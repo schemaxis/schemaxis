@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.premiere/1",
+      "description": "Experimental Premiere contract version."
+    },
+    "operation": {
+      "const": "sequenceContract",
+      "description": "Observe the active sequence through the supplied read-only UXP panel."
+    },
+    "projectPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "description": "Exact absolute path identity of the open saved Premiere project; its bytes are not read."
+    },
+    "sequenceName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Exact name of the active sequence to inspect; no sequence is selected or modified."
+    },
+    "fps": {
+      "type": "integer",
+      "minimum": 24,
+      "maximum": 60,
+      "default": 25,
+      "enum": [
+        24,
+        25,
+        30,
+        50,
+        60
+      ],
+      "description": "Integer sequence rate: 24, 25, 30, 50 or 60. Fractional/drop-frame rates are unsupported."
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 8192,
+      "default": 1920,
+      "description": "Expected sequence frame width; rendered dimensions are not inspected."
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 8192,
+      "default": 1080,
+      "description": "Expected sequence frame height; rendered dimensions are not inspected."
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sourcePath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Exact absolute native source path identity; no source-content readback."
+          },
+          "startFrame": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000,
+            "default": 0,
+            "description": "Zero-based source frame at the sequence timebase; default 0."
+          },
+          "frameCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 600,
+            "description": "Positive duration in sequence frames; out points are exclusive."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "sourcePath",
+          "frameCount"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 128,
+      "description": "Ordered contiguous clips on the sole unmuted video track, at zero-based timeline positions."
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "projectPath",
+    "sequenceName",
+    "clips"
+  ]
+}

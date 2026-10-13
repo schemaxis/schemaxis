@@ -1,0 +1,50 @@
+{
+  "version": "schemaxis.qgis/1",
+  "nodes": [
+    {
+      "id": "sites",
+      "filter": "readVector",
+      "options": {
+        "file": "/absolute/path/to/qgis-sites.geojson"
+      }
+    },
+    {
+      "id": "metric",
+      "filter": "reproject",
+      "inputs": {
+        "input": "sites"
+      },
+      "options": {
+        "crs": "EPSG:3857"
+      }
+    },
+    {
+      "id": "zones",
+      "filter": "buffer",
+      "inputs": {
+        "input": "metric"
+      },
+      "options": {
+        "distance": 100,
+        "segments": 32
+      }
+    },
+    {
+      "id": "study",
+      "filter": "clip",
+      "inputs": {
+        "input": "zones"
+      },
+      "options": {
+        "bounds": [
+          200,
+          -25,
+          250,
+          25
+        ]
+      }
+    }
+  ],
+  "output": "study",
+  "preview": true
+}

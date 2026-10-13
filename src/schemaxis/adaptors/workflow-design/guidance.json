@@ -1,0 +1,1732 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {},
+  "routes": {
+    "schemaxis.workflow-design/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A saved workflow design, version 1: an ordinary workflow body, explicit data arrows (connections) that override existing inputs, and feedback settings (controllers) for closed loops. Acyclic designs compile into an ordinary workflow with operations ordered by their data dependencies; cyclic designs can be saved and configured but not executed. Drawing an arrow does not validate artifact availability, type or units.",
+          "pitfalls": [
+            "Version 1 has no ports, parameters, outputs, naming or layout; use version 2 for those."
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:1-11",
+            "src/schemaxis/workflow_design.py:283-294",
+            "src/schemaxis/workflow_design.py:861-898",
+            "src/schemaxis/studio_schemas.py:64-99",
+            "docs/workflow-design.md#saved-design-and-agent-access"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Fixed identifier of the saved design format, schemaxis.workflow-design/1. A design is an authoring document, separate from the executable schemaxis.workflow/1 and from the template manifest schemaxis.workflow-template/1.",
+          "label": "Design version",
+          "defaultMeaning": "Required.",
+          "pitfalls": [
+            "Version 1 designs can only use source/target connections; Studio upgrades them to version 2, giving each connection generated ports."
+          ],
+          "examples": [
+            "schemaxis.workflow-design/1"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:27-28",
+            "src/schemaxis/workflow_design.py:256-260",
+            "docs/workflow-design.md#saved-design-and-agent-access"
+          ]
+        },
+        "/properties/workflow": {
+          "status": "reviewed",
+          "explanation": "The ordinary schemaxis.workflow/1 body the design is built on, with the same contract and help as a workflow file, except that it may be empty while designing and holds at most 256 operations. Connections replace selected inputs of these operations only in the compiled result; the body keeps the baseline inputs, which return when a connection is removed.",
+          "label": "Workflow body",
+          "defaultMeaning": "Required; an empty workflow is {\"version\": \"schemaxis.workflow/1\", \"operations\": []}.",
+          "examples": [
+            {
+              "version": "schemaxis.workflow/1",
+              "operations": []
+            }
+          ],
+          "sources": [
+            "src/schemaxis/studio_schemas.py:68-73",
+            "src/schemaxis/workflow_design.py:256-277",
+            "src/schemaxis/workflow_design.py:790-797",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/controllers": {
+          "status": "reviewed",
+          "explanation": "Saved convergence settings for closed runtime data loops, keyed by each loop's derived identity (loop-...). The identity is computed from the loop's member operations, their internal arrows, their documents and the shared workflow context, so changing any of these invalidates the old settings. Only current loops may have entries.",
+          "label": "Feedback controllers",
+          "defaultMeaning": "Required; {} when the design has no configured loops.",
+          "pitfalls": [
+            "Settings are configuration only: native coupled-loop execution is unavailable and a cyclic design fails compilation with FEEDBACK_EXECUTION_UNAVAILABLE.",
+            "A key that no longer matches a current loop fails validation; remove it and configure the changed loop."
+          ],
+          "examples": [
+            {}
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:340-363",
+            "src/schemaxis/workflow_design.py:800-808",
+            "docs/workflow-design.md#use-the-designer",
+            "docs/workflow-design.md#current-execution-boundary"
+          ]
+        },
+        "/properties/controllers/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "Settings for one closed loop: the coupling algorithm, an iteration bound and tolerances. They describe point coupling of the exchanged variables, not a native solver's own tolerances; convergence is to be judged on the raw feedback residual before any relaxation.",
+          "examples": [
+            {
+              "algorithm": "fixed-point",
+              "maxIterations": 50,
+              "absoluteTolerance": 1e-06,
+              "relativeTolerance": 0.0001
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:1-7",
+            "src/schemaxis/workflow_loop_controls.py:128-167",
+            "src/schemaxis/studio_schemas.py:23-33",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Plain fixed-point coupling: each iteration passes the newly exchanged values on without damping. Choose it when the coupled loop is expected to converge on its own; choose constant-relaxation if it oscillates.",
+          "examples": [
+            {
+              "algorithm": "fixed-point",
+              "maxIterations": 50,
+              "absoluteTolerance": 1e-06,
+              "relativeTolerance": 0.0001
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:26-38",
+            "src/schemaxis/studio_schemas.py:25-32",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0/properties/algorithm": {
+          "status": "reviewed",
+          "explanation": "Selects undamped fixed-point coupling for this loop.",
+          "label": "Algorithm",
+          "examples": [
+            "fixed-point"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:26-38"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0/properties/maxIterations": {
+          "status": "reviewed",
+          "explanation": "Upper bound on coupling iterations for this fixed-point loop, from 1 to 1000; reaching it without meeting the tolerances means the loop has not converged.",
+          "label": "Maximum iterations",
+          "defaultMeaning": "Required; the catalogue suggests 50.",
+          "examples": [
+            50
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:158-160",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0/properties/absoluteTolerance": {
+          "status": "reviewed",
+          "explanation": "Absolute convergence threshold on the raw feedback residual of this fixed-point loop; greater than zero. Its scale depends on the units and magnitude of the exchanged variables, which the eventual loop executor must establish.",
+          "label": "Absolute tolerance",
+          "defaultMeaning": "Required; the catalogue suggests 1e-6.",
+          "pitfalls": [
+            "These are coupled-variable tolerances, separate from the tolerances of the native solvers inside the loop."
+          ],
+          "examples": [
+            1e-06
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:1-7",
+            "src/schemaxis/workflow_loop_controls.py:161",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0/properties/relativeTolerance": {
+          "status": "reviewed",
+          "explanation": "Relative convergence threshold on the raw feedback residual of this fixed-point loop, measured against the size of the exchanged values; zero or positive.",
+          "label": "Relative tolerance",
+          "defaultMeaning": "Required; the catalogue suggests 1e-4.",
+          "examples": [
+            0.0001
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:162",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Fixed-point coupling with a constant relaxation factor that damps every update (0 < factor <= 1; 1 means no damping). Choose it when plain fixed-point iteration oscillates or diverges.",
+          "pitfalls": [
+            "A small damped step does not by itself show convergence; convergence is tested on the raw residual before relaxation."
+          ],
+          "examples": [
+            {
+              "algorithm": "constant-relaxation",
+              "maxIterations": 50,
+              "absoluteTolerance": 1e-06,
+              "relativeTolerance": 0.0001,
+              "relaxation": 0.5
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:39-50",
+            "src/schemaxis/studio_schemas.py:25-32",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/algorithm": {
+          "status": "reviewed",
+          "explanation": "Selects fixed-point coupling damped by a constant relaxation factor.",
+          "label": "Algorithm",
+          "examples": [
+            "constant-relaxation"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:39-50"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/maxIterations": {
+          "status": "reviewed",
+          "explanation": "Upper bound on coupling iterations for this constant-relaxation loop, from 1 to 1000; reaching it without meeting the tolerances means the loop has not converged.",
+          "label": "Maximum iterations",
+          "defaultMeaning": "Required; the catalogue suggests 50.",
+          "examples": [
+            50
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:158-160",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/absoluteTolerance": {
+          "status": "reviewed",
+          "explanation": "Absolute convergence threshold on the raw feedback residual of this constant-relaxation loop; greater than zero. Its scale depends on the units and magnitude of the exchanged variables, which the eventual loop executor must establish.",
+          "label": "Absolute tolerance",
+          "defaultMeaning": "Required; the catalogue suggests 1e-6.",
+          "pitfalls": [
+            "These are coupled-variable tolerances, separate from the tolerances of the native solvers inside the loop."
+          ],
+          "examples": [
+            1e-06
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:1-7",
+            "src/schemaxis/workflow_loop_controls.py:161",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/relativeTolerance": {
+          "status": "reviewed",
+          "explanation": "Relative convergence threshold on the raw feedback residual of this constant-relaxation loop, measured against the size of the exchanged values; zero or positive.",
+          "label": "Relative tolerance",
+          "defaultMeaning": "Required; the catalogue suggests 1e-4.",
+          "examples": [
+            0.0001
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:162",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/relaxation": {
+          "status": "reviewed",
+          "explanation": "Constant factor applied to every feedback update; smaller values damp more strongly. Greater than 0 and at most 1.",
+          "label": "Relaxation factor",
+          "defaultMeaning": "Required for this algorithm; the catalogue suggests 0.5.",
+          "examples": [
+            0.5
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:163-166",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/connections": {
+          "status": "reviewed",
+          "explanation": "Explicit data arrows. Each replaces one existing input of a target operation with a reference to an output of a source operation: a file handoff ($artifact) or a number read from a JSON/CSV artifact ($value with path). Removing a connection restores the baseline input; arrows that close a cycle form a feedback loop.",
+          "label": "Connections",
+          "defaultMeaning": "Required; [] when there are no arrows. At most 2048.",
+          "examples": [
+            []
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:155-180",
+            "src/schemaxis/workflow_design.py:297-317",
+            "src/schemaxis/workflow_design.py:790-797",
+            "docs/workflow-design.md#saved-design-and-agent-access"
+          ]
+        },
+        "/properties/connections/items": {
+          "status": "reviewed",
+          "explanation": "One arrow from a producer operation to an existing input of a consumer operation.",
+          "examples": [
+            {
+              "id": "meshSize",
+              "source": "measure",
+              "target": "mesh",
+              "targetPointer": "/dimensions/h",
+              "kind": "value",
+              "artifactIndex": 0,
+              "valuePath": "/rows/0/1"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:155-180",
+            "src/schemaxis/studio_schemas.py:76-79"
+          ]
+        },
+        "/properties/connections/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique name of this arrow, used to disconnect it and to identify it in loops and diagnostics.",
+          "label": "Connection ID",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "meshSize"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:157",
+            "src/schemaxis/workflow_design.py:303-305"
+          ]
+        },
+        "/properties/connections/items/properties/source": {
+          "status": "reviewed",
+          "explanation": "ID of the producing operation. Unlike references in an ordinary workflow it need not precede the target in the operation list; compilation orders operations by their data dependencies.",
+          "label": "Source operation",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "measure"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:158-160",
+            "src/schemaxis/workflow_design.py:872-886"
+          ]
+        },
+        "/properties/connections/items/properties/target": {
+          "status": "reviewed",
+          "explanation": "ID of the consuming operation whose input this arrow replaces.",
+          "label": "Target operation",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "mesh"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:158-160"
+          ]
+        },
+        "/properties/connections/items/properties/targetPointer": {
+          "status": "reviewed",
+          "explanation": "JSON pointer, relative to the target operation's document, to the existing input being replaced. It must lie under /dimensions/..., /definitions/... or /settings/... (at least one key deep) or under /nodes/N/options/..., and the current value there must suit the kind: a number (or a marker resolving to one) for value, a file path string or $artifact for artifact.",
+          "label": "Target input",
+          "defaultMeaning": "Required.",
+          "pitfalls": [
+            "Two connections to the same input, or to an input nested inside another connected input, are rejected."
+          ],
+          "examples": [
+            "/dimensions/h"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:117-137",
+            "src/schemaxis/workflow_design.py:164-170",
+            "docs/workflow-design.md#saved-design-and-agent-access"
+          ]
+        },
+        "/properties/connections/items/properties/kind": {
+          "status": "reviewed",
+          "explanation": "artifact hands over a verified producer file: the target input receives its path. value reads one number from a producer's JSON or numeric CSV artifact at valuePath. The kind must match the kind Schemaxis infers for the target input.",
+          "label": "Connection kind",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "value"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:161-170",
+            "src/schemaxis/workflow_design.py:315-316"
+          ]
+        },
+        "/properties/connections/items/properties/artifactIndex": {
+          "status": "reviewed",
+          "explanation": "Zero-based index of the producer artifact in its verified publication order: the file handed over (artifact) or the JSON/CSV artifact read (value).",
+          "label": "Artifact index",
+          "defaultMeaning": "Required.",
+          "pitfalls": [
+            "A nonnegative index can pass design validation and still be absent at execution; check the producer receipt."
+          ],
+          "examples": [
+            0
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:171-173",
+            "src/schemaxis/workflow_design.py:315-316"
+          ]
+        },
+        "/properties/connections/items/properties/valuePath": {
+          "status": "reviewed",
+          "explanation": "Pointer inside the selected artifact to the number to read, for example /rows/0/1 in a CSV table. Required when kind is value and forbidden when kind is artifact.",
+          "label": "Value pointer",
+          "examples": [
+            "/rows/0/1"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:174-179"
+          ]
+        }
+      }
+    },
+    "schemaxis.workflow-design/2": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A saved workflow design, version 2: the workflow body plus named, typed ports on each operation, port-to-port connections, feedback controllers, template parameters, named outputs, an output naming preference and a presentation-only layout. Each connection compiles to exactly one version 1 connection, so validation, loop detection and compilation are shared. Acyclic designs compile into an ordinary workflow or a template bundle; cyclic designs are design-only.",
+          "pitfalls": [
+            "Saving, drawing arrows and compiling never launch a native application; execution uses the compiled workflow."
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:1-11",
+            "src/schemaxis/workflow_design.py:366",
+            "src/schemaxis/workflow_design.py:575-588",
+            "src/schemaxis/workflow_design.py:1312-1359",
+            "src/schemaxis/studio_schemas.py:64-99",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Fixed identifier of the saved design format, schemaxis.workflow-design/2. A design is an authoring document, separate from the executable schemaxis.workflow/1 and from the template manifest schemaxis.workflow-template/1.",
+          "label": "Design version",
+          "defaultMeaning": "Required.",
+          "pitfalls": [
+            "Do not run a design file directly; compile it (acyclic designs only) into an ordinary workflow first."
+          ],
+          "examples": [
+            "schemaxis.workflow-design/2"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:27-28",
+            "src/schemaxis/workflow_design.py:256-260",
+            "docs/workflow-design.md#saved-design-and-agent-access"
+          ]
+        },
+        "/properties/workflow": {
+          "status": "reviewed",
+          "explanation": "The ordinary schemaxis.workflow/1 body the design is built on, with the same contract and help as a workflow file, except that it may be empty while designing and holds at most 256 operations. Connections replace selected inputs of these operations only in the compiled result; the body keeps the baseline inputs, which return when a connection is removed.",
+          "label": "Workflow body",
+          "defaultMeaning": "Required; an empty workflow is {\"version\": \"schemaxis.workflow/1\", \"operations\": []}.",
+          "examples": [
+            {
+              "version": "schemaxis.workflow/1",
+              "operations": []
+            }
+          ],
+          "sources": [
+            "src/schemaxis/studio_schemas.py:68-73",
+            "src/schemaxis/workflow_design.py:256-277",
+            "src/schemaxis/workflow_design.py:790-797",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/controllers": {
+          "status": "reviewed",
+          "explanation": "Saved convergence settings for closed runtime data loops, keyed by each loop's derived identity (loop-...). The identity is computed from the loop's member operations, their internal arrows, their documents and the shared workflow context, so changing any of these invalidates the old settings. Only current loops may have entries.",
+          "label": "Feedback controllers",
+          "defaultMeaning": "Required; {} when the design has no configured loops.",
+          "pitfalls": [
+            "Settings are configuration only: native coupled-loop execution is unavailable and a cyclic design fails compilation with FEEDBACK_EXECUTION_UNAVAILABLE.",
+            "A key that no longer matches a current loop fails validation; remove it and configure the changed loop."
+          ],
+          "examples": [
+            {}
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:340-363",
+            "src/schemaxis/workflow_design.py:800-808",
+            "docs/workflow-design.md#use-the-designer",
+            "docs/workflow-design.md#current-execution-boundary"
+          ]
+        },
+        "/properties/controllers/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "Settings for one closed loop: the coupling algorithm, an iteration bound and tolerances. They describe point coupling of the exchanged variables, not a native solver's own tolerances; convergence is to be judged on the raw feedback residual before any relaxation.",
+          "examples": [
+            {
+              "algorithm": "fixed-point",
+              "maxIterations": 50,
+              "absoluteTolerance": 1e-06,
+              "relativeTolerance": 0.0001
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:1-7",
+            "src/schemaxis/workflow_loop_controls.py:128-167",
+            "src/schemaxis/studio_schemas.py:23-33",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Plain fixed-point coupling: each iteration passes the newly exchanged values on without damping. Choose it when the coupled loop is expected to converge on its own; choose constant-relaxation if it oscillates.",
+          "examples": [
+            {
+              "algorithm": "fixed-point",
+              "maxIterations": 50,
+              "absoluteTolerance": 1e-06,
+              "relativeTolerance": 0.0001
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:26-38",
+            "src/schemaxis/studio_schemas.py:25-32",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0/properties/algorithm": {
+          "status": "reviewed",
+          "explanation": "Selects undamped fixed-point coupling for this loop.",
+          "label": "Algorithm",
+          "examples": [
+            "fixed-point"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:26-38"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0/properties/maxIterations": {
+          "status": "reviewed",
+          "explanation": "Upper bound on coupling iterations for this fixed-point loop, from 1 to 1000; reaching it without meeting the tolerances means the loop has not converged.",
+          "label": "Maximum iterations",
+          "defaultMeaning": "Required; the catalogue suggests 50.",
+          "examples": [
+            50
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:158-160",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0/properties/absoluteTolerance": {
+          "status": "reviewed",
+          "explanation": "Absolute convergence threshold on the raw feedback residual of this fixed-point loop; greater than zero. Its scale depends on the units and magnitude of the exchanged variables, which the eventual loop executor must establish.",
+          "label": "Absolute tolerance",
+          "defaultMeaning": "Required; the catalogue suggests 1e-6.",
+          "pitfalls": [
+            "These are coupled-variable tolerances, separate from the tolerances of the native solvers inside the loop."
+          ],
+          "examples": [
+            1e-06
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:1-7",
+            "src/schemaxis/workflow_loop_controls.py:161",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/0/properties/relativeTolerance": {
+          "status": "reviewed",
+          "explanation": "Relative convergence threshold on the raw feedback residual of this fixed-point loop, measured against the size of the exchanged values; zero or positive.",
+          "label": "Relative tolerance",
+          "defaultMeaning": "Required; the catalogue suggests 1e-4.",
+          "examples": [
+            0.0001
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:162",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Fixed-point coupling with a constant relaxation factor that damps every update (0 < factor <= 1; 1 means no damping). Choose it when plain fixed-point iteration oscillates or diverges.",
+          "pitfalls": [
+            "A small damped step does not by itself show convergence; convergence is tested on the raw residual before relaxation."
+          ],
+          "examples": [
+            {
+              "algorithm": "constant-relaxation",
+              "maxIterations": 50,
+              "absoluteTolerance": 1e-06,
+              "relativeTolerance": 0.0001,
+              "relaxation": 0.5
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:39-50",
+            "src/schemaxis/studio_schemas.py:25-32",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/algorithm": {
+          "status": "reviewed",
+          "explanation": "Selects fixed-point coupling damped by a constant relaxation factor.",
+          "label": "Algorithm",
+          "examples": [
+            "constant-relaxation"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:39-50"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/maxIterations": {
+          "status": "reviewed",
+          "explanation": "Upper bound on coupling iterations for this constant-relaxation loop, from 1 to 1000; reaching it without meeting the tolerances means the loop has not converged.",
+          "label": "Maximum iterations",
+          "defaultMeaning": "Required; the catalogue suggests 50.",
+          "examples": [
+            50
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:158-160",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/absoluteTolerance": {
+          "status": "reviewed",
+          "explanation": "Absolute convergence threshold on the raw feedback residual of this constant-relaxation loop; greater than zero. Its scale depends on the units and magnitude of the exchanged variables, which the eventual loop executor must establish.",
+          "label": "Absolute tolerance",
+          "defaultMeaning": "Required; the catalogue suggests 1e-6.",
+          "pitfalls": [
+            "These are coupled-variable tolerances, separate from the tolerances of the native solvers inside the loop."
+          ],
+          "examples": [
+            1e-06
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:1-7",
+            "src/schemaxis/workflow_loop_controls.py:161",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/relativeTolerance": {
+          "status": "reviewed",
+          "explanation": "Relative convergence threshold on the raw feedback residual of this constant-relaxation loop, measured against the size of the exchanged values; zero or positive.",
+          "label": "Relative tolerance",
+          "defaultMeaning": "Required; the catalogue suggests 1e-4.",
+          "examples": [
+            0.0001
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:162",
+            "src/schemaxis/workflow_loop_controls.py:15-19"
+          ]
+        },
+        "/properties/controllers/additionalProperties/oneOf/1/properties/relaxation": {
+          "status": "reviewed",
+          "explanation": "Constant factor applied to every feedback update; smaller values damp more strongly. Greater than 0 and at most 1.",
+          "label": "Relaxation factor",
+          "defaultMeaning": "Required for this algorithm; the catalogue suggests 0.5.",
+          "examples": [
+            0.5
+          ],
+          "sources": [
+            "src/schemaxis/workflow_loop_controls.py:163-166",
+            "docs/workflow-design.md#use-the-designer"
+          ]
+        },
+        "/properties/ports": {
+          "status": "reviewed",
+          "explanation": "Named interface of each operation, keyed by operation ID. Input ports name existing runtime inputs that arrows may drive; output ports name producer artifacts (and, for values, a pointer inside one). Connections join an output port to an input port of the same kind.",
+          "label": "Ports",
+          "defaultMeaning": "Required; {} when no ports are declared.",
+          "pitfalls": [
+            "Ports must belong to existing operations; a design may declare at most 4096 ports."
+          ],
+          "examples": [
+            {}
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:416-467",
+            "src/schemaxis/studio_schemas.py:48-61",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "Port declarations of one operation: optional inputs and outputs maps keyed by port name.",
+          "examples": [
+            {
+              "inputs": {
+                "h": {
+                  "kind": "value",
+                  "target": "/dimensions/h"
+                }
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:421-428"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "Input ports keyed by port name (a letter first, then letters, digits, _ or -; at most 64 characters). Each drives one existing numeric or file input of this operation. An input port accepts only one connection, so add several ports for fan-in.",
+          "label": "Input ports",
+          "examples": [
+            {
+              "h": {
+                "kind": "value",
+                "target": "/dimensions/h"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:403-406",
+            "src/schemaxis/workflow_design.py:430-448",
+            "src/schemaxis/workflow_design.py:492-495"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "One input port: the operation-local input it drives, its kind, and optional data description and label.",
+          "examples": [
+            {
+              "kind": "value",
+              "target": "/dimensions/h",
+              "label": "Mesh size"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:430-448"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Whether this input port receives a file (artifact) or a number (value). It must equal the kind Schemaxis infers for the target input.",
+          "label": "Port kind",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "value"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:123-137",
+            "src/schemaxis/workflow_design.py:441-443"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/data": {
+          "status": "reviewed",
+          "explanation": "Descriptive metadata about the data passing through this input port. When both connected ports declare kind, units or layout and they differ, or both declare formats with nothing in common, the designer shows a warning; it never blocks the connection and the native planner stays authoritative.",
+          "label": "Data description",
+          "examples": [
+            {
+              "kind": "table",
+              "formats": [
+                "csv"
+              ],
+              "units": "Pa"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:382-400",
+            "src/schemaxis/workflow_design.py:503-521",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/data/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Category of data on this input port: geometry, image, video, table, series, text, number, vector, audio or archive. Used for compatibility hints and display only.",
+          "label": "Data kind",
+          "examples": [
+            "geometry"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:29",
+            "src/schemaxis/workflow_design.py:384-385",
+            "src/schemaxis/workflow_design.py:509-514"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/data/properties/units": {
+          "status": "reviewed",
+          "explanation": "Free-text units of the data on this input port, such as \"mm\" or \"Pa\". Compared literally with the connected port to raise a warning; no conversion is performed.",
+          "label": "Units",
+          "examples": [
+            "mm"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:394-395",
+            "src/schemaxis/workflow_design.py:509-514"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/data/properties/formats": {
+          "status": "reviewed",
+          "explanation": "Nonempty list (at most 64) of unique file format names this input port handles, such as step, vtu or csv. Connected ports without a common format get a warning.",
+          "label": "Formats",
+          "examples": [
+            [
+              "vtu",
+              "vtp"
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:386-393",
+            "src/schemaxis/workflow_design.py:515-518"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/data/properties/formats/items": {
+          "status": "reviewed",
+          "explanation": "One format name of the input port: starts with a letter or digit, then letters, digits, _, ., + or -; compared literally (case-sensitive).",
+          "examples": [
+            "step"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:368",
+            "src/schemaxis/workflow_design.py:386-393"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/data/properties/layout": {
+          "status": "reviewed",
+          "explanation": "Component ordering of multi-component data on this input port: interleaved (x0 y0 z0 x1 ...) or planar (x0 x1 ... y0 y1 ...). Differing declarations on connected ports give a warning.",
+          "label": "Component layout",
+          "examples": [
+            "interleaved"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:396-397",
+            "src/schemaxis/workflow_design.py:509-514",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/data/properties/streaming": {
+          "status": "reviewed",
+          "explanation": "Declares whether the data on this input port is streamed. Descriptive only: the designer neither checks it against the producer nor compares it between connected ports.",
+          "label": "Streaming",
+          "examples": [
+            false
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:398-400",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/data/properties/contiguous": {
+          "status": "reviewed",
+          "explanation": "Declares whether the data on this input port is contiguous. Descriptive only: no check or compatibility warning uses it.",
+          "label": "Contiguous",
+          "examples": [
+            true
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:398-400",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/label": {
+          "status": "reviewed",
+          "explanation": "Human-readable name shown for this input port in the designer instead of its key.",
+          "label": "Display label",
+          "examples": [
+            "Mesh size"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:408-409"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/generated": {
+          "status": "reviewed",
+          "explanation": "true marks an input port that Studio created automatically when an arrow was drawn; Studio deletes unused generated ports after each structural edit (connections, ports, operations or exposed parameters). Omit it for ports you declare yourself so they persist.",
+          "label": "Generated",
+          "defaultMeaning": "Omitted: the port is kept.",
+          "examples": [
+            true
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:410-411",
+            "src/schemaxis/workflow_design.py:691-715",
+            "src/schemaxis/workflow_design.py:744-768"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/inputs/additionalProperties/properties/target": {
+          "status": "reviewed",
+          "explanation": "Operation-local JSON pointer to the input this port drives, under /dimensions/..., /definitions/... or /settings/... (at least one key deep) or under /nodes/N/options/.... The input must already exist and match the port kind; ports of one operation must not target the same or nested inputs.",
+          "label": "Target input",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "/dimensions/h"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:117-120",
+            "src/schemaxis/workflow_design.py:433-447"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs": {
+          "status": "reviewed",
+          "explanation": "Output ports keyed by port name; each names one producer artifact by index and, for value ports, a pointer inside it. One output port may feed any number of input ports (fan-out).",
+          "label": "Output ports",
+          "examples": [
+            {
+              "volume": {
+                "kind": "artifact",
+                "artifact": 0
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:449-462",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "One output port: artifact index, kind, valuePath for value ports, and optional data description and label.",
+          "examples": [
+            {
+              "kind": "value",
+              "artifact": 1,
+              "valuePath": "/rows/0/1"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:449-462"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/kind": {
+          "status": "reviewed",
+          "explanation": "artifact passes the whole verified file; value reads one number at valuePath from a JSON or CSV artifact. A connection must join an output and an input port of the same kind.",
+          "label": "Port kind",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "artifact"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:455-462",
+            "src/schemaxis/workflow_design.py:488-491"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/data": {
+          "status": "reviewed",
+          "explanation": "Descriptive metadata about the data passing through this output port. When both connected ports declare kind, units or layout and they differ, or both declare formats with nothing in common, the designer shows a warning; it never blocks the connection and the native planner stays authoritative.",
+          "label": "Data description",
+          "examples": [
+            {
+              "kind": "table",
+              "formats": [
+                "csv"
+              ],
+              "units": "Pa"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:382-400",
+            "src/schemaxis/workflow_design.py:503-521",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/data/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Category of data on this output port: geometry, image, video, table, series, text, number, vector, audio or archive. Used for compatibility hints and display only.",
+          "label": "Data kind",
+          "examples": [
+            "geometry"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:29",
+            "src/schemaxis/workflow_design.py:384-385",
+            "src/schemaxis/workflow_design.py:509-514"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/data/properties/units": {
+          "status": "reviewed",
+          "explanation": "Free-text units of the data on this output port, such as \"mm\" or \"Pa\". Compared literally with the connected port to raise a warning; no conversion is performed.",
+          "label": "Units",
+          "examples": [
+            "mm"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:394-395",
+            "src/schemaxis/workflow_design.py:509-514"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/data/properties/formats": {
+          "status": "reviewed",
+          "explanation": "Nonempty list (at most 64) of unique file format names this output port handles, such as step, vtu or csv. Connected ports without a common format get a warning.",
+          "label": "Formats",
+          "examples": [
+            [
+              "vtu",
+              "vtp"
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:386-393",
+            "src/schemaxis/workflow_design.py:515-518"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/data/properties/formats/items": {
+          "status": "reviewed",
+          "explanation": "One format name of the output port: starts with a letter or digit, then letters, digits, _, ., + or -; compared literally (case-sensitive).",
+          "examples": [
+            "step"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:368",
+            "src/schemaxis/workflow_design.py:386-393"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/data/properties/layout": {
+          "status": "reviewed",
+          "explanation": "Component ordering of multi-component data on this output port: interleaved (x0 y0 z0 x1 ...) or planar (x0 x1 ... y0 y1 ...). Differing declarations on connected ports give a warning.",
+          "label": "Component layout",
+          "examples": [
+            "interleaved"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:396-397",
+            "src/schemaxis/workflow_design.py:509-514",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/data/properties/streaming": {
+          "status": "reviewed",
+          "explanation": "Declares whether the data on this output port is streamed. Descriptive only: the designer neither checks it against the producer nor compares it between connected ports.",
+          "label": "Streaming",
+          "examples": [
+            false
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:398-400",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/data/properties/contiguous": {
+          "status": "reviewed",
+          "explanation": "Declares whether the data on this output port is contiguous. Descriptive only: no check or compatibility warning uses it.",
+          "label": "Contiguous",
+          "examples": [
+            true
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:398-400",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/label": {
+          "status": "reviewed",
+          "explanation": "Human-readable name shown for this output port in the designer instead of its key.",
+          "label": "Display label",
+          "examples": [
+            "Volume mesh"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:408-409"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/generated": {
+          "status": "reviewed",
+          "explanation": "true marks an output port that Studio created automatically when an arrow was drawn; Studio deletes unused generated ports after each structural edit (connections, ports, operations or exposed parameters). Omit it for ports you declare yourself so they persist.",
+          "label": "Generated",
+          "defaultMeaning": "Omitted: the port is kept.",
+          "examples": [
+            true
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:410-411",
+            "src/schemaxis/workflow_design.py:691-715",
+            "src/schemaxis/workflow_design.py:744-768"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/artifact": {
+          "status": "reviewed",
+          "explanation": "Zero-based index of the producer artifact in verified publication order. Studio's suggestions assume one publication per declared output in declaration order; the producer receipt is authoritative.",
+          "label": "Artifact index",
+          "defaultMeaning": "Required.",
+          "examples": [
+            0
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:452-454",
+            "src/schemaxis/workflow_design.py:1244-1252"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/properties/valuePath": {
+          "status": "reviewed",
+          "explanation": "Pointer to the number inside the artifact, for example /rows/0/1 in a CSV table. Required for value ports, forbidden for artifact ports; it is only knowable from a verified artifact.",
+          "label": "Value pointer",
+          "examples": [
+            "/rows/0/1"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:455-462",
+            "src/schemaxis/workflow_design.py:1294-1296"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/allOf/0": {
+          "status": "reviewed",
+          "explanation": "Rule tying valuePath to kind: value output ports must declare valuePath; artifact output ports must not.",
+          "sources": [
+            "src/schemaxis/studio_schemas.py:59-60",
+            "src/schemaxis/workflow_design.py:455-462"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/allOf/0/if": {
+          "status": "reviewed",
+          "explanation": "Condition of the rule: the output port kind is value.",
+          "sources": [
+            "src/schemaxis/studio_schemas.py:59"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/allOf/0/if/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Kind value (\"value\") that makes valuePath required.",
+          "examples": [
+            "value"
+          ],
+          "sources": [
+            "src/schemaxis/studio_schemas.py:59"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/allOf/0/then": {
+          "status": "reviewed",
+          "explanation": "Applied to value output ports: valuePath must be present.",
+          "sources": [
+            "src/schemaxis/studio_schemas.py:60"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/allOf/0/else": {
+          "status": "reviewed",
+          "explanation": "Applied to artifact output ports: valuePath must be absent.",
+          "sources": [
+            "src/schemaxis/studio_schemas.py:60"
+          ]
+        },
+        "/properties/ports/additionalProperties/properties/outputs/additionalProperties/allOf/0/else/not": {
+          "status": "reviewed",
+          "explanation": "Rejects an artifact output port that declares valuePath.",
+          "sources": [
+            "src/schemaxis/studio_schemas.py:60",
+            "src/schemaxis/workflow_design.py:461-462"
+          ]
+        },
+        "/properties/parameters": {
+          "status": "reviewed",
+          "explanation": "Values a template user may set for each case, keyed by parameter ID (a letter first, then letters, digits, _, . or -). Each binds exactly one existing workflow-level value under /dimensions, /definitions or /settings. Exporting the design writes them into a schemaxis.workflow-template/1 manifest.",
+          "label": "Template parameters",
+          "defaultMeaning": "{} (none).",
+          "examples": [
+            {}
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:524-541",
+            "src/schemaxis/workflow_templates.py:152-197",
+            "src/schemaxis/workflow_design.py:1312-1330",
+            "docs/design/workflow-templates/template-contract.md#parameter-subset"
+          ]
+        },
+        "/properties/parameters/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "One template parameter: a label, a kind with optional constraints, an optional default and units, and the workflow value it replaces.",
+          "examples": [
+            {
+              "label": "Mesh size",
+              "kind": "number",
+              "units": "mm",
+              "constraints": {
+                "minimum": 0.5
+              },
+              "target": {
+                "scope": "workflow",
+                "pointer": "/settings/meshSize"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:170-197",
+            "src/schemaxis/studio_schemas.py:36-45"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/label": {
+          "status": "reviewed",
+          "explanation": "Name shown to the person filling in a case.",
+          "label": "Label",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "Mesh size"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:172"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/help": {
+          "status": "reviewed",
+          "explanation": "Optional explanatory text shown with the parameter when a case is filled in.",
+          "label": "Help text",
+          "examples": [
+            "Target tetrahedron edge length near the part."
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:173-174"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/units": {
+          "status": "reviewed",
+          "explanation": "Units in which case values are given; allowed only for number, integer and vector kinds. Plain numbers are taken in these units; there is no conversion, and quantity objects such as {\"value\": 1, \"units\": \"m\"} are rejected.",
+          "label": "Units",
+          "examples": [
+            "mm"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:177-180",
+            "docs/design/workflow-templates/template-contract.md#parameter-subset"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/default": {
+          "status": "reviewed",
+          "explanation": "Value used when a case omits this parameter; it must satisfy the kind and constraints. Without a default every case must supply a value (MISSING_PARAMETER); the workflow's current value is not used as a fallback.",
+          "label": "Default value",
+          "examples": [
+            3
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:194-195",
+            "src/schemaxis/workflow_templates.py:320-324",
+            "docs/design/workflow-templates/template-contract.md#parameter-subset"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Type of value accepted: number (finite, not boolean), integer, boolean, string, enum (one of constraints.enum) or vector (numeric array of fixed constraints.length). Expressions and analytics cannot be supplied as values.",
+          "label": "Parameter kind",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "number"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:133-149",
+            "docs/design/workflow-templates/template-contract.md#parameter-subset"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/constraints": {
+          "status": "reviewed",
+          "explanation": "Kind-specific limits: minimum and maximum (inclusive) for number, integer and vector components; minLength and maxLength for string; enum for enum; length (required, 1 to 1024) for vector. Keys not allowed for the kind fail.",
+          "label": "Constraints",
+          "examples": [
+            {
+              "minimum": 0.5,
+              "maximum": 10
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:94-122",
+            "docs/design/workflow-templates/template-contract.md#parameter-subset"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/constraints/properties/minimum": {
+          "status": "reviewed",
+          "explanation": "Inclusive lower limit for a number or integer value, or for each vector component.",
+          "label": "Minimum",
+          "examples": [
+            0.5
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:100-104",
+            "src/schemaxis/workflow_templates.py:143-146"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/constraints/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Inclusive upper limit for a number or integer value, or for each vector component; must not be below minimum.",
+          "label": "Maximum",
+          "examples": [
+            10
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:100-104",
+            "src/schemaxis/workflow_templates.py:143-146"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/constraints/properties/length": {
+          "status": "reviewed",
+          "explanation": "Required fixed number of components of a vector parameter, from 1 to 1024.",
+          "label": "Vector length",
+          "examples": [
+            3
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:108-109",
+            "src/schemaxis/workflow_templates.py:140"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/constraints/properties/minLength": {
+          "status": "reviewed",
+          "explanation": "Minimum length of a string parameter, counted in Unicode code points.",
+          "label": "Minimum length",
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:105-107",
+            "src/schemaxis/workflow_templates.py:147-148"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/constraints/properties/maxLength": {
+          "status": "reviewed",
+          "explanation": "Maximum length of a string parameter, counted in Unicode code points; not below minLength.",
+          "label": "Maximum length",
+          "examples": [
+            64
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:105-107",
+            "src/schemaxis/workflow_templates.py:147-148"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/constraints/properties/enum": {
+          "status": "reviewed",
+          "explanation": "Nonempty list of allowed choices for an enum parameter; all of one scalar type (string, boolean or number) and unique. Integers and decimals count as one type.",
+          "label": "Choices",
+          "examples": [
+            [
+              "coarse",
+              "medium",
+              "fine"
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:110-117",
+            "docs/design/workflow-templates/template-contract.md#parameter-subset"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/constraints/properties/enum/items": {
+          "status": "reviewed",
+          "explanation": "One allowed choice: a string, boolean or number of the same type as the other choices.",
+          "examples": [
+            "fine"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:113-117"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/target": {
+          "status": "reviewed",
+          "explanation": "The workflow value this parameter replaces when a case is bound.",
+          "label": "Bound value",
+          "defaultMeaning": "Required.",
+          "examples": [
+            {
+              "scope": "workflow",
+              "pointer": "/settings/meshSize"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:181-189"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/target/properties/scope": {
+          "status": "reviewed",
+          "explanation": "Always \"workflow\": the pointer is read from the workflow root, not from an operation document.",
+          "label": "Scope",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "workflow"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:183-184"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/target/properties/pointer": {
+          "status": "reviewed",
+          "explanation": "Pointer from the workflow root to an existing value at least one key below /dimensions, /definitions or /settings, for example /settings/meshSize. Parameters' targets must not overlap.",
+          "label": "Target pointer",
+          "defaultMeaning": "Required.",
+          "pitfalls": [
+            "Operation-local values cannot be bound directly; use Expose parameter, which moves the literal to /settings or /dimensions and leaves a workflow-scoped $document in its place."
+          ],
+          "examples": [
+            "/settings/meshSize"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:58-66",
+            "src/schemaxis/workflow_templates.py:185-189",
+            "docs/design/workflow-templates/template-contract.md#parameter-subset"
+          ]
+        },
+        "/properties/outputs": {
+          "status": "reviewed",
+          "explanation": "Aliases for selected producer artifacts, keyed by alias name. They are written into the exported template and supply the {output} token when verified outputs are named; static validation does not prove that the artifact exists or has the stated kind or units.",
+          "label": "Named outputs",
+          "defaultMeaning": "{} (none).",
+          "examples": [
+            {}
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:203-217",
+            "src/schemaxis/output_naming.py:218-236",
+            "docs/design/workflow-templates/template-contract.md#manifest-and-output-subset"
+          ]
+        },
+        "/properties/outputs/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "One named output: the operation and artifact it designates, an optional pointer inside the artifact, and a descriptive kind and units.",
+          "examples": [
+            {
+              "operation": "mesh",
+              "artifact": 0,
+              "kind": "geometry"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:209-217"
+          ]
+        },
+        "/properties/outputs/additionalProperties/properties/operation": {
+          "status": "reviewed",
+          "explanation": "ID of the operation that publishes the artifact.",
+          "label": "Operation",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "mesh"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:211-212"
+          ]
+        },
+        "/properties/outputs/additionalProperties/properties/artifact": {
+          "status": "reviewed",
+          "explanation": "Zero-based index of the artifact in the producer's verified publication order.",
+          "label": "Artifact index",
+          "defaultMeaning": "Required.",
+          "examples": [
+            0
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:213-214"
+          ]
+        },
+        "/properties/outputs/additionalProperties/properties/pointer": {
+          "status": "reviewed",
+          "explanation": "Optional RFC 6901 pointer to a value inside a structured (JSON or table) artifact.",
+          "label": "Value pointer",
+          "examples": [
+            "/rows/0/1"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:215-216"
+          ]
+        },
+        "/properties/outputs/additionalProperties/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Free-text description of what the artifact is, such as image or table; not checked against the native artifact.",
+          "label": "Output kind",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "image"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:214",
+            "docs/design/workflow-templates/template-contract.md#manifest-and-output-subset"
+          ]
+        },
+        "/properties/outputs/additionalProperties/properties/units": {
+          "status": "reviewed",
+          "explanation": "Optional free-text units of the designated value; documentation only, no conversion.",
+          "label": "Units",
+          "examples": [
+            "m^3"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_templates.py:217",
+            "docs/design/workflow-templates/template-contract.md#manifest-and-output-subset"
+          ]
+        },
+        "/properties/naming": {
+          "status": "reviewed",
+          "explanation": "Preferred file names for the named/ copies of verified outputs (hard links or copies made after verification; native publication names are unchanged). Exporting a template copies it into the example case's run options.",
+          "label": "Output naming",
+          "defaultMeaning": "When a case gives no naming, Studio's output naming settings apply, otherwise the pattern {index}-{operation}-{output}{ext} with index width 6.",
+          "examples": [
+            {
+              "pattern": "{index}-{operation}-{output}{ext}",
+              "indexWidth": 3
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:544-549",
+            "src/schemaxis/workflow_design.py:1335-1336",
+            "src/schemaxis/output_naming.py:1-8",
+            "src/schemaxis/studio_cases.py:206-212"
+          ]
+        },
+        "/properties/naming/properties/pattern": {
+          "status": "reviewed",
+          "explanation": "Single file-name pattern made of literal text (letters, digits and _ . + = , @ -) and tokens: {index} run-wide 1-based ordinal, {operation}, {output} (output alias or native file stem), {artifact} index, {ext} original extension, {param:ID} bound parameter value, {axis:NAME} study axis value. At least one token; it must not start with a dot.",
+          "label": "Name pattern",
+          "pitfalls": [
+            "If two outputs receive the same name, naming fails with NAMING_COLLISION; include {index} or another distinguishing token."
+          ],
+          "examples": [
+            "{index}-{operation}-{output}{ext}"
+          ],
+          "sources": [
+            "src/schemaxis/output_naming.py:22-30",
+            "src/schemaxis/output_naming.py:40-64",
+            "src/schemaxis/output_naming.py:218-236"
+          ]
+        },
+        "/properties/naming/properties/indexWidth": {
+          "status": "reviewed",
+          "explanation": "Minimum digits of {index}, zero-padded (3 gives 001); from 1 to 12.",
+          "label": "Index width",
+          "defaultMeaning": "6 when neither the case nor Studio settings specify it.",
+          "examples": [
+            3
+          ],
+          "sources": [
+            "src/schemaxis/output_naming.py:34-37",
+            "src/schemaxis/output_naming.py:200-201"
+          ]
+        },
+        "/properties/layout": {
+          "status": "reviewed",
+          "explanation": "Presentation-only positions of operation boxes and the saved canvas view. It is excluded from loop identity and from the template digest, so moving boxes never invalidates feedback settings or exported templates.",
+          "label": "Layout",
+          "examples": [
+            {
+              "nodes": {}
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:370",
+            "src/schemaxis/workflow_design.py:552-572",
+            "src/schemaxis/workflow_design.py:1113-1128",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/layout/properties/nodes": {
+          "status": "reviewed",
+          "explanation": "Saved canvas position of each operation box, keyed by operation ID; operations without one are placed automatically.",
+          "label": "Box positions",
+          "examples": [
+            {
+              "mesh": {
+                "x": 120,
+                "y": 80
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:554-562",
+            "src/schemaxis/studio_ui/windows/designer/model.mjs:42-47"
+          ]
+        },
+        "/properties/layout/properties/nodes/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "Position of one operation box in canvas (world) coordinates, before pan and zoom are applied.",
+          "examples": [
+            {
+              "x": 120,
+              "y": 80
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:559-562",
+            "src/schemaxis/studio_ui/windows/designer/geometry.mjs:154-160"
+          ]
+        },
+        "/properties/layout/properties/nodes/additionalProperties/properties/x": {
+          "status": "reviewed",
+          "explanation": "Horizontal canvas coordinate of the box, increasing to the right; finite, within +/-1e7.",
+          "label": "X",
+          "examples": [
+            120
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:560-562"
+          ]
+        },
+        "/properties/layout/properties/nodes/additionalProperties/properties/y": {
+          "status": "reviewed",
+          "explanation": "Vertical canvas coordinate of the box, increasing downwards as on screen; finite, within +/-1e7.",
+          "label": "Y",
+          "examples": [
+            80
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:560-562",
+            "src/schemaxis/studio_ui/windows/designer/geometry.mjs:154-160"
+          ]
+        },
+        "/properties/layout/properties/viewport": {
+          "status": "reviewed",
+          "explanation": "Saved pan and zoom of the canvas: screen position = canvas position x zoom + (x, y).",
+          "label": "Viewport",
+          "defaultMeaning": "Omitted: the designer starts at x 0, y 0, zoom 1.",
+          "examples": [
+            {
+              "x": 0,
+              "y": 0,
+              "zoom": 1
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:563-572",
+            "src/schemaxis/studio_ui/windows/designer/geometry.mjs:154-160"
+          ]
+        },
+        "/properties/layout/properties/viewport/properties/x": {
+          "status": "reviewed",
+          "explanation": "Horizontal pan offset of the canvas, in screen pixels.",
+          "label": "Pan X",
+          "examples": [
+            0
+          ],
+          "sources": [
+            "src/schemaxis/studio_ui/windows/designer/geometry.mjs:158-160"
+          ]
+        },
+        "/properties/layout/properties/viewport/properties/y": {
+          "status": "reviewed",
+          "explanation": "Vertical pan offset of the canvas, in screen pixels.",
+          "label": "Pan Y",
+          "examples": [
+            0
+          ],
+          "sources": [
+            "src/schemaxis/studio_ui/windows/designer/geometry.mjs:158-160"
+          ]
+        },
+        "/properties/layout/properties/viewport/properties/zoom": {
+          "status": "reviewed",
+          "explanation": "Zoom factor (1 = 100 %). The file accepts 0.01 to 100, while the designer's zoom controls keep it between 0.2 and 2.5.",
+          "label": "Zoom",
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:570-571",
+            "src/schemaxis/studio_ui/windows/designer/canvas.mjs:147-152"
+          ]
+        },
+        "/properties/connections": {
+          "status": "reviewed",
+          "explanation": "Port-to-port arrows. Each joins a declared output port of one operation to a declared input port of another and compiles to exactly one version 1 connection, which replaces the target input with an $artifact or $value reference. Both ports must have the same kind, and an input port accepts one connection.",
+          "label": "Connections",
+          "defaultMeaning": "Required; [] when there are no arrows. At most 2048.",
+          "examples": [
+            []
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:470-500",
+            "src/schemaxis/workflow_design.py:575-588",
+            "docs/design/studio/architecture.md"
+          ]
+        },
+        "/properties/connections/items": {
+          "status": "reviewed",
+          "explanation": "One arrow from an output port to an input port.",
+          "examples": [
+            {
+              "id": "meshToSolve",
+              "from": {
+                "operation": "mesh",
+                "port": "volume"
+              },
+              "to": {
+                "operation": "solve",
+                "port": "meshFile"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:470-500",
+            "src/schemaxis/studio_schemas.py:81-82"
+          ]
+        },
+        "/properties/connections/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique name of this arrow, used to disconnect it and to identify it in loops, warnings and diagnostics.",
+          "label": "Connection ID",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "meshToSolve"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:473",
+            "src/schemaxis/workflow_design.py:303-305"
+          ]
+        },
+        "/properties/connections/items/properties/from": {
+          "status": "reviewed",
+          "explanation": "Producer end of the arrow: an operation and one of its declared output ports.",
+          "label": "From",
+          "defaultMeaning": "Required.",
+          "examples": [
+            {
+              "operation": "mesh",
+              "port": "volume"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:475-486"
+          ]
+        },
+        "/properties/connections/items/properties/from/properties/operation": {
+          "status": "reviewed",
+          "explanation": "ID of the producing operation.",
+          "label": "Operation",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "mesh"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:479-481"
+          ]
+        },
+        "/properties/connections/items/properties/from/properties/port": {
+          "status": "reviewed",
+          "explanation": "Name of a declared output port of the producing operation.",
+          "label": "Output port",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "volume"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:482-485"
+          ]
+        },
+        "/properties/connections/items/properties/to": {
+          "status": "reviewed",
+          "explanation": "Consumer end of the arrow: an operation and one of its declared input ports, which must not already have another connection.",
+          "label": "To",
+          "defaultMeaning": "Required.",
+          "examples": [
+            {
+              "operation": "solve",
+              "port": "meshFile"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:475-495"
+          ]
+        },
+        "/properties/connections/items/properties/to/properties/operation": {
+          "status": "reviewed",
+          "explanation": "ID of the consuming operation.",
+          "label": "Operation",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "solve"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:479-481"
+          ]
+        },
+        "/properties/connections/items/properties/to/properties/port": {
+          "status": "reviewed",
+          "explanation": "Name of a declared input port of the consuming operation; it decides which input is replaced.",
+          "label": "Input port",
+          "defaultMeaning": "Required.",
+          "examples": [
+            "meshFile"
+          ],
+          "sources": [
+            "src/schemaxis/workflow_design.py:482-485",
+            "src/schemaxis/workflow_design.py:496-497"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Schemaxis assembly literal settings",
+  "$defs": {
+    "json": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.freecad.assembly/1"
+    },
+    "units": {
+      "const": "mm"
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "type": {
+                "const": "box"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "length": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 10000,
+                    "default": 10
+                  },
+                  "width": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 10000,
+                    "default": 10
+                  },
+                  "height": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 10000,
+                    "default": 10
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "type": {
+                "const": "cylinder"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "radius": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 10000,
+                    "default": 5
+                  },
+                  "height": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 10000,
+                    "default": 10
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "type"
+            ]
+          }
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          },
+          "part": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": -100000,
+              "maximum": 100000
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "default": [
+              0,
+              0,
+              0
+            ]
+          },
+          "rotation": {
+            "type": "number",
+            "minimum": -360,
+            "maximum": 360,
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "part"
+        ]
+      },
+      "minItems": 2,
+      "maxItems": 32
+    },
+    "grounded": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    },
+    "joints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          },
+          "type": {
+            "const": "fixed"
+          },
+          "parent": {
+            "type": "object",
+            "properties": {
+              "component": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "face": {
+                "enum": [
+                  "top",
+                  "bottom"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "component",
+              "face"
+            ]
+          },
+          "child": {
+            "type": "object",
+            "properties": {
+              "component": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "face": {
+                "enum": [
+                  "top",
+                  "bottom"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "component",
+              "face"
+            ]
+          },
+          "offset": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": -100000,
+              "maximum": 100000
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "default": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "parent",
+          "child"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 31
+    },
+    "dimensions": {
+      "$ref": "#/$defs/json"
+    },
+    "definitions": {
+      "$ref": "#/$defs/json"
+    },
+    "settings": {
+      "$ref": "#/$defs/json"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "parts",
+    "components",
+    "grounded",
+    "joints"
+  ]
+}

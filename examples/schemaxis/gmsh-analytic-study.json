@@ -1,0 +1,57 @@
+{
+  "version": "schemaxis.gmsh/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "solid",
+      "filter": "box",
+      "options": {
+        "size": [
+          {
+            "$document": "/dimensions/extent"
+          },
+          10,
+          10
+        ]
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "tetrahedral",
+      "inputs": {
+        "input": "solid"
+      },
+      "options": {
+        "size": {
+          "$document": "/dimensions/h"
+        },
+        "volumeName": "domain",
+        "boundaryName": "boundary",
+        "volumeTolerance": 1e-06
+      }
+    }
+  ],
+  "output": "mesh",
+  "dimensions": {
+    "extent": {
+      "$analytic": {
+        "type": "values",
+        "values": [
+          10,
+          12
+        ],
+        "sync": "design"
+      }
+    },
+    "h": {
+      "$analytic": {
+        "type": "values",
+        "values": [
+          3,
+          2
+        ],
+        "sync": "design"
+      }
+    }
+  }
+}

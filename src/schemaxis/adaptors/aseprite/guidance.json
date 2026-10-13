@@ -1,0 +1,1950 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "sprite": {
+      "status": "reviewed",
+      "explanation": "Starts every Aseprite document: creates a new RGB sprite canvas of width x height pixels with one transparent frame, one normal image layer and an initial palette. It must be the first node and appear only once; every later operation modifies this same sprite in sequence. The finished sprite is published as editable sprite.aseprite, preview.png (first frame), sheet.png (all frames in a row) and sheet.json (frame rectangles, durations and tags).",
+      "sources": [
+        "src/schemaxis/adaptors/aseprite/adaptor.py:38-41",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:74-79",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:88-90",
+        "src/schemaxis/adaptors/aseprite/native_source.py:94-98",
+        "src/schemaxis/adaptors/aseprite/native_source.py:125-131",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:296-299",
+        "docs/aseprite.md#document-contract",
+        "docs/media-workflows.md#published-artifact-order",
+        "https://www.aseprite.org/api/sprite"
+      ],
+      "pitfalls": [
+        "Choose the canvas size first: drawing nodes are checked against it, and the canvas cannot be resized later in the chain.",
+        "Larger canvases leave less room for layers and frames: width x height x frames x layers may not exceed 262144 (a 256 x 256 canvas allows only four layer-frame cels in total). Native acceptance covers the bundled icon and two-layer, two-frame animation examples with Aseprite 1.3.x in batch mode; it does not review GUI appearance."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/aseprite-animation.json",
+          "purpose": "16 x 16 sprite with two layers, two frames, a palette and a ping-pong tag."
+        }
+      ]
+    },
+    "layer": {
+      "status": "reviewed",
+      "explanation": "Adds a new, empty, visible image layer with normal blending on top of all existing layers. Choose it to keep parts of the artwork separately editable in Aseprite, such as a background and a foreground; in the flattened preview and sheet, opaque pixels on later layers cover those on earlier layers. Drawing nodes select the layer by its name.",
+      "sources": [
+        "src/schemaxis/adaptors/aseprite/adaptor.py:42",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:91-94",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:169-176",
+        "src/schemaxis/adaptors/aseprite/native_source.py:99-100",
+        "https://www.aseprite.org/api/sprite"
+      ],
+      "pitfalls": [
+        "At most 16 layers in total, including the sprite's initial layer; names must be unique.",
+        "It must take its sprite input from the immediately preceding node."
+      ]
+    },
+    "frame": {
+      "status": "reviewed",
+      "explanation": "Appends one new empty animation frame after the last frame, with its own display duration. Choose it to build an animation; frames are numbered from 1 in the order they are added, and every layer is transparent in the new frame until drawing nodes with that frame number paint it. Each frame becomes one cell of the horizontal sheet.png.",
+      "sources": [
+        "src/schemaxis/adaptors/aseprite/adaptor.py:43",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:95-96",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:157-159",
+        "src/schemaxis/adaptors/aseprite/native_source.py:101-102",
+        "https://www.aseprite.org/api/sprite",
+        "docs/aseprite.md#document-contract"
+      ],
+      "pitfalls": [
+        "Nothing is copied from the previous frame; redraw the background on the new frame (as the animation example does).",
+        "At most 32 frames, and the sheet width (canvas width x frames) may not exceed 8192 pixels. It must take its sprite input from the immediately preceding node."
+      ]
+    },
+    "palette": {
+      "status": "reviewed",
+      "explanation": "Replaces the sprite's whole palette with the listed RGBA colours, in order. Because Schemaxis sprites use RGB colour mode, the palette is saved in sprite.aseprite as the colour swatches offered when editing in Aseprite; it does not recolour existing pixels and does not restrict which colours drawing nodes may use.",
+      "sources": [
+        "src/schemaxis/adaptors/aseprite/adaptor.py:44",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:160",
+        "src/schemaxis/adaptors/aseprite/native_source.py:17-21",
+        "src/schemaxis/adaptors/aseprite/native_source.py:103",
+        "https://www.aseprite.org/docs/color-mode/",
+        "https://www.aseprite.org/api/palette",
+        "docs/aseprite.md#document-contract"
+      ],
+      "pitfalls": [
+        "Changing a palette entry never changes pixels already drawn; change the colour of the drawing nodes instead.",
+        "It must take its sprite input from the immediately preceding node."
+      ]
+    },
+    "pixel": {
+      "status": "reviewed",
+      "explanation": "Sets exactly one pixel at zero-based column x and row y (origin at the top-left) on a named layer and frame. Pixels are replaced, not blended: an opaque colour overwrites the selected layer and frame, and transparent [0, 0, 0, 0] erases. Choose it for highlights, outlines and single details; use rect or circle for filled areas.",
+      "sources": [
+        "src/schemaxis/adaptors/aseprite/adaptor.py:45",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:101-107",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:163-168",
+        "src/schemaxis/adaptors/aseprite/native_source.py:106-122",
+        "https://www.aseprite.org/api/image",
+        "docs/aseprite.md#document-contract"
+      ],
+      "pitfalls": [
+        "The layer and frame must already exist at this point of the chain; otherwise planning fails with INVALID_DRAW. It must take its sprite input from the immediately preceding node."
+      ]
+    },
+    "rect": {
+      "status": "reviewed",
+      "explanation": "Fills an axis-aligned rectangle of width x height pixels whose top-left pixel is at (x, y), covering columns x to x + width - 1 and rows y to y + height - 1, on a named layer and frame. Pixels are replaced, not blended: an opaque colour overwrites the selected layer and frame, and transparent [0, 0, 0, 0] erases. Choose it for backgrounds, panels and blocks; a full-canvas rect is the usual way to give a frame an opaque background.",
+      "sources": [
+        "src/schemaxis/adaptors/aseprite/adaptor.py:46",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:101-107",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:163-168",
+        "src/schemaxis/adaptors/aseprite/native_source.py:117-121",
+        "docs/aseprite.md#document-contract"
+      ],
+      "pitfalls": [
+        "The whole rectangle must lie inside the canvas (x + width and y + height at most the canvas size); it is rejected, not clipped. It must take its sprite input from the immediately preceding node."
+      ]
+    },
+    "circle": {
+      "status": "reviewed",
+      "explanation": "Fills a raster disc centred on pixel (x, y): every pixel whose squared distance from the centre is at most radius squared, on a named layer and frame. Radius 0 draws a single pixel. Pixels are replaced, not blended: an opaque colour overwrites the selected layer and frame, and transparent [0, 0, 0, 0] erases. Choose it for round shapes and, with a transparent colour, for round cut-outs.",
+      "sources": [
+        "src/schemaxis/adaptors/aseprite/adaptor.py:47",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:101-107",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:166",
+        "src/schemaxis/adaptors/aseprite/native_source.py:111-116",
+        "docs/aseprite.md#document-contract"
+      ],
+      "pitfalls": [
+        "The full square from (x - radius, y - radius) to (x + radius, y + radius) must fit in the canvas, so a disc cannot touch beyond the edge. It must take its sprite input from the immediately preceding node.",
+        "The disc always has an odd diameter (2 x radius + 1 pixels); an even-width circle is not possible."
+      ]
+    },
+    "tag": {
+      "status": "reviewed",
+      "explanation": "Names an inclusive range of existing frames and records its playback direction as an Aseprite animation tag. Tags change no pixels; they are saved in sprite.aseprite and listed in sheet.json so that a game engine or an artist in Aseprite can play that sequence. Choose it to label animations such as walk or blink when the sprite has several frames.",
+      "sources": [
+        "src/schemaxis/adaptors/aseprite/adaptor.py:48-50",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:97-100",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:161",
+        "src/schemaxis/adaptors/aseprite/adaptor.py:178",
+        "src/schemaxis/adaptors/aseprite/native_source.py:104-105",
+        "https://www.aseprite.org/docs/tags/",
+        "https://www.aseprite.org/api/tag",
+        "docs/media-workflows.md#ffmpeg-publication"
+      ],
+      "pitfalls": [
+        "Add the tag after the frame nodes it covers: toFrame may not exceed the number of frames created so far.",
+        "Schemaxis's FFmpeg sheet encoding keeps tags as metadata only; they do not select or reorder video playback. It must take its sprite input from the immediately preceding node."
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.aseprite/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "An Aseprite sprite document: a linear chain of operations that starts with one sprite node and then adds layers, frames, palette changes, drawings and tags in order, each taking the previous node as its input. output names the final node. Schemaxis runs the chain in Aseprite's batch mode, reopens the saved sprite in a fresh process and compares every cel and both PNGs with an independent pixel model.",
+          "pitfalls": [
+            "Branches are not possible: two nodes taking the same input fail with INVALID_DEPENDENCY."
+          ],
+          "examples": [
+            {
+              "version": "schemaxis.aseprite/1",
+              "nodes": [
+                {
+                  "id": "canvas",
+                  "filter": "sprite",
+                  "options": {
+                    "width": 8,
+                    "height": 8
+                  }
+                },
+                {
+                  "id": "square",
+                  "filter": "rect",
+                  "inputs": {
+                    "sprite": "canvas"
+                  },
+                  "options": {
+                    "layer": "base",
+                    "x": 1,
+                    "y": 1,
+                    "width": 6,
+                    "height": 6,
+                    "colour": [
+                      30,
+                      130,
+                      230,
+                      255
+                    ]
+                  }
+                }
+              ],
+              "output": "square"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:56-115",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:130-142",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:145-186",
+            "docs/aseprite.md#document-contract",
+            "docs/aseprite.md#outputs-and-evidence"
+          ]
+        },
+        "/properties/version": {
+          "status": "reference",
+          "explanation": "Identifies the document format and chooses its adaptor. Keep the version matching the selected schema.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reviewed",
+          "explanation": "The ordered operation chain, 1 to 256 nodes. The first node must be the sprite node; each later node names the immediately preceding node as its sprite input and is applied in that order, so layers and frames must be created before drawing on them and frames before tags that cover them. Node ids must be unique.",
+          "label": "Operation chain",
+          "pitfalls": [
+            "Reordering nodes also requires updating every sprite input and output, because each input must name the node directly before it."
+          ],
+          "examples": [
+            [
+              {
+                "id": "canvas",
+                "filter": "sprite",
+                "options": {
+                  "width": 16,
+                  "height": 16
+                }
+              },
+              {
+                "id": "dot",
+                "filter": "pixel",
+                "inputs": {
+                  "sprite": "canvas"
+                },
+                "options": {
+                  "layer": "base",
+                  "x": 8,
+                  "y": 8,
+                  "colour": [
+                    255,
+                    255,
+                    255,
+                    255
+                  ]
+                }
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:60-79",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:101-109",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reviewed",
+          "explanation": "One step of the chain. Its filter chooses the operation: sprite (first node only) creates the canvas; layer and frame add structure; palette replaces the swatches; pixel, rect and circle draw; tag labels a frame range.",
+          "examples": [
+            {
+              "id": "extra",
+              "filter": "frame",
+              "inputs": {
+                "sprite": "canvas"
+              },
+              "options": {
+                "durationMS": 200
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:38-51",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:65-81"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "The sprite node is always the first node: it creates the canvas, its first layer, frame 1 and the initial palette. No other node can create a sprite.",
+          "examples": [
+            {
+              "id": "canvas",
+              "filter": "sprite",
+              "options": {
+                "width": 16,
+                "height": 16,
+                "durationMS": 120
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:74-75",
+            "src/schemaxis/adaptors/aseprite/native_source.py:94-98"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options": {
+          "status": "reviewed",
+          "explanation": "Canvas size, first layer name, first frame duration and initial palette. width and height are required and bound every later drawing; the rest take the Schemaxis defaults when omitted: layer \"base\", 100 ms, and a palette of transparent and white.",
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:39-41",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:80-81",
+            "docs/aseprite.md#document-contract"
+          ],
+          "examples": [
+            {
+              "width": 32,
+              "height": 32,
+              "layer": "background",
+              "durationMS": 100
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/width": {
+          "status": "reviewed",
+          "explanation": "Canvas width in pixels (1 to 256). Every frame and layer has this width, drawing x coordinates must stay below it, and sheet.png is width x number of frames pixels wide.",
+          "label": "Canvas width",
+          "units": "Pixels",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Width also limits frames: width x frames may not exceed 8192, and width x height x frames x layers may not exceed 262144."
+          ],
+          "examples": [
+            16
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:39",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:88-89",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:105-109",
+            "src/schemaxis/adaptors/aseprite/native_source.py:95",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:182-183"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/height": {
+          "status": "reviewed",
+          "explanation": "Canvas height in pixels (1 to 256). Every frame and layer has this height, and drawing y coordinates (counted downwards from the top row 0) must stay below it.",
+          "label": "Canvas height",
+          "units": "Pixels",
+          "defaultMeaning": "Required; there is no default.",
+          "examples": [
+            16
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:39",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:88-89",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:105-109",
+            "src/schemaxis/adaptors/aseprite/native_source.py:95"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/layer": {
+          "status": "reviewed",
+          "explanation": "Name given to the sprite's first (bottom) image layer. Drawing nodes refer to this name to paint on it; later layer nodes stack above it.",
+          "label": "First layer name",
+          "defaultMeaning": "Schemaxis default: \"base\".",
+          "pitfalls": [
+            "If you rename it, update the layer option of every drawing node that targets it.",
+            "Names may not contain NUL characters and must differ from all later layer names."
+          ],
+          "examples": [
+            "background"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:40",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:90",
+            "src/schemaxis/adaptors/aseprite/native_source.py:96"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/durationMS": {
+          "status": "reviewed",
+          "explanation": "Display time of frame 1 in milliseconds (1 to 65535), saved as the frame duration in sprite.aseprite and listed in sheet.json. Later frames get their own durations from frame nodes.",
+          "label": "First frame duration",
+          "units": "Milliseconds",
+          "defaultMeaning": "Schemaxis default: 100 (10 frames per second).",
+          "pitfalls": [
+            "A video encoded from the sheet needs durations that are exact multiples of 1000 / fps; for example 40 ms at 25 fps."
+          ],
+          "examples": [
+            120
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:41",
+            "src/schemaxis/adaptors/aseprite/native_source.py:97",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:183-184",
+            "https://github.com/aseprite/aseprite/blob/main/docs/ase-file-specs.md",
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colours": {
+          "status": "reviewed",
+          "explanation": "Initial palette: 1 to 256 RGBA entries saved in order as palette indices 0, 1, 2 and so on. In RGB colour mode the palette only provides editing swatches; it neither limits nor changes the colours drawn. A later palette node replaces it.",
+          "label": "Initial palette",
+          "defaultMeaning": "Schemaxis default: [[0, 0, 0, 0], [255, 255, 255, 255]] (transparent and white).",
+          "pitfalls": [
+            "Each entry is either opaque with alpha 255 or exactly [0, 0, 0, 0]; other alpha values fail planning with UNSUPPORTED_COLOUR."
+          ],
+          "examples": [
+            [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                20,
+                40,
+                80,
+                255
+              ],
+              [
+                250,
+                150,
+                30,
+                255
+              ]
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:26-27",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:41",
+            "src/schemaxis/adaptors/aseprite/native_source.py:17-21",
+            "src/schemaxis/adaptors/aseprite/native_source.py:98",
+            "https://www.aseprite.org/docs/color-mode/"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colours/items": {
+          "status": "reviewed",
+          "explanation": "One palette entry as [red, green, blue, alpha] bytes: either an opaque colour with alpha 255 or transparent [0, 0, 0, 0]. Its position in the list is its palette index; duplicates are kept.",
+          "examples": [
+            [
+              20,
+              40,
+              80,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:25-27",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/native_source.py:17-21"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colours/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Choose fully transparent [0, 0, 0, 0] as a palette entry, usually index 0 so the swatches include a transparent eraser. It is the only accepted transparent value: Schemaxis supports no partial alpha and requires the colour channels of a transparent entry to be zero.",
+          "examples": [
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colours/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose an opaque colour [red, green, blue, 255] as a palette entry: an editing swatch stored at this index. Each channel is an integer byte from 0 to 255 and the fourth value must be exactly 255; for a transparent swatch use the [0, 0, 0, 0] alternative instead.",
+          "examples": [
+            [
+              250,
+              150,
+              30,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colours/items/anyOf/1/prefixItems/0": {
+          "status": "reviewed",
+          "explanation": "The red channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            250
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colours/items/anyOf/1/prefixItems/1": {
+          "status": "reviewed",
+          "explanation": "The green channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            150
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colours/items/anyOf/1/prefixItems/2": {
+          "status": "reviewed",
+          "explanation": "The blue channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            30
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colours/items/anyOf/1/prefixItems/3": {
+          "status": "reviewed",
+          "explanation": "The alpha (opacity) channel, which must be 255 for an opaque colour. Partially transparent colours are not supported; use [0, 0, 0, 0] for full transparency instead.",
+          "examples": [
+            255
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose a layer node to add a separately editable image layer above the existing ones, so later drawing on it covers the layers below.",
+          "examples": [
+            {
+              "id": "foreground",
+              "filter": "layer",
+              "inputs": {
+                "sprite": "background"
+              },
+              "options": {
+                "name": "orb"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:42",
+            "src/schemaxis/adaptors/aseprite/native_source.py:100"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options": {
+          "status": "reviewed",
+          "explanation": "The new layer has a single required setting, its name. Visibility, opacity (fully opaque) and normal blending are fixed by Schemaxis.",
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:42",
+            "src/schemaxis/adaptors/aseprite/native_source.py:65",
+            "src/schemaxis/adaptors/aseprite/native_source.py:100"
+          ],
+          "examples": [
+            {
+              "name": "details"
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/name": {
+          "status": "reviewed",
+          "explanation": "Name of the new layer, 1 to 64 characters. Drawing nodes select the layer by this exact name, and the name is kept in sprite.aseprite for editing in Aseprite.",
+          "label": "Layer name",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "A name already used by an earlier layer (including the sprite's first layer) fails planning with INVALID_LAYER.",
+            "Names are case-sensitive: \"Orb\" and \"orb\" are different layers."
+          ],
+          "examples": [
+            "orb"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:24",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:42",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:82-84",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:91-94",
+            "src/schemaxis/adaptors/aseprite/native_source.py:100"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs/properties/sprite": {
+          "status": "reviewed",
+          "explanation": "Id of the node immediately before this layer node in nodes; the layer is added to the sprite produced by that node.",
+          "label": "Previous node",
+          "pitfalls": [
+            "Any other id, even an earlier node, fails planning with INVALID_DEPENDENCY."
+          ],
+          "examples": [
+            "background"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:76-79",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Choose a frame node to append an empty animation frame with its own duration; draw on it by giving drawing nodes its frame number.",
+          "examples": [
+            {
+              "id": "second",
+              "filter": "frame",
+              "inputs": {
+                "sprite": "highlight"
+              },
+              "options": {
+                "durationMS": 200
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:43",
+            "src/schemaxis/adaptors/aseprite/native_source.py:101-102"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options": {
+          "status": "reviewed",
+          "explanation": "The new frame's only setting is its display duration; omitted, it takes the Schemaxis default of 100 ms. The frame number is implied by order: the first frame node creates frame 2.",
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:43",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:95-96"
+          ],
+          "examples": [
+            {
+              "durationMS": 200
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/durationMS": {
+          "status": "reviewed",
+          "explanation": "Display time of the new frame in milliseconds (1 to 65535), saved in sprite.aseprite and listed in sheet.json. Unequal durations let one frame hold longer than others.",
+          "label": "Frame duration",
+          "units": "Milliseconds",
+          "defaultMeaning": "Schemaxis default: 100.",
+          "pitfalls": [
+            "For video encoding of the sheet, every duration must be an exact multiple of 1000 / fps."
+          ],
+          "examples": [
+            200
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:43",
+            "src/schemaxis/adaptors/aseprite/native_source.py:102",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:183-184",
+            "https://github.com/aseprite/aseprite/blob/main/docs/ase-file-specs.md",
+            "https://www.aseprite.org/api/frame",
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs/properties/sprite": {
+          "status": "reviewed",
+          "explanation": "Id of the node immediately before this frame node in nodes; the frame is appended to the sprite produced by that node.",
+          "label": "Previous node",
+          "pitfalls": [
+            "Any other id fails planning with INVALID_DEPENDENCY."
+          ],
+          "examples": [
+            "highlight"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:76-79"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3": {
+          "status": "reviewed",
+          "explanation": "Choose a palette node to replace the sprite's swatches with a curated list of colours, for example the exact colours the artwork uses. Pixels are not changed.",
+          "examples": [
+            {
+              "id": "colours",
+              "filter": "palette",
+              "inputs": {
+                "sprite": "canvas"
+              },
+              "options": {
+                "colours": [
+                  [
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    20,
+                    40,
+                    80,
+                    255
+                  ]
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:44",
+            "src/schemaxis/adaptors/aseprite/native_source.py:103"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options": {
+          "status": "reviewed",
+          "explanation": "The replacement palette, which is required. The new list replaces every previous entry rather than adding to them.",
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:44",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:52",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:160"
+          ],
+          "examples": [
+            {
+              "colours": [
+                [
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  20,
+                  40,
+                  80,
+                  255
+                ],
+                [
+                  250,
+                  150,
+                  30,
+                  255
+                ],
+                [
+                  255,
+                  255,
+                  255,
+                  255
+                ]
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/colours": {
+          "status": "reviewed",
+          "explanation": "The complete new palette: 1 to 256 RGBA entries saved in order as indices 0, 1, 2 and so on, replacing the previous palette. In RGB colour mode these are swatches only; drawing colours need not appear in it.",
+          "label": "Palette colours",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Entries with alpha other than 0 or 255, or transparent entries with non-zero colour, fail with UNSUPPORTED_COLOUR."
+          ],
+          "examples": [
+            [
+              [
+                0,
+                0,
+                0,
+                0
+              ],
+              [
+                20,
+                40,
+                80,
+                255
+              ],
+              [
+                250,
+                150,
+                30,
+                255
+              ]
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:44",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:52",
+            "src/schemaxis/adaptors/aseprite/native_source.py:17-21",
+            "src/schemaxis/adaptors/aseprite/native_source.py:103",
+            "https://www.aseprite.org/docs/color-mode/",
+            "https://www.aseprite.org/api/palette"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/colours/items": {
+          "status": "reviewed",
+          "explanation": "One palette entry as [red, green, blue, alpha] bytes, opaque with alpha 255 or transparent [0, 0, 0, 0]; its position in the list is its palette index.",
+          "examples": [
+            [
+              250,
+              150,
+              30,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:25-26",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/native_source.py:17-21"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/colours/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Choose fully transparent [0, 0, 0, 0] as a palette entry, conventionally at index 0 as the transparent swatch. It is the only accepted transparent value: Schemaxis supports no partial alpha and requires the colour channels of a transparent entry to be zero.",
+          "examples": [
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/colours/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose an opaque colour [red, green, blue, 255] as a palette entry: an editing swatch stored at this index. Each channel is an integer byte from 0 to 255 and the fourth value must be exactly 255; for a transparent swatch use the [0, 0, 0, 0] alternative instead.",
+          "examples": [
+            [
+              250,
+              150,
+              30,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/colours/items/anyOf/1/prefixItems/0": {
+          "status": "reviewed",
+          "explanation": "The red channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            250
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/colours/items/anyOf/1/prefixItems/1": {
+          "status": "reviewed",
+          "explanation": "The green channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            150
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/colours/items/anyOf/1/prefixItems/2": {
+          "status": "reviewed",
+          "explanation": "The blue channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            30
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/colours/items/anyOf/1/prefixItems/3": {
+          "status": "reviewed",
+          "explanation": "The alpha (opacity) channel, which must be 255 for an opaque colour. Partially transparent colours are not supported; use [0, 0, 0, 0] for full transparency instead.",
+          "examples": [
+            255
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs/properties/sprite": {
+          "status": "reviewed",
+          "explanation": "Id of the node immediately before this palette node in nodes; that node's sprite receives the new palette.",
+          "label": "Previous node",
+          "pitfalls": [
+            "Any other id fails planning with INVALID_DEPENDENCY."
+          ],
+          "examples": [
+            "canvas"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:76-79"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4": {
+          "status": "reviewed",
+          "explanation": "Choose a pixel node to set one pixel, for highlights, eyes, outlines and other single-pixel details.",
+          "examples": [
+            {
+              "id": "highlight",
+              "filter": "pixel",
+              "inputs": {
+                "sprite": "orb1"
+              },
+              "options": {
+                "layer": "orb",
+                "x": 4,
+                "y": 7,
+                "colour": [
+                  255,
+                  255,
+                  255,
+                  255
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:45",
+            "src/schemaxis/adaptors/aseprite/native_source.py:117-121"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options": {
+          "status": "reviewed",
+          "explanation": "Where and in what colour the pixel is drawn: layer, x, y and colour are required, and frame defaults to 1.",
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36-37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:45"
+          ],
+          "examples": [
+            {
+              "layer": "base",
+              "x": 3,
+              "y": 2,
+              "colour": [
+                255,
+                255,
+                255,
+                255
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/layer": {
+          "status": "reviewed",
+          "explanation": "Name of the existing layer the pixel is drawn on: the sprite's first layer (default \"base\") or a layer added by an earlier layer node.",
+          "label": "Layer",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "A layer that is created later in the chain, or a misspelt name, fails planning with INVALID_DRAW."
+          ],
+          "examples": [
+            "base"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:104",
+            "src/schemaxis/adaptors/aseprite/native_source.py:107"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/frame": {
+          "status": "reviewed",
+          "explanation": "One-based number of the frame the pixel is drawn on: 1 is the sprite's first frame, 2 the frame added by the first frame node, and so on. Only that frame changes.",
+          "label": "Frame number",
+          "units": "Frame index (1-based)",
+          "defaultMeaning": "Schemaxis default: 1 (the first frame).",
+          "pitfalls": [
+            "Drawing on frame 2 requires an earlier frame node; otherwise planning fails with INVALID_DRAW.",
+            "Content drawn on frame 1 does not appear on later frames; repeat the drawing for each frame that needs it."
+          ],
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:104",
+            "src/schemaxis/adaptors/aseprite/native_source.py:108"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based column of the pixel, counted from the left edge; it must be less than the canvas width.",
+          "label": "X",
+          "units": "Pixels (zero-based column from the left edge)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "On a 16-pixel-wide canvas the last column is x = 15; x = 16 fails planning with INVALID_DRAW."
+          ],
+          "examples": [
+            4
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36-37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:102-107",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:166-167",
+            "src/schemaxis/adaptors/aseprite/native_source.py:111-121",
+            "https://www.aseprite.org/api/image"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based row of the pixel, counted from the top edge; it must be less than the canvas height.",
+          "label": "Y",
+          "units": "Pixels (zero-based row from the top edge, increasing downwards)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "y grows downwards: row 0 is the top of the image, not the bottom."
+          ],
+          "examples": [
+            7
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36-37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:102-107",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:166-167",
+            "src/schemaxis/adaptors/aseprite/native_source.py:111-121",
+            "https://www.aseprite.org/api/image"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/colour": {
+          "status": "reviewed",
+          "explanation": "RGBA colour written to the selected pixel: an opaque colour with alpha 255 replaces the pixels, and [0, 0, 0, 0] erases them to transparency. Colours are stored directly as RGB values and need not be in the palette.",
+          "label": "Colour",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Semi-transparent colours such as [255, 0, 0, 128] are rejected; draw opaque colours on a separate layer instead of blending."
+          ],
+          "examples": [
+            [
+              250,
+              150,
+              30,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:25",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-125",
+            "src/schemaxis/adaptors/aseprite/native_source.py:110",
+            "https://www.aseprite.org/docs/color-mode/"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/colour/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Choose fully transparent [0, 0, 0, 0] to erase one pixel to transparency. It is the only accepted transparent value: Schemaxis supports no partial alpha and requires the colour channels of a transparent entry to be zero.",
+          "examples": [
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/colour/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose an opaque colour [red, green, blue, 255] to paint the pixel; it replaces whatever the layer held at that position. Each channel is an integer byte from 0 to 255 and the fourth value must be exactly 255; to erase the pixel instead, use the [0, 0, 0, 0] alternative.",
+          "examples": [
+            [
+              250,
+              150,
+              30,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/colour/anyOf/1/prefixItems/0": {
+          "status": "reviewed",
+          "explanation": "The red channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            250
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/colour/anyOf/1/prefixItems/1": {
+          "status": "reviewed",
+          "explanation": "The green channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            150
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/colour/anyOf/1/prefixItems/2": {
+          "status": "reviewed",
+          "explanation": "The blue channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            30
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/colour/anyOf/1/prefixItems/3": {
+          "status": "reviewed",
+          "explanation": "The alpha (opacity) channel, which must be 255 for an opaque colour. Partially transparent colours are not supported; use [0, 0, 0, 0] for full transparency instead.",
+          "examples": [
+            255
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs/properties/sprite": {
+          "status": "reviewed",
+          "explanation": "Id of the node immediately before this pixel node in nodes; the pixel is drawn into the sprite produced by that node.",
+          "label": "Previous node",
+          "pitfalls": [
+            "Any other id fails planning with INVALID_DEPENDENCY."
+          ],
+          "examples": [
+            "canvas"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:76-79"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5": {
+          "status": "reviewed",
+          "explanation": "Choose a rect node to fill a rectangular block of pixels, such as a background, panel or bar, on one layer and frame.",
+          "examples": [
+            {
+              "id": "background",
+              "filter": "rect",
+              "inputs": {
+                "sprite": "colours"
+              },
+              "options": {
+                "layer": "base",
+                "x": 0,
+                "y": 0,
+                "width": 16,
+                "height": 16,
+                "colour": [
+                  20,
+                  40,
+                  80,
+                  255
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:46",
+            "src/schemaxis/adaptors/aseprite/native_source.py:117-121"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options": {
+          "status": "reviewed",
+          "explanation": "Position, size and colour of the filled rectangle: layer, x, y, width, height and colour are required, and frame defaults to 1. The rectangle must fit entirely inside the canvas.",
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36-37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:46",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:104-107"
+          ],
+          "examples": [
+            {
+              "layer": "base",
+              "x": 1,
+              "y": 1,
+              "width": 6,
+              "height": 6,
+              "colour": [
+                30,
+                130,
+                230,
+                255
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/layer": {
+          "status": "reviewed",
+          "explanation": "Name of the existing layer the rectangle is drawn on: the sprite's first layer (default \"base\") or a layer added by an earlier layer node.",
+          "label": "Layer",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "A layer that is created later in the chain, or a misspelt name, fails planning with INVALID_DRAW."
+          ],
+          "examples": [
+            "base"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:104",
+            "src/schemaxis/adaptors/aseprite/native_source.py:107"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/frame": {
+          "status": "reviewed",
+          "explanation": "One-based number of the frame the rectangle is drawn on: 1 is the sprite's first frame, 2 the frame added by the first frame node, and so on. Only that frame changes.",
+          "label": "Frame number",
+          "units": "Frame index (1-based)",
+          "defaultMeaning": "Schemaxis default: 1 (the first frame).",
+          "pitfalls": [
+            "Drawing on frame 2 requires an earlier frame node; otherwise planning fails with INVALID_DRAW.",
+            "Content drawn on frame 1 does not appear on later frames; repeat the drawing for each frame that needs it."
+          ],
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:104",
+            "src/schemaxis/adaptors/aseprite/native_source.py:108"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based column of the rectangle's left edge; it covers columns x to x + width - 1.",
+          "label": "Left column",
+          "units": "Pixels (zero-based column from the left edge)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "x + width may be at most the canvas width; a rectangle crossing the edge is rejected, not clipped."
+          ],
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36-37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:102-107",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:166-167",
+            "src/schemaxis/adaptors/aseprite/native_source.py:111-121",
+            "https://www.aseprite.org/api/image"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based row of the rectangle's top edge; it covers rows y to y + height - 1, extending downwards.",
+          "label": "Top row",
+          "units": "Pixels (zero-based row from the top edge, increasing downwards)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "y grows downwards: row 0 is the top of the image, not the bottom."
+          ],
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36-37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:102-107",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:166-167",
+            "src/schemaxis/adaptors/aseprite/native_source.py:111-121",
+            "https://www.aseprite.org/api/image"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/colour": {
+          "status": "reviewed",
+          "explanation": "RGBA colour written to every pixel of the rectangle: an opaque colour with alpha 255 replaces the pixels, and [0, 0, 0, 0] erases them to transparency. Colours are stored directly as RGB values and need not be in the palette.",
+          "label": "Colour",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Semi-transparent colours such as [255, 0, 0, 128] are rejected; draw opaque colours on a separate layer instead of blending."
+          ],
+          "examples": [
+            [
+              250,
+              150,
+              30,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:25",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-125",
+            "src/schemaxis/adaptors/aseprite/native_source.py:110",
+            "https://www.aseprite.org/docs/color-mode/"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/colour/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Choose fully transparent [0, 0, 0, 0] to cut a transparent rectangular hole. It is the only accepted transparent value: Schemaxis supports no partial alpha and requires the colour channels of a transparent entry to be zero.",
+          "examples": [
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/colour/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose an opaque colour [red, green, blue, 255] to fill the rectangle; it replaces whatever the layer held there. Each channel is an integer byte from 0 to 255 and the fourth value must be exactly 255; to cut a transparent hole instead, use the [0, 0, 0, 0] alternative.",
+          "examples": [
+            [
+              250,
+              150,
+              30,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/colour/anyOf/1/prefixItems/0": {
+          "status": "reviewed",
+          "explanation": "The red channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            250
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/colour/anyOf/1/prefixItems/1": {
+          "status": "reviewed",
+          "explanation": "The green channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            150
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/colour/anyOf/1/prefixItems/2": {
+          "status": "reviewed",
+          "explanation": "The blue channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            30
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/colour/anyOf/1/prefixItems/3": {
+          "status": "reviewed",
+          "explanation": "The alpha (opacity) channel, which must be 255 for an opaque colour. Partially transparent colours are not supported; use [0, 0, 0, 0] for full transparency instead.",
+          "examples": [
+            255
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/width": {
+          "status": "reviewed",
+          "explanation": "Number of columns the rectangle covers, from x to x + width - 1 (1 to 256). x + width must not exceed the canvas width.",
+          "label": "Width",
+          "units": "Pixels",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "To fill the whole canvas use x 0 with width equal to the canvas width, not width - 1."
+          ],
+          "examples": [
+            16
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:46",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:106",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:167",
+            "src/schemaxis/adaptors/aseprite/native_source.py:118-119"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/height": {
+          "status": "reviewed",
+          "explanation": "Number of rows the rectangle covers, from y downwards to y + height - 1 (1 to 256). y + height must not exceed the canvas height.",
+          "label": "Height",
+          "units": "Pixels",
+          "defaultMeaning": "Required; there is no default.",
+          "examples": [
+            6
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:46",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:106",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:167",
+            "src/schemaxis/adaptors/aseprite/native_source.py:118-119"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs/properties/sprite": {
+          "status": "reviewed",
+          "explanation": "Id of the node immediately before this rectangle node in nodes; the rectangle is drawn into the sprite produced by that node.",
+          "label": "Previous node",
+          "pitfalls": [
+            "Any other id fails planning with INVALID_DEPENDENCY."
+          ],
+          "examples": [
+            "canvas"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:76-79"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6": {
+          "status": "reviewed",
+          "explanation": "Choose a circle node to fill a round disc of pixels centred on one pixel, for orbs, dots and round cut-outs.",
+          "examples": [
+            {
+              "id": "orb1",
+              "filter": "circle",
+              "inputs": {
+                "sprite": "foreground"
+              },
+              "options": {
+                "layer": "orb",
+                "x": 5,
+                "y": 8,
+                "radius": 3,
+                "colour": [
+                  250,
+                  150,
+                  30,
+                  255
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:47",
+            "src/schemaxis/adaptors/aseprite/native_source.py:111-116"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options": {
+          "status": "reviewed",
+          "explanation": "Centre, radius and colour of the filled disc: layer, x, y, radius and colour are required, and frame defaults to 1. The disc's bounding square must fit inside the canvas.",
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36-37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:47",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:104-107"
+          ],
+          "examples": [
+            {
+              "layer": "base",
+              "x": 16,
+              "y": 16,
+              "radius": 10,
+              "colour": [
+                250,
+                150,
+                30,
+                255
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/layer": {
+          "status": "reviewed",
+          "explanation": "Name of the existing layer the circle is drawn on: the sprite's first layer (default \"base\") or a layer added by an earlier layer node.",
+          "label": "Layer",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "A layer that is created later in the chain, or a misspelt name, fails planning with INVALID_DRAW."
+          ],
+          "examples": [
+            "base"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:104",
+            "src/schemaxis/adaptors/aseprite/native_source.py:107"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/frame": {
+          "status": "reviewed",
+          "explanation": "One-based number of the frame the circle is drawn on: 1 is the sprite's first frame, 2 the frame added by the first frame node, and so on. Only that frame changes.",
+          "label": "Frame number",
+          "units": "Frame index (1-based)",
+          "defaultMeaning": "Schemaxis default: 1 (the first frame).",
+          "pitfalls": [
+            "Drawing on frame 2 requires an earlier frame node; otherwise planning fails with INVALID_DRAW.",
+            "Content drawn on frame 1 does not appear on later frames; repeat the drawing for each frame that needs it."
+          ],
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:104",
+            "src/schemaxis/adaptors/aseprite/native_source.py:108"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based column of the disc's centre pixel. The disc spans columns x - radius to x + radius, so x must be at least radius and at most canvas width - 1 - radius.",
+          "label": "Centre column",
+          "units": "Pixels (zero-based column from the left edge)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "On a 16-pixel canvas a radius-3 disc needs x between 3 and 12; the centre of a 16-pixel canvas lies between pixels 7 and 8."
+          ],
+          "examples": [
+            5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36-37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:102-107",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:166-167",
+            "src/schemaxis/adaptors/aseprite/native_source.py:111-121",
+            "https://www.aseprite.org/api/image"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based row of the disc's centre pixel. The disc spans rows y - radius to y + radius, so y must be at least radius and at most canvas height - 1 - radius.",
+          "label": "Centre row",
+          "units": "Pixels (zero-based row from the top edge, increasing downwards)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "y grows downwards: row 0 is the top of the image, not the bottom."
+          ],
+          "examples": [
+            8
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:36-37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:102-107",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:166-167",
+            "src/schemaxis/adaptors/aseprite/native_source.py:111-121",
+            "https://www.aseprite.org/api/image"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/colour": {
+          "status": "reviewed",
+          "explanation": "RGBA colour written to every pixel of the circle: an opaque colour with alpha 255 replaces the pixels, and [0, 0, 0, 0] erases them to transparency. Colours are stored directly as RGB values and need not be in the palette.",
+          "label": "Colour",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Semi-transparent colours such as [255, 0, 0, 128] are rejected; draw opaque colours on a separate layer instead of blending."
+          ],
+          "examples": [
+            [
+              250,
+              150,
+              30,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:25",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:37",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-125",
+            "src/schemaxis/adaptors/aseprite/native_source.py:110",
+            "https://www.aseprite.org/docs/color-mode/"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/colour/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Choose fully transparent [0, 0, 0, 0] to cut a round transparent hole. It is the only accepted transparent value: Schemaxis supports no partial alpha and requires the colour channels of a transparent entry to be zero.",
+          "examples": [
+            [
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/colour/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose an opaque colour [red, green, blue, 255] to fill the disc; it replaces whatever the layer held there. Each channel is an integer byte from 0 to 255 and the fourth value must be exactly 255; to cut a round transparent hole instead, use the [0, 0, 0, 0] alternative.",
+          "examples": [
+            [
+              250,
+              150,
+              30,
+              255
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-126",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/colour/anyOf/1/prefixItems/0": {
+          "status": "reviewed",
+          "explanation": "The red channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            250
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/colour/anyOf/1/prefixItems/1": {
+          "status": "reviewed",
+          "explanation": "The green channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            150
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/colour/anyOf/1/prefixItems/2": {
+          "status": "reviewed",
+          "explanation": "The blue channel of the opaque colour as an integer byte, 0 (none) to 255 (full intensity).",
+          "examples": [
+            30
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/colour/anyOf/1/prefixItems/3": {
+          "status": "reviewed",
+          "explanation": "The alpha (opacity) channel, which must be 255 for an opaque colour. Partially transparent colours are not supported; use [0, 0, 0, 0] for full transparency instead.",
+          "examples": [
+            255
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:85-87",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:123-124"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Radius of the disc in whole pixels (0 to 127). A pixel at offset (dx, dy) from the centre is filled when dx squared plus dy squared is at most radius squared, so the disc is 2 x radius + 1 pixels across and radius 0 draws one pixel.",
+          "label": "Radius",
+          "units": "Pixels",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Small radii look square-ish (radius 1 gives a plus sign of 5 pixels); this is the exact raster rule, not an anti-aliased circle."
+          ],
+          "examples": [
+            3
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:47",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:103-107",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:166",
+            "src/schemaxis/adaptors/aseprite/native_source.py:111-116",
+            "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/inputs/properties/sprite": {
+          "status": "reviewed",
+          "explanation": "Id of the node immediately before this circle node in nodes; the circle is drawn into the sprite produced by that node.",
+          "label": "Previous node",
+          "pitfalls": [
+            "Any other id fails planning with INVALID_DEPENDENCY."
+          ],
+          "examples": [
+            "canvas"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:76-79"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7": {
+          "status": "reviewed",
+          "explanation": "Choose a tag node to name an animation sequence over existing frames and record how it should play.",
+          "examples": [
+            {
+              "id": "bounce",
+              "filter": "tag",
+              "inputs": {
+                "sprite": "orb2"
+              },
+              "options": {
+                "name": "bounce",
+                "fromFrame": 1,
+                "toFrame": 2,
+                "direction": "pingPong"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:48-50",
+            "src/schemaxis/adaptors/aseprite/native_source.py:104-105"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options": {
+          "status": "reviewed",
+          "explanation": "Name, inclusive frame range and playback direction of the tag. name, fromFrame and toFrame are required; direction defaults to forward.",
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:48-50",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:97-100"
+          ],
+          "examples": [
+            {
+              "name": "walk",
+              "fromFrame": 1,
+              "toFrame": 4
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/name": {
+          "status": "reviewed",
+          "explanation": "Name of the animation tag, 1 to 64 characters, as shown in Aseprite's timeline and listed in sheet.json for engines that select animations by name.",
+          "label": "Tag name",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Tag names must be unique within the sprite; a repeated name fails planning with INVALID_TAG."
+          ],
+          "examples": [
+            "walk"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:48",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:82-84",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:98-100",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:178",
+            "src/schemaxis/adaptors/aseprite/native_source.py:105"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/fromFrame": {
+          "status": "reviewed",
+          "explanation": "One-based number of the first frame in the tag; the range is inclusive and fromFrame must not exceed toFrame.",
+          "label": "First frame",
+          "units": "Frame index (1-based, inclusive)",
+          "defaultMeaning": "Required; there is no default.",
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:48-49",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:98-99",
+            "src/schemaxis/adaptors/aseprite/native_source.py:105",
+            "https://www.aseprite.org/api/tag"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/toFrame": {
+          "status": "reviewed",
+          "explanation": "One-based number of the last frame in the tag, included in the range. It must be at least fromFrame and no greater than the number of frames created before this tag node.",
+          "label": "Last frame",
+          "units": "Frame index (1-based, inclusive)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "A tag placed before its frames exist fails planning with INVALID_TAG; move it after the frame nodes."
+          ],
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:48-49",
+            "src/schemaxis/adaptors/aseprite/adaptor.py:98-99",
+            "src/schemaxis/adaptors/aseprite/native_source.py:105",
+            "https://www.aseprite.org/api/tag"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/direction": {
+          "status": "reviewed",
+          "explanation": "Playback direction stored with the tag (Aseprite's Animation Direction): forward plays fromFrame to toFrame; reverse plays toFrame back to fromFrame; pingPong plays forward then backward and repeats; pingPongReverse is ping-pong that starts with the backward pass. It is metadata for players such as Aseprite or a game engine; Schemaxis renders no animation.",
+          "label": "Playback direction",
+          "defaultMeaning": "Schemaxis default: forward.",
+          "pitfalls": [
+            "Not every engine or importer supports pingPongReverse; check the consumer before using it."
+          ],
+          "examples": [
+            "pingPong"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:49-50",
+            "src/schemaxis/adaptors/aseprite/native_source.py:14-15",
+            "src/schemaxis/adaptors/aseprite/native_source.py:105",
+            "https://www.aseprite.org/api/anidir",
+            "https://www.aseprite.org/docs/tags/",
+            "https://github.com/aseprite/aseprite/blob/main/docs/ase-file-specs.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/inputs/properties/sprite": {
+          "status": "reviewed",
+          "explanation": "Id of the node immediately before this tag node in nodes; the tag is added to the sprite produced by that node.",
+          "label": "Previous node",
+          "pitfalls": [
+            "Any other id fails planning with INVALID_DEPENDENCY."
+          ],
+          "examples": [
+            "orb2"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:76-79"
+          ]
+        },
+        "/properties/output": {
+          "status": "reviewed",
+          "explanation": "Id of the node whose sprite is published. Because the operations form one chain that edits a single sprite, this must be the id of the last node in nodes; the published files always contain the result of the whole chain.",
+          "label": "Output node",
+          "defaultMeaning": "Required; there is no default. Any id other than the last node fails planning with INVALID_SELECTION.",
+          "pitfalls": [
+            "After appending a node, update output to the new last id (the Studio snippets do this automatically)."
+          ],
+          "examples": [
+            "bounce"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/aseprite/adaptor.py:112-113",
+            "docs/aseprite.md#document-contract"
+          ]
+        }
+      }
+    }
+  }
+}

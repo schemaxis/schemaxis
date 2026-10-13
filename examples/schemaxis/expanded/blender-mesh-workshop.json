@@ -1,0 +1,746 @@
+{
+  "version": "schemaxis.workflow/1",
+  "execution": {
+    "maxWorkers": 2,
+    "cpus": 8,
+    "memoryMB": 8192,
+    "gpus": 0
+  },
+  "operations": [
+    {
+      "id": "weightedNormals",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.06,
+                0.27,
+                0.42,
+                1
+              ],
+              "metallic": 0.35,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "box",
+            "filter": "cube",
+            "inputs": {
+              "material": "paint"
+            }
+          },
+          {
+            "id": "bevel",
+            "filter": "bevel",
+            "options": {
+              "width": 0.15,
+              "segments": 3
+            },
+            "inputs": {
+              "input": "box"
+            }
+          },
+          {
+            "id": "smooth",
+            "filter": "shadeSmooth",
+            "inputs": {
+              "input": "bevel"
+            }
+          },
+          {
+            "id": "out",
+            "filter": "weightedNormal",
+            "inputs": {
+              "input": "smooth"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "mesh",
+            "visible": [
+              "out"
+            ],
+            "meshes": [
+              "out"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 24,
+              "denoise": true
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  640,
+                  480
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1.3
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "twist",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.06,
+                0.27,
+                0.42,
+                1
+              ],
+              "metallic": 0.35,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "box",
+            "filter": "cube",
+            "inputs": {
+              "material": "paint"
+            }
+          },
+          {
+            "id": "subdivided",
+            "filter": "subdivision",
+            "options": {
+              "levels": 4,
+              "method": "SIMPLE"
+            },
+            "inputs": {
+              "input": "box"
+            }
+          },
+          {
+            "id": "tall",
+            "filter": "transform",
+            "options": {
+              "scale": [
+                0.7,
+                0.25,
+                2
+              ]
+            },
+            "inputs": {
+              "input": "subdivided"
+            }
+          },
+          {
+            "id": "baked",
+            "filter": "applyTransform",
+            "inputs": {
+              "input": "tall"
+            }
+          },
+          {
+            "id": "deformed",
+            "filter": "twist",
+            "options": {
+              "angle": {
+                "$axis": "angle"
+              },
+              "axis": "Z"
+            },
+            "inputs": {
+              "input": "baked"
+            }
+          },
+          {
+            "id": "out",
+            "filter": "shadeSmooth",
+            "inputs": {
+              "input": "deformed"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "mesh",
+            "visible": [
+              "out"
+            ],
+            "meshes": [
+              "out"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 24,
+              "denoise": true
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  640,
+                  480
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1.3
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "axes": [
+          {
+            "name": "angle",
+            "values": [
+              0,
+              1.2,
+              2.4
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "bend",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.06,
+                0.27,
+                0.42,
+                1
+              ],
+              "metallic": 0.35,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "box",
+            "filter": "cube",
+            "inputs": {
+              "material": "paint"
+            }
+          },
+          {
+            "id": "subdivided",
+            "filter": "subdivision",
+            "options": {
+              "levels": 4,
+              "method": "SIMPLE"
+            },
+            "inputs": {
+              "input": "box"
+            }
+          },
+          {
+            "id": "tall",
+            "filter": "transform",
+            "options": {
+              "scale": [
+                0.4,
+                0.4,
+                2
+              ]
+            },
+            "inputs": {
+              "input": "subdivided"
+            }
+          },
+          {
+            "id": "baked",
+            "filter": "applyTransform",
+            "inputs": {
+              "input": "tall"
+            }
+          },
+          {
+            "id": "deformed",
+            "filter": "bend",
+            "options": {
+              "angle": 1.6,
+              "axis": "X"
+            },
+            "inputs": {
+              "input": "baked"
+            }
+          },
+          {
+            "id": "out",
+            "filter": "shadeSmooth",
+            "inputs": {
+              "input": "deformed"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "mesh",
+            "visible": [
+              "out"
+            ],
+            "meshes": [
+              "out"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 24,
+              "denoise": true
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  640,
+                  480
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1.3
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "weld",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.06,
+                0.27,
+                0.42,
+                1
+              ],
+              "metallic": 0.35,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "box",
+            "filter": "cube",
+            "inputs": {
+              "material": "paint"
+            }
+          },
+          {
+            "id": "shifted",
+            "filter": "transform",
+            "options": {
+              "translation": [
+                2,
+                0,
+                0
+              ]
+            },
+            "inputs": {
+              "input": "box"
+            }
+          },
+          {
+            "id": "joined",
+            "filter": "join",
+            "inputs": {
+              "inputs": [
+                "box",
+                "shifted"
+              ]
+            }
+          },
+          {
+            "id": "out",
+            "filter": "weld",
+            "options": {
+              "distance": 0.001
+            },
+            "inputs": {
+              "input": "joined"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "mesh",
+            "visible": [
+              "out"
+            ],
+            "meshes": [
+              "out"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 24,
+              "denoise": true
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  640,
+                  480
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1.3
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "voxelUnion",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.06,
+                0.27,
+                0.42,
+                1
+              ],
+              "metallic": 0.35,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "box",
+            "filter": "cube",
+            "inputs": {
+              "material": "paint"
+            }
+          },
+          {
+            "id": "shifted",
+            "filter": "transform",
+            "options": {
+              "translation": [
+                1,
+                0.5,
+                0.5
+              ]
+            },
+            "inputs": {
+              "input": "box"
+            }
+          },
+          {
+            "id": "joined",
+            "filter": "join",
+            "inputs": {
+              "inputs": [
+                "box",
+                "shifted"
+              ]
+            }
+          },
+          {
+            "id": "out",
+            "filter": "voxelRemesh",
+            "options": {
+              "voxelSize": 0.12
+            },
+            "inputs": {
+              "input": "joined"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "mesh",
+            "visible": [
+              "out"
+            ],
+            "meshes": [
+              "out"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 24,
+              "denoise": true
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  640,
+                  480
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1.3
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "shrinkwrap",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.06,
+                0.27,
+                0.42,
+                1
+              ],
+              "metallic": 0.35,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "target",
+            "filter": "uvSphere",
+            "options": {
+              "radius": 1.2,
+              "segments": 48,
+              "rings": 32
+            },
+            "inputs": {
+              "material": "paint"
+            }
+          },
+          {
+            "id": "patch",
+            "filter": "plane",
+            "options": {
+              "width": 2,
+              "height": 2,
+              "centre": [
+                0,
+                0,
+                0.8
+              ]
+            },
+            "inputs": {
+              "material": "paint"
+            }
+          },
+          {
+            "id": "grid",
+            "filter": "subdivision",
+            "options": {
+              "levels": 3
+            },
+            "inputs": {
+              "input": "patch"
+            }
+          },
+          {
+            "id": "wrapped",
+            "filter": "shrinkwrap",
+            "options": {
+              "offset": 0.03
+            },
+            "inputs": {
+              "input": "grid",
+              "target": "target"
+            }
+          },
+          {
+            "id": "out",
+            "filter": "solidify",
+            "options": {
+              "thickness": 0.05
+            },
+            "inputs": {
+              "input": "wrapped"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "mesh",
+            "visible": [
+              "out"
+            ],
+            "meshes": [
+              "out"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 24,
+              "denoise": true
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  640,
+                  480
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1.3
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "plyImport",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.06,
+                0.27,
+                0.42,
+                1
+              ],
+              "metallic": 0.35,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "ply",
+            "filter": "readPLY",
+            "options": {
+              "file": "examples/schemaxis/expanded/tetrahedron.ply",
+              "scale": 2
+            }
+          },
+          {
+            "id": "out",
+            "filter": "assignMaterial",
+            "inputs": {
+              "input": "ply",
+              "material": "paint"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "mesh",
+            "visible": [
+              "out"
+            ],
+            "meshes": [
+              "out"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 24,
+              "denoise": true
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  640,
+                  480
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1.3
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

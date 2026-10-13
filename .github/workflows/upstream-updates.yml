@@ -1,0 +1,43 @@
+name: Upstream application updates
+on:
+  schedule:
+    - cron: '23 9 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check releases and prepare repair briefs
+        run: PYTHONPATH=src python -m schemaxis updates --prepare evidence/updates
+      - name: Publish concise job summary
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from schemaxis.updates import markdown
+          result = json.loads(Path('evidence/updates/report.json').read_text())
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
+              output.write(markdown(result))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: application-updates
+          path: evidence/updates/
+      - name: Surface failed release checks
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('evidence/updates/report.json').read_text())
+          problems = [x for x in result['attention'] if x['status'] in ('check-failed', 'source-behind')]
+          if problems:
+              raise SystemExit('Release checks need attention: ' + ', '.join(x['app'] for x in problems))
+          PY

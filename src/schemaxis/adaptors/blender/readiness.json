@@ -1,0 +1,566 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.blender/1": {
+      "guide": "docs/parallel-dispatch-and-blender.md",
+      "context": {
+        "purpose": "Build editable mesh/material scenes, apply declared modifiers and publish verified geometry or CPU/GPU renders. Use prepare-only scenes for repeated camera renders.",
+        "assumptions": "The implementation currently requires Blender 5.2.2. Coordinates are Blender world coordinates; import scale is explicit and rotations follow the declared operation conventions.",
+        "constraints": "One declared scene; bounded image/camera/expansion limits. Mesh imports and CSV inputs use the documented subsets. Remeshing, decimation and Boolean operations can change topology. GPU availability is separate from declarations.",
+        "inspection": "Inspect native mesh bounds/counts, materials, render settings and reopened blend snapshots; use geometry/image panels and retained publication hashes.",
+        "recovery": "UNSUPPORTED_RUNTIME needs the configured supported Blender release. Fix material/dependency or input-format faults during planning; retain native logs for modifier/render errors and use a fresh run."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/blender-admission.json"
+        },
+        {
+          "id": "invalid-input",
+          "document": {
+            "version": "schemaxis.blender/1",
+            "nodes": [
+              {
+                "id": "paint",
+                "filter": "material"
+              },
+              {
+                "id": "box",
+                "filter": "cube",
+                "inputs": {
+                  "material": "absent"
+                },
+                "options": {
+                  "size": 2
+                }
+              }
+            ],
+            "scenes": [
+              {
+                "id": "main",
+                "visible": [
+                  "box"
+                ],
+                "prepareOnly": true,
+                "render": {
+                  "samples": 1,
+                  "threads": 1
+                },
+                "images": [
+                  {
+                    "id": "view",
+                    "size": [
+                      32,
+                      32
+                    ],
+                    "cameras": [
+                      {
+                        "direction": [
+                          1,
+                          -2,
+                          1
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "UNKNOWN_NODE",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_schemaxis_adaptor_growth.py",
+        "tests/unit/test_adaptor_migration.py"
+      ],
+      "acceptance": [
+        "tools/qualify_adaptor_migration.py",
+        "tools/qualify_adaptor_expansion.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses.",
+          "references": [
+            "docs/parallel-dispatch-and-blender.md",
+            "tests/unit/test_schemaxis_adaptor_growth.py"
+          ]
+        },
+        "native-inspection": {
+          "scope": "Registered geometry/field observation hooks; bounded views do not prove physical correctness.",
+          "references": [
+            "docs/parallel-dispatch-and-blender.md",
+            "tests/unit/test_schemaxis_adaptor_growth.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://docs.blender.org/api/current/"
+        ],
+        "lifecycle": {
+          "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
+          "cancellation": "Shared owned-process cancellation retains partial evidence. Pre-launch cancellation is tested separately from shared in-flight cleanup.",
+          "logs": "Fresh run directory retains authored input, effective plan, native submissions/stdout/stderr, publications and verification evidence.",
+          "verification": "Compare independently observed mesh/material/camera state, saved blend reopening and publication membership; decode PNG outputs and reject empty images."
+        },
+        "data": [
+          {
+            "id": "input-0",
+            "direction": "input",
+            "kind": "geometry",
+            "format": "STL/PLY",
+            "traits": {
+              "units": null,
+              "scale": "explicit"
+            },
+            "losses": [
+              "Mesh modifiers can change topology; STL and rendered images do not preserve editable scene semantics."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "input-1",
+            "direction": "input",
+            "kind": "gltf",
+            "format": "glTF 2.0 embedded",
+            "traits": {
+              "meshes": 1
+            },
+            "losses": [
+              "Mesh modifiers can change topology; STL and rendered images do not preserve editable scene semantics."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "input-2",
+            "direction": "input",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "columns": "explicit coordinates"
+            },
+            "losses": [
+              "Mesh modifiers can change topology; STL and rendered images do not preserve editable scene semantics."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-0",
+            "direction": "output",
+            "kind": "scene",
+            "format": "blend",
+            "traits": {
+              "editable": true,
+              "frame": "Blender world"
+            },
+            "losses": [
+              "Mesh modifiers can change topology; STL and rendered images do not preserve editable scene semantics."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-1",
+            "direction": "output",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "colour": "rendered RGBA"
+            },
+            "losses": [
+              "Mesh modifiers can change topology; STL and rendered images do not preserve editable scene semantics."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "geometry",
+            "scope": "Inspect native mesh bounds/counts, materials, render settings and reopened blend snapshots; use geometry/image panels and retained publication hashes.",
+            "limits": "One declared scene; bounded image/camera/expansion limits. Mesh imports and CSV inputs use the documented subsets. Remeshing, decimation and Boolean operations can change topology. GPU availability is separate from declarations."
+          },
+          {
+            "panel": "image",
+            "scope": "Inspect native mesh bounds/counts, materials, render settings and reopened blend snapshots; use geometry/image panels and retained publication hashes.",
+            "limits": "One declared scene; bounded image/camera/expansion limits. Mesh imports and CSV inputs use the documented subsets. Remeshing, decimation and Boolean operations can change topology. GPU availability is separate from declarations."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect native mesh bounds/counts, materials, render settings and reopened blend snapshots; use geometry/image panels and retained publication hashes.",
+            "limits": "One declared scene; bounded image/camera/expansion limits. Mesh imports and CSV inputs use the documented subsets. Remeshing, decimation and Boolean operations can change topology. GPU availability is separate from declarations."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "baseline",
+          "reuse": "Edit the example with source or JSON pointer patches; inspect declared units and losses, replan the new revision, and verify a fresh run against independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses."
+          },
+          "native-inspection": {
+            "status": "supported",
+            "scope": "Registered geometry/field observation hooks; bounded views do not prove physical correctness."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This route does not implement mpi; use its documented batch/source workflow."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Registered input fingerprint hook may decline reuse for unsupported input shapes; never assume hashes for unknown companions."
+          },
+          "time-batches": {
+            "status": "supported",
+            "scope": "Finite declared visits; inspect native time availability before selecting source times."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON draft, revision checking, recovery and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Atomic JSON pointer edits through the shared draft model."
+          },
+          "live-editing": {
+            "status": "supported",
+            "scope": "Registered persistent native editing session; the batch kit cases do not qualify live-session behaviour."
+          },
+          "native-save": {
+            "status": "supported",
+            "scope": "Declared native extension available to the console; retain dependent resources and inspect reopen evidence."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Only explicit declared readers/writers or table/vector transformations, with the data losses listed here; no automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Compare independently observed mesh/material/camera state, saved blend reopening and publication membership; decode PNG outputs and reject empty images. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/states/0/observations/box/signedVolume",
+                "expected": 8,
+                "relative": 1e-08,
+                "absolute": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/size",
+                "value": 3
+              }
+            ],
+            "scope": "Compare independently observed mesh/material/camera state, saved blend reopening and publication membership; decode PNG outputs and reject empty images. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/states/0/observations/box/signedVolume",
+                "expected": 27,
+                "relative": 1e-08,
+                "absolute": 1e-08
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "schemaxis.blender.render/1": {
+      "guide": "docs/parallel-dispatch-and-blender.md",
+      "context": {
+        "purpose": "Render existing verified self-contained Schemaxis blend scenes from new camera directions without rebuilding geometry.",
+        "assumptions": "The implementation currently requires Blender 5.2.2. Coordinates are Blender world coordinates; import scale is explicit and rotations follow the declared operation conventions.",
+        "constraints": "Requires saved Schemaxis node/visibility/camera metadata and packed resources. No arbitrary blend scripts or linked libraries; source changes invalidate verification. CPU rendering is the kit scope.",
+        "inspection": "Inspect native mesh bounds/counts, materials, render settings and reopened blend snapshots; use geometry/image panels and retained publication hashes.",
+        "recovery": "UNSUPPORTED_RUNTIME needs the configured supported Blender release. Fix material/dependency or input-format faults during planning; retain native logs for modifier/render errors and use a fresh run."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "document": {
+            "version": "schemaxis.blender.render/1",
+            "sceneFile": "/replace-with-your-input/scene.blend",
+            "size": [
+              32,
+              32
+            ],
+            "render": {
+              "threads": 1,
+              "samples": 1
+            },
+            "cameras": [
+              {
+                "direction": [
+                  1,
+                  -2,
+                  1
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "invalid-camera",
+          "document": {
+            "version": "schemaxis.blender.render/1",
+            "sceneFile": "/replace-with-your-input/scene.blend",
+            "size": [
+              32,
+              32
+            ],
+            "render": {
+              "threads": 1,
+              "samples": 1
+            },
+            "cameras": [
+              {
+                "direction": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "INVALID_CAMERA",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_schemaxis_adaptor_growth.py",
+        "tests/unit/test_adaptor_migration.py"
+      ],
+      "acceptance": [
+        "tools/qualify_adaptor_migration.py",
+        "tools/qualify_adaptor_expansion.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses.",
+          "references": [
+            "docs/parallel-dispatch-and-blender.md",
+            "tests/unit/test_schemaxis_adaptor_growth.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://docs.blender.org/api/current/"
+        ],
+        "lifecycle": {
+          "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
+          "cancellation": "Shared owned-process cancellation retains partial evidence. Pre-launch cancellation is tested separately from shared in-flight cleanup.",
+          "logs": "Fresh run directory retains authored input, effective plan, native submissions/stdout/stderr, publications and verification evidence.",
+          "verification": "Compare independently observed mesh/material/camera state, saved blend reopening and publication membership; decode PNG outputs and reject empty images."
+        },
+        "data": [
+          {
+            "id": "source",
+            "direction": "input",
+            "kind": "scene",
+            "format": "blend",
+            "traits": {
+              "packed": true,
+              "metadata": "Schemaxis nodes/visibility"
+            },
+            "losses": [
+              "Rendered PNG is a 2D view and does not encode editable geometry."
+            ],
+            "scope": "Self-contained scene from the primary Blender route."
+          },
+          {
+            "id": "render",
+            "direction": "output",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "dimensions": "authored",
+              "colour": "rendered RGBA"
+            },
+            "losses": [
+              "No depth, geometry or material semantics in the raster."
+            ],
+            "scope": "Bounded nonempty rendered image with retained camera/render evidence."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "image",
+            "scope": "Inspect decoded PNG size/content and retained camera, geometry-preservation and render-setting evidence.",
+            "limits": "A 2D render is not a geometry inspection; no native node inspection hook on this route."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect decoded PNG size/content and retained camera, geometry-preservation and render-setting evidence.",
+            "limits": "A 2D render is not a geometry inspection; no native node inspection hook on this route."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the example with source or JSON pointer patches; inspect declared units and losses, replan the new revision, and verify a fresh run against independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This route renders an existing scene; no native-inspection interface is exposed."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This route does not implement mpi; use its documented batch/source workflow."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Registered input fingerprint hook may decline reuse for unsupported input shapes; never assume hashes for unknown companions."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This route renders an existing scene; no time-batches interface is exposed."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON draft, revision checking, recovery and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Atomic JSON pointer edits through the shared draft model."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This route renders an existing scene; no live-editing interface is exposed."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This route renders an existing scene; no native-save interface is exposed."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This route renders an existing scene; no conversion interface is exposed."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/sceneFile": "examples/schemaxis/fixtures/blender-cube.blend"
+            },
+            "scope": "Analytic cube bounds persist before and after native rendering; requested image dimensions and native nonempty decode are verified.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/before/box/bounds",
+                "expected": [
+                  -1,
+                  1,
+                  -1,
+                  1,
+                  -1,
+                  1
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/artifacts/0/size",
+                "expected": [
+                  32,
+                  32
+                ]
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/size",
+                "value": [
+                  48,
+                  32
+                ]
+              }
+            ],
+            "resources": {
+              "/sceneFile": "examples/schemaxis/fixtures/blender-cube.blend"
+            },
+            "scope": "Analytic cube bounds persist before and after native rendering; requested image dimensions and native nonempty decode are verified.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/before/box/bounds",
+                "expected": [
+                  -1,
+                  1,
+                  -1,
+                  1,
+                  -1,
+                  1
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/artifacts/0/size",
+                "expected": [
+                  48,
+                  32
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

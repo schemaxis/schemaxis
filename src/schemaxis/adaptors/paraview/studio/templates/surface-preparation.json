@@ -1,0 +1,85 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "source",
+      "filter": "readSTL",
+      "options": {
+        "files": [
+          {
+            "$fill": "file"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cleaned",
+      "filter": "clean",
+      "options": {
+        "tolerance": {
+          "$fill": "tolerance"
+        },
+        "mergePoints": true
+      },
+      "inputs": {
+        "input": "source"
+      }
+    },
+    {
+      "id": "triangles",
+      "filter": "triangulate",
+      "inputs": {
+        "input": "cleaned"
+      }
+    },
+    {
+      "id": "normals",
+      "filter": "normals",
+      "options": {
+        "consistency": true,
+        "splitting": false
+      },
+      "inputs": {
+        "input": "triangles"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "prepared",
+      "visible": {
+        "normals": {
+          "colour": "steelblue"
+        }
+      },
+      "geometry": [
+        "normals"
+      ],
+      "images": [
+        {
+          "id": "overview",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -1,
+                0.6
+              ]
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "id": "surface",
+          "node": "normals",
+          "writer": "pvWriteXMLPolyDataWriter"
+        }
+      ]
+    }
+  ]
+}

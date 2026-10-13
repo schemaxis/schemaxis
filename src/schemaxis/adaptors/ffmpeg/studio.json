@@ -1,0 +1,298 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.ffmpeg/1",
+    "nodes": [
+      {
+        "id": "video",
+        "filter": "encodeFrames",
+        "options": {
+          "files": [
+            "/data/frame-0001.png",
+            "/data/frame-0002.png"
+          ],
+          "fps": 25,
+          "codec": "h264",
+          "threads": 1
+        }
+      }
+    ]
+  },
+  "categories": [
+    {
+      "id": "encoding",
+      "title": "Video encoding",
+      "icon": "layers"
+    },
+    {
+      "id": "sources",
+      "title": "Frames & sprite sheets",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "encode-frames",
+      "title": "Encode ordered frame files",
+      "category": "sources",
+      "icon": "layers",
+      "description": "Replace the video source with an explicit ordered PNG frame list.",
+      "fields": {
+        "files": {
+          "label": "Ordered PNG files",
+          "type": "json",
+          "required": true,
+          "default": [
+            "/data/frame-0001.png",
+            "/data/frame-0002.png"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ffmpeg/1",
+              "nodes": [
+                {
+                  "id": "video",
+                  "filter": "encodeFrames",
+                  "options": {
+                    "files": {
+                      "$fill": "files"
+                    },
+                    "fps": 25,
+                    "codec": "h264",
+                    "threads": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Requires same-sized PNG frames at the supplied absolute paths; no audio is authored."
+    },
+    {
+      "id": "encode-sheet",
+      "title": "Encode an Aseprite sprite sheet",
+      "category": "sources",
+      "icon": "layers",
+      "description": "Read the image and captured Aseprite JSON metadata to reconstruct frame timing.",
+      "fields": {
+        "sheet": {
+          "label": "Sprite sheet image",
+          "type": "path",
+          "required": true,
+          "default": "/data/sheet.png",
+          "extensions": [
+            "png"
+          ]
+        },
+        "metadata": {
+          "label": "Aseprite metadata",
+          "type": "path",
+          "required": true,
+          "default": "/data/sheet.json",
+          "extensions": [
+            "json"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ffmpeg/1",
+              "nodes": [
+                {
+                  "id": "video",
+                  "filter": "encodeSheet",
+                  "options": {
+                    "file": {
+                      "$fill": "sheet"
+                    },
+                    "metadata": {
+                      "$fill": "metadata"
+                    },
+                    "fps": 25,
+                    "codec": "ffv1",
+                    "threads": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Requires matching Aseprite sprite-sheet PNG and JSON files at run time."
+    },
+    {
+      "id": "codec",
+      "title": "Delivery or lossless codec",
+      "category": "encoding",
+      "icon": "layers",
+      "description": "Choose H.264 delivery (MP4) or FFV1 lossless RGB publication (MKV). Alpha is composited on black.",
+      "fields": {
+        "codec": {
+          "label": "Delivery or lossless codec",
+          "type": "enum",
+          "required": true,
+          "default": "ffv1",
+          "values": [
+            "h264",
+            "ffv1"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options/codec",
+          "values": [
+            {
+              "$fill": "codec"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "frame-rate",
+      "title": "Constant playback frame rate",
+      "category": "encoding",
+      "icon": "layers",
+      "description": "Set the integer frame rate used by the declared video publication.",
+      "fields": {
+        "frame-rate": {
+          "label": "Constant playback frame rate",
+          "type": "integer",
+          "required": true,
+          "default": 25,
+          "minimum": 1,
+          "maximum": 120
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options/fps",
+          "values": [
+            {
+              "$fill": "frame-rate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "encoder-threads",
+      "title": "Bound encoder threads",
+      "category": "encoding",
+      "icon": "layers",
+      "description": "Declare the native encoder thread budget explicitly.",
+      "fields": {
+        "encoder-threads": {
+          "label": "Bound encoder threads",
+          "type": "integer",
+          "required": true,
+          "default": 2,
+          "minimum": 1,
+          "maximum": 16
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options/threads",
+          "values": [
+            {
+              "$fill": "encoder-threads"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hold-frame",
+      "title": "Append a held final frame",
+      "category": "sources",
+      "icon": "layers",
+      "description": "Repeat one final PNG once to extend its display by one frame interval.",
+      "fields": {
+        "hold-frame": {
+          "label": "Append a held final frame",
+          "type": "path",
+          "required": true,
+          "default": "/data/frame-0002.png",
+          "extensions": [
+            "png"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options/files/-",
+          "values": [
+            {
+              "$fill": "hold-frame"
+            }
+          ]
+        }
+      ],
+      "requires": "Requires the PNG frame at its declared absolute path."
+    }
+  ],
+  "templates": [
+    {
+      "id": "frame-movie",
+      "title": "Frame-sequence movie",
+      "description": "Encode an explicitly ordered PNG frame list at 25 fps into an H.264 movie; frames must have matching dimensions.",
+      "file": "studio/templates/frame-movie.json",
+      "fields": {
+        "files": {
+          "label": "Ordered PNG files",
+          "type": "json",
+          "required": true,
+          "default": [
+            "/data/frame-0001.png",
+            "/data/frame-0002.png"
+          ]
+        }
+      },
+      "requires": "Requires the declared source images and, for sheets, matching Aseprite JSON at run time."
+    },
+    {
+      "id": "sprite-movie",
+      "title": "Lossless sprite-sheet movie",
+      "description": "Reconstruct frame timing from an Aseprite PNG sheet and JSON metadata, then encode FFV1 at 25 fps; alpha is composited on black.",
+      "file": "studio/templates/sprite-movie.json",
+      "fields": {
+        "sheet": {
+          "label": "Sheet PNG",
+          "type": "path",
+          "required": true,
+          "default": "/data/sheet.png",
+          "extensions": [
+            "png"
+          ]
+        },
+        "metadata": {
+          "label": "Aseprite JSON",
+          "type": "path",
+          "required": true,
+          "default": "/data/sheet.json",
+          "extensions": [
+            "json"
+          ]
+        }
+      },
+      "requires": "Requires the declared source images and, for sheets, matching Aseprite JSON at run time."
+    }
+  ],
+  "viewers": [
+    "image",
+    "text"
+  ]
+}

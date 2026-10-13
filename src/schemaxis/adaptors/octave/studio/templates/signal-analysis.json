@@ -1,0 +1,55 @@
+{
+  "version": "schemaxis.octave/1",
+  "nodes": [
+    {
+      "id": "signal",
+      "filter": "wave",
+      "options": {
+        "step": 0.0078125,
+        "count": 128,
+        "frequency": {
+          "$fill": "value"
+        },
+        "amplitude": 2
+      }
+    },
+    {
+      "id": "smoothed",
+      "filter": "movingMean",
+      "inputs": {
+        "input": "signal"
+      },
+      "options": {
+        "window": 5
+      }
+    },
+    {
+      "id": "spectrum",
+      "filter": "fft",
+      "inputs": {
+        "input": "signal"
+      }
+    },
+    {
+      "id": "area",
+      "filter": "integral",
+      "inputs": {
+        "input": "signal"
+      }
+    },
+    {
+      "id": "gradient",
+      "filter": "derivative",
+      "inputs": {
+        "input": "signal"
+      }
+    }
+  ],
+  "outputs": [
+    "signal",
+    "smoothed",
+    "spectrum",
+    "area",
+    "gradient"
+  ]
+}

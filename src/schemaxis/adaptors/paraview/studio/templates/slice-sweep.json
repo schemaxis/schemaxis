@@ -1,0 +1,171 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "source",
+      "filter": "wavelet"
+    },
+    {
+      "id": "cut",
+      "filter": "slice",
+      "options": {
+        "normal": "x+",
+        "origin": [
+          {
+            "$calc": "add",
+            "args": [
+              {
+                "$observe": "source",
+                "path": [
+                  "bounds",
+                  0
+                ]
+              },
+              {
+                "$calc": "multiply",
+                "args": [
+                  {
+                    "$axis": "fraction"
+                  },
+                  {
+                    "$calc": "subtract",
+                    "args": [
+                      {
+                        "$observe": "source",
+                        "path": [
+                          "bounds",
+                          1
+                        ]
+                      },
+                      {
+                        "$observe": "source",
+                        "path": [
+                          "bounds",
+                          0
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "source",
+                    "path": [
+                      "bounds",
+                      2
+                    ]
+                  },
+                  {
+                    "$observe": "source",
+                    "path": [
+                      "bounds",
+                      3
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "source",
+                    "path": [
+                      "bounds",
+                      4
+                    ]
+                  },
+                  {
+                    "$observe": "source",
+                    "path": [
+                      "bounds",
+                      5
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          }
+        ]
+      },
+      "inputs": {
+        "input": "source"
+      }
+    },
+    {
+      "id": "outline",
+      "filter": "outline",
+      "inputs": {
+        "input": "source"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "sliceSweep",
+      "visible": {
+        "cut": {
+          "field": [
+            "POINTS",
+            "RTData"
+          ],
+          "range": [
+            0,
+            300
+          ]
+        },
+        "outline": {
+          "colour": "black"
+        }
+      },
+      "geometry": [
+        "cut",
+        "outline"
+      ],
+      "images": [
+        {
+          "id": "overview",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -1,
+                0.6
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "axes": [
+    {
+      "name": "fraction",
+      "series": {
+        "start": 0.1,
+        "end": 0.9,
+        "count": {
+          "$fill": "count"
+        }
+      }
+    }
+  ]
+}

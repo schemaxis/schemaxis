@@ -1,0 +1,1023 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "box": {
+      "status": "reviewed",
+      "explanation": "Creates an axis-aligned rectangular solid with gmsh.model.occ.addBox from a minimum corner and three extents in millimetres, as the solid source for a tetrahedral node. Choose it for test domains, channel sections and mesh-size studies where no CAD file is needed; its exact volume and bounds let verification compare the mesh with analytic values. Use readSTEP for any other shape. The solid is not published by itself; only the tetrahedral node publishes files.",
+      "sources": [
+        "src/schemaxis/adaptors/gmsh/adaptor.py:40-42",
+        "src/schemaxis/adaptors/gmsh/adaptor.py:268-271",
+        "src/schemaxis/adaptors/gmsh/native.py:22-23",
+        "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc",
+        "docs/gmsh.md#editable-input",
+        "docs/gmsh.md#native-acceptance",
+        "src/schemaxis/adaptors/gmsh/capabilities.py"
+      ],
+      "pitfalls": [
+        "size holds extents, not the opposite corner; origin is the minimum corner.",
+        "faceGroups coordinates are absolute, so moving origin moves the face planes they must match."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/gmsh-minimal.json",
+          "purpose": "Mesh a 10 mm cube and independently verify its 1000 mm^3 volume."
+        }
+      ]
+    },
+    "readSTEP": {
+      "status": "reviewed",
+      "explanation": "Imports exactly one solid from a single-file STEP document with gmsh.model.occ.importShapes, converting its length unit to millimetres. Choose it to mesh a real CAD part, such as a FreeCAD STEP artifact in a workflow. The file bytes are captured (digest and retained copy) before meshing, and the volume and bounds measured by OpenCASCADE become the reference for verification. Feature history and STEP labels are not imported; name faces with the tetrahedral faceGroups.",
+      "sources": [
+        "src/schemaxis/adaptors/gmsh/adaptor.py:43-44",
+        "src/schemaxis/adaptors/gmsh/adaptor.py:78-79",
+        "src/schemaxis/adaptors/gmsh/adaptor.py:128-137",
+        "src/schemaxis/adaptors/gmsh/adaptor.py:180-187",
+        "src/schemaxis/adaptors/gmsh/native.py:24-29",
+        "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc",
+        "https://gmsh.info/doc/texinfo/gmsh.html#Geometry-options",
+        "docs/gmsh.md#editable-input",
+        "src/schemaxis/adaptors/gmsh/capabilities.py"
+      ],
+      "pitfalls": [
+        "The path must be absolute and end in .step or .stp, with at most 16 MiB; multi-solid files and assemblies fail during meshing.",
+        "Native acceptance covers STEP parts exported by FreeCAD (20×10×5 and 20×10×7 mm); STEP from other CAD tools has not had a Schemaxis acceptance check."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/freecad-gmsh-paraview.json",
+          "purpose": "Mesh a STEP solid exported by FreeCAD and inspect the result in ParaView."
+        }
+      ]
+    },
+    "tetrahedral": {
+      "status": "reviewed",
+      "explanation": "Meshes the preceding solid with first-order (4-node) tetrahedra using Gmsh's Delaunay 3D algorithm at a global target size, optionally finer near named boundaries, and assigns one named physical volume plus named planar face groups and a remainder boundary. It publishes result.msh (ASCII MSH 2.2 with names), volume.vtu and boundary.vtu (numeric physicalTag per cell, with quality arrays on the volume) and mesh-summary.json (name and tag map, mm units, counts, CAD and mesh volume, quality distributions). Every mesh is reopened in a fresh Gmsh process and checked independently for positive volumes, a closed boundary, face membership and agreement with the CAD volume. Add the top-level refinement object to refine until measured requirements pass.",
+      "sources": [
+        "src/schemaxis/adaptors/gmsh/adaptor.py:45-51",
+        "src/schemaxis/adaptors/gmsh/adaptor.py:215-279",
+        "src/schemaxis/adaptors/gmsh/native.py:30-126",
+        "src/schemaxis/adaptors/gmsh/mesh.py",
+        "src/schemaxis/adaptors/gmsh/quality.py",
+        "https://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format-version-2-_0028Legacy_0029",
+        "docs/gmsh.md#publications-and-meaning",
+        "docs/gmsh.md#inspection-verification-and-recovery",
+        "src/schemaxis/adaptors/gmsh/capabilities.py"
+      ],
+      "pitfalls": [
+        "size is a target edge length in mm, not a guarantee of element count, maximum edge length or shape quality.",
+        "The VTU files carry numeric tags only; keep mesh-summary.json for group names and units.",
+        "Outputs are bounded to 50000 nodes and 200000 cells, linear elements only, and no boundary conditions are applied."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/gmsh-minimal.json",
+          "purpose": "Mesh a 10 mm cube with default group names."
+        },
+        {
+          "reference": "examples/schemaxis/gmsh-boundary-sizing.json",
+          "purpose": "Name two opposite x faces and refine the mesh near one of them."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.gmsh/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A Gmsh meshing document: one solid source node (box or readSTEP) followed by one tetrahedral node, run in an isolated Gmsh 4.15.x Python process. A successful run publishes result.msh (ASCII MSH 2.2 with named physical groups), volume.vtu, boundary.vtu and mesh-summary.json, after the mesh has been reopened in a fresh Gmsh process and checked independently (positive cell volumes, closed boundary, face membership, volume against CAD). Add the optional refinement object to mesh repeatedly at smaller sizes until declared quality or resolution requirements pass.",
+          "pitfalls": [
+            "The document prepares a mesh only: face and volume names are labels for a downstream solver; no materials, loads or boundary conditions are assigned.",
+            "Every length in the document is in millimetres; there is no unit conversion for authored values."
+          ],
+          "examples": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "box",
+                  "options": {
+                    "size": [
+                      10,
+                      10,
+                      10
+                    ]
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 3,
+                    "volumeName": "domain",
+                    "boundaryName": "boundary",
+                    "volumeTolerance": 1e-06
+                  }
+                }
+              ],
+              "output": "mesh"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:57-111",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:162-212",
+            "docs/gmsh.md#publications-and-meaning",
+            "docs/gmsh.md#inspection-verification-and-recovery"
+          ]
+        },
+        "/properties/version": {
+          "status": "reference",
+          "explanation": "Identifies the document format and chooses its adaptor. Keep the version matching the selected schema.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/units": {
+          "status": "reviewed",
+          "explanation": "Declares that every authored length (box origin and size, element sizes, face-group coordinates and tolerances, sizing distances and refinement lengths) is in millimetres, and that published meshes are in millimetres. Only \"mm\" is accepted. For readSTEP, Schemaxis sets Gmsh's Geometry.OCCTargetUnit to MM before import, so OpenCASCADE converts the STEP file's declared length unit to millimetres.",
+          "label": "Length units",
+          "defaultMeaning": "Required; there is no default. Any other value fails planning with UNSUPPORTED_UNITS.",
+          "pitfalls": [
+            "The STEP conversion relies on the unit declared in the file; a part saved with the wrong unit imports at the wrong scale. Check cadBounds and cadVolume in mesh-summary.json."
+          ],
+          "examples": [
+            "mm"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:61",
+            "src/schemaxis/adaptors/gmsh/native.py:24-26",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Geometry-options",
+            "docs/gmsh.md#editable-input"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reviewed",
+          "explanation": "The meshing chain, which always has exactly two nodes in a fixed order: first the solid source (box or readSTEP), then the tetrahedral node whose inputs.input names the first node. Node ids must be distinct. Any other count or order fails planning with INVALID_DOCUMENT or INVALID_DEPENDENCY.",
+          "label": "Nodes",
+          "pitfalls": [
+            "To mesh a different shape, replace the first node (for example box by readSTEP) rather than adding a third node."
+          ],
+          "examples": [
+            [
+              {
+                "id": "solid",
+                "filter": "box",
+                "options": {
+                  "size": [
+                    10,
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "mesh",
+                "filter": "tetrahedral",
+                "inputs": {
+                  "input": "solid"
+                },
+                "options": {
+                  "size": 3,
+                  "volumeName": "domain",
+                  "boundaryName": "boundary",
+                  "volumeTolerance": 1e-06
+                }
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:62-77",
+            "docs/gmsh.md#editable-input"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reviewed",
+          "explanation": "One node of the two-node meshing chain. Its filter selects the operation: box or readSTEP is only valid in the first position and tetrahedral only in the second.",
+          "examples": [
+            {
+              "id": "solid",
+              "filter": "box",
+              "options": {
+                "size": [
+                  10,
+                  10,
+                  10
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:66-77"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Choose the box node when the domain is a rectangular block that you can describe by a corner and three extents, such as a test domain, channel section or mesh-size study. Because its volume and bounds are known exactly, verification also compares the mesh with the analytic volume and bounds. Choose readSTEP for any other shape.",
+          "examples": [
+            {
+              "id": "solid",
+              "filter": "box",
+              "options": {
+                "origin": [
+                  0,
+                  0,
+                  0
+                ],
+                "size": [
+                  20,
+                  10,
+                  5
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:40-42",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:268-271",
+            "docs/gmsh.md#editable-input"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options": {
+          "status": "reviewed",
+          "explanation": "Position and extents of the axis-aligned box, both in millimetres. size decides the domain and, together with the tetrahedral size, the number of cells; origin only moves the box, which also moves the planes used by faceGroups. Omitted settings take the Schemaxis defaults: origin [0, 0, 0] and size [10, 10, 10].",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:20",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:41-42",
+            "src/schemaxis/adaptors/gmsh/native.py:22-23"
+          ],
+          "examples": [
+            {
+              "origin": [
+                0,
+                0,
+                0
+              ],
+              "size": [
+                20,
+                10,
+                5
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/origin": {
+          "status": "reviewed",
+          "explanation": "World coordinates [x, y, z] of the box's minimum corner; the box extends from origin to origin + size along each positive axis. Schemaxis passes these as the x, y, z arguments of gmsh.model.occ.addBox. Moving the origin changes the coordinates of every box face, so faceGroups coordinates must move with it.",
+          "label": "Minimum corner",
+          "units": "Millimetres (world coordinates)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "pitfalls": [
+            "faceGroups coordinates are absolute: with origin [-5, 0, 0] and size [10, 10, 10], the x faces lie at x = -5 and x = 5, not 0 and 10."
+          ],
+          "examples": [
+            [
+              -5,
+              0,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:20",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:41-42",
+            "src/schemaxis/adaptors/gmsh/native.py:22-23",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/origin/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate of the minimum corner in millimetres; its position in the array selects the axis (first x, second y, third z).",
+          "examples": [
+            0
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:20",
+            "src/schemaxis/adaptors/gmsh/native.py:23"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/size": {
+          "status": "reviewed",
+          "explanation": "Extents [dx, dy, dz] of the box along x, y and z, each positive. These are lengths, not the opposite corner. Verification checks that the CAD volume equals dx·dy·dz and that the mesh bounds equal origin and origin + size. Larger extents at the same element size mean more cells: planning rejects the document with RESOURCE_LIMIT when 6 × Π(extent / smallest element size + 1) exceeds 200000.",
+          "label": "Box extents",
+          "units": "Millimetres",
+          "defaultMeaning": "Schemaxis default: [10, 10, 10] (a 10 mm cube).",
+          "pitfalls": [
+            "A box from (5, 0, 0) to (15, 10, 10) is origin [5, 0, 0] with size [10, 10, 10]; entering [15, 10, 10] doubles the x extent."
+          ],
+          "examples": [
+            [
+              20,
+              10,
+              5
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:41-42",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:97-99",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:268-271",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/size/items": {
+          "status": "reviewed",
+          "explanation": "One positive extent of the box in millimetres; its position in the array selects the axis (first x, second y, third z).",
+          "examples": [
+            10
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:41-42",
+            "src/schemaxis/adaptors/gmsh/native.py:23"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose the readSTEP node to mesh an existing CAD part, for example a STEP file exported by FreeCAD earlier in a workflow. The file must hold exactly one solid; Schemaxis captures its bytes before meshing and uses the volume and bounds measured by OpenCASCADE as the reference for the volume and bounds checks. Choose box when the domain is a simple block.",
+          "examples": [
+            {
+              "id": "solid",
+              "filter": "readSTEP",
+              "options": {
+                "file": "/data/part.step"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:43-44",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:128-137",
+            "src/schemaxis/adaptors/gmsh/native.py:24-29",
+            "docs/gmsh.md#editable-input"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options": {
+          "status": "reviewed",
+          "explanation": "The STEP import has a single required setting, the file. Import behaviour is fixed by Schemaxis: lengths are converted to millimetres, only the highest-dimension entities (solids) are imported, and the format is forced to STEP.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py:24-29",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc"
+          ],
+          "examples": [
+            {
+              "file": "/data/part.step"
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path of a single-file STEP (ISO 10303-21) document containing exactly one solid. The name must end in .step or .stp (any letter case); relative paths fail planning with INVALID_RESOURCE. Before meshing, Schemaxis checks that it is a regular file of at most 16 MiB that begins with \"ISO-10303-21;\", records its SHA-256 digest and meshes a retained copy (source.step) in the run directory. In a workflow the path can come from an upstream CAD artifact, such as {\"$artifact\": \"cad\", \"index\": 0}.",
+          "label": "STEP file",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Assemblies or files with several solids fail natively with \"STEP input must contain exactly one solid volume\"; export one fused solid.",
+            "Editing the file changes its digest: earlier results are not reused, and a refinement study fails if the bytes change between attempts.",
+            "Feature history and STEP face labels are not imported; name faces with faceGroups instead."
+          ],
+          "fileExtensions": [
+            ".step",
+            ".stp"
+          ],
+          "examples": [
+            "/data/part.step"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:78-79",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:128-137",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:180-187",
+            "src/schemaxis/adaptors/gmsh/native.py:24-29",
+            "examples/schemaxis/freecad-gmsh-faces-paraview.json"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "The meshing node. It must be the second node, reference the solid node through inputs.input, and be the node selected by output. It turns the solid into first-order tetrahedra with named physical groups and publishes the mesh, two VTU views and a summary.",
+          "examples": [
+            {
+              "id": "mesh",
+              "filter": "tetrahedral",
+              "inputs": {
+                "input": "solid"
+              },
+              "options": {
+                "size": 3,
+                "volumeName": "domain",
+                "boundaryName": "boundary",
+                "volumeTolerance": 1e-06
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:45-51",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:71-77",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:101"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options": {
+          "status": "reviewed",
+          "explanation": "Settings for the tetrahedral mesh. The global size has the largest effect on cell count and on how well curved faces are approximated; faceGroups and nearBoundaries name planar faces and refine near them; volumeTolerance sets the volume acceptance check. Omitted settings take the Schemaxis defaults (size 3 mm, names \"domain\" and \"boundary\", no face groups or local sizing, volumeTolerance 0.01). Schemaxis sets the relevant Gmsh mesh options itself and does not read Gmsh configuration files.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:45-51",
+            "src/schemaxis/adaptors/gmsh/native.py:12",
+            "src/schemaxis/adaptors/gmsh/native.py:63-68"
+          ],
+          "examples": [
+            {
+              "size": 2.5,
+              "volumeName": "part",
+              "boundaryName": "outside",
+              "volumeTolerance": 1e-06
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/size": {
+          "status": "reviewed",
+          "explanation": "Global target edge length of the tetrahedra. Schemaxis passes it to Gmsh as Mesh.MeshSizeMax (and as Mesh.MeshSizeMin when no nearBoundaries rule is smaller) with sizes from CAD points, curvature and boundary extension disabled, and meshes with Gmsh's Delaunay 3D algorithm (Mesh.Algorithm3D = 1). Smaller values give more, smaller tetrahedra (the count grows roughly with the inverse cube of size) and follow curved faces more closely, because curvature-based sizing is off.",
+          "label": "Target element size",
+          "units": "Millimetres",
+          "defaultMeaning": "Schemaxis default: 3 mm. Gmsh's own Mesh.MeshSizeMax default (1e+22) never applies because Schemaxis always sets it.",
+          "pitfalls": [
+            "It is a target, not a bound: individual edges can be longer. Use refinement.requirements.maximumEdgeLength when a bound matters.",
+            "A size that is small relative to the solid is rejected when the estimate 6 × Π(bounding-box extent / smallest size + 1) exceeds 200000. For a box this fails planning with RESOURCE_LIMIT; for readSTEP the bounds are only known after import, so the Gmsh worker fails natively with \"requested mesh size exceeds the 200000-cell work estimate\". Increase size either way."
+          ],
+          "examples": [
+            2.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py:37-39",
+            "src/schemaxis/adaptors/gmsh/native.py:63-68",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:97-99",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Mesh-options",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Specifying-mesh-element-sizes",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:84-85",
+            "src/schemaxis/adaptors/gmsh/native.py:37-41"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/volumeName": {
+          "status": "reviewed",
+          "explanation": "Name of the physical volume group (tag 1) that contains every tetrahedron of the solid. The name is stored in result.msh and mesh-summary.json; the VTU files carry only the numeric physicalTag 1. Names start with an ASCII letter followed by letters, digits, underscores or hyphens, and must differ from boundaryName and every faceGroups name.",
+          "label": "Volume group name",
+          "defaultMeaning": "Schemaxis default: \"domain\".",
+          "pitfalls": [
+            "Spaces, dots or non-ASCII characters fail planning with INVALID_ARGUMENT even though the form accepts any text; use names such as fluid_region."
+          ],
+          "examples": [
+            "part"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:81-84",
+            "src/schemaxis/adaptors/gmsh/native.py:45",
+            "docs/gmsh.md#publications-and-meaning",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Elementary-entities-vs-physical-groups"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/boundaryName": {
+          "status": "reviewed",
+          "explanation": "Name of the physical surface group (tag 2) that holds every boundary face not selected by faceGroups, or the entire exterior surface when faceGroups is empty. nearBoundaries and refinement boundary requirements can refer to it. The same naming rules as volumeName apply, and all group names must be distinct.",
+          "label": "Remainder boundary name",
+          "defaultMeaning": "Schemaxis default: \"boundary\".",
+          "pitfalls": [
+            "Tag 2 always means the remainder group whatever its name; tools reading the VTU files must map physicalTag to names through mesh-summary.json."
+          ],
+          "examples": [
+            "walls"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:81-84",
+            "src/schemaxis/adaptors/gmsh/native.py:60-62",
+            "docs/gmsh.md#editable-input"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups": {
+          "status": "reviewed",
+          "explanation": "Up to 12 named physical surface groups, each holding the whole CAD faces that lie flat on one axis-aligned plane (for example x = 0). Groups receive tags 3, 4, … in list order, and every face not selected goes to boundaryName (tag 2). Use them to name inlets, outlets, fixed or loaded faces for later setup. Each selector must match at least one face, selectors on the same axis must not overlap, and at least one face must remain for the remainder group.",
+          "label": "Planar face groups",
+          "defaultMeaning": "Schemaxis default: [] (no face groups; the whole exterior belongs to boundaryName).",
+          "pitfalls": [
+            "Naming all six faces of a box leaves no remainder and fails natively (\"leave at least one face for the remainder boundary group\"); name at most five.",
+            "Curved or oblique faces cannot be selected; they always belong to the remainder group.",
+            "Reordering the list changes the numeric tags written to the VTU files."
+          ],
+          "examples": [
+            [
+              {
+                "name": "inlet",
+                "axis": "x",
+                "coordinate": 0
+              },
+              {
+                "name": "outlet",
+                "axis": "x",
+                "coordinate": 10
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:85-88",
+            "src/schemaxis/adaptors/gmsh/native.py:46-62",
+            "src/schemaxis/adaptors/gmsh/mesh.py:127-135",
+            "docs/gmsh.md#editable-input"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups/items": {
+          "status": "reviewed",
+          "explanation": "One named plane selector. Every boundary face whose extent along axis stays within tolerance of coordinate joins this group, so several separate faces on the same plane are grouped together.",
+          "examples": [
+            {
+              "name": "fixed",
+              "axis": "x",
+              "coordinate": 0
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py:47-58"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Physical surface name written to result.msh and mesh-summary.json. It must start with an ASCII letter followed by letters, digits, underscores or hyphens, and be unique among volumeName, boundaryName and the other face groups. nearBoundaries and refinement boundary requirements refer to the group by this name.",
+          "label": "Group name",
+          "pitfalls": [
+            "A name such as \"x min\" (with a space) fails planning with INVALID_ARGUMENT; use x_min."
+          ],
+          "examples": [
+            "inlet"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:81-84",
+            "src/schemaxis/adaptors/gmsh/native.py:58",
+            "docs/gmsh.md#editable-input"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups/items/properties/axis": {
+          "status": "reviewed",
+          "explanation": "World axis perpendicular to the selected plane: x selects faces of constant x, y faces of constant y, z faces of constant z. Pick the axis the face is normal to, not an axis lying within the face.",
+          "label": "Normal axis",
+          "pitfalls": [
+            "For the top face of a box spanning z = 0 to 5, use axis z with coordinate 5."
+          ],
+          "examples": [
+            "z"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py:48-53"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups/items/properties/coordinate": {
+          "status": "reviewed",
+          "explanation": "Position of the plane along axis, in world millimetres (after STEP unit conversion, and including any box origin). A face is selected when both its minimum and maximum bounding-box coordinates along axis lie within tolerance of this value.",
+          "label": "Plane coordinate",
+          "units": "Millimetres (world coordinates)",
+          "pitfalls": [
+            "If no face lies on the plane, meshing fails with \"face selector … is empty\"; check cadBounds in mesh-summary.json or the CAD model coordinates."
+          ],
+          "examples": [
+            10
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py:47-53",
+            "docs/gmsh.md#editable-input"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups/items/properties/tolerance": {
+          "status": "reviewed",
+          "explanation": "Absolute distance allowed between a face's extent along axis and coordinate when selecting faces; verification uses the same distance when it classifies every boundary triangle. Increase it, within 1e-6 to 1e-3 mm, only when a face that sits slightly off the nominal plane is not found. Two selectors on the same axis are rejected as overlapping when their coordinates differ by no more than the sum of their tolerances.",
+          "label": "Plane tolerance",
+          "units": "Millimetres",
+          "defaultMeaning": "Schemaxis default: 1e-6 mm.",
+          "examples": [
+            0.0001
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:85-88",
+            "src/schemaxis/adaptors/gmsh/native.py:52",
+            "src/schemaxis/adaptors/gmsh/mesh.py:127-135",
+            "docs/gmsh.md#editable-input"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/nearBoundaries": {
+          "status": "reviewed",
+          "explanation": "Up to 13 rules that request a finer target size close to named boundary groups. For each rule Schemaxis builds a Gmsh Distance field to that group's surfaces and a Threshold field: the size equals the rule's size on the surface, grows linearly to the global size at the rule's distance, and stays at the global size beyond. Rules are combined with a Min field, so the smallest requested size wins where they overlap. The native field settings are read back and verified.",
+          "label": "Local boundary sizing",
+          "defaultMeaning": "Schemaxis default: [] (uniform global size everywhere).",
+          "pitfalls": [
+            "The RESOURCE_LIMIT estimate assumes the smallest rule size fills the whole bounding box, so a small local size on a large part can be rejected although the real mesh would fit.",
+            "In a refinement study the rule sizes shrink with the global size (not below 0.001 mm) but the distances stay fixed."
+          ],
+          "examples": [
+            [
+              {
+                "boundary": "fixed",
+                "size": 0.75,
+                "distance": 2
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py:72-94",
+            "src/schemaxis/adaptors/gmsh/sizing.py",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:89-96",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Gmsh-mesh-size-fields",
+            "docs/gmsh.md#meshing-intent-near-named-boundaries"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/nearBoundaries/items": {
+          "status": "reviewed",
+          "explanation": "One sizing rule for one named boundary group: the target size on that boundary and the distance over which the size grows back to the global size. Each boundary name may appear in only one rule.",
+          "examples": [
+            {
+              "boundary": "fixed",
+              "size": 0.75,
+              "distance": 2
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:89-96",
+            "src/schemaxis/adaptors/gmsh/native.py:74-88"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/nearBoundaries/items/properties/boundary": {
+          "status": "reviewed",
+          "explanation": "Name of the boundary group to refine near: boundaryName (the whole remaining exterior) or one faceGroups name. Gmsh resolves the name to that physical group's CAD surfaces, so native face numbers are never authored.",
+          "label": "Boundary group",
+          "pitfalls": [
+            "An undeclared name, a repeated name or volumeName fails planning with INVALID_SELECTION."
+          ],
+          "examples": [
+            "fixed"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:89-93",
+            "src/schemaxis/adaptors/gmsh/native.py:72-78"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/nearBoundaries/items/properties/size": {
+          "status": "reviewed",
+          "explanation": "Target tetrahedron edge length on the named surfaces (the Threshold field's SizeMin). It must not exceed the tetrahedral size; a value equal to it has no local effect. The smallest rule size also becomes Mesh.MeshSizeMin and is the size used by the cell-count estimate.",
+          "label": "Size at boundary",
+          "units": "Millimetres",
+          "pitfalls": [
+            "It is a target, not a bound; check the achieved value with refinement.requirements.boundaryMaximumEdgeLength or quality.boundaries in mesh-summary.json."
+          ],
+          "examples": [
+            0.75
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:94-97",
+            "src/schemaxis/adaptors/gmsh/native.py:38",
+            "src/schemaxis/adaptors/gmsh/native.py:63",
+            "src/schemaxis/adaptors/gmsh/native.py:81-82",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Gmsh-mesh-size-fields"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/nearBoundaries/items/properties/distance": {
+          "status": "reviewed",
+          "explanation": "Distance from the named surfaces at which the target size has grown back to the global size (Threshold DistMax, with DistMin 0 and StopAtDistMax off). Between the surface and this distance the size is interpolated linearly. Larger distances spread fine elements deeper into the volume and increase the cell count. Distances are measured to 20 sample points per direction on each surface (Distance field Sampling 20), so the transition is approximate.",
+          "label": "Transition distance",
+          "units": "Millimetres",
+          "pitfalls": [
+            "Refinement studies scale rule sizes but not this distance; set it for the finest mesh you expect to accept."
+          ],
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py:77-83",
+            "https://gmsh.info/doc/texinfo/gmsh.html#Gmsh-mesh-size-fields",
+            "docs/gmsh.md#meshing-intent-near-named-boundaries"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/volumeTolerance": {
+          "status": "reviewed",
+          "explanation": "Largest allowed relative difference between the total tetrahedral volume and the CAD volume measured by OpenCASCADE: |Vmesh − Vcad| ≤ volumeTolerance × Vcad. Solids bounded only by planar faces, such as a box, are filled exactly by linear tetrahedra, so tiny values such as 1e-6 are appropriate; curved faces are approximated by flat triangles and the error shrinks as size decreases. A mesh outside the tolerance fails verification and is not published.",
+          "label": "Volume tolerance",
+          "units": "Dimensionless fraction of the CAD volume (0.01 = 1 %)",
+          "defaultMeaning": "Schemaxis default: 0.01 (1 %).",
+          "pitfalls": [
+            "In a refinement study this remains a hard check: a candidate outside it stops the study with a fault instead of being refined. Use refinement.requirements.maximumVolumeRelativeError for a criterion that drives refinement.",
+            "If it fails on curved CAD, reduce size or investigate the CAD; do not loosen it beyond what your analysis can accept."
+          ],
+          "examples": [
+            1e-06
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:272",
+            "src/schemaxis/adaptors/gmsh/native.py:33-34",
+            "docs/gmsh.md#editable-input",
+            "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "Id of the solid node (the box or readSTEP node in the first position) to be meshed. Any other value fails planning with INVALID_DEPENDENCY.",
+          "label": "Solid",
+          "examples": [
+            "solid"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:75-77"
+          ]
+        },
+        "/properties/output": {
+          "status": "reviewed",
+          "explanation": "Id of the node whose results are published; it must be the tetrahedral node. The published artifacts are, in order: result.msh, volume.vtu, boundary.vtu and mesh-summary.json, followed by study-summary.json and study.html when refinement is present. Workflow steps select them by zero-based index, for example index 1 for volume.vtu.",
+          "label": "Output node",
+          "pitfalls": [
+            "Selecting the box or readSTEP node fails planning with INVALID_SELECTION; solids are not published on their own."
+          ],
+          "examples": [
+            "mesh"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py:53",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:101",
+            "docs/gmsh.md#publications-and-meaning",
+            "docs/gmsh.md#bounded-refinement-under-explicit-requirements",
+            "examples/schemaxis/freecad-gmsh-faces-paraview.json"
+          ]
+        },
+        "/properties/refinement": {
+          "status": "reviewed",
+          "explanation": "Optional bounded refinement study. The first candidate uses the authored size; each candidate is meshed, verified and measured, and the first one that meets every requirement within maxTetrahedra is accepted. Otherwise the global size is multiplied by reductionFactor (not below minimumSize) and meshing repeats. The study stops on acceptance, after maxIterations candidates, after a candidate at minimumSize, when the cell budget is exceeded, or when the next candidate would exceed the native work estimate. If no candidate passes, the run fails with STUDY_REQUIREMENTS_NOT_MET, keeps study-summary.json and study.html, and exports no mesh.",
+          "label": "Refinement study",
+          "defaultMeaning": "Omitted: a single mesh at the authored size, with no requirement checks beyond verification.",
+          "pitfalls": [
+            "A smaller size does not guarantee better element shape, so a strict minimumMeanRatio can exhaust the study.",
+            "The accepted mesh is the first passing candidate, not the coarsest or optimal one; every candidate shares one run timeout."
+          ],
+          "examples": [
+            {
+              "maxIterations": 4,
+              "reductionFactor": 0.7,
+              "minimumSize": 1,
+              "maxTetrahedra": 20000,
+              "requirements": {
+                "maximumEdgeLength": 3,
+                "minimumMeanRatio": 0.1
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:51-113",
+            "src/schemaxis/feedback.py:22-38",
+            "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
+          ]
+        },
+        "/properties/refinement/properties/maxIterations": {
+          "status": "reviewed",
+          "explanation": "Largest number of candidate meshes in the study, counting the first one at the authored size; 1 only checks the authored mesh against the requirements. Each candidate is a full native mesh and verification, so higher values cost more time within the same timeout.",
+          "label": "Maximum candidates",
+          "defaultMeaning": "Schemaxis default: 4.",
+          "examples": [
+            6
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:13",
+            "src/schemaxis/adaptors/gmsh/refinement.py:56",
+            "src/schemaxis/feedback.py:31-32"
+          ]
+        },
+        "/properties/refinement/properties/reductionFactor": {
+          "status": "reviewed",
+          "explanation": "Multiplier applied to the global size between candidates: next size = max(previous size × factor, minimumSize). nearBoundaries sizes are scaled by the same ratio. Smaller factors reach fine meshes in fewer candidates but can step past the coarsest acceptable mesh; values near 0.95 take small steps and need more candidates.",
+          "label": "Size reduction factor",
+          "defaultMeaning": "Schemaxis default: 0.7.",
+          "examples": [
+            0.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:71-80",
+            "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
+          ]
+        },
+        "/properties/refinement/properties/minimumSize": {
+          "status": "reviewed",
+          "explanation": "Smallest global size the study may try. The last candidate is clamped to this size, and once a candidate at or below it has been tested the study stops. It must not exceed the tetrahedral size (INVALID_STUDY otherwise).",
+          "label": "Smallest global size",
+          "units": "Millimetres",
+          "defaultMeaning": "Schemaxis default: 0.1 mm.",
+          "pitfalls": [
+            "The default is not a recommendation; on larger parts a small minimum is usually cut short by the 200000-cell work estimate. Set it to the finest mesh you are prepared to run."
+          ],
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:39-40",
+            "src/schemaxis/adaptors/gmsh/refinement.py:71-75",
+            "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
+          ]
+        },
+        "/properties/refinement/properties/maxTetrahedra": {
+          "status": "reviewed",
+          "explanation": "Largest number of tetrahedra an acceptable candidate may have. It is checked after meshing: a candidate that exceeds it is rejected and the study stops instead of refining further. The native hard limits of 200000 cells and 50000 nodes apply independently.",
+          "label": "Tetrahedron budget",
+          "units": "Number of tetrahedra",
+          "defaultMeaning": "Schemaxis default: 50000.",
+          "pitfalls": [
+            "If the authored size already exceeds the budget, the study stops after its first candidate; increase size or the budget."
+          ],
+          "examples": [
+            20000
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:16",
+            "src/schemaxis/adaptors/gmsh/refinement.py:90",
+            "src/schemaxis/adaptors/gmsh/refinement.py:103-104",
+            "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
+          ]
+        },
+        "/properties/refinement/properties/requirements": {
+          "status": "reviewed",
+          "explanation": "Measured criteria that a candidate must all satisfy; at least one is required and only the declared ones are checked. Comparisons are inclusive, and the measurements are made by Schemaxis from the retained mesh coordinates, independently of Gmsh.",
+          "label": "Acceptance requirements",
+          "defaultMeaning": "Required whenever refinement is present; an empty object fails with INVALID_STUDY.",
+          "pitfalls": [
+            "These describe mesh size, shape and volume only; they do not establish solution accuracy or solver convergence."
+          ],
+          "examples": [
+            {
+              "maximumEdgeLength": 3,
+              "minimumMeanRatio": 0.1
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:17-24",
+            "src/schemaxis/adaptors/gmsh/refinement.py:37-38",
+            "src/schemaxis/adaptors/gmsh/refinement.py:82-103",
+            "src/schemaxis/adaptors/gmsh/quality.py"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/maximumEdgeLength": {
+          "status": "reviewed",
+          "explanation": "Upper bound on the longest edge of any tetrahedron in the mesh (quality.maximumEdgeLength.maximum in mesh-summary.json). The global size is only a target, so use this when a resolution limit must actually hold; the study refines until the longest edge is no greater than this value.",
+          "label": "Maximum edge length",
+          "units": "Millimetres",
+          "defaultMeaning": "Not checked when omitted.",
+          "examples": [
+            3
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:92-93",
+            "src/schemaxis/adaptors/gmsh/quality.py",
+            "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/minimumMeanRatio": {
+          "status": "reviewed",
+          "explanation": "Lower bound on the worst tetrahedron's mean ratio, 12·(3V)^(2/3) / Σ(edge length²): 1 for a regular tetrahedron, tending to 0 for a flat sliver. Schemaxis also reports a diagnostic count below 0.2, but that is not an acceptance threshold; choose the bound your downstream solver needs.",
+          "label": "Minimum mean ratio",
+          "units": "Dimensionless (0 to 1)",
+          "defaultMeaning": "Not checked when omitted.",
+          "pitfalls": [
+            "Reducing size does not necessarily improve the worst element, so a strict bound may never be met; inspect worstCells in mesh-summary.json."
+          ],
+          "examples": [
+            0.1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/quality.py:1-21",
+            "src/schemaxis/adaptors/gmsh/refinement.py:94-95",
+            "docs/gmsh.md#independent-quality-assessment"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/maximumVolumeRelativeError": {
+          "status": "reviewed",
+          "explanation": "Upper bound on |Vmesh − Vcad| / Vcad as a study criterion: a candidate above it is rejected and refined. This differs from the tetrahedral volumeTolerance, which is a hard check that fails the run, so set this at or below volumeTolerance; a larger value has no effect.",
+          "label": "Maximum volume error",
+          "units": "Dimensionless fraction of the CAD volume (0.001 = 0.1 %)",
+          "defaultMeaning": "Not checked when omitted.",
+          "examples": [
+            0.001
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:96-97",
+            "src/schemaxis/adaptors/gmsh/adaptor.py:272",
+            "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/boundaryMaximumEdgeLength": {
+          "status": "reviewed",
+          "explanation": "Per-boundary upper bounds on the longest triangle edge within named boundary groups (quality.boundaries in mesh-summary.json). Use it with nearBoundaries to confirm that local refinement was actually achieved. Each entry must name a distinct declared boundary group.",
+          "label": "Boundary maximum edge lengths",
+          "defaultMeaning": "Not checked when omitted.",
+          "examples": [
+            [
+              {
+                "boundary": "fixed",
+                "maximum": 0.9
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:44-47",
+            "src/schemaxis/adaptors/gmsh/refinement.py:98-102",
+            "src/schemaxis/adaptors/gmsh/quality.py",
+            "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/boundaryMaximumEdgeLength/items": {
+          "status": "reviewed",
+          "explanation": "One boundary requirement: the longest edge of any triangle in the named boundary group must not exceed maximum.",
+          "examples": [
+            {
+              "boundary": "fixed",
+              "maximum": 0.9
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:98-102"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/boundaryMaximumEdgeLength/items/properties/boundary": {
+          "status": "reviewed",
+          "explanation": "Name of the boundary group to check: boundaryName or one faceGroups name of the tetrahedral node. volumeName, undeclared names and repeated names fail planning with INVALID_SELECTION.",
+          "label": "Boundary group",
+          "examples": [
+            "fixed"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:41-47"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/boundaryMaximumEdgeLength/items/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Largest allowed edge length of the triangles on that boundary group (inclusive). Set it slightly above the matching nearBoundaries size when you only want to confirm that the local sizing took effect.",
+          "label": "Maximum boundary edge",
+          "units": "Millimetres",
+          "examples": [
+            0.9
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py:98-102",
+            "examples/schemaxis/gmsh-boundary-refinement.json"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "version": "schemaxis/1",
+  "maxStates": 100,
+  "maxPublications": 250,
+  "dimensions": {
+    "model": {
+      "min": [
+        -1,
+        -0.5,
+        0.1
+      ],
+      "max": [
+        1,
+        0.5,
+        1.1
+      ]
+    },
+    "sliceBounds": {
+      "min": [
+        -2,
+        -1,
+        0.2
+      ],
+      "max": [
+        3,
+        1,
+        0.8
+      ]
+    },
+    "detail": {
+      "min": [
+        -0.5,
+        -0.4,
+        0.2
+      ],
+      "max": [
+        1.5,
+        0.4,
+        0.8
+      ]
+    },
+    "sampleLine": {
+      "start": [
+        -1,
+        -0.5,
+        0.5
+      ],
+      "end": [
+        2,
+        -0.5,
+        0.5
+      ]
+    },
+    "sliceSpacing": 0.2
+  },
+  "settings": {
+    "case": "/absolute/path/to/completed-case/case.foam",
+    "caseType": "Reconstructed Case",
+    "times": [
+      1.0
+    ],
+    "velocity": "U",
+    "pressure": "p",
+    "sliceCount": 3,
+    "orbitCount": 4,
+    "imageSize": [
+      960,
+      540
+    ],
+    "aspect": [
+      16,
+      9
+    ],
+    "pressureRange": [
+      -100,
+      100
+    ],
+    "speedRange": [
+      0,
+      30
+    ],
+    "isoPressure": 0,
+    "seeds": {
+      "start": [
+        -1,
+        -0.5,
+        0.3
+      ],
+      "end": [
+        -1,
+        0.5,
+        0.3
+      ],
+      "resolution": 12,
+      "maximumLength": 6,
+      "tubeRadius": 0.02
+    }
+  },
+  "views": {
+    "overview": {
+      "$value": "boundsExtend",
+      "args": {
+        "bounds": {
+          "$document": "/dimensions/model"
+        },
+        "before": [
+          0.5,
+          1,
+          0
+        ],
+        "after": [
+          1.5,
+          1,
+          0.5
+        ]
+      }
+    },
+    "detail": {
+      "$document": "/dimensions/detail"
+    }
+  },
+  "times": {
+    "$document": "/settings/times"
+  },
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {
+          "$document": "/settings/case"
+        },
+        "caseType": {
+          "$document": "/settings/caseType"
+        },
+        "regions": [
+          "internalMesh"
+        ],
+        "cellArrays": [
+          {
+            "$document": "/settings/velocity"
+          },
+          {
+            "$document": "/settings/pressure"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "merge",
+      "inputs": {
+        "input": "case"
+      }
+    },
+    {
+      "id": "domainOutline",
+      "filter": "outline",
+      "inputs": {
+        "input": "mesh"
+      }
+    },
+    {
+      "id": "points",
+      "filter": "cellToPoint",
+      "inputs": {
+        "input": "mesh"
+      }
+    },
+    {
+      "id": "seedLine",
+      "filter": "line",
+      "options": {
+        "start": {
+          "$document": "/settings/seeds/start"
+        },
+        "end": {
+          "$document": "/settings/seeds/end"
+        },
+        "resolution": {
+          "$document": "/settings/seeds/resolution"
+        }
+      }
+    },
+    {
+      "id": "stream",
+      "filter": "streamTracer",
+      "inputs": {
+        "input": "points",
+        "seed": "seedLine"
+      },
+      "options": {
+        "vectors": [
+          "POINTS",
+          {
+            "$document": "/settings/velocity"
+          }
+        ],
+        "maximumLength": {
+          "$document": "/settings/seeds/maximumLength"
+        }
+      }
+    },
+    {
+      "id": "streamTubes",
+      "filter": "tube",
+      "inputs": {
+        "input": "stream"
+      },
+      "options": {
+        "radius": {
+          "$document": "/settings/seeds/tubeRadius"
+        }
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "streamlines",
+      "geometry": [
+        "stream"
+      ],
+      "visible": {
+        "streamTubes": {
+          "field": [
+            "POINTS",
+            {
+              "$document": "/settings/velocity"
+            }
+          ],
+          "component": -1,
+          "range": {
+            "$document": "/settings/speedRange"
+          },
+          "preset": "Viridis (matplotlib)",
+          "legend": true
+        },
+        "domainOutline": {
+          "colour": "grey",
+          "opacity": 0.3
+        }
+      },
+      "images": [
+        {
+          "id": "overview",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/overview"
+                },
+                "direction": [
+                  1,
+                  -2,
+                  1
+                ],
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "version": "schemaxis.blender/1",
+  "nodes": [
+    {
+      "id": "paint",
+      "filter": "material"
+    },
+    {
+      "id": "${prefix}Column",
+      "filter": "cylinder",
+      "options": {
+        "radius": 0.2,
+        "depth": 2
+      },
+      "inputs": {
+        "material": "paint"
+      }
+    },
+    {
+      "id": "${prefix}Final",
+      "filter": "array",
+      "options": {
+        "count": {
+          "$fill": "count"
+        },
+        "relativeOffset": [
+          3,
+          0,
+          0
+        ]
+      },
+      "inputs": {
+        "input": "${prefix}Column"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "main",
+      "visible": [
+        "${prefix}Final"
+      ],
+      "images": [
+        {
+          "id": "view",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -2,
+                1
+              ]
+            }
+          ]
+        }
+      ],
+      "render": {
+        "device": "CPU",
+        "samples": 16,
+        "threads": 1
+      }
+    }
+  ]
+}

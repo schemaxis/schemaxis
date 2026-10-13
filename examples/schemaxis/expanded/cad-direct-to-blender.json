@@ -1,0 +1,695 @@
+{
+  "version": "schemaxis.workflow/1",
+  "execution": {
+    "maxWorkers": 2,
+    "cpus": 8,
+    "memoryMB": 8192,
+    "gpus": 0
+  },
+  "operations": [
+    {
+      "id": "housing",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "linearDeflection": 0.03,
+        "nodes": [
+          {
+            "id": "blank",
+            "filter": "box",
+            "options": {
+              "length": 80,
+              "width": 50,
+              "height": {
+                "$document": "/dimensions/height"
+              }
+            }
+          },
+          {
+            "id": "rounded",
+            "filter": "fillet",
+            "options": {
+              "radius": 2,
+              "edges": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+              ]
+            },
+            "inputs": {
+              "base": "blank"
+            }
+          },
+          {
+            "id": "pocket",
+            "filter": "box",
+            "options": {
+              "length": 74,
+              "width": 44,
+              "height": {
+                "$document": "/dimensions/height"
+              },
+              "origin": [
+                3,
+                3,
+                3
+              ]
+            }
+          },
+          {
+            "id": "shell",
+            "filter": "cut",
+            "inputs": {
+              "base": "rounded",
+              "tool": "pocket"
+            }
+          },
+          {
+            "id": "post0",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 13,
+              "origin": [
+                10,
+                10,
+                3
+              ]
+            }
+          },
+          {
+            "id": "withPost0",
+            "filter": "fuse",
+            "inputs": {
+              "base": "shell",
+              "tool": "post0"
+            }
+          },
+          {
+            "id": "drill0",
+            "filter": "cylinder",
+            "options": {
+              "radius": 1.5,
+              "height": 14,
+              "origin": [
+                10,
+                10,
+                3
+              ]
+            }
+          },
+          {
+            "id": "hole0",
+            "filter": "cut",
+            "inputs": {
+              "base": "withPost0",
+              "tool": "drill0"
+            }
+          },
+          {
+            "id": "post1",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 13,
+              "origin": [
+                70,
+                10,
+                3
+              ]
+            }
+          },
+          {
+            "id": "withPost1",
+            "filter": "fuse",
+            "inputs": {
+              "base": "hole0",
+              "tool": "post1"
+            }
+          },
+          {
+            "id": "drill1",
+            "filter": "cylinder",
+            "options": {
+              "radius": 1.5,
+              "height": 14,
+              "origin": [
+                70,
+                10,
+                3
+              ]
+            }
+          },
+          {
+            "id": "hole1",
+            "filter": "cut",
+            "inputs": {
+              "base": "withPost1",
+              "tool": "drill1"
+            }
+          },
+          {
+            "id": "post2",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 13,
+              "origin": [
+                10,
+                40,
+                3
+              ]
+            }
+          },
+          {
+            "id": "withPost2",
+            "filter": "fuse",
+            "inputs": {
+              "base": "hole1",
+              "tool": "post2"
+            }
+          },
+          {
+            "id": "drill2",
+            "filter": "cylinder",
+            "options": {
+              "radius": 1.5,
+              "height": 14,
+              "origin": [
+                10,
+                40,
+                3
+              ]
+            }
+          },
+          {
+            "id": "hole2",
+            "filter": "cut",
+            "inputs": {
+              "base": "withPost2",
+              "tool": "drill2"
+            }
+          },
+          {
+            "id": "post3",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 13,
+              "origin": [
+                70,
+                40,
+                3
+              ]
+            }
+          },
+          {
+            "id": "withPost3",
+            "filter": "fuse",
+            "inputs": {
+              "base": "hole2",
+              "tool": "post3"
+            }
+          },
+          {
+            "id": "drill3",
+            "filter": "cylinder",
+            "options": {
+              "radius": 1.5,
+              "height": 14,
+              "origin": [
+                70,
+                40,
+                3
+              ]
+            }
+          },
+          {
+            "id": "hole3",
+            "filter": "cut",
+            "inputs": {
+              "base": "withPost3",
+              "tool": "drill3"
+            }
+          }
+        ],
+        "output": "hole3",
+        "dimensions": {
+          "height": 24
+        }
+      }
+    },
+    {
+      "id": "ventedHousing",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "linearDeflection": 0.03,
+        "nodes": [
+          {
+            "id": "source",
+            "filter": "readSTEP",
+            "options": {
+              "file": {
+                "$artifact": "housing",
+                "index": 0
+              }
+            }
+          },
+          {
+            "id": "vent",
+            "filter": "box",
+            "options": {
+              "length": 28,
+              "width": 5,
+              "height": 5,
+              "origin": [
+                26,
+                -1,
+                10
+              ]
+            }
+          },
+          {
+            "id": "vented",
+            "filter": "cut",
+            "inputs": {
+              "base": "source",
+              "tool": "vent"
+            }
+          }
+        ],
+        "output": "vented"
+      }
+    },
+    {
+      "id": "housingRender",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "imported",
+            "filter": "readSTL",
+            "options": {
+              "file": {
+                "$artifact": "ventedHousing",
+                "index": 1
+              },
+              "scale": 0.001
+            }
+          },
+          {
+            "id": "finish",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.04,
+                0.16,
+                0.3,
+                1
+              ],
+              "metallic": 0.5,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "styled",
+            "filter": "assignMaterial",
+            "inputs": {
+              "input": "imported",
+              "material": "finish"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "presentation",
+            "visible": [
+              "styled"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 48,
+              "denoise": true,
+              "worldStrength": 0.4,
+              "lightEnergy": 4,
+              "lightPosition": [
+                0.12,
+                -0.15,
+                0.25
+              ],
+              "lightSize": 0.12
+            },
+            "images": [
+              {
+                "id": "views",
+                "size": [
+                  960,
+                  720
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -1.5,
+                      1.4
+                    ],
+                    "padding": 0.08
+                  },
+                  {
+                    "direction": [
+                      -1,
+                      -1,
+                      1.8
+                    ],
+                    "padding": 0.08
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "rail",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "linearDeflection": 0.03,
+        "nodes": [
+          {
+            "id": "profile",
+            "filter": "polygon",
+            "options": {
+              "points": [
+                [
+                  0,
+                  0
+                ],
+                [
+                  40,
+                  0
+                ],
+                [
+                  40,
+                  5
+                ],
+                [
+                  5,
+                  5
+                ],
+                [
+                  5,
+                  30
+                ],
+                [
+                  0,
+                  30
+                ]
+              ]
+            }
+          },
+          {
+            "id": "rail",
+            "filter": "extrude",
+            "options": {
+              "length": 100
+            },
+            "inputs": {
+              "profile": "profile"
+            }
+          },
+          {
+            "id": "chamfered",
+            "filter": "chamfer",
+            "options": {
+              "distance": 0.5,
+              "edges": [
+                1
+              ]
+            },
+            "inputs": {
+              "base": "rail"
+            }
+          }
+        ],
+        "output": "chamfered"
+      }
+    },
+    {
+      "id": "railRender",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "imported",
+            "filter": "readSTL",
+            "options": {
+              "file": {
+                "$artifact": "rail",
+                "index": 1
+              },
+              "scale": 0.001
+            }
+          },
+          {
+            "id": "finish",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.28,
+                0.33,
+                0.4,
+                1
+              ],
+              "metallic": 0.5,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "styled",
+            "filter": "assignMaterial",
+            "inputs": {
+              "input": "imported",
+              "material": "finish"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "presentation",
+            "visible": [
+              "styled"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 48,
+              "denoise": true,
+              "worldStrength": 0.4,
+              "lightEnergy": 4,
+              "lightPosition": [
+                0.12,
+                -0.15,
+                0.25
+              ],
+              "lightSize": 0.12
+            },
+            "images": [
+              {
+                "id": "views",
+                "size": [
+                  960,
+                  720
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -1.5,
+                      1.4
+                    ],
+                    "padding": 0.08
+                  },
+                  {
+                    "direction": [
+                      -1,
+                      -1,
+                      1.8
+                    ],
+                    "padding": 0.08
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "connector",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "linearDeflection": 0.03,
+        "nodes": [
+          {
+            "id": "section",
+            "filter": "polygon",
+            "options": {
+              "plane": "XZ",
+              "points": [
+                [
+                  8,
+                  0
+                ],
+                [
+                  16,
+                  0
+                ],
+                [
+                  16,
+                  4
+                ],
+                [
+                  12,
+                  4
+                ],
+                [
+                  12,
+                  25
+                ],
+                [
+                  10,
+                  25
+                ],
+                [
+                  10,
+                  8
+                ],
+                [
+                  8,
+                  8
+                ]
+              ]
+            }
+          },
+          {
+            "id": "turned",
+            "filter": "revolve",
+            "inputs": {
+              "profile": "section"
+            }
+          }
+        ],
+        "output": "turned"
+      }
+    },
+    {
+      "id": "connectorRender",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "imported",
+            "filter": "readSTL",
+            "options": {
+              "file": {
+                "$artifact": "connector",
+                "index": 1
+              },
+              "scale": 0.001
+            }
+          },
+          {
+            "id": "finish",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.42,
+                0.14,
+                0.03,
+                1
+              ],
+              "metallic": 0.5,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "styled",
+            "filter": "assignMaterial",
+            "inputs": {
+              "input": "imported",
+              "material": "finish"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "presentation",
+            "visible": [
+              "styled"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 48,
+              "denoise": true,
+              "worldStrength": 0.4,
+              "lightEnergy": 4,
+              "lightPosition": [
+                0.12,
+                -0.15,
+                0.25
+              ],
+              "lightSize": 0.12
+            },
+            "images": [
+              {
+                "id": "views",
+                "size": [
+                  960,
+                  720
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -1.5,
+                      1.4
+                    ],
+                    "padding": 0.08
+                  },
+                  {
+                    "direction": [
+                      -1,
+                      -1,
+                      1.8
+                    ],
+                    "padding": 0.08
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

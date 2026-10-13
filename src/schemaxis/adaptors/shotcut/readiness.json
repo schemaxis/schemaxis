@@ -1,0 +1,317 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.shotcut/1": {
+      "guide": "docs/shotcut.md",
+      "context": {
+        "purpose": "Trim, reorder and repeat explicit video source ranges as an editable Shotcut timeline and a verified silent FFV1 video.",
+        "assumptions": "Integer constant fps, matching source/timeline pixel dimensions and square progressive frames; Shotcut-bundled melt with matching ffmpeg and ffprobe beside it. Named source files are captured before rendering.",
+        "constraints": "One contiguous video track, no gaps/transitions/audio/subtitles/rotation/resizing. At most 16 assets, 128 cuts, 600 frames and 192 MiB of retained/decoded source RGB. Each source must begin at timestamp zero. MLT colour conversion has fixed pixel error bounds.",
+        "inspection": "Read back native reloaded MLT profile, asset identities and ordered inclusive ranges; compare every rendered frame with the source-frame selection and require identical original/reloaded render RGB. Inspect verification.json, stages and actual video.",
+        "recovery": "INVALID_SELECTION means an unknown asset name. INVALID_RANGE means a selected range exceeds retained source frames. INVALID_MEDIA needs matching fps/dimensions, silent progressive square pixels and zero-based constant timestamps. INTERPRETER_NOT_FOUND requires Shotcut bundled tools. Preserve failed logs and retry in a fresh directory."
+      },
+      "examples": [
+        {
+          "id": "timeline",
+          "reference": "examples/schemaxis/shotcut-timeline.json"
+        },
+        {
+          "id": "unknown-asset",
+          "reference": "examples/schemaxis/shotcut-invalid-asset.json",
+          "expect": "invalid",
+          "fault": "INVALID_SELECTION"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_shotcut.py"
+      ],
+      "acceptance": [
+        "tools/qualify_shotcut.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Consumes explicit video files. Output indices0 video,1 native project with captured companions,2 deterministic self-contained ZIP project bundle. No implicit external ZIP import.",
+          "references": [
+            "docs/shotcut.md",
+            "tests/unit/test_shotcut.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared authored references/expressions resolve before bounded timeline planning.",
+          "references": [
+            "docs/adaptor-runtime.md"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://www.mltframework.org/docs/mltxml/",
+          "https://www.mltframework.org/docs/melt/",
+          "https://github.com/mltframework/shotcut"
+        ],
+        "lifecycle": {
+          "timeout": "A shared elapsed deadline bounds probing, source decode, reload, rendering and publication decode.",
+          "cancellation": "Shared native process-tree ownership supports cancellation and retains failure logs.",
+          "logs": "Every native command, submission, stdout/stderr and intermediate RGB is retained and hashed.",
+          "verification": "Independent source-frame selection checks the complete render; reloaded native timeline fields and render must agree. Changed/deleted project, source, video, logs and evidence fail. Native probe/decode stage input hashes bind retained readback to the actual consumed publication bytes; ordinary artifact hash refresh cannot reuse prior readback."
+        },
+        "data": [
+          {
+            "id": "source",
+            "direction": "input",
+            "kind": "video",
+            "format": "native FFmpeg-decodable silent video",
+            "traits": {
+              "frameRate": "constant authored integer fps",
+              "pixels": "progressive square",
+              "timeUnits": "zero-based source frames"
+            },
+            "losses": [
+              "Unsupported metadata/audio/rotation is rejected."
+            ],
+            "scope": "Matching dimensions and timestamps; at most 600 frames per source."
+          },
+          {
+            "id": "video",
+            "direction": "output",
+            "kind": "video",
+            "format": "Matroska/FFV1",
+            "traits": {
+              "audio": false,
+              "frameRate": "constant",
+              "colour": "RGB decode"
+            },
+            "losses": [
+              "MLT colour conversion must meet fixed mean/max per-frame error bounds."
+            ],
+            "scope": "Ordered frame ranges, no resizing or interpolation."
+          },
+          {
+            "id": "project",
+            "direction": "output",
+            "kind": "videoProject",
+            "format": "Shotcut MLT XML",
+            "traits": {
+              "timeUnits": "frames",
+              "editable": true,
+              "assets": "relative captured companions"
+            },
+            "losses": [
+              "Project requires captured asset-XX.media files beside it; file alone is not portable.",
+              "Native MLT reload is qualified; GUI editing is separate."
+            ],
+            "scope": "One editable video track, explicit source ranges and profile."
+          },
+          {
+            "id": "project-bundle",
+            "direction": "output",
+            "kind": "videoProjectBundle",
+            "format": "ZIP/Shotcut MLT XML",
+            "traits": {
+              "editable": true,
+              "selfContained": true,
+              "members": "project.mlt and captured asset-XX.media only"
+            },
+            "losses": [
+              "Extract all validated members together before opening project.mlt; no general external ZIP import."
+            ],
+            "scope": "Deterministic stored archive, exact bounded member set and bytes; extracted project is natively rerendered in acceptance."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect native MLT XML, frame probes and verification JSON.",
+            "limits": "No shared native video player or persistent GUI editing hook."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "timeline",
+          "reuse": "Bind an absolute video file with matching fps/dimensions. Edit clips startFrame/frameCount/order through JSON pointers, replan and run in a fresh directory."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Consumes explicit video files. Output indices0 video,1 native project with captured companions,2 deterministic self-contained ZIP project bundle. No implicit external ZIP import."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No native-inspection contract is advertised for this batch timeline route."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared authored references/expressions resolve before bounded timeline planning."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "No mpi contract is advertised for this batch timeline route."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "All declared local source files are hashed for scheduler reuse."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No time-batches contract is advertised for this batch timeline route."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit ordinary authored JSON, with validation before native rendering."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON-pointer edits change source ranges/order and profile values."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No live-editing contract is advertised for this batch timeline route."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "No native-save contract is advertised for this batch timeline route."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Declared single-track frame range editing produces an FFV1 publication with checked MLT colour losses."
+          }
+        },
+        "cases": [
+          {
+            "id": "trim-reorder",
+            "example": "timeline",
+            "edits": [],
+            "scope": "Known six-colour FFV1 source at 25 fps. Literal requested ranges establish frame count, timeline coverage and order; native decode checks all pixels. No arbitrary media, GUI editing, audio or transitions qualified.",
+            "resources": {
+              "/nodes/0/options/assets/0/file": "examples/schemaxis/shotcut-colours.mkv"
+            },
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 5
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/duration",
+                "expected": 0.2
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/segments/0/startFrame",
+                "expected": 3
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/segments/1/startFrame",
+                "expected": 0
+              }
+            ]
+          },
+          {
+            "id": "repeat-range",
+            "example": "timeline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/clips",
+                "value": [
+                  {
+                    "asset": "colours",
+                    "startFrame": 1,
+                    "frameCount": 2
+                  },
+                  {
+                    "asset": "colours",
+                    "startFrame": 1,
+                    "frameCount": 2
+                  }
+                ]
+              }
+            ],
+            "scope": "Known six-colour FFV1 source at 25 fps. Literal requested ranges establish frame count, timeline coverage and order; native decode checks all pixels. No arbitrary media, GUI editing, audio or transitions qualified.",
+            "resources": {
+              "/nodes/0/options/assets/0/file": "examples/schemaxis/shotcut-colours.mkv"
+            },
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 4
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/duration",
+                "expected": 0.16
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/segments/0/startFrame",
+                "expected": 1
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/segments/1/startFrame",
+                "expected": 1
+              }
+            ]
+          },
+          {
+            "id": "large-trim-reorder",
+            "example": "timeline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/width",
+                "value": 400
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/height",
+                "value": 200
+              }
+            ],
+            "scope": "Known six-colour lossless source at400x200 and25fps; independently check five requested frames and native reloaded render. Covers normal image sizes and fixed FFV1 version1 policy.",
+            "resources": {
+              "/nodes/0/options/assets/0/file": "examples/schemaxis/shotcut-colours-large.mkv"
+            },
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 5
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/duration",
+                "expected": 0.2
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/segments/0/startFrame",
+                "expected": 3
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/segments/1/startFrame",
+                "expected": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

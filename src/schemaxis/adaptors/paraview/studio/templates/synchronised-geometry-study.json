@@ -1,0 +1,102 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "sphere",
+      "filter": "sphere",
+      "options": {
+        "radius": {
+          "$analytic": {
+            "type": "linear",
+            "start": {
+              "$fill": "radiusStart"
+            },
+            "end": {
+              "$fill": "radiusEnd"
+            },
+            "count": {
+              "$fill": "count"
+            },
+            "sync": "shape"
+          }
+        },
+        "centre": {
+          "$analytic": {
+            "type": "linear",
+            "start": [
+              0,
+              0,
+              0
+            ],
+            "end": [
+              3,
+              0,
+              0
+            ],
+            "count": {
+              "$fill": "count"
+            },
+            "sync": "shape"
+          }
+        }
+      }
+    },
+    {
+      "id": "section",
+      "filter": "slice",
+      "options": {
+        "normal": "z+",
+        "origin": {
+          "$call": "boundsCentre",
+          "args": {
+            "bounds": {
+              "$observe": "sphere",
+              "path": [
+                "bounds"
+              ]
+            }
+          }
+        }
+      },
+      "inputs": {
+        "input": "sphere"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "study",
+      "visible": {
+        "sphere": {
+          "opacity": 0.2,
+          "colour": "steelblue"
+        },
+        "section": {
+          "colour": "orange"
+        }
+      },
+      "geometry": [
+        "sphere",
+        "section"
+      ],
+      "images": [
+        {
+          "id": "overview",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -1,
+                0.6
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

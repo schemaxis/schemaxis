@@ -1,0 +1,66 @@
+{
+  "version": "schemaxis.gmsh/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "solid",
+      "filter": "box",
+      "options": {
+        "size": [
+          10,
+          10,
+          10
+        ]
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "tetrahedral",
+      "inputs": {
+        "input": "solid"
+      },
+      "options": {
+        "size": {
+          "$document": "/dimensions/initialSize"
+        },
+        "volumeName": "domain",
+        "boundaryName": "boundary",
+        "volumeTolerance": 1e-06
+      }
+    }
+  ],
+  "output": "mesh",
+  "refinement": {
+    "maxIterations": 4,
+    "reductionFactor": 0.7,
+    "minimumSize": 1,
+    "maxTetrahedra": 20000,
+    "requirements": {
+      "maximumEdgeLength": {
+        "$expr": {
+          "op": "multiply",
+          "args": [
+            {
+              "$document": "/dimensions/edgeLimit"
+            },
+            1
+          ]
+        }
+      },
+      "minimumMeanRatio": 0.1
+    }
+  },
+  "dimensions": {
+    "initialSize": 3,
+    "edgeLimit": {
+      "$analytic": {
+        "type": "values",
+        "values": [
+          4.5,
+          3
+        ]
+      }
+    }
+  },
+  "maxStates": 2
+}

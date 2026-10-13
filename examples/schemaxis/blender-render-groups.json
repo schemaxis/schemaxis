@@ -1,0 +1,134 @@
+{
+  "version": "schemaxis.workflow/1",
+  "execution": {
+    "maxWorkers": 2,
+    "cpus": 4,
+    "memoryMB": 4096,
+    "gpus": 0
+  },
+  "operations": [
+    {
+      "id": "prepare",
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.1,
+                0.4,
+                0.8,
+                1
+              ]
+            }
+          },
+          {
+            "id": "box",
+            "filter": "cube",
+            "inputs": {
+              "material": "paint"
+            }
+          },
+          {
+            "id": "rounded",
+            "filter": "bevel",
+            "inputs": {
+              "input": "box"
+            },
+            "options": {
+              "width": 0.15,
+              "segments": 4
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "main",
+            "visible": [
+              "rounded"
+            ],
+            "prepareOnly": true,
+            "render": {
+              "threads": 2,
+              "samples": 8
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  320,
+                  240
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "front",
+      "document": {
+        "version": "schemaxis.blender.render/1",
+        "sceneFile": {
+          "$artifact": "prepare",
+          "index": 0
+        },
+        "size": [
+          320,
+          240
+        ],
+        "render": {
+          "threads": 2,
+          "samples": 16
+        },
+        "cameras": [
+          {
+            "direction": [
+              1,
+              -2,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "back",
+      "document": {
+        "version": "schemaxis.blender.render/1",
+        "sceneFile": {
+          "$artifact": "prepare",
+          "index": 0
+        },
+        "size": [
+          320,
+          240
+        ],
+        "render": {
+          "threads": 2,
+          "samples": 16
+        },
+        "cameras": [
+          {
+            "direction": [
+              -1,
+              2,
+              1
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,279 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.aseprite/1": {
+      "guide": "docs/aseprite.md",
+      "context": {
+        "purpose": "Author bounded editable RGBA pixel sprites, layers, timed frames and tags, then publish native sprites, previews and sheet metadata.",
+        "assumptions": "Aseprite 1.3.x batch Lua API; integer pixel coordinates, explicit RGBA bytes and millisecond frame durations. Layer and frame identifiers must already exist.",
+        "constraints": "No arbitrary Lua or general sprite import. Canvas/frame/palette limits apply. Flattened previews and sheets lose editable layer structure; the native sprite retains it.",
+        "inspection": "Inspect PNG pixels and sheet rectangles/durations alongside native layer/frame readback. Use image and retained text evidence; no native live editing hook.",
+        "recovery": "Correct selection, layer/frame and out-of-canvas faults before execution. Configure a real batch-capable Aseprite executable; preserve native logs and rerun in a fresh directory."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/aseprite-admission.json"
+        },
+        {
+          "id": "invalid-input",
+          "document": {
+            "version": "schemaxis.aseprite/1",
+            "nodes": [
+              {
+                "id": "canvas",
+                "filter": "sprite",
+                "options": {
+                  "width": 4,
+                  "height": 4
+                }
+              },
+              {
+                "id": "paint",
+                "filter": "rect",
+                "inputs": {
+                  "sprite": "canvas"
+                },
+                "options": {
+                  "layer": "base",
+                  "x": 0,
+                  "y": 0,
+                  "width": 4,
+                  "height": 4,
+                  "colour": [
+                    255,
+                    0,
+                    0,
+                    255
+                  ]
+                }
+              }
+            ],
+            "output": "absent"
+          },
+          "expect": "invalid",
+          "fault": "INVALID_SELECTION",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_schemaxis_aseprite.py",
+        "tests/unit/test_adaptor_migration.py"
+      ],
+      "acceptance": [
+        "tools/qualify_adaptor_migration.py",
+        "tools/qualify_aseprite.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses.",
+          "references": [
+            "docs/aseprite.md",
+            "tests/unit/test_schemaxis_aseprite.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://aseprite.org/api/"
+        ],
+        "lifecycle": {
+          "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
+          "cancellation": "Shared owned-process cancellation retains partial evidence. Pre-launch cancellation is tested separately from shared in-flight cleanup.",
+          "logs": "Fresh run directory retains authored input, effective plan, native submissions/stdout/stderr, publications and verification evidence.",
+          "verification": "An independent host raster model checks native reopened layers, frame durations, RGBA pixels, sheet metadata and all publication hashes."
+        },
+        "data": [
+          {
+            "id": "output-0",
+            "direction": "output",
+            "kind": "sprite",
+            "format": "aseprite",
+            "traits": {
+              "layers": "editable",
+              "colour": "RGBA8"
+            },
+            "losses": [
+              "Flattened PNGs lose layer structure; preserve the native sprite for editing."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-1",
+            "direction": "output",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "units": "pixels"
+            },
+            "losses": [
+              "Flattened PNGs lose layer structure; preserve the native sprite for editing."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-2",
+            "direction": "output",
+            "kind": "spriteSheet",
+            "format": "PNG",
+            "traits": {
+              "order": "explicit frames"
+            },
+            "losses": [
+              "Flattened PNGs lose layer structure; preserve the native sprite for editing."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-3",
+            "direction": "output",
+            "kind": "spriteMetadata",
+            "format": "schemaxis.aseprite.sheet/1",
+            "traits": {
+              "durationUnits": "ms"
+            },
+            "losses": [
+              "Flattened PNGs lose layer structure; preserve the native sprite for editing."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "image",
+            "scope": "Inspect PNG pixels and sheet rectangles/durations alongside native layer/frame readback. Use image and retained text evidence; no native live editing hook.",
+            "limits": "No arbitrary Lua or general sprite import. Canvas/frame/palette limits apply. Flattened previews and sheets lose editable layer structure; the native sprite retains it."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect PNG pixels and sheet rectangles/durations alongside native layer/frame readback. Use image and retained text evidence; no native live editing hook.",
+            "limits": "No arbitrary Lua or general sprite import. Canvas/frame/palette limits apply. Flattened previews and sheets lose editable layer structure; the native sprite retains it."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "baseline",
+          "reuse": "Edit the example with source or JSON pointer patches; inspect declared units and losses, replan the new revision, and verify a fresh run against independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This route does not implement native-inspection; use its documented batch/source workflow."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This route does not implement mpi; use its documented batch/source workflow."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Registered input fingerprint hook may decline reuse for unsupported input shapes; never assume hashes for unknown companions."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This route does not implement time-batches; use its documented batch/source workflow."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON draft, revision checking, recovery and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Atomic JSON pointer edits through the shared draft model."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This route does not implement live-editing; use its documented batch/source workflow."
+          },
+          "native-save": {
+            "status": "supported",
+            "scope": "Declared native extension available to the console; retain dependent resources and inspect reopen evidence."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This route does not implement conversion; use its documented batch/source workflow."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "An independent host raster model checks native reopened layers, frame durations, RGBA pixels, sheet metadata and all publication hashes. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/width",
+                "expected": 4
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/height",
+                "expected": 4
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/pixels",
+                "expected": "ff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ff"
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/colour",
+                "value": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ],
+            "scope": "An independent host raster model checks native reopened layers, frame durations, RGBA pixels, sheet metadata and all publication hashes. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/width",
+                "expected": 4
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/height",
+                "expected": 4
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/pixels",
+                "expected": "0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

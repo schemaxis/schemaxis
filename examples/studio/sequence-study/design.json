@@ -1,0 +1,241 @@
+{
+  "connections": [
+    {
+      "from": {
+        "operation": "samples",
+        "port": "table"
+      },
+      "id": "sample-table-to-scale",
+      "to": {
+        "operation": "scaled",
+        "port": "source"
+      }
+    }
+  ],
+  "controllers": {},
+  "layout": {
+    "nodes": {
+      "samples": {
+        "x": 100,
+        "y": 150
+      },
+      "scaled": {
+        "x": 540,
+        "y": 150
+      }
+    },
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    }
+  },
+  "naming": {
+    "indexWidth": 4,
+    "pattern": "{index}-{operation}-{output}-gain_{param:factor}{ext}"
+  },
+  "outputs": {
+    "sampleStatistics": {
+      "artifact": 1,
+      "kind": "analysis",
+      "operation": "samples"
+    },
+    "samples": {
+      "artifact": 0,
+      "kind": "table",
+      "operation": "samples"
+    },
+    "scaled": {
+      "artifact": 0,
+      "kind": "table",
+      "operation": "scaled"
+    },
+    "scaledStatistics": {
+      "artifact": 1,
+      "kind": "analysis",
+      "operation": "scaled"
+    }
+  },
+  "parameters": {
+    "count": {
+      "constraints": {
+        "maximum": 1000,
+        "minimum": 2
+      },
+      "default": 5,
+      "help": "Number of rows in the sample and scaled tables, including both endpoints.",
+      "kind": "integer",
+      "label": "Sample count",
+      "target": {
+        "pointer": "/settings/count",
+        "scope": "workflow"
+      }
+    },
+    "factor": {
+      "constraints": {
+        "maximum": 10,
+        "minimum": -10
+      },
+      "default": 2,
+      "help": "Multiply every y value by this factor; x coordinates are retained.",
+      "kind": "number",
+      "label": "Scale factor",
+      "target": {
+        "pointer": "/settings/factor",
+        "scope": "workflow"
+      }
+    },
+    "stop": {
+      "constraints": {
+        "maximum": 100,
+        "minimum": 0.1
+      },
+      "default": 4,
+      "help": "Last value in the evenly spaced sequence, beginning at zero.",
+      "kind": "number",
+      "label": "Upper bound",
+      "target": {
+        "pointer": "/settings/stop",
+        "scope": "workflow"
+      }
+    }
+  },
+  "ports": {
+    "samples": {
+      "outputs": {
+        "statistics": {
+          "artifact": 1,
+          "data": {
+            "formats": [
+              "json"
+            ],
+            "kind": "text"
+          },
+          "kind": "artifact",
+          "label": "Sample statistics"
+        },
+        "table": {
+          "artifact": 0,
+          "data": {
+            "formats": [
+              "csv"
+            ],
+            "kind": "table"
+          },
+          "kind": "artifact",
+          "label": "Sample table"
+        }
+      }
+    },
+    "scaled": {
+      "inputs": {
+        "source": {
+          "data": {
+            "formats": [
+              "csv"
+            ],
+            "kind": "table"
+          },
+          "kind": "artifact",
+          "label": "Input table",
+          "target": "/nodes/0/options/file"
+        }
+      },
+      "outputs": {
+        "statistics": {
+          "artifact": 1,
+          "data": {
+            "formats": [
+              "json"
+            ],
+            "kind": "text"
+          },
+          "kind": "artifact",
+          "label": "Scaled statistics"
+        },
+        "table": {
+          "artifact": 0,
+          "data": {
+            "formats": [
+              "csv"
+            ],
+            "kind": "table"
+          },
+          "kind": "artifact",
+          "label": "Scaled table"
+        }
+      }
+    }
+  },
+  "version": "schemaxis.workflow-design/2",
+  "workflow": {
+    "operations": [
+      {
+        "document": {
+          "nodes": [
+            {
+              "filter": "sequence",
+              "id": "data",
+              "options": {
+                "count": {
+                  "$document": "/settings/count",
+                  "scope": "workflow"
+                },
+                "start": 0,
+                "stop": {
+                  "$document": "/settings/stop",
+                  "scope": "workflow"
+                }
+              }
+            }
+          ],
+          "outputs": [
+            "data"
+          ],
+          "version": "schemaxis.octave/1"
+        },
+        "id": "samples"
+      },
+      {
+        "document": {
+          "nodes": [
+            {
+              "filter": "readCSV",
+              "id": "data",
+              "options": {
+                "file": {
+                  "$artifact": "samples",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "filter": "scale",
+              "id": "result",
+              "inputs": {
+                "input": "data"
+              },
+              "options": {
+                "factor": {
+                  "$document": "/settings/factor",
+                  "scope": "workflow"
+                }
+              }
+            }
+          ],
+          "outputs": [
+            "result"
+          ],
+          "version": "schemaxis.octave/1"
+        },
+        "id": "scaled"
+      }
+    ],
+    "settings": {
+      "count": 5,
+      "factor": 2,
+      "stop": 4
+    },
+    "version": "schemaxis.workflow/1"
+  }
+}

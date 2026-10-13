@@ -1,0 +1,314 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.r/1": {
+      "guide": "docs/r.md",
+      "context": {
+        "purpose": "Fit a small numeric calibration or explanatory model and decide whether actual finite training/held-out fit/prediction results meet named requirements.",
+        "assumptions": "Unweighted additive numeric ordinary least squares. Rows use declared predictor order followed by observed response, with plain unit labels. Fixed native symbols and vanilla Rscript; fresh RDS replay, independent QR verification.",
+        "constraints": "One to eight predictors, four to 512 training rows and optional one to 512 separate held-out rows. Training rows exceed coefficient count; full rank and actual scaled rectangular infinity-norm condition at most1e6. No categorical/missing values, arbitrary formulas/scripts/models, weights, interactions, confidence intervals or inference/generalisation guarantee.",
+        "inspection": "Review coefficients with original predictor/response units in regression-summary.json, actual training/held-out residuals in CSV and each signed requirement margin/worst sampled condition. Native comparison uses relative1e-10 plus128*ULP(max training response magnitude)*max(1,scaled condition), recorded explicitly; acceptance does not certify below that fidelity limit.",
+        "recovery": "RANK_DEFICIENT_DATA/ILL_CONDITIONED_DATA/INSUFFICIENT_DATA need independent predictors and a supported design. INVALID_REQUIREMENT needs valid scopes/indices/bounds. FIT_REQUIREMENT_NOT_MET retains valid fit evidence and needs review of data/model or justified requirements then a fresh attempt. Configure qualified Rscript for INTERPRETER_NOT_FOUND; retain logs for native faults."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/r-regression.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/r-regression-variant.json"
+        },
+        {
+          "id": "rank-deficient",
+          "reference": "examples/schemaxis/r-rank-invalid.json",
+          "expect": "invalid",
+          "fault": "RANK_DEFICIENT_DATA",
+          "schemaValid": true
+        },
+        {
+          "id": "no-intercept",
+          "reference": "examples/schemaxis/r-no-intercept.json"
+        },
+        {
+          "id": "eight-predictors",
+          "reference": "examples/schemaxis/r-eight-predictors.json"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_r_admission.py"
+      ],
+      "acceptance": [
+        "tools/qualify_r.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified numeric prediction/fit tables into Calc with preserved numeric columns and independently checked workbook values.",
+          "references": [
+            "docs/r.md",
+            "tools/qualify_r.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure values and explicit finite analytic visits; each visit independently validates native fit and requirements.",
+          "references": [
+            "docs/r.md",
+            "tools/qualify_r.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/lm.html",
+          "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/predict.lm.html",
+          "https://stat.ethz.ch/R-manual/R-devel/library/base/html/readRDS.html"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers fit, saved-model reopen and final independent CPU verification; shared native kit has a separate bounded watchdog.",
+          "cancellation": "Owned process cancellation covers native stages; cancellation is checked again before successful publication.",
+          "logs": "Retain authored/effective plans, canonical numeric inputs, fixed native worker, launcher/input bindings, model.rds, native tables/runtime records, stage stdout/stderr/submissions and failed/success results.",
+          "verification": "Independent column-scaled Householder QR reconstructs coefficients/predictions/residuals; actual rectangular infinity-norm condition from QR unit-vector solves gates unsupported designs. Compare native model rank/df, fit values and fresh-process RDS replay; recompute finite requirements from checked native values. Launcher/source/model bindings reject stale readback even with refreshed ordinary hashes. Retained regular descriptor reads are nonblocking and bounded8MiB."
+        },
+        "data": [
+          {
+            "id": "numeric-table",
+            "direction": "output",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "columns": "numeric",
+              "rows": "at most512"
+            },
+            "losses": [
+              "Coefficient labels and physical unit meaning require accompanying summary.",
+              "Finite authored rows only; no physical or generalisation guarantee."
+            ],
+            "scope": "Coefficient indices/estimates, training observations/predictions/residuals, and optional held-out predictions."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "model": "additive numeric OLS"
+            },
+            "losses": [
+              "No causal inference, confidence intervals, p-values or continuous/future prediction proof."
+            ],
+            "scope": "Named coefficients/unit descriptors, numerical conditioning/rank, actual native fit metrics and explicit acceptance."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "Inspect finite numeric native predictions and signed residuals, preserving sample order.",
+            "limits": "At most512 rows; no statistical plots or native interactive editor."
+          },
+          {
+            "panel": "text",
+            "scope": "Review declared units, coefficients, measured metrics, signed bound margins and numerical fidelity limits.",
+            "limits": "RDS remains native evidence, not imported or cross-machine interchange."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit inline rows/model/requirement pointers or source JSON; plan fresh revision, run, inspect residuals and verify. Successful unchanged inputs share durable draft/property/console reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified numeric prediction/fit tables into Calc with preserved numeric columns and independently checked workbook values."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This bounded batch regression route does not implement native-inspection."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure values and explicit finite analytic visits; each visit independently validates native fit and requirements."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This bounded batch regression route does not implement mpi."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "All authored inputs are inline; verified successful attempts can be reused. Unmet requirements cannot be reused as success."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This bounded batch regression route does not implement time-batches."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared durable document source editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer edits for rows, model/intercept, labels and finite requirements."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This bounded batch regression route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This bounded batch regression route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This bounded batch regression route does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "known-calibration",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Orthogonal residuals preserve independently known intercept10/slope2; both finite RMSE values equal sqrt(.025).",
+            "checks": [
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/coefficients/0/estimate",
+                "expected": 10,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/coefficients/1/estimate",
+                "expected": 2,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/metrics/training/rmse",
+                "expected": 0.15811388300841897,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/metrics/heldout/maxAbsoluteError",
+                "expected": 0.2,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "changed-slope",
+            "example": "variant",
+            "edits": [],
+            "scope": "Declared slope3 changes predictions while orthogonal errors preserve intercept10 and RMSE sqrt(.025).",
+            "checks": [
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/coefficients/0/estimate",
+                "expected": 10,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/coefficients/1/estimate",
+                "expected": 3,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/metrics/training/rmse",
+                "expected": 0.15811388300841897,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "through-origin",
+            "example": "no-intercept",
+            "edits": [],
+            "scope": "Literal y=2*x is fitted through the origin with one coefficient and zero errors; no held-out table is published.",
+            "checks": [
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/coefficients/0/estimate",
+                "expected": 2,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/rank",
+                "expected": 1,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/metrics/training/maxAbsoluteError",
+                "expected": 0,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "eight-independent-predictors",
+            "example": "eight-predictors",
+            "edits": [],
+            "scope": "Sixteen-row orthogonal sign design: intercept10 and eight independent coefficients1..8; full native rank9.",
+            "checks": [
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/coefficients/0/estimate",
+                "expected": 10,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/coefficients/8/estimate",
+                "expected": 8,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/rank",
+                "expected": 9,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/metrics/training/maxAbsoluteError",
+                "expected": 0,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "version": "schemaxis.workflow/1",
+  "execution": {
+    "maxWorkers": 2,
+    "cpus": 2,
+    "memoryMB": 2048,
+    "gpus": 0
+  },
+  "operations": [
+    {
+      "id": "baseline",
+      "document": {
+        "version": "schemaxis.inkscape/1",
+        "operation": "blockDiagram",
+        "width": 80,
+        "height": 40,
+        "dpi": 127,
+        "boxes": [
+          {
+            "id": "design",
+            "label": "Design",
+            "x": 7,
+            "y": 10,
+            "width": 25,
+            "height": 20,
+            "colour": "blue"
+          },
+          {
+            "id": "verify",
+            "label": "Verify",
+            "x": 48,
+            "y": 10,
+            "width": 25,
+            "height": 20,
+            "colour": "amber"
+          }
+        ],
+        "links": [
+          {
+            "id": "handoff",
+            "source": "design",
+            "target": "verify"
+          }
+        ]
+      }
+    },
+    {
+      "id": "variant",
+      "document": {
+        "version": "schemaxis.inkscape/1",
+        "operation": "blockDiagram",
+        "width": 80,
+        "height": 40,
+        "dpi": 127,
+        "boxes": [
+          {
+            "id": "design",
+            "label": "Design",
+            "x": 7,
+            "y": 10,
+            "width": 25,
+            "height": 20,
+            "colour": "green"
+          },
+          {
+            "id": "verify",
+            "label": "Verify",
+            "x": 48,
+            "y": 10,
+            "width": 25,
+            "height": 20,
+            "colour": "amber"
+          }
+        ],
+        "links": [
+          {
+            "id": "handoff",
+            "source": "design",
+            "target": "verify"
+          }
+        ]
+      }
+    },
+    {
+      "id": "animation",
+      "document": {
+        "version": "schemaxis.ffmpeg/1",
+        "nodes": [
+          {
+            "id": "movie",
+            "filter": "encodeFrames",
+            "options": {
+              "files": [
+                {
+                  "$artifact": "baseline",
+                  "index": 1
+                },
+                {
+                  "$artifact": "variant",
+                  "index": 1
+                },
+                {
+                  "$artifact": "baseline",
+                  "index": 1
+                },
+                {
+                  "$artifact": "variant",
+                  "index": 1
+                },
+                {
+                  "$artifact": "baseline",
+                  "index": 1
+                },
+                {
+                  "$artifact": "variant",
+                  "index": 1
+                }
+              ],
+              "fps": 12,
+              "codec": "ffv1",
+              "threads": 1
+            }
+          }
+        ],
+        "deliverable": {
+          "width": 400,
+          "height": 200,
+          "frames": 6,
+          "durationSeconds": 0.5,
+          "maxMeanRGBError": 0
+        }
+      }
+    },
+    {
+      "id": "edit",
+      "document": {
+        "version": "schemaxis.shotcut/1",
+        "nodes": [
+          {
+            "id": "edit",
+            "filter": "editTimeline",
+            "options": {
+              "assets": [
+                {
+                  "name": "process",
+                  "file": {
+                    "$artifact": "animation",
+                    "index": 0
+                  }
+                }
+              ],
+              "clips": [
+                {
+                  "asset": "process",
+                  "startFrame": 1,
+                  "frameCount": 2
+                },
+                {
+                  "asset": "process",
+                  "startFrame": 0,
+                  "frameCount": 3
+                }
+              ],
+              "fps": 12,
+              "width": 400,
+              "height": 200,
+              "threads": 1
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

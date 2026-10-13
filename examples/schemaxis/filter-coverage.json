@@ -1,0 +1,260 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "source",
+      "filter": "wavelet"
+    },
+    {
+      "id": "velocity",
+      "filter": "calculator",
+      "inputs": {
+        "input": "source"
+      },
+      "options": {
+        "expression": "iHat",
+        "result": "velocity"
+      }
+    },
+    {
+      "id": "scalar",
+      "filter": "calculator",
+      "inputs": {
+        "input": "velocity"
+      },
+      "options": {
+        "expression": "coordsX",
+        "result": "positionX"
+      }
+    },
+    {
+      "id": "sphere",
+      "filter": "sphere"
+    },
+    {
+      "id": "line",
+      "filter": "line",
+      "options": {
+        "start": [
+          -5,
+          -2,
+          0
+        ],
+        "end": [
+          -5,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "id": "cell",
+      "filter": "pointToCell",
+      "inputs": {
+        "input": "scalar"
+      }
+    },
+    {
+      "id": "point",
+      "filter": "cellToPoint",
+      "inputs": {
+        "input": "cell"
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "slice",
+      "inputs": {
+        "input": "point"
+      },
+      "options": {
+        "normal": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "iso",
+      "filter": "contour",
+      "inputs": {
+        "input": "scalar"
+      },
+      "options": {
+        "field": [
+          "POINTS",
+          "positionX"
+        ],
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "id": "stream",
+      "filter": "streamTracer",
+      "inputs": {
+        "input": "velocity",
+        "seed": "line"
+      },
+      "options": {
+        "vectors": [
+          "POINTS",
+          "velocity"
+        ],
+        "maximumLength": 10
+      }
+    },
+    {
+      "id": "tube",
+      "filter": "tube",
+      "inputs": {
+        "input": "stream"
+      }
+    },
+    {
+      "id": "surface",
+      "filter": "surface",
+      "inputs": {
+        "input": "point"
+      }
+    },
+    {
+      "id": "normals",
+      "filter": "normals",
+      "inputs": {
+        "input": "surface"
+      }
+    },
+    {
+      "id": "reflect",
+      "filter": "reflect",
+      "inputs": {
+        "input": "sphere"
+      }
+    },
+    {
+      "id": "clip",
+      "filter": "clip",
+      "inputs": {
+        "input": "scalar"
+      }
+    },
+    {
+      "id": "threshold",
+      "filter": "threshold",
+      "inputs": {
+        "input": "scalar"
+      },
+      "options": {
+        "field": [
+          "POINTS",
+          "positionX"
+        ],
+        "lower": -2,
+        "upper": 2
+      }
+    },
+    {
+      "id": "group",
+      "filter": "group",
+      "inputs": {
+        "input": [
+          "sphere",
+          "cut"
+        ]
+      }
+    },
+    {
+      "id": "extract",
+      "filter": "extractBlock",
+      "inputs": {
+        "input": "group"
+      },
+      "options": {
+        "selectors": [
+          "/Root/sphere"
+        ]
+      }
+    },
+    {
+      "id": "merge",
+      "filter": "merge",
+      "inputs": {
+        "input": "group"
+      }
+    },
+    {
+      "id": "integrate",
+      "filter": "integrate",
+      "inputs": {
+        "input": "cut"
+      }
+    },
+    {
+      "id": "probe",
+      "filter": "probeLine",
+      "inputs": {
+        "input": "scalar"
+      },
+      "options": {
+        "start": [
+          -4,
+          0,
+          0
+        ],
+        "end": [
+          4,
+          0,
+          0
+        ],
+        "resolution": 8
+      }
+    },
+    {
+      "id": "outline",
+      "filter": "outline",
+      "inputs": {
+        "input": "scalar"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "coverage",
+      "geometry": [
+        "source",
+        "velocity",
+        "scalar",
+        "sphere",
+        "line",
+        "cell",
+        "point",
+        "cut",
+        "iso",
+        "stream",
+        "tube",
+        "surface",
+        "normals",
+        "reflect",
+        "clip",
+        "threshold",
+        "group",
+        "extract",
+        "merge",
+        "integrate",
+        "probe",
+        "outline"
+      ],
+      "measurements": [
+        {
+          "node": "integrate"
+        },
+        {
+          "node": "probe"
+        }
+      ]
+    }
+  ]
+}

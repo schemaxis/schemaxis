@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="1040" viewBox="0 0 1160 1040" role="img" aria-labelledby="title desc">
+<title id="title">Schemaxis CFD execution sequence</title>
+<desc id="desc">Authoring references and calculations are resolved first. For each time, scene and active pipeline state, publish scientific data. For each appearance, optionally publish glTF; then for each image and camera, render a PNG. Nested loops repeat at their own levels. A multi-application workflow wraps the pipeline with operations.</desc>
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#35687b"/></marker>
+  <style>
+    text{font-family:DejaVu Sans,Arial,sans-serif;fill:#153c4b}
+    .title{font-size:29px;font-weight:700}.subtitle{font-size:17px;fill:#526b75}
+    .label{font-size:21px;font-weight:700}.code{font-family:DejaVu Sans Mono,monospace;font-size:18px;fill:#175f79}
+    .note{font-size:16px;fill:#42626f}.box{fill:#fff;stroke:#bed4dc;stroke-width:2}
+    .line{fill:none;stroke:#35687b;stroke-width:2.5;marker-end:url(#arrow)}
+    .loop{fill:none;stroke:#9bb8c3;stroke-width:1.8;stroke-dasharray:5 5;marker-end:url(#arrow)}
+  </style>
+</defs>
+<rect width="1160" height="1040" rx="16" fill="#f4f8fa"/>
+<text x="46" y="54" class="title">One input. Several kinds of output.</text>
+<text x="46" y="84" class="subtitle">Serial ParaView pipeline • outer workflow operations are optional</text>
+<rect x="170" y="112" width="850" height="86" rx="12" fill="#e2eef3" stroke="#bed4dc"/>
+<text x="195" y="146" class="label">Resolve authored values and prepare the graph</text>
+<text x="195" y="177" class="code">$document → $expr / $value → compile $analytic</text>
+<path d="M480 198 V226" class="line"/>
+<rect x="230" y="228" width="500" height="68" rx="10" class="box"/>
+<text x="255" y="256" class="label">For each selected time</text><text x="255" y="281" class="code">times</text>
+<path d="M480 296 V326" class="line"/>
+<rect x="230" y="328" width="500" height="68" rx="10" class="box"/>
+<text x="255" y="356" class="label">For each scene</text><text x="255" y="381" class="code">scenes[]</text>
+<path d="M480 396 V426" class="line"/>
+<rect x="230" y="428" width="500" height="94" rx="10" class="box"/>
+<text x="255" y="460" class="label">For each active pipeline state</text>
+<text x="255" y="487" class="code">axes / option $analytic</text>
+<text x="255" y="510" class="note">Update only the required native dependencies</text>
+<path d="M730 475 H774" class="line"/>
+<rect x="777" y="428" width="340" height="130" rx="10" fill="#e1f2e9" stroke="#96bfab" stroke-width="2"/>
+<text x="800" y="460" class="label">Scientific publications</text>
+<text x="800" y="490" class="code">geometry</text>
+<text x="800" y="515" class="code">measurements / exports</text>
+<text x="800" y="543" class="note">Once per state, before styling</text>
+<path d="M480 522 V564" class="line"/>
+<rect x="230" y="566" width="500" height="85" rx="10" class="box"/>
+<text x="255" y="597" class="label">For each appearance</text>
+<text x="255" y="626" class="code">visible + appearances[] overrides</text>
+<path d="M730 608 H774" class="line"/>
+<rect x="777" y="582" width="340" height="68" rx="10" fill="#fff0d4" stroke="#d9bd87" stroke-width="2"/>
+<text x="800" y="611" class="label">Optional glTF export</text><text x="800" y="636" class="note">One glTF per appearance</text>
+<path d="M480 651 V680" class="line"/>
+<rect x="230" y="682" width="500" height="68" rx="10" class="box"/>
+<text x="255" y="710" class="label">For each image definition</text><text x="255" y="736" class="code">images[]: id + size + cameras</text>
+<path d="M480 750 V780" class="line"/>
+<rect x="230" y="782" width="500" height="68" rx="10" class="box"/>
+<text x="255" y="810" class="label">For each camera</text><text x="255" y="836" class="code">cameras[]: frame, direction, projection</text>
+<path d="M730 816 H774" class="line"/>
+<rect x="777" y="782" width="340" height="89" rx="10" fill="#dfeefa" stroke="#95b8d4" stroke-width="2"/>
+<text x="800" y="816" class="label">Render → PNG</text><text x="800" y="845" class="note">One PNG per camera</text>
+<path d="M270 850 V877 H202 V816 H228" class="loop"/>
+<path d="M300 850 V890 H175 V716 H228" class="loop"/>
+<path d="M330 850 V903 H148 V609 H228" class="loop"/>
+<path d="M360 850 V916 H121 V475 H228" class="loop"/>
+<path d="M390 850 V929 H94 V362 H228" class="loop"/>
+<path d="M420 850 V942 H67 V262 H228" class="loop"/>
+<text x="46" y="984" class="note">Each dashed return represents its own loop. Only active axes multiply a scene's states.</text>
+<text x="46" y="1012" class="note">Camera framing changes the image. A clip or selection node changes the data.</text>
+</svg>

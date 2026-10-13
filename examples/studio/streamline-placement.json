@@ -1,0 +1,13 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {"id": "volume", "filter": "wavelet", "options": {"extent": [-10, 10, -10, 10, -10, 10]}},
+    {"id": "flow", "filter": "calculator", "inputs": {"input": "volume"},
+      "options": {"expression": "iHat", "result": "U", "association": "Point Data"}},
+    {"id": "seeds", "filter": "line", "options": {"start": [-5, -4, 0], "end": [-5, 4, 0], "resolution": 20}},
+    {"id": "streamlines", "filter": "streamTracer", "inputs": {"input": "flow", "seed": "seeds"},
+      "options": {"vectors": ["POINTS", "U"], "direction": "BOTH", "maximumLength": 12}},
+    {"id": "outline", "filter": "outline", "inputs": {"input": "flow"}}
+  ],
+  "scenes": [{"id": "preview", "geometry": ["seeds", "streamlines", "outline"]}]
+}

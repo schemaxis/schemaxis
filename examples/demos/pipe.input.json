@@ -1,0 +1,104 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "dimensions": {
+    "bendRadius": 60,
+    "outerRadius": 18,
+    "innerRadius": 14,
+    "bendAngle": 90,
+    "meshDeflection": 0.05
+  },
+  "linearDeflection": {
+    "$document": "/dimensions/meshDeflection"
+  },
+  "nodes": [
+    {
+      "id": "outerProfile",
+      "filter": "circle",
+      "options": {
+        "radius": {
+          "$document": "/dimensions/outerRadius"
+        },
+        "plane": "XZ",
+        "origin": [
+          {
+            "$document": "/dimensions/bendRadius"
+          },
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "outerBend",
+      "filter": "revolve",
+      "options": {
+        "angle": {
+          "$document": "/dimensions/bendAngle"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ]
+      },
+      "inputs": {
+        "profile": "outerProfile"
+      }
+    },
+    {
+      "id": "innerProfile",
+      "filter": "circle",
+      "options": {
+        "radius": {
+          "$document": "/dimensions/innerRadius"
+        },
+        "plane": "XZ",
+        "origin": [
+          {
+            "$document": "/dimensions/bendRadius"
+          },
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "innerBend",
+      "filter": "revolve",
+      "options": {
+        "angle": {
+          "$document": "/dimensions/bendAngle"
+        },
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "origin": [
+          0,
+          0,
+          0
+        ]
+      },
+      "inputs": {
+        "profile": "innerProfile"
+      }
+    },
+    {
+      "id": "pipe",
+      "filter": "cut",
+      "options": {},
+      "inputs": {
+        "base": "outerBend",
+        "tool": "innerBend"
+      }
+    }
+  ],
+  "output": "pipe"
+}

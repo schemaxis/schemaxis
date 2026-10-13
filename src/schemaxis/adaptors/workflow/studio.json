@@ -1,0 +1,947 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.workflow/1",
+    "operations": [
+      {
+        "id": "analyse",
+        "document": {
+          "version": "schemaxis.octave/1",
+          "nodes": [
+            {
+              "id": "samples",
+              "filter": "sequence",
+              "options": {
+                "start": 0,
+                "stop": 1,
+                "count": 11
+              }
+            }
+          ],
+          "outputs": [
+            "samples"
+          ]
+        }
+      }
+    ]
+  },
+  "categories": [
+    {
+      "id": "operations",
+      "title": "Adaptor operations",
+      "icon": "layers"
+    },
+    {
+      "id": "handoffs",
+      "title": "Artifact & value handoffs",
+      "icon": "layers"
+    },
+    {
+      "id": "shared",
+      "title": "Shared parameters",
+      "icon": "layers"
+    },
+    {
+      "id": "studies",
+      "title": "Study execution",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "numeric-operation",
+      "title": "Numeric analysis operation",
+      "category": "operations",
+      "icon": "layers",
+      "description": "Append an independent operation using the registered adaptor document.",
+      "fields": {
+        "operation": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "octave"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/operations/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "operation"
+              },
+              "document": {
+                "version": "schemaxis.octave/1",
+                "nodes": [
+                  {
+                    "id": "source",
+                    "filter": "samples",
+                    "options": {
+                      "x": [
+                        0,
+                        1,
+                        2,
+                        3,
+                        4
+                      ],
+                      "y": [
+                        0,
+                        2,
+                        4,
+                        6,
+                        8
+                      ]
+                    }
+                  }
+                ],
+                "outputs": [
+                  "source"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workbook-operation",
+      "title": "Workbook operation",
+      "category": "operations",
+      "icon": "layers",
+      "description": "Append an independent operation using the registered adaptor document.",
+      "fields": {
+        "operation": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "calc"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/operations/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "operation"
+              },
+              "document": {
+                "version": "schemaxis.calc/1",
+                "nodes": [
+                  {
+                    "id": "data",
+                    "filter": "fromRows",
+                    "options": {
+                      "columns": [
+                        "x",
+                        "y"
+                      ],
+                      "rows": [
+                        [
+                          0,
+                          2
+                        ],
+                        [
+                          1,
+                          4
+                        ],
+                        [
+                          2,
+                          6
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mesh-operation",
+      "title": "Tetrahedral meshing operation",
+      "category": "operations",
+      "icon": "layers",
+      "description": "Append an independent operation using the registered adaptor document.",
+      "fields": {
+        "operation": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "gmsh"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/operations/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "operation"
+              },
+              "document": {
+                "version": "schemaxis.gmsh/1",
+                "units": "mm",
+                "nodes": [
+                  {
+                    "id": "solid",
+                    "filter": "box",
+                    "options": {
+                      "size": [
+                        10,
+                        10,
+                        10
+                      ]
+                    }
+                  },
+                  {
+                    "id": "mesh",
+                    "filter": "tetrahedral",
+                    "inputs": {
+                      "input": "solid"
+                    },
+                    "options": {
+                      "size": 3,
+                      "volumeName": "domain",
+                      "boundaryName": "boundary",
+                      "volumeTolerance": 1e-06
+                    }
+                  }
+                ],
+                "output": "mesh"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "table-handoff",
+      "title": "Numeric table to workbook",
+      "category": "handoffs",
+      "icon": "layers",
+      "description": "Pass verified numeric CSV artifacts through Calc and read the captured CSV back into Octave.",
+      "fields": {
+        "frequency": {
+          "label": "Signal frequency",
+          "type": "number",
+          "required": true,
+          "default": 8,
+          "minimum": 0
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.workflow/1",
+              "operations": [
+                {
+                  "id": "signal",
+                  "document": {
+                    "version": "schemaxis.octave/1",
+                    "nodes": [
+                      {
+                        "id": "wave",
+                        "filter": "wave",
+                        "options": {
+                          "count": 128,
+                          "step": 0.0078125,
+                          "frequency": {
+                            "$fill": "frequency"
+                          },
+                          "amplitude": 2
+                        }
+                      },
+                      {
+                        "id": "spectrum",
+                        "filter": "fft",
+                        "inputs": {
+                          "input": "wave"
+                        }
+                      }
+                    ],
+                    "outputs": [
+                      "wave",
+                      "spectrum"
+                    ]
+                  }
+                },
+                {
+                  "id": "workbook",
+                  "document": {
+                    "version": "schemaxis.calc/1",
+                    "nodes": [
+                      {
+                        "id": "spectrum",
+                        "filter": "readCSV",
+                        "options": {
+                          "file": {
+                            "$artifact": "signal",
+                            "index": 1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "readback",
+                  "document": {
+                    "version": "schemaxis.octave/1",
+                    "nodes": [
+                      {
+                        "id": "spectrum",
+                        "filter": "readCSV",
+                        "options": {
+                          "file": {
+                            "$artifact": "workbook",
+                            "index": 2
+                          }
+                        }
+                      }
+                    ],
+                    "outputs": [
+                      "spectrum"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "measured-value-handoff",
+      "title": "Mesh measurements into a numeric table",
+      "category": "handoffs",
+      "icon": "layers",
+      "description": "Read a verified mesh-volume value and use a scoped expression when constructing downstream numeric samples.",
+      "fields": {
+        "scale": {
+          "label": "Volume scale",
+          "type": "number",
+          "required": true,
+          "default": 0.5
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.workflow/1",
+              "dimensions": {
+                "scale": {
+                  "$fill": "scale"
+                }
+              },
+              "operations": [
+                {
+                  "id": "mesh",
+                  "document": {
+                    "version": "schemaxis.gmsh/1",
+                    "units": "mm",
+                    "nodes": [
+                      {
+                        "id": "solid",
+                        "filter": "box",
+                        "options": {
+                          "size": [
+                            {
+                              "$document": "/dimensions/extent"
+                            },
+                            10,
+                            10
+                          ]
+                        }
+                      },
+                      {
+                        "id": "mesh",
+                        "filter": "tetrahedral",
+                        "inputs": {
+                          "input": "solid"
+                        },
+                        "options": {
+                          "size": {
+                            "$document": "/dimensions/h"
+                          },
+                          "volumeName": "domain",
+                          "boundaryName": "boundary",
+                          "volumeTolerance": 1e-06
+                        }
+                      }
+                    ],
+                    "output": "mesh",
+                    "dimensions": {
+                      "extent": {
+                        "$analytic": {
+                          "type": "values",
+                          "values": [
+                            10,
+                            12
+                          ],
+                          "sync": "design"
+                        }
+                      },
+                      "h": {
+                        "$analytic": {
+                          "type": "values",
+                          "values": [
+                            3,
+                            2
+                          ],
+                          "sync": "design"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "measurements",
+                  "document": {
+                    "version": "schemaxis.octave/1",
+                    "nodes": [
+                      {
+                        "id": "samples",
+                        "filter": "samples",
+                        "options": {
+                          "x": [
+                            0,
+                            1,
+                            2
+                          ],
+                          "y": [
+                            {
+                              "$value": "mesh",
+                              "artifact": 3,
+                              "path": "/volume"
+                            },
+                            {
+                              "$expr": {
+                                "op": "multiply",
+                                "args": [
+                                  {
+                                    "$value": "mesh",
+                                    "artifact": 3,
+                                    "path": "/volume"
+                                  },
+                                  {
+                                    "$document": "/dimensions/scale",
+                                    "scope": "workflow"
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "$document": "/dimensions/h",
+                              "operation": "mesh"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "outputs": [
+                      "samples"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "shared-sample-count",
+      "title": "Shared sample-count parameter",
+      "category": "shared",
+      "icon": "layers",
+      "description": "Move a runtime numeric input into workflow settings and reference it from the operation.",
+      "fields": {
+        "count": {
+          "label": "Samples",
+          "type": "integer",
+          "required": true,
+          "default": 11,
+          "minimum": 2,
+          "maximum": 10000
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.workflow/1",
+              "operations": [
+                {
+                  "id": "analyse",
+                  "document": {
+                    "version": "schemaxis.octave/1",
+                    "nodes": [
+                      {
+                        "id": "samples",
+                        "filter": "sequence",
+                        "options": {
+                          "start": 0,
+                          "stop": 1,
+                          "count": {
+                            "$document": "/settings/count",
+                            "scope": "workflow"
+                          }
+                        }
+                      }
+                    ],
+                    "outputs": [
+                      "samples"
+                    ]
+                  }
+                }
+              ],
+              "settings": {
+                "count": {
+                  "$fill": "count"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "derived-duration",
+      "title": "Expression from a shared dimension",
+      "category": "shared",
+      "icon": "layers",
+      "description": "Derive an operation limit from a workflow dimension through a declared multiply expression.",
+      "fields": {
+        "duration": {
+          "label": "Study duration",
+          "type": "number",
+          "required": true,
+          "default": 10,
+          "minimum": 0.001
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.workflow/1",
+              "operations": [
+                {
+                  "id": "analyse",
+                  "document": {
+                    "version": "schemaxis.octave/1",
+                    "nodes": [
+                      {
+                        "id": "samples",
+                        "filter": "sequence",
+                        "options": {
+                          "start": 0,
+                          "stop": {
+                            "$expr": {
+                              "op": "multiply",
+                              "args": [
+                                {
+                                  "$document": "/dimensions/duration",
+                                  "scope": "workflow"
+                                },
+                                0.5
+                              ]
+                            }
+                          },
+                          "count": 11
+                        }
+                      }
+                    ],
+                    "outputs": [
+                      "samples"
+                    ]
+                  }
+                }
+              ],
+              "dimensions": {
+                "duration": {
+                  "$fill": "duration"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "sample-count-study",
+      "title": "Compare numerical resolutions",
+      "category": "studies",
+      "icon": "layers",
+      "description": "Run the same workflow for a bounded list of sample counts using the common analytic study contract.",
+      "fields": {
+        "counts": {
+          "label": "Sample counts",
+          "type": "json",
+          "required": true,
+          "default": [
+            11,
+            21,
+            51
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.workflow/1",
+              "operations": [
+                {
+                  "id": "analyse",
+                  "document": {
+                    "version": "schemaxis.octave/1",
+                    "nodes": [
+                      {
+                        "id": "samples",
+                        "filter": "sequence",
+                        "options": {
+                          "start": 0,
+                          "stop": 1,
+                          "count": {
+                            "$document": "/settings/count",
+                            "scope": "workflow"
+                          }
+                        }
+                      }
+                    ],
+                    "outputs": [
+                      "samples"
+                    ]
+                  }
+                }
+              ],
+              "settings": {
+                "count": {
+                  "$analytic": {
+                    "type": "values",
+                    "values": {
+                      "$fill": "counts"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "artifact-reference",
+      "title": "Verified artifact reference",
+      "category": "handoffs",
+      "icon": "layers",
+      "description": "Fill a downstream file value with an explicitly selected producer artifact.",
+      "fields": {
+        "artifact-reference": {
+          "label": "Verified artifact reference",
+          "type": "json",
+          "required": true,
+          "default": {
+            "$artifact": "signal",
+            "index": 1
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "$fill": "artifact-reference"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.workflow/1",
+        "operations": [
+          {
+            "id": "signal",
+            "document": {
+              "version": "schemaxis.octave/1",
+              "nodes": [
+                {
+                  "id": "wave",
+                  "filter": "wave",
+                  "options": {
+                    "count": 128,
+                    "step": 0.0078125,
+                    "frequency": 8,
+                    "amplitude": 2
+                  }
+                },
+                {
+                  "id": "spectrum",
+                  "filter": "fft",
+                  "inputs": {
+                    "input": "wave"
+                  }
+                }
+              ],
+              "outputs": [
+                "wave",
+                "spectrum"
+              ]
+            }
+          },
+          {
+            "id": "workbook",
+            "document": {
+              "version": "schemaxis.calc/1",
+              "nodes": [
+                {
+                  "id": "spectrum",
+                  "filter": "readCSV",
+                  "options": {
+                    "file": {
+                      "$artifact": "signal",
+                      "index": 1
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "readback",
+            "document": {
+              "version": "schemaxis.octave/1",
+              "nodes": [
+                {
+                  "id": "spectrum",
+                  "filter": "readCSV",
+                  "options": {
+                    "file": {
+                      "$artifact": "workbook",
+                      "index": 2
+                    }
+                  }
+                }
+              ],
+              "outputs": [
+                "spectrum"
+              ]
+            }
+          }
+        ]
+      },
+      "testCursor": "/operations/1/document/nodes/0/options/file"
+    },
+    {
+      "id": "value-reference",
+      "title": "Verified scalar value reference",
+      "category": "handoffs",
+      "icon": "layers",
+      "description": "Fill a downstream numeric input from a verified producer summary value.",
+      "fields": {
+        "value-reference": {
+          "label": "Verified scalar value reference",
+          "type": "json",
+          "required": true,
+          "default": {
+            "$value": "mesh",
+            "artifact": 3,
+            "path": "/volume"
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "$fill": "value-reference"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.workflow/1",
+        "dimensions": {
+          "scale": 0.5
+        },
+        "operations": [
+          {
+            "id": "mesh",
+            "document": {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "box",
+                  "options": {
+                    "size": [
+                      {
+                        "$document": "/dimensions/extent"
+                      },
+                      10,
+                      10
+                    ]
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": {
+                      "$document": "/dimensions/h"
+                    },
+                    "volumeName": "domain",
+                    "boundaryName": "boundary",
+                    "volumeTolerance": 1e-06
+                  }
+                }
+              ],
+              "output": "mesh",
+              "dimensions": {
+                "extent": {
+                  "$analytic": {
+                    "type": "values",
+                    "values": [
+                      10,
+                      12
+                    ],
+                    "sync": "design"
+                  }
+                },
+                "h": {
+                  "$analytic": {
+                    "type": "values",
+                    "values": [
+                      3,
+                      2
+                    ],
+                    "sync": "design"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "id": "measurements",
+            "document": {
+              "version": "schemaxis.octave/1",
+              "nodes": [
+                {
+                  "id": "samples",
+                  "filter": "samples",
+                  "options": {
+                    "x": [
+                      0,
+                      1,
+                      2
+                    ],
+                    "y": [
+                      {
+                        "$value": "mesh",
+                        "artifact": 3,
+                        "path": "/volume"
+                      },
+                      {
+                        "$expr": {
+                          "op": "multiply",
+                          "args": [
+                            {
+                              "$value": "mesh",
+                              "artifact": 3,
+                              "path": "/volume"
+                            },
+                            {
+                              "$document": "/dimensions/scale",
+                              "scope": "workflow"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "$document": "/dimensions/h",
+                        "operation": "mesh"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "outputs": [
+                "samples"
+              ]
+            }
+          }
+        ]
+      },
+      "testCursor": "/operations/1/document/nodes/0/options/y/0"
+    }
+  ],
+  "templates": [
+    {
+      "id": "numeric-workflow",
+      "title": "Numerical analysis workflow",
+      "description": "Run one Octave coordinate-sequence operation with a selected sample count.",
+      "file": "studio/templates/numeric-workflow.json",
+      "fields": {
+        "input": {
+          "label": "Study input",
+          "type": "integer",
+          "required": true,
+          "default": 11
+        }
+      }
+    },
+    {
+      "id": "table-workflow",
+      "title": "Signal to workbook workflow",
+      "description": "Generate an Octave spectrum, pass its verified CSV to Calc, and read the workbook CSV back into Octave.",
+      "file": "studio/templates/table-workflow.json",
+      "fields": {
+        "input": {
+          "label": "Study input",
+          "type": "number",
+          "required": true,
+          "default": 8
+        }
+      }
+    },
+    {
+      "id": "mesh-measurements",
+      "title": "Mesh and verified measurements",
+      "description": "Run two synchronised Gmsh designs and consume their verified volume measurements in a numeric table.",
+      "file": "studio/templates/mesh-measurements.json",
+      "fields": {
+        "input": {
+          "label": "Study input",
+          "type": "number",
+          "required": true,
+          "default": 0.5
+        }
+      }
+    }
+  ],
+  "viewers": [
+    "table",
+    "text"
+  ]
+}

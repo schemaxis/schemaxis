@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.ffmpeg/1"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "encodeFrames"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "fps": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 120,
+                    "default": 25
+                  },
+                  "codec": {
+                    "enum": [
+                      "h264",
+                      "ffv1"
+                    ],
+                    "default": "h264"
+                  },
+                  "threads": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 16,
+                    "default": 1
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 4096
+                    },
+                    "minItems": 1,
+                    "maxItems": 600
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "files"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "encodeSheet"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "fps": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 120,
+                    "default": 25
+                  },
+                  "codec": {
+                    "enum": [
+                      "h264",
+                      "ffv1"
+                    ],
+                    "default": "h264"
+                  },
+                  "threads": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 16,
+                    "default": 1
+                  },
+                  "file": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  "metadata": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "file",
+                  "metadata"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
+          }
+        ]
+      }
+    },
+    "deliverable": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "frames": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "durationSeconds": {
+          "type": "number",
+          "minimum": 0.008333333333333333,
+          "maximum": 600
+        },
+        "durationToleranceSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "maxBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741824
+        },
+        "maxMeanRGBError": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 16
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1,
+      "dependentRequired": {
+        "durationToleranceSeconds": [
+          "durationSeconds"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "nodes"
+  ]
+}

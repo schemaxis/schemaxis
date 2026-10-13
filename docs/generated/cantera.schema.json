@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.cantera/1"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "gas"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "pressure": {
+                    "type": "number",
+                    "minimum": 1000,
+                    "maximum": 10000000,
+                    "default": 101325
+                  },
+                  "basis": {
+                    "enum": [
+                      "mole",
+                      "mass"
+                    ],
+                    "default": "mole"
+                  },
+                  "composition": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "species": {
+                          "enum": [
+                            "H2",
+                            "H",
+                            "O",
+                            "O2",
+                            "OH",
+                            "H2O",
+                            "HO2",
+                            "H2O2",
+                            "AR",
+                            "N2"
+                          ]
+                        },
+                        "amount": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000000.0
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "species",
+                        "amount"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 10
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "composition"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "thermoSweep"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "temperatures": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 300,
+                      "maximum": 3500
+                    },
+                    "minItems": 2,
+                    "maxItems": 100,
+                    "default": [
+                      300,
+                      600,
+                      900
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "equilibrate"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "temperatures": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 300,
+                      "maximum": 3500
+                    },
+                    "minItems": 2,
+                    "maxItems": 100,
+                    "default": [
+                      1000,
+                      1500,
+                      2000
+                    ]
+                  },
+                  "mode": {
+                    "enum": [
+                      "TP",
+                      "HP"
+                    ],
+                    "default": "TP"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          }
+        ]
+      }
+    },
+    "output": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "nodes",
+    "output"
+  ]
+}

@@ -1,0 +1,3385 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "categories": [
+    {
+      "id": "primitives",
+      "title": "Primitives & curves",
+      "icon": "cube"
+    },
+    {
+      "id": "modifiers",
+      "title": "Modifiers",
+      "icon": "layers"
+    },
+    {
+      "id": "materials",
+      "title": "Materials",
+      "icon": "image"
+    },
+    {
+      "id": "lighting",
+      "title": "Lighting & render",
+      "icon": "sun"
+    },
+    {
+      "id": "camera",
+      "title": "Cameras & export",
+      "icon": "camera"
+    },
+    {
+      "id": "import",
+      "title": "Import",
+      "icon": "file"
+    },
+    {
+      "id": "recipes",
+      "title": "Procedural recipes",
+      "icon": "layers"
+    },
+    {
+      "id": "sweeps",
+      "title": "Sweeps",
+      "icon": "gear"
+    }
+  ],
+  "baseDocument": {
+    "version": "schemaxis.blender/1",
+    "nodes": [
+      {
+        "id": "paint",
+        "filter": "material"
+      },
+      {
+        "id": "base",
+        "filter": "cube",
+        "inputs": {
+          "material": "paint"
+        }
+      },
+      {
+        "id": "target",
+        "filter": "uvSphere",
+        "options": {
+          "radius": 1.1,
+          "centre": [
+            0.6,
+            0,
+            0
+          ]
+        },
+        "inputs": {
+          "material": "paint"
+        }
+      }
+    ],
+    "scenes": [
+      {
+        "id": "main",
+        "visible": [
+          "base"
+        ],
+        "images": [
+          {
+            "id": "view",
+            "size": [
+              640,
+              480
+            ],
+            "cameras": [
+              {
+                "direction": [
+                  1,
+                  -2,
+                  1
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "templates": [
+    {
+      "id": "studio-cube",
+      "title": "Studio cube",
+      "file": "templates/studio-cube.json",
+      "description": "A material and cube with a camera and a small render."
+    },
+    {
+      "id": "rounded-enclosure-template",
+      "title": "Rounded enclosure mesh",
+      "description": "Bevel a cube, then apply weighted normals for hard-surface shading.",
+      "file": "studio/templates/rounded-enclosure-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Recipe prefix",
+          "type": "id",
+          "required": true,
+          "default": "model"
+        },
+        "size": {
+          "label": "Cube size",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 2
+        }
+      }
+    },
+    {
+      "id": "wire-cage-template",
+      "title": "Triangulated wire cage",
+      "description": "Turn an icosphere into a visible structural edge cage.",
+      "file": "studio/templates/wire-cage-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Recipe prefix",
+          "type": "id",
+          "required": true,
+          "default": "model"
+        },
+        "thickness": {
+          "label": "Strut thickness",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "default": 0.03
+        }
+      }
+    },
+    {
+      "id": "bent-panel-template",
+      "title": "Subdivided bent panel",
+      "description": "Subdivide a grid before bending it to create a curved panel.",
+      "file": "studio/templates/bent-panel-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Recipe prefix",
+          "type": "id",
+          "required": true,
+          "default": "model"
+        },
+        "angle": {
+          "label": "Bend angle (radians)",
+          "type": "number",
+          "required": true,
+          "minimum": -3.14,
+          "maximum": 3.14,
+          "default": 0.8
+        }
+      }
+    },
+    {
+      "id": "repeat-columns-template",
+      "title": "Repeated column row",
+      "description": "Create a capped column mesh and repeat it with an array modifier.",
+      "file": "studio/templates/repeat-columns-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Recipe prefix",
+          "type": "id",
+          "required": true,
+          "default": "model"
+        },
+        "count": {
+          "label": "Columns",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 20,
+          "default": 5
+        }
+      }
+    }
+  ],
+  "snippets": [
+    {
+      "id": "add-material",
+      "title": "Material",
+      "category": "materials",
+      "description": "Add a material and a sample cube so the material is visible and retained in the scene.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newMaterial"
+        },
+        "colour": {
+          "label": "Colour (RGBA, 0\u20131)",
+          "type": "json",
+          "required": true,
+          "default": [
+            0.1,
+            0.4,
+            0.8,
+            1
+          ]
+        },
+        "roughness": {
+          "label": "Roughness",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        },
+        "metallic": {
+          "label": "Metallic",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "material",
+              "options": {
+                "colour": {
+                  "$fill": "colour"
+                },
+                "roughness": {
+                  "$fill": "roughness"
+                },
+                "metallic": {
+                  "$fill": "metallic"
+                }
+              }
+            },
+            {
+              "id": "${id}Sample",
+              "filter": "cube",
+              "options": {
+                "centre": [
+                  3,
+                  0,
+                  0
+                ]
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "id"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            "${id}Sample"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-cube",
+      "title": "Cube",
+      "category": "primitives",
+      "description": "Append a material-bound cube and include it in scene visibility.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "cube"
+        },
+        "size": {
+          "label": "Size",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 2
+        },
+        "centre": {
+          "label": "Centre",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "cube",
+              "options": {
+                "size": {
+                  "$fill": "size"
+                },
+                "centre": {
+                  "$fill": "centre"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-bevel",
+      "title": "Bevel",
+      "category": "modifiers",
+      "description": "Bevel a mesh edge network with a controlled width and segment count.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newBevel"
+        },
+        "width": {
+          "label": "Width",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 0.1
+        },
+        "segments": {
+          "label": "Segments",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 12,
+          "default": 3
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "bevel",
+              "options": {
+                "width": {
+                  "$fill": "width"
+                },
+                "segments": {
+                  "$fill": "segments"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-readGltf",
+      "title": "Read gltf",
+      "category": "import",
+      "description": "Import a glTF scene asset as declared geometry.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newReadGltf"
+        },
+        "file": {
+          "label": "Source .gltf file",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "gltf"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "readGltf",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ],
+      "testValues": {
+        "file": "/library-fixtures/asset.gltf"
+      },
+      "requires": "A readable source file in the declared format is needed at execution."
+    },
+    {
+      "id": "add-lathe",
+      "title": "Lathe",
+      "category": "primitives",
+      "description": "Revolve a radius/height profile into a capped mesh.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newLathe"
+        },
+        "profile": {
+          "label": "Profile",
+          "type": "json",
+          "required": true,
+          "default": [
+            [
+              0.8,
+              -1
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              0.6,
+              1
+            ]
+          ]
+        },
+        "segments": {
+          "label": "Segments",
+          "type": "integer",
+          "required": true,
+          "minimum": 3,
+          "maximum": 256,
+          "default": 64
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "lathe",
+              "options": {
+                "profile": {
+                  "$fill": "profile"
+                },
+                "segments": {
+                  "$fill": "segments"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-grid",
+      "title": "Grid",
+      "category": "primitives",
+      "description": "Build a subdivided rectangular grid for downstream deformation or surface modelling.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newGrid"
+        },
+        "width": {
+          "label": "Width",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 2
+        },
+        "height": {
+          "label": "Height",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 2
+        },
+        "xSegments": {
+          "label": "X segments",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 256,
+          "default": 10
+        },
+        "ySegments": {
+          "label": "Y segments",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 256,
+          "default": 10
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "grid",
+              "options": {
+                "width": {
+                  "$fill": "width"
+                },
+                "height": {
+                  "$fill": "height"
+                },
+                "xSegments": {
+                  "$fill": "xSegments"
+                },
+                "ySegments": {
+                  "$fill": "ySegments"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-disk",
+      "title": "Disk",
+      "category": "primitives",
+      "description": "Build a radial disk with a bounded segment count.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newDisk"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 1
+        },
+        "segments": {
+          "label": "Segments",
+          "type": "integer",
+          "required": true,
+          "minimum": 3,
+          "maximum": 256,
+          "default": 32
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "disk",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "segments": {
+                  "$fill": "segments"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-polylineTube",
+      "title": "Polyline tube",
+      "category": "primitives",
+      "description": "Thicken an ordered three-dimensional polyline into a capped tube.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newPolylineTube"
+        },
+        "points": {
+          "label": "Points",
+          "type": "json",
+          "required": true,
+          "default": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ],
+            [
+              1,
+              0,
+              2
+            ]
+          ]
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 0.05
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "polylineTube",
+              "options": {
+                "points": {
+                  "$fill": "points"
+                },
+                "radius": {
+                  "$fill": "radius"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-curveFromCSV",
+      "title": "Curve from csv",
+      "category": "import",
+      "description": "Build a tube from named CSV coordinate columns; z may be added for a spatial curve.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newCurveFromCSV"
+        },
+        "file": {
+          "label": "Source .csv file",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "csv"
+          ]
+        },
+        "xColumn": {
+          "label": "X column",
+          "type": "string",
+          "required": true,
+          "default": "x"
+        },
+        "yColumn": {
+          "label": "Y column",
+          "type": "string",
+          "required": true,
+          "default": "y"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 0.05
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "curveFromCSV",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                },
+                "xColumn": {
+                  "$fill": "xColumn"
+                },
+                "yColumn": {
+                  "$fill": "yColumn"
+                },
+                "radius": {
+                  "$fill": "radius"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ],
+      "testValues": {
+        "file": "/library-fixtures/asset.csv"
+      },
+      "requires": "A readable source file in the declared format is needed at execution."
+    },
+    {
+      "id": "add-plane",
+      "title": "Plane",
+      "category": "primitives",
+      "description": "Add a rectangular material-bound plane.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newPlane"
+        },
+        "width": {
+          "label": "Width",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 2
+        },
+        "height": {
+          "label": "Height",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 2
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "plane",
+              "options": {
+                "width": {
+                  "$fill": "width"
+                },
+                "height": {
+                  "$fill": "height"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-uvSphere",
+      "title": "Uv sphere",
+      "category": "primitives",
+      "description": "Add a sphere with independent longitude and latitude resolution.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newUvSphere"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 1
+        },
+        "segments": {
+          "label": "Segments",
+          "type": "integer",
+          "required": true,
+          "minimum": 3,
+          "maximum": 256,
+          "default": 32
+        },
+        "rings": {
+          "label": "Rings",
+          "type": "integer",
+          "required": true,
+          "minimum": 3,
+          "maximum": 256,
+          "default": 16
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "uvSphere",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "segments": {
+                  "$fill": "segments"
+                },
+                "rings": {
+                  "$fill": "rings"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-icoSphere",
+      "title": "Ico sphere",
+      "category": "primitives",
+      "description": "Add a sphere with approximately uniform triangular tessellation.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newIcoSphere"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 1
+        },
+        "subdivisions": {
+          "label": "Subdivisions",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 5,
+          "default": 2
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "icoSphere",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "subdivisions": {
+                  "$fill": "subdivisions"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-cylinder",
+      "title": "Cylinder",
+      "category": "primitives",
+      "description": "Add a capped cylindrical mesh.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newCylinder"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 1
+        },
+        "depth": {
+          "label": "Depth",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 2
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "cylinder",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "depth": {
+                  "$fill": "depth"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-cone",
+      "title": "Cone",
+      "category": "primitives",
+      "description": "Add a cone or frustum with separate tip radius.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newCone"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 1
+        },
+        "tipRadius": {
+          "label": "Tip radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 0
+        },
+        "depth": {
+          "label": "Depth",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 2
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "cone",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "tipRadius": {
+                  "$fill": "tipRadius"
+                },
+                "depth": {
+                  "$fill": "depth"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-torus",
+      "title": "Torus",
+      "category": "primitives",
+      "description": "Add a ring mesh with major and minor radii.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newTorus"
+        },
+        "majorRadius": {
+          "label": "Major radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 1
+        },
+        "minorRadius": {
+          "label": "Minor radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 0.25
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "torus",
+              "options": {
+                "majorRadius": {
+                  "$fill": "majorRadius"
+                },
+                "minorRadius": {
+                  "$fill": "minorRadius"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-weld",
+      "title": "Weld",
+      "category": "modifiers",
+      "description": "Merge nearby vertices using a bounded spatial distance.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newWeld"
+        },
+        "distance": {
+          "label": "Distance",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 0.0001
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "weld",
+              "options": {
+                "distance": {
+                  "$fill": "distance"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-weightedNormal",
+      "title": "Weighted normal",
+      "category": "modifiers",
+      "description": "Improve hard-surface shading while optionally preserving sharp edges.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newWeightedNormal"
+        },
+        "weight": {
+          "label": "Weight",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50
+        },
+        "keepSharp": {
+          "label": "Keep sharp",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "weightedNormal",
+              "options": {
+                "weight": {
+                  "$fill": "weight"
+                },
+                "keepSharp": {
+                  "$fill": "keepSharp"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-voxelRemesh",
+      "title": "Voxel remesh",
+      "category": "modifiers",
+      "description": "Rebuild a mesh on a voxel grid with controlled adaptivity.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newVoxelRemesh"
+        },
+        "voxelSize": {
+          "label": "Voxel size",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 0.1
+        },
+        "adaptivity": {
+          "label": "Adaptivity",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "voxelRemesh",
+              "options": {
+                "voxelSize": {
+                  "$fill": "voxelSize"
+                },
+                "adaptivity": {
+                  "$fill": "adaptivity"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-bend",
+      "title": "Bend",
+      "category": "modifiers",
+      "description": "Bend a sufficiently subdivided mesh about the selected axis; the angle is in radians.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newBend"
+        },
+        "angle": {
+          "label": "Angle",
+          "type": "number",
+          "required": true,
+          "minimum": -6.283185307179586,
+          "maximum": 6.283185307179586,
+          "default": 0.7853981633974483
+        },
+        "axis": {
+          "label": "Axis",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "X",
+            "Y",
+            "Z"
+          ],
+          "default": "Z"
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "bend",
+              "options": {
+                "angle": {
+                  "$fill": "angle"
+                },
+                "axis": {
+                  "$fill": "axis"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-twist",
+      "title": "Twist",
+      "category": "modifiers",
+      "description": "Twist a sufficiently subdivided mesh about the selected axis; the angle is in radians.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newTwist"
+        },
+        "angle": {
+          "label": "Angle",
+          "type": "number",
+          "required": true,
+          "minimum": -6.283185307179586,
+          "maximum": 6.283185307179586,
+          "default": 0.7853981633974483
+        },
+        "axis": {
+          "label": "Axis",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "X",
+            "Y",
+            "Z"
+          ],
+          "default": "Z"
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "twist",
+              "options": {
+                "angle": {
+                  "$fill": "angle"
+                },
+                "axis": {
+                  "$fill": "axis"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-shrinkwrap",
+      "title": "Shrinkwrap",
+      "category": "modifiers",
+      "description": "Project a source mesh onto a target with an explicit offset and side mode.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newShrinkwrap"
+        },
+        "offset": {
+          "label": "Offset",
+          "type": "number",
+          "required": true,
+          "default": 0
+        },
+        "mode": {
+          "label": "Mode",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "ON_SURFACE",
+            "OUTSIDE",
+            "INSIDE",
+            "ABOVE_SURFACE"
+          ],
+          "default": "ON_SURFACE"
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        },
+        "target": {
+          "label": "Target",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "target"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "shrinkwrap",
+              "options": {
+                "offset": {
+                  "$fill": "offset"
+                },
+                "mode": {
+                  "$fill": "mode"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                },
+                "target": {
+                  "$fill": "target"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-wireframe",
+      "title": "Wireframe",
+      "category": "modifiers",
+      "description": "Turn mesh edges into struts, optionally retaining the original surface.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newWireframe"
+        },
+        "thickness": {
+          "label": "Thickness",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 0.02
+        },
+        "replace": {
+          "label": "Replace",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "wireframe",
+              "options": {
+                "thickness": {
+                  "$fill": "thickness"
+                },
+                "replace": {
+                  "$fill": "replace"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-solidify",
+      "title": "Solidify",
+      "category": "modifiers",
+      "description": "Give a surface thickness relative to its existing normals.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newSolidify"
+        },
+        "thickness": {
+          "label": "Thickness",
+          "type": "number",
+          "required": true,
+          "default": 0.1
+        },
+        "offset": {
+          "label": "Offset",
+          "type": "number",
+          "required": true,
+          "minimum": -1,
+          "maximum": 1,
+          "default": -1
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "solidify",
+              "options": {
+                "thickness": {
+                  "$fill": "thickness"
+                },
+                "offset": {
+                  "$fill": "offset"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-subdivision",
+      "title": "Subdivision",
+      "category": "modifiers",
+      "description": "Refine a mesh using smooth Catmull\u2013Clark or topology-preserving simple subdivision.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newSubdivision"
+        },
+        "levels": {
+          "label": "Levels",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 4,
+          "default": 1
+        },
+        "method": {
+          "label": "Method",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "CATMULL_CLARK",
+            "SIMPLE"
+          ],
+          "default": "CATMULL_CLARK"
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "subdivision",
+              "options": {
+                "levels": {
+                  "$fill": "levels"
+                },
+                "method": {
+                  "$fill": "method"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-decimate",
+      "title": "Decimate",
+      "category": "modifiers",
+      "description": "Reduce mesh complexity by a chosen ratio.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newDecimate"
+        },
+        "ratio": {
+          "label": "Ratio",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "decimate",
+              "options": {
+                "ratio": {
+                  "$fill": "ratio"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-triangulate",
+      "title": "Triangulate",
+      "category": "modifiers",
+      "description": "Convert faces to triangles for downstream interchange.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newTriangulate"
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "triangulate",
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-smooth",
+      "title": "Smooth",
+      "category": "modifiers",
+      "description": "Apply bounded repeated vertex smoothing.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newSmooth"
+        },
+        "factor": {
+          "label": "Factor",
+          "type": "number",
+          "required": true,
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0.5
+        },
+        "iterations": {
+          "label": "Iterations",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 100,
+          "default": 1
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "smooth",
+              "options": {
+                "factor": {
+                  "$fill": "factor"
+                },
+                "iterations": {
+                  "$fill": "iterations"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-array",
+      "title": "Array",
+      "category": "modifiers",
+      "description": "Repeat a mesh using a count and relative bounding-box offset.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newArray"
+        },
+        "count": {
+          "label": "Count",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 100,
+          "default": 2
+        },
+        "relativeOffset": {
+          "label": "Relative offset",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            1,
+            0,
+            0
+          ]
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "array",
+              "options": {
+                "count": {
+                  "$fill": "count"
+                },
+                "relativeOffset": {
+                  "$fill": "relativeOffset"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-mirror",
+      "title": "Mirror",
+      "category": "modifiers",
+      "description": "Mirror a mesh across selected local axes and optionally merge the seam.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newMirror"
+        },
+        "axes": {
+          "label": "Axes",
+          "type": "json",
+          "required": true,
+          "default": [
+            true,
+            false,
+            false
+          ]
+        },
+        "merge": {
+          "label": "Merge",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "mirror",
+              "options": {
+                "axes": {
+                  "$fill": "axes"
+                },
+                "merge": {
+                  "$fill": "merge"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-boolean",
+      "title": "Boolean",
+      "category": "modifiers",
+      "description": "Combine two meshes using difference, union or intersection.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newBoolean"
+        },
+        "operation": {
+          "label": "Operation",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "DIFFERENCE",
+            "UNION",
+            "INTERSECT"
+          ],
+          "default": "DIFFERENCE"
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        },
+        "operand": {
+          "label": "Operand",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "target"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "boolean",
+              "options": {
+                "operation": {
+                  "$fill": "operation"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                },
+                "operand": {
+                  "$fill": "operand"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-assignMaterial",
+      "title": "Assign material",
+      "category": "materials",
+      "description": "Replace a mesh material with an existing material node.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newAssignMaterial"
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "assignMaterial",
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                },
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-applyTransform",
+      "title": "Apply transform",
+      "category": "modifiers",
+      "description": "Bake an existing object transform into the mesh.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newApplyTransform"
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "applyTransform",
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-shadeSmooth",
+      "title": "Shade smooth",
+      "category": "modifiers",
+      "description": "Enable or disable smooth face shading on a mesh.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newShadeSmooth"
+        },
+        "enabled": {
+          "label": "Enabled",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "shadeSmooth",
+              "options": {
+                "enabled": {
+                  "$fill": "enabled"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-join",
+      "title": "Join",
+      "category": "modifiers",
+      "description": "Join several distinct mesh inputs into one object.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newJoin"
+        },
+        "inputs": {
+          "label": "Inputs",
+          "type": "json",
+          "required": true,
+          "default": [
+            "base",
+            "target"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "join",
+              "inputs": {
+                "inputs": {
+                  "$fill": "inputs"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-readSTL",
+      "title": "Read stl",
+      "category": "import",
+      "description": "Import a triangulated STL and apply an explicit unit scale.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newReadSTL"
+        },
+        "file": {
+          "label": "Source .stl file",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "stl"
+          ]
+        },
+        "scale": {
+          "label": "Scale",
+          "type": "number",
+          "required": true,
+          "minimum": 1e-06,
+          "maximum": 1000000,
+          "default": 1
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "readSTL",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                },
+                "scale": {
+                  "$fill": "scale"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ],
+      "testValues": {
+        "file": "/library-fixtures/asset.stl"
+      },
+      "requires": "A readable source file in the declared format is needed at execution."
+    },
+    {
+      "id": "add-readPLY",
+      "title": "Read ply",
+      "category": "import",
+      "description": "Import a PLY mesh and apply an explicit unit scale.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newReadPLY"
+        },
+        "file": {
+          "label": "Source .ply file",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "ply"
+          ]
+        },
+        "scale": {
+          "label": "Scale",
+          "type": "number",
+          "required": true,
+          "minimum": 1e-06,
+          "maximum": 1000000,
+          "default": 1
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "readPLY",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                },
+                "scale": {
+                  "$fill": "scale"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ],
+      "testValues": {
+        "file": "/library-fixtures/asset.ply"
+      },
+      "requires": "A readable source file in the declared format is needed at execution."
+    },
+    {
+      "id": "add-transform",
+      "title": "Transform",
+      "category": "modifiers",
+      "description": "Translate, rotate and scale an existing mesh.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newTransform"
+        },
+        "translation": {
+          "label": "Translation",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "rotation": {
+          "label": "Rotation",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "scale": {
+          "label": "Scale",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            1,
+            1,
+            1
+          ]
+        },
+        "input": {
+          "label": "Input",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "transform",
+              "options": {
+                "translation": {
+                  "$fill": "translation"
+                },
+                "rotation": {
+                  "$fill": "rotation"
+                },
+                "scale": {
+                  "$fill": "scale"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "input"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "soft-studio",
+      "title": "Soft studio lighting",
+      "category": "lighting",
+      "description": "Use a large area light and a gentle world fill for product inspection.",
+      "fields": {
+        "size": {
+          "label": "Area light size",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 5
+        },
+        "energy": {
+          "label": "Light energy",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "default": 1000
+        }
+      },
+      "inserts": [
+        {
+          "at": "/scenes/0/render",
+          "merge": {
+            "lightSize": {
+              "$fill": "size"
+            },
+            "lightEnergy": {
+              "$fill": "energy"
+            },
+            "worldStrength": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "transparent-render",
+      "title": "Transparent object render",
+      "category": "lighting",
+      "description": "Render an isolated object with a transparent background.",
+      "fields": {
+        "samples": {
+          "label": "Samples",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 4096,
+          "default": 32
+        }
+      },
+      "inserts": [
+        {
+          "at": "/scenes/0/render",
+          "merge": {
+            "transparent": true,
+            "samples": {
+              "$fill": "samples"
+            },
+            "denoise": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "deterministic-preview",
+      "title": "Deterministic CPU preview",
+      "category": "lighting",
+      "description": "Choose an explicit CPU sample, thread and seed budget.",
+      "fields": {
+        "samples": {
+          "label": "Samples",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 4096,
+          "default": 16
+        },
+        "threads": {
+          "label": "Threads",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 64,
+          "default": 1
+        }
+      },
+      "inserts": [
+        {
+          "at": "/scenes/0/render",
+          "merge": {
+            "device": "CPU",
+            "samples": {
+              "$fill": "samples"
+            },
+            "threads": {
+              "$fill": "threads"
+            },
+            "seed": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "orbit-cameras",
+      "title": "Orbit around the object",
+      "category": "camera",
+      "description": "Create a declared orbit camera sequence, excluding the duplicate final full-turn frame.",
+      "fields": {
+        "count": {
+          "label": "Views",
+          "type": "integer",
+          "required": true,
+          "minimum": 2,
+          "maximum": 60,
+          "default": 12
+        },
+        "elevation": {
+          "label": "Elevation (degrees)",
+          "type": "number",
+          "required": true,
+          "minimum": -89,
+          "maximum": 89,
+          "default": 20
+        }
+      },
+      "inserts": [
+        {
+          "at": "/scenes/0/images/0/cameras",
+          "values": [
+            {
+              "$analytic": {
+                "type": "orbit",
+                "start": 0,
+                "end": {
+                  "$expr": {
+                    "op": "subtract",
+                    "args": [
+                      360,
+                      {
+                        "$expr": {
+                          "op": "divide",
+                          "args": [
+                            360,
+                            {
+                              "$fill": "count"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                "count": {
+                  "$fill": "count"
+                },
+                "elevation": {
+                  "$fill": "elevation"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "export-mesh",
+      "title": "Publish a mesh alongside images",
+      "category": "camera",
+      "description": "Add an existing mesh to the scene mesh-publication list.",
+      "fields": {
+        "source": {
+          "label": "Mesh node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "data"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/scenes/0/meshes/-",
+          "values": [
+            {
+              "$fill": "source"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rounded-enclosure",
+      "title": "Rounded enclosure mesh",
+      "category": "recipes",
+      "description": "Bevel a cube, then apply weighted normals for hard-surface shading.",
+      "fields": {
+        "prefix": {
+          "label": "Recipe prefix",
+          "type": "id",
+          "required": true,
+          "default": "study"
+        },
+        "size": {
+          "label": "Cube size",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 2
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Blank",
+              "filter": "cube",
+              "options": {
+                "size": {
+                  "$fill": "size"
+                }
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Bevel",
+              "filter": "bevel",
+              "options": {
+                "width": 0.12,
+                "segments": 3
+              },
+              "inputs": {
+                "input": "${prefix}Blank"
+              }
+            },
+            {
+              "id": "${prefix}Final",
+              "filter": "weightedNormal",
+              "options": {
+                "keepSharp": true
+              },
+              "inputs": {
+                "input": "${prefix}Bevel"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            "${prefix}Final"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "wire-cage",
+      "title": "Triangulated wire cage",
+      "category": "recipes",
+      "description": "Turn an icosphere into a visible structural edge cage.",
+      "fields": {
+        "prefix": {
+          "label": "Recipe prefix",
+          "type": "id",
+          "required": true,
+          "default": "study"
+        },
+        "thickness": {
+          "label": "Strut thickness",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "default": 0.03
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Sphere",
+              "filter": "icoSphere",
+              "options": {
+                "subdivisions": 2
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Final",
+              "filter": "wireframe",
+              "options": {
+                "thickness": {
+                  "$fill": "thickness"
+                }
+              },
+              "inputs": {
+                "input": "${prefix}Sphere"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            "${prefix}Final"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "bent-panel",
+      "title": "Subdivided bent panel",
+      "category": "recipes",
+      "description": "Subdivide a grid before bending it to create a curved panel.",
+      "fields": {
+        "prefix": {
+          "label": "Recipe prefix",
+          "type": "id",
+          "required": true,
+          "default": "study"
+        },
+        "angle": {
+          "label": "Bend angle (radians)",
+          "type": "number",
+          "required": true,
+          "minimum": -3.14,
+          "maximum": 3.14,
+          "default": 0.8
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Grid",
+              "filter": "grid",
+              "options": {
+                "width": 4,
+                "height": 2,
+                "xSegments": 24,
+                "ySegments": 12
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Bend",
+              "filter": "bend",
+              "options": {
+                "angle": {
+                  "$fill": "angle"
+                },
+                "axis": "X"
+              },
+              "inputs": {
+                "input": "${prefix}Grid"
+              }
+            },
+            {
+              "id": "${prefix}Final",
+              "filter": "solidify",
+              "options": {
+                "thickness": 0.05
+              },
+              "inputs": {
+                "input": "${prefix}Bend"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            "${prefix}Final"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "repeat-columns",
+      "title": "Repeated column row",
+      "category": "recipes",
+      "description": "Create a capped column mesh and repeat it with an array modifier.",
+      "fields": {
+        "prefix": {
+          "label": "Recipe prefix",
+          "type": "id",
+          "required": true,
+          "default": "study"
+        },
+        "count": {
+          "label": "Columns",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 20,
+          "default": 5
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Column",
+              "filter": "cylinder",
+              "options": {
+                "radius": 0.2,
+                "depth": 2
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Final",
+              "filter": "array",
+              "options": {
+                "count": {
+                  "$fill": "count"
+                },
+                "relativeOffset": [
+                  3,
+                  0,
+                  0
+                ]
+              },
+              "inputs": {
+                "input": "${prefix}Column"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            "${prefix}Final"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "radius-sweep",
+      "title": "Sphere radius study",
+      "category": "sweeps",
+      "description": "Use a scheduled axis to compare several primitive radii.",
+      "fields": {
+        "prefix": {
+          "label": "Recipe prefix",
+          "type": "id",
+          "required": true,
+          "default": "study"
+        },
+        "radii": {
+          "label": "Radius values",
+          "type": "json",
+          "required": true,
+          "default": [
+            0.5,
+            1,
+            1.5
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/axes/-",
+          "values": [
+            {
+              "name": "${prefix}Radius",
+              "values": {
+                "$fill": "radii"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Final",
+              "filter": "uvSphere",
+              "options": {
+                "radius": {
+                  "$axis": "${prefix}Radius"
+                }
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/scenes/0/visible/-",
+          "values": [
+            "${prefix}Final"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    }
+  ],
+  "viewers": [
+    "3d",
+    "image",
+    "table",
+    "text"
+  ]
+}

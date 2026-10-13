@@ -1,0 +1,143 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "sphere",
+      "filter": "sphere",
+      "options": {
+        "radius": {
+          "$analytic": {
+            "type": "linear",
+            "start": 1,
+            "end": 3,
+            "count": 3,
+            "sync": "shape"
+          }
+        },
+        "centre": {
+          "$analytic": {
+            "type": "linear",
+            "start": [
+              0,
+              0,
+              0
+            ],
+            "end": [
+              2,
+              0,
+              0
+            ],
+            "count": 3,
+            "sync": "shape"
+          }
+        }
+      }
+    },
+    {
+      "id": "other",
+      "filter": "sphere",
+      "options": {
+        "radius": {
+          "$analytic": {
+            "type": "linear",
+            "start": 2,
+            "end": 4,
+            "count": 3,
+            "sync": "shape"
+          }
+        }
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "slice",
+      "inputs": {
+        "input": "sphere"
+      },
+      "options": {
+        "origin": {
+          "$calc": "add",
+          "args": [
+            {
+              "$call": "boundsCentre",
+              "args": {
+                "bounds": {
+                  "$observe": "sphere",
+                  "path": [
+                    "bounds"
+                  ]
+                }
+              }
+            },
+            {
+              "$analytic": {
+                "type": "linear",
+                "start": [
+                  0,
+                  0,
+                  0
+                ],
+                "end": [
+                  0,
+                  0,
+                  0.5
+                ],
+                "count": 2
+              }
+            }
+          ]
+        },
+        "normal": "z+"
+      }
+    },
+    {
+      "id": "unused",
+      "filter": "sphere",
+      "options": {
+        "radius": {
+          "$analytic": {
+            "type": "linear",
+            "start": 1,
+            "end": 10,
+            "count": 10
+          }
+        }
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "test",
+      "geometry": [
+        "cut"
+      ],
+      "visible": {
+        "cut": {
+          "colour": "xkcd:sky blue"
+        },
+        "other": {
+          "colour": "orange",
+          "opacity": 0.3
+        }
+      },
+      "images": [
+        {
+          "id": "orbit",
+          "cameras": {
+            "$analytic": {
+              "type": "orbit",
+              "start": 0,
+              "end": 270,
+              "count": 4,
+              "elevation": 25
+            }
+          },
+          "size": [
+            320,
+            240
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "version": "schemaxis.workflow-template/1",
+  "id": "example.reentrant-dimensions",
+  "revision": 1,
+  "title": "A measured dimension returns to FreeCAD",
+  "workflow": "workflow.json",
+  "parameters": {
+    "height": {
+      "label": "Initial height",
+      "help": "Height of the source box; the final box uses height calculated from verified mesh volume divided by the declared base area.",
+      "kind": "number",
+      "units": "mm",
+      "constraints": {
+        "minimum": 1,
+        "maximum": 20
+      },
+      "default": 5,
+      "target": {
+        "scope": "workflow",
+        "pointer": "/dimensions/height"
+      }
+    },
+    "length": {
+      "label": "Length",
+      "kind": "number",
+      "units": "mm",
+      "constraints": {
+        "minimum": 5,
+        "maximum": 40
+      },
+      "default": 20,
+      "target": {
+        "scope": "workflow",
+        "pointer": "/dimensions/length"
+      }
+    }
+  },
+  "outputs": {
+    "finalModel": {
+      "operation": "revise",
+      "artifact": 0,
+      "kind": "geometry"
+    },
+    "calculatedHeight": {
+      "operation": "table",
+      "artifact": 0,
+      "pointer": "/rows/0/1",
+      "kind": "number",
+      "units": "mm"
+    }
+  },
+  "requirements": {
+    "providers": [
+      "freecad",
+      "gmsh",
+      "octave"
+    ],
+    "qualification": "design-example; host planning only; native acceptance pending"
+  }
+}

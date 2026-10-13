@@ -1,0 +1,224 @@
+{
+  "version": "schemaxis/1",
+  "times": {
+    "source": "case",
+    "select": {
+      "latest": 2
+    }
+  },
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": "cases/coupe/coupe_AMI.foam",
+        "cellArrays": [
+          "U",
+          "p"
+        ]
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "merge",
+      "inputs": {
+        "input": "case"
+      }
+    },
+    {
+      "id": "speed",
+      "filter": "calculator",
+      "inputs": {
+        "input": "mesh"
+      },
+      "options": {
+        "expression": "mag(U)",
+        "result": "Umag",
+        "association": "Cell Data"
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "slice",
+      "inputs": {
+        "input": "speed"
+      },
+      "options": {
+        "origin": [
+          {
+            "$calc": "add",
+            "args": [
+              {
+                "$observe": "mesh",
+                "path": [
+                  "bounds",
+                  0
+                ]
+              },
+              {
+                "$calc": "multiply",
+                "args": [
+                  {
+                    "$axis": "fraction"
+                  },
+                  {
+                    "$calc": "subtract",
+                    "args": [
+                      {
+                        "$observe": "mesh",
+                        "path": [
+                          "bounds",
+                          1
+                        ]
+                      },
+                      {
+                        "$observe": "mesh",
+                        "path": [
+                          "bounds",
+                          0
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "mesh",
+                    "path": [
+                      "bounds",
+                      2
+                    ]
+                  },
+                  {
+                    "$observe": "mesh",
+                    "path": [
+                      "bounds",
+                      3
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "mesh",
+                    "path": [
+                      "bounds",
+                      4
+                    ]
+                  },
+                  {
+                    "$observe": "mesh",
+                    "path": [
+                      "bounds",
+                      5
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "outer",
+      "filter": "surface",
+      "inputs": {
+        "input": "speed"
+      }
+    },
+    {
+      "id": "outline",
+      "filter": "outline",
+      "inputs": {
+        "input": "mesh"
+      }
+    }
+  ],
+  "axes": [
+    {
+      "name": "fraction",
+      "values": [
+        0.35,
+        0.65
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "flow",
+      "geometry": [
+        "cut"
+      ],
+      "visible": {
+        "cut": {
+          "field": [
+            "CELLS",
+            "p"
+          ],
+          "range": [
+            -200,
+            200
+          ]
+        },
+        "outer": {
+          "colour": "slategrey",
+          "opacity": 0.12
+        },
+        "outline": {
+          "colour": "black"
+        }
+      },
+      "appearances": [
+        {},
+        {
+          "cut": {
+            "field": [
+              "CELLS",
+              "Umag"
+            ],
+            "range": [
+              0,
+              50
+            ]
+          }
+        }
+      ],
+      "images": [
+        {
+          "id": "overview",
+          "size": [
+            400,
+            300
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -1,
+                0.6
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

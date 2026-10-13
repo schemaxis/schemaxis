@@ -1,0 +1,1453 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "samples": {
+      "status": "reviewed",
+      "explanation": "Creates a table directly from literal x and y vectors typed into the document, with no file involved. Choose it for small measured data sets, test cases with known answers, or calibration points; use readCSV for data already in a file and sequence or wave for generated data. The table passes unchanged to later nodes; any ordering requirement comes from the operation that consumes it.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/adaptor.py:22",
+        "src/schemaxis/adaptors/octave/adaptor.py:56",
+        "src/schemaxis/adaptors/octave/worker.py:23-24",
+        "src/schemaxis/adaptors/octave/capabilities.py",
+        "docs/numerical-analysis.md#octave-contract"
+      ],
+      "pitfalls": [
+        "x and y must have the same length (2-10000 values), otherwise planning fails with INVALID_TABLE.",
+        "derivative, integral, resample and fft need strictly increasing x; sort the pairs before entering them."
+      ],
+      "examples": [
+        {
+          "purpose": "Editable numerical calibration pipeline.",
+          "reference": "examples/schemaxis/analysis/octave-calibration.json"
+        },
+        {
+          "purpose": "Fit a straight line through five measurements and differentiate and integrate it.",
+          "reference": "examples/schemaxis/analysis/octave-regression.json"
+        }
+      ]
+    },
+    "readCSV": {
+      "status": "reviewed",
+      "explanation": "Reads two named numeric columns from an existing CSV file as the x and y of a table. Schemaxis validates and copies the file into the run, so the analysis and its verification use the captured bytes. Choose it for measurements exported from instruments, spreadsheets or other Schemaxis runs (for example a Calc or Cantera CSV); use samples for a few literal values.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/adaptor.py:23",
+        "src/schemaxis/adaptors/octave/adaptor.py:58",
+        "src/schemaxis/adaptors/octave/adaptor.py:104-113",
+        "src/schemaxis/adaptors/octave/reference.py:37-41",
+        "src/schemaxis/tabular.py:34-49",
+        "src/schemaxis/adaptors/octave/capabilities.py",
+        "docs/numerical-analysis.md#octave-contract"
+      ],
+      "pitfalls": [
+        "Every cell in the file must be a finite number below a header row; missing values, text or dates fail with INVALID_TABLE, even in columns you do not select.",
+        "The file is limited to 8 MiB and 10000 data rows. Units are not read from the file; keep track of them yourself."
+      ]
+    },
+    "sequence": {
+      "status": "reviewed",
+      "explanation": "Generates count evenly spaced values from start to stop inclusive with Octave's linspace and uses them as both x and y, giving the identity line y = x. Choose it as a synthetic or calibration input, for example followed by scale to build a known linear relationship; choose wave for an oscillating signal.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/adaptor.py:24",
+        "src/schemaxis/adaptors/octave/worker.py:30-31",
+        "src/schemaxis/adaptors/octave/reference.py:43-45",
+        "https://docs.octave.org/latest/Special-Utility-Matrices.html#index-linspace",
+        "src/schemaxis/adaptors/octave/capabilities.py"
+      ],
+      "pitfalls": [
+        "Both endpoints are included, so the spacing is (stop - start) / (count - 1), not (stop - start) / count.",
+        "A stop below start gives decreasing x, which derivative, integral, resample and fft reject."
+      ],
+      "examples": [
+        {
+          "purpose": "Editable numerical calibration pipeline.",
+          "reference": "examples/schemaxis/analysis/octave-calibration.json"
+        }
+      ]
+    },
+    "wave": {
+      "status": "reviewed",
+      "explanation": "Generates a sampled sinusoid y = offset + amplitude * sin(2 pi frequency x + phase) (or cos) at x = start, start + step, ... for count samples. Choose it for synthetic test signals, for example to check an fft, movingMean or derivative chain against a known answer. Frequency is in cycles per x unit and phase in radians.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/adaptor.py:25-28",
+        "src/schemaxis/adaptors/octave/worker.py:32-36",
+        "src/schemaxis/adaptors/octave/reference.py:46-49",
+        "src/schemaxis/adaptors/octave/capabilities.py",
+        "docs/numerical-analysis.md#octave-contract"
+      ],
+      "pitfalls": [
+        "Keep frequency below 1 / (2 step) cycles per x unit; faster signals are undersampled and alias to a lower apparent frequency.",
+        "For an fft, choose count as a power of two from 4 to 8192."
+      ],
+      "examples": [
+        {
+          "purpose": "Editable numerical calibration pipeline.",
+          "reference": "examples/schemaxis/analysis/octave-calibration.json"
+        },
+        {
+          "purpose": "An 8-cycle sine of amplitude 2 sampled 128 times per x unit, then smoothed, integrated, differentiated and transformed.",
+          "reference": "examples/schemaxis/analysis/octave-signal.json"
+        }
+      ]
+    },
+    "scale": {
+      "status": "reviewed",
+      "explanation": "Applies a linear transformation y' = factor * y + offset to the input table and leaves x unchanged. Choose it to apply a calibration, change sign, or convert units when you know the conversion factor and offset (for example degrees Celsius to kelvin with factor 1 and offset 273.15).",
+      "sources": [
+        "src/schemaxis/adaptors/octave/adaptor.py:29",
+        "src/schemaxis/adaptors/octave/worker.py:40-41",
+        "src/schemaxis/adaptors/octave/reference.py:52",
+        "src/schemaxis/adaptors/octave/capabilities.py"
+      ],
+      "pitfalls": [
+        "No implicit unit conversion; select factor and offset for the intended physical convention.",
+        "Only y is transformed; to rescale x, there is no operation in this adaptor."
+      ],
+      "examples": [
+        {
+          "purpose": "Editable numerical calibration pipeline.",
+          "reference": "examples/schemaxis/analysis/octave-calibration.json"
+        }
+      ]
+    },
+    "resample": {
+      "status": "reviewed",
+      "explanation": "Linearly interpolates the input table (Octave interp1, method linear) onto count evenly spaced x values from its first to its last x. Choose it to turn irregular measurements into a uniform grid, for example before fft, or to change the number of samples.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/adaptor.py:30",
+        "src/schemaxis/adaptors/octave/worker.py:42-44",
+        "src/schemaxis/adaptors/octave/reference.py:53-61",
+        "https://docs.octave.org/latest/One_002ddimensional-Interpolation.html#index-interp1",
+        "src/schemaxis/adaptors/octave/capabilities.py"
+      ],
+      "pitfalls": [
+        "Requires strictly increasing x. Interpolation changes the sampling and does not preserve extrema between samples.",
+        "Resampling to fewer points discards detail without low-pass filtering; apply movingMean first if the data are noisy."
+      ],
+      "examples": [
+        {
+          "purpose": "Editable numerical calibration pipeline.",
+          "reference": "examples/schemaxis/analysis/octave-calibration.json"
+        }
+      ]
+    },
+    "movingMean": {
+      "status": "reviewed",
+      "explanation": "Smooths y with a centred moving average over an odd number of neighbouring samples (Octave movmean with Endpoints shrink), keeping x. Choose it to reduce noise before differentiation or plotting; a wider window smooths more but flattens peaks and blurs steps.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/adaptor.py:31",
+        "src/schemaxis/adaptors/octave/adaptor.py:57",
+        "src/schemaxis/adaptors/octave/worker.py:45-46",
+        "src/schemaxis/adaptors/octave/reference.py:62-65",
+        "https://docs.octave.org/latest/Statistics-on-Sliding-Windows-of-Data.html#index-movmean",
+        "src/schemaxis/adaptors/octave/capabilities.py"
+      ],
+      "pitfalls": [
+        "The window counts samples, not x distance, so irregular spacing gives an uneven smoothing length.",
+        "The window shrinks at endpoints and must not exceed the number of samples."
+      ],
+      "examples": [
+        {
+          "purpose": "Smooth a sampled sine with a 5-sample window.",
+          "reference": "examples/schemaxis/analysis/octave-signal.json"
+        }
+      ]
+    },
+    "derivative": {
+      "status": "reviewed",
+      "explanation": "Estimates dy/dx at every sample with Octave's gradient using the x coordinates, so nonuniform spacing is handled. Interior values are the secant slope between the two neighbours, (y[i+1] - y[i-1]) / (x[i+1] - x[i-1]); the first and last values use the one-sided slope to the adjacent sample. The output keeps x and has units of y per x.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/worker.py:47-48",
+        "src/schemaxis/adaptors/octave/reference.py:66-68",
+        "https://docs.octave.org/latest/Utility-Functions.html#index-gradient",
+        "src/schemaxis/adaptors/octave/capabilities.py",
+        "docs/numerical-analysis.md#octave-contract"
+      ],
+      "pitfalls": [
+        "Requires strictly increasing x.",
+        "Differentiation amplifies noise; smooth with movingMean or fit with linearFit first for measured data."
+      ],
+      "examples": [
+        {
+          "purpose": "Editable numerical calibration pipeline.",
+          "reference": "examples/schemaxis/analysis/octave-calibration.json"
+        }
+      ]
+    },
+    "integral": {
+      "status": "reviewed",
+      "explanation": "Accumulates the trapezoidal integral of y over x (Octave cumtrapz) and adds a constant initial value, so output y[i] is initial plus the area from the first x to x[i]. Choose it for running totals such as displacement from velocity or energy from power. The output keeps x and has units of y times x.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/adaptor.py:32",
+        "src/schemaxis/adaptors/octave/worker.py:49-50",
+        "src/schemaxis/adaptors/octave/reference.py:69-73",
+        "https://docs.octave.org/latest/Functions-of-One-Variable.html#index-cumtrapz",
+        "src/schemaxis/adaptors/octave/capabilities.py"
+      ],
+      "pitfalls": [
+        "Requires strictly increasing x; the first output equals initial and units are y-unit times x-unit.",
+        "The trapezoidal rule is exact only for piecewise-linear data; coarse sampling of curved signals under- or over-estimates the area."
+      ],
+      "examples": [
+        {
+          "purpose": "Editable numerical calibration pipeline.",
+          "reference": "examples/schemaxis/analysis/octave-calibration.json"
+        }
+      ]
+    },
+    "linearFit": {
+      "status": "reviewed",
+      "explanation": "Fits the least-squares straight line y = slope * x + intercept to the input (Octave polyfit, degree 1) and outputs the fitted y at each original x. Slope, intercept and residual sum of squares are recorded in the run's native.json evidence, not in the published CSV or statistics.json. Choose it to summarise a linear trend or calibration; use the R adaptor's regression for uncertainty estimates.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/worker.py:51-54",
+        "src/schemaxis/adaptors/octave/reference.py:74-83",
+        "https://docs.octave.org/latest/Polynomial-Interpolation.html#index-polyfit",
+        "src/schemaxis/adaptors/octave/capabilities.py",
+        "docs/numerical-analysis.md#octave-contract"
+      ],
+      "pitfalls": [
+        "Requires varying x. Slope, intercept and residual sum of squares are retained in native metadata.",
+        "No standard errors, R squared or outlier handling are produced; inspect the residuals separately if fit quality matters."
+      ],
+      "examples": [
+        {
+          "purpose": "Fit five collinear points and differentiate and integrate the fitted line.",
+          "reference": "examples/schemaxis/analysis/octave-regression.json"
+        }
+      ]
+    },
+    "fft": {
+      "status": "reviewed",
+      "explanation": "Computes the one-sided amplitude spectrum of uniformly sampled real y with Octave's fft: x becomes frequency in cycles per x unit (0 to the Nyquist frequency, n/2 + 1 values) and y the amplitude, scaled so that a sinusoid of amplitude A centred on a frequency bin shows a peak of A. Choose it to identify dominant frequencies in a signal. No window or detrending is applied.",
+      "sources": [
+        "src/schemaxis/adaptors/octave/worker.py:55-60",
+        "src/schemaxis/adaptors/octave/reference.py:84-92",
+        "https://docs.octave.org/latest/Signal-Processing.html#index-fft",
+        "src/schemaxis/adaptors/octave/capabilities.py",
+        "docs/numerical-analysis.md#octave-contract"
+      ],
+      "pitfalls": [
+        "Requires 4-8192 samples in a power of two and uniform x spacing; use resample first for irregular data. x becomes frequency; amplitudes double interior bins but not DC or Nyquist.",
+        "Frequencies that fall between bins leak into neighbouring bins with a lower peak; choose the record length to contain whole cycles where possible.",
+        "Phase is discarded; only magnitudes are published."
+      ],
+      "examples": [
+        {
+          "purpose": "Spectrum of an 8-cycle, amplitude-2 sine sampled 128 times: a peak of 2 at frequency 8.",
+          "reference": "examples/schemaxis/analysis/octave-signal.json"
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.octave/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A GNU Octave numerical analysis of real-valued 1D x/y tables: up to 64 nodes that create tables (samples, readCSV, sequence, wave) and transform them (scale, resample, movingMean, derivative, integral, linearFit, fft), run by a fixed Octave script in an isolated process. Each table listed in outputs is published as <id>.csv with columns x and y, followed by statistics.json (count, mean, median, sample standard deviation, minimum, maximum and RMS of y). Every intermediate result is recomputed by independent host arithmetic and must agree within relative tolerance 2e-8 and absolute tolerance 2e-9.",
+          "pitfalls": [
+            "No physical units are tracked or converted; record the units of x and y yourself.",
+            "Very small values near the absolute tolerance 2e-9 can fail verification; rescale the data into a convenient unit first."
+          ],
+          "examples": [
+            {
+              "version": "schemaxis.octave/1",
+              "nodes": [
+                {
+                  "id": "signal",
+                  "filter": "wave",
+                  "options": {
+                    "step": 0.0078125,
+                    "count": 128,
+                    "frequency": 8,
+                    "amplitude": 2
+                  }
+                },
+                {
+                  "id": "smoothed",
+                  "filter": "movingMean",
+                  "inputs": {
+                    "input": "signal"
+                  },
+                  "options": {
+                    "window": 5
+                  }
+                },
+                {
+                  "id": "spectrum",
+                  "filter": "fft",
+                  "inputs": {
+                    "input": "signal"
+                  }
+                }
+              ],
+              "outputs": [
+                "signal",
+                "smoothed",
+                "spectrum"
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:40-63",
+            "src/schemaxis/adaptors/octave/adaptor.py:88-127",
+            "src/schemaxis/adaptors/octave/worker.py:69-82",
+            "src/schemaxis/tabular.py:62-69",
+            "docs/numerical-analysis.md#octave-contract"
+          ]
+        },
+        "/properties/version": {
+          "status": "reference",
+          "explanation": "Identifies the document format and chooses its adaptor. Keep the version matching the selected schema.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reviewed",
+          "explanation": "The tables of the analysis, 1-64 nodes evaluated in list order. Source nodes (samples, readCSV, sequence, wave) have no inputs; every other node names one earlier node in inputs.input, so several nodes may branch from the same table. Each table holds 2-10000 samples, and all tables together at most 100000.",
+          "label": "Nodes",
+          "pitfalls": [
+            "A node can only use a table defined earlier in the list; reorder nodes rather than referencing forward."
+          ],
+          "examples": [
+            [
+              {
+                "id": "measurements",
+                "filter": "samples",
+                "options": {
+                  "x": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                  ],
+                  "y": [
+                    1,
+                    3,
+                    5,
+                    7,
+                    9
+                  ]
+                }
+              },
+              {
+                "id": "fit",
+                "filter": "linearFit",
+                "inputs": {
+                  "input": "measurements"
+                }
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:43-59",
+            "src/schemaxis/adaptors/octave/reference.py:93-96"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reviewed",
+          "explanation": "One table-producing step. Its filter selects the operation; every operation outputs an x/y table that later nodes can use and outputs can publish.",
+          "examples": [
+            {
+              "id": "uniform",
+              "filter": "resample",
+              "inputs": {
+                "input": "irregular"
+              },
+              "options": {
+                "count": 8
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:34-37"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Choose samples to enter a small data set directly as two equal-length vectors. Choose readCSV for data in a file.",
+          "examples": [
+            {
+              "id": "irregular",
+              "filter": "samples",
+              "options": {
+                "x": [
+                  0,
+                  1,
+                  3,
+                  5
+                ],
+                "y": [
+                  1,
+                  3,
+                  7,
+                  11
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:22",
+            "src/schemaxis/adaptors/octave/worker.py:23-24"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options": {
+          "status": "reviewed",
+          "explanation": "The paired abscissae x and values y, both required and of equal length; pair i is (x[i], y[i]).",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:18",
+            "src/schemaxis/adaptors/octave/adaptor.py:22",
+            "src/schemaxis/adaptors/octave/adaptor.py:56"
+          ],
+          "examples": [
+            {
+              "x": [
+                0,
+                1,
+                3,
+                5
+              ],
+              "y": [
+                1,
+                3,
+                7,
+                11
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/x": {
+          "status": "reviewed",
+          "explanation": "The independent variable of each sample (for example time or position), in the order the pairs should appear. Order matters: derivative, integral, resample and fft need it strictly increasing, and fft also evenly spaced.",
+          "label": "x values",
+          "units": "Caller-defined (no conversion)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Repeated x values make derivative, integral and resample fail with INVALID_SAMPLING."
+          ],
+          "examples": [
+            [
+              0,
+              1,
+              3,
+              5
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:18",
+            "src/schemaxis/adaptors/octave/reference.py:10-12"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/x/items": {
+          "status": "reviewed",
+          "explanation": "One abscissa value; its position pairs it with the y value at the same index.",
+          "examples": [
+            3
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:17-18"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/y": {
+          "status": "reviewed",
+          "explanation": "The dependent values, one per x at the same position. Must have exactly as many values as x.",
+          "label": "y values",
+          "units": "Caller-defined (no conversion)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Missing measurements cannot be left blank or entered as NaN; remove the whole pair instead."
+          ],
+          "examples": [
+            [
+              1,
+              3,
+              7,
+              11
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:18",
+            "src/schemaxis/adaptors/octave/adaptor.py:56"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/y/items": {
+          "status": "reviewed",
+          "explanation": "One finite value, paired with the x at the same index.",
+          "examples": [
+            7
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:17-18"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose readCSV to take two columns of an existing numeric CSV file as x and y. Choose samples to type a few values instead.",
+          "examples": [
+            {
+              "id": "measured",
+              "filter": "readCSV",
+              "options": {
+                "file": "/data/measurements.csv",
+                "xColumn": "time",
+                "yColumn": "pressure"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:23",
+            "src/schemaxis/adaptors/octave/worker.py:25-29"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options": {
+          "status": "reviewed",
+          "explanation": "The file (required) and the header names of the two columns to use. Omitted column names take the Schemaxis defaults x and y, which match the CSV files this adaptor publishes.",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:23"
+          ],
+          "examples": [
+            {
+              "file": "/data/measurements.csv",
+              "xColumn": "time",
+              "yColumn": "pressure"
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path of a UTF-8 CSV file with one header row of distinct column names and only finite numeric cells below it (2-10000 rows, at most 8 MiB). The file is validated, copied into the run and checked for changes during the copy; the analysis reads the copy.",
+          "label": "CSV file",
+          "defaultMeaning": "Required; there is no default.",
+          "fileExtensions": [
+            ".csv"
+          ],
+          "pitfalls": [
+            "Relative paths fail planning with INVALID_RESOURCE.",
+            "Semicolon-separated or decimal-comma files fail or are misread; export with commas as separators and points as decimal marks."
+          ],
+          "examples": [
+            "/data/measurements.csv"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:58",
+            "src/schemaxis/adaptors/octave/adaptor.py:105-113",
+            "src/schemaxis/tabular.py:34-49"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/xColumn": {
+          "status": "reviewed",
+          "explanation": "Header name of the column used as x, matched exactly (case-sensitive) against the first row of the file.",
+          "label": "x column",
+          "defaultMeaning": "Schemaxis default: \"x\".",
+          "pitfalls": [
+            "A name that is not in the header fails with INVALID_TABLE 'requested CSV column is absent'; check spaces and capitalisation."
+          ],
+          "examples": [
+            "time"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:23",
+            "src/schemaxis/adaptors/octave/reference.py:39-41"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/yColumn": {
+          "status": "reviewed",
+          "explanation": "Header name of the column used as y, matched exactly (case-sensitive) against the first row of the file. It may be the same column as x.",
+          "label": "y column",
+          "defaultMeaning": "Schemaxis default: \"y\".",
+          "examples": [
+            "pressure"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:23",
+            "src/schemaxis/adaptors/octave/reference.py:39-41"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Choose sequence for evenly spaced values between two endpoints with y equal to x, a known straight line for calibration or as input to scale. Choose wave for an oscillating signal.",
+          "examples": [
+            {
+              "id": "sequence",
+              "filter": "sequence",
+              "options": {
+                "start": -3,
+                "stop": 3,
+                "count": 7
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:24",
+            "src/schemaxis/adaptors/octave/worker.py:30-31"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options": {
+          "status": "reviewed",
+          "explanation": "The endpoints and the number of points; spacing follows as (stop - start) / (count - 1). Omitted settings take the Schemaxis defaults start 0, stop 1 and count 101 (spacing 0.01).",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:19",
+            "src/schemaxis/adaptors/octave/adaptor.py:24"
+          ],
+          "examples": [
+            {
+              "start": -3,
+              "stop": 3,
+              "count": 7
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/start": {
+          "status": "reviewed",
+          "explanation": "First value of the sequence, included exactly as the first x (and y).",
+          "label": "Start",
+          "defaultMeaning": "Schemaxis default: 0.",
+          "examples": [
+            -3
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:24",
+            "src/schemaxis/adaptors/octave/worker.py:30-31"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/stop": {
+          "status": "reviewed",
+          "explanation": "Last value of the sequence, included exactly as the final x (and y). A value below start produces a decreasing sequence.",
+          "label": "Stop",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "pitfalls": [
+            "Decreasing sequences are rejected by derivative, integral, resample and fft, which need increasing x."
+          ],
+          "examples": [
+            3
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:24",
+            "src/schemaxis/adaptors/octave/reference.py:10-12"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/count": {
+          "status": "reviewed",
+          "explanation": "Number of points, including both endpoints. More points give a finer spacing, (stop - start) / (count - 1).",
+          "label": "Number of points",
+          "defaultMeaning": "Schemaxis default: 101.",
+          "pitfalls": [
+            "For a spacing of exactly 0.5 between 0 and 3, use count 7, not 6."
+          ],
+          "examples": [
+            7
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:19",
+            "src/schemaxis/adaptors/octave/worker.py:31"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3": {
+          "status": "reviewed",
+          "explanation": "Choose wave to generate a sine or cosine signal with chosen amplitude, frequency, phase and offset, sampled at a fixed step. Useful for testing spectral, smoothing and calculus steps against known answers.",
+          "examples": [
+            {
+              "id": "signal",
+              "filter": "wave",
+              "options": {
+                "step": 0.0078125,
+                "count": 128,
+                "frequency": 8,
+                "amplitude": 2
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:25-28",
+            "src/schemaxis/adaptors/octave/worker.py:32-36"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options": {
+          "status": "reviewed",
+          "explanation": "Sampling (start, step, count) and signal shape (shape, amplitude, frequency, phase, offset): y = offset + amplitude * sin or cos(2 pi frequency x + phase). Omitted settings take the Schemaxis defaults start 0, step 0.01, count 101, sine, amplitude 1, frequency 1, phase 0 and offset 0, which is exactly one cycle over x = 0 to 1.",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:25-28",
+            "src/schemaxis/adaptors/octave/worker.py:32-36"
+          ],
+          "examples": [
+            {
+              "shape": "cosine",
+              "phase": 0.3,
+              "frequency": 0.25,
+              "count": 16,
+              "step": 0.1,
+              "amplitude": 0.7,
+              "offset": 2
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/start": {
+          "status": "reviewed",
+          "explanation": "x value of the first sample. Shifting start moves the sampling window along x; because phase is applied to 2 pi frequency x, it also changes the signal value at the first sample.",
+          "label": "Start",
+          "defaultMeaning": "Schemaxis default: 0.",
+          "examples": [
+            0
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:25",
+            "src/schemaxis/adaptors/octave/worker.py:33-34"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/step": {
+          "status": "reviewed",
+          "explanation": "Spacing between successive x values; the samples run from start to start + step * (count - 1). Smaller steps resolve faster oscillations: the highest representable frequency is 1 / (2 step) cycles per x unit.",
+          "label": "Sample spacing",
+          "units": "x units",
+          "defaultMeaning": "Schemaxis default: 0.01.",
+          "pitfalls": [
+            "With step 0.01, a frequency of 60 is above the Nyquist limit of 50 and appears as a slower wave."
+          ],
+          "examples": [
+            0.0078125
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:25",
+            "src/schemaxis/adaptors/octave/worker.py:33",
+            "src/schemaxis/adaptors/octave/reference.py:47"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/count": {
+          "status": "reviewed",
+          "explanation": "Number of samples generated. Together with step it sets the length covered, step * (count - 1).",
+          "label": "Number of samples",
+          "defaultMeaning": "Schemaxis default: 101.",
+          "pitfalls": [
+            "An fft of this signal needs count to be a power of two (4 to 8192), for example 128 rather than the default 101."
+          ],
+          "examples": [
+            128
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:19",
+            "src/schemaxis/adaptors/octave/reference.py:86"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/shape": {
+          "status": "reviewed",
+          "explanation": "Whether the signal is a sine or a cosine. With phase 0, at x = 0 a sine is at the offset and rising while a cosine is at its peak (offset + amplitude); the two differ only by a quarter-cycle phase shift of pi/2.",
+          "label": "Waveform",
+          "defaultMeaning": "Schemaxis default: sine.",
+          "examples": [
+            "cosine"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:26",
+            "src/schemaxis/adaptors/octave/worker.py:35"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/amplitude": {
+          "status": "reviewed",
+          "explanation": "Peak deviation of the signal from its offset, in y units; the signal ranges from offset - amplitude to offset + amplitude. A negative value inverts the wave.",
+          "label": "Amplitude",
+          "units": "y units",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "pitfalls": [
+            "This is the peak, not the peak-to-peak or RMS value; an amplitude-2 sine has RMS about 1.414 about its offset."
+          ],
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:27",
+            "src/schemaxis/adaptors/octave/worker.py:36"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/frequency": {
+          "status": "reviewed",
+          "explanation": "Number of complete cycles per unit of x (for example hertz when x is in seconds). Higher frequency means more oscillations over the same x range; 0 gives a constant signal.",
+          "label": "Frequency",
+          "units": "Cycles per x unit",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "pitfalls": [
+            "This is ordinary frequency, not angular frequency: do not multiply by 2 pi, Schemaxis already does."
+          ],
+          "examples": [
+            8
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:27",
+            "src/schemaxis/adaptors/octave/worker.py:34",
+            "docs/numerical-analysis.md#octave-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/phase": {
+          "status": "reviewed",
+          "explanation": "Phase angle added inside the sine or cosine, in radians; a positive phase shifts the wave towards smaller x by phase / (2 pi frequency).",
+          "label": "Phase",
+          "units": "Radians",
+          "defaultMeaning": "Schemaxis default: 0.",
+          "pitfalls": [
+            "Enter radians, not degrees: a 90 degree shift is about 1.5708."
+          ],
+          "examples": [
+            0.3
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:28",
+            "src/schemaxis/adaptors/octave/worker.py:34",
+            "docs/numerical-analysis.md#octave-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Constant added to every sample, shifting the whole wave up or down in y units; it becomes the mean of a whole number of cycles and the DC (frequency 0) value of an fft.",
+          "label": "Offset",
+          "units": "y units",
+          "defaultMeaning": "Schemaxis default: 0.",
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:28",
+            "src/schemaxis/adaptors/octave/worker.py:36"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4": {
+          "status": "reviewed",
+          "explanation": "Choose scale to apply y' = factor * y + offset, for calibration, sign changes or a known unit conversion. x is unchanged.",
+          "examples": [
+            {
+              "id": "calibrated",
+              "filter": "scale",
+              "inputs": {
+                "input": "sequence"
+              },
+              "options": {
+                "factor": 2,
+                "offset": 1
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:29",
+            "src/schemaxis/adaptors/octave/worker.py:40-41"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options": {
+          "status": "reviewed",
+          "explanation": "The multiplier and the added constant of the linear map; the factor is applied before the offset. Omitted settings take the Schemaxis defaults factor 1 and offset 0, which leave y unchanged.",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:29"
+          ],
+          "examples": [
+            {
+              "factor": 2,
+              "offset": 1
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/factor": {
+          "status": "reviewed",
+          "explanation": "Multiplier applied to every y value before the offset is added; a negative factor inverts the data and 0 gives a constant equal to the offset.",
+          "label": "Factor",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "pitfalls": [
+            "To convert degrees Fahrenheit to Celsius, use factor 5/9 (0.5555…) with offset -17.777…, because the offset is added after multiplying."
+          ],
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:29",
+            "src/schemaxis/adaptors/octave/worker.py:41"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Constant added to every y value after multiplication by factor, in the output y units.",
+          "label": "Offset",
+          "units": "Output y units",
+          "defaultMeaning": "Schemaxis default: 0.",
+          "examples": [
+            273.15
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:29",
+            "src/schemaxis/adaptors/octave/worker.py:41"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose table is scaled.",
+          "label": "Input table",
+          "examples": [
+            "sequence"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:55"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5": {
+          "status": "reviewed",
+          "explanation": "Choose resample to interpolate a table linearly onto an evenly spaced x grid spanning its original first and last x, for example to prepare irregular data for fft.",
+          "examples": [
+            {
+              "id": "uniform",
+              "filter": "resample",
+              "inputs": {
+                "input": "irregular"
+              },
+              "options": {
+                "count": 8
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:30",
+            "src/schemaxis/adaptors/octave/worker.py:42-44"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options": {
+          "status": "reviewed",
+          "explanation": "The resampler has a single setting, the number of output points. Omitted, Schemaxis produces 101 points.",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:19",
+            "src/schemaxis/adaptors/octave/adaptor.py:30"
+          ],
+          "examples": [
+            {
+              "count": 64
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/count": {
+          "status": "reviewed",
+          "explanation": "Number of evenly spaced output points between the input's first and last x, both included; the new spacing is (last x - first x) / (count - 1). More points do not add information beyond straight lines between the original samples.",
+          "label": "Number of points",
+          "defaultMeaning": "Schemaxis default: 101.",
+          "pitfalls": [
+            "For a following fft, choose a power of two such as 64 or 128."
+          ],
+          "examples": [
+            64
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:19",
+            "src/schemaxis/adaptors/octave/worker.py:43",
+            "src/schemaxis/adaptors/octave/reference.py:55"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose table is resampled; its x must be strictly increasing.",
+          "label": "Input table",
+          "examples": [
+            "irregular"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:55",
+            "src/schemaxis/adaptors/octave/reference.py:54"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6": {
+          "status": "reviewed",
+          "explanation": "Choose movingMean to smooth noisy y values with a centred running average while keeping the same x.",
+          "examples": [
+            {
+              "id": "smoothed",
+              "filter": "movingMean",
+              "inputs": {
+                "input": "signal"
+              },
+              "options": {
+                "window": 5
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:31",
+            "src/schemaxis/adaptors/octave/worker.py:45-46"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options": {
+          "status": "reviewed",
+          "explanation": "The smoother has a single setting, the window length in samples. Omitted, Schemaxis uses a 5-sample window.",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:31"
+          ],
+          "examples": [
+            {
+              "window": 9
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/window": {
+          "status": "reviewed",
+          "explanation": "Number of samples averaged for each output, centred on that sample: (window - 1) / 2 on each side. Larger windows remove more noise but also reduce peaks and widen edges; 1 leaves the data unchanged. Near the ends the window is truncated to the samples that exist.",
+          "label": "Window (samples)",
+          "units": "Samples",
+          "defaultMeaning": "Schemaxis default: 5.",
+          "pitfalls": [
+            "Even windows fail planning with INVALID_ARGUMENT, and a window larger than the number of samples fails before Octave runs."
+          ],
+          "examples": [
+            9
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:31",
+            "src/schemaxis/adaptors/octave/adaptor.py:57",
+            "src/schemaxis/adaptors/octave/reference.py:62-65",
+            "https://docs.octave.org/latest/Statistics-on-Sliding-Windows-of-Data.html#index-movmean"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose y values are smoothed.",
+          "label": "Input table",
+          "examples": [
+            "signal"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:55"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7": {
+          "status": "reviewed",
+          "explanation": "Choose derivative to estimate the slope dy/dx at every sample, including for unevenly spaced x. Interior points use the neighbouring samples on both sides; the end points use the single adjacent sample.",
+          "examples": [
+            {
+              "id": "gradient",
+              "filter": "derivative",
+              "inputs": {
+                "input": "irregular"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/worker.py:47-48",
+            "src/schemaxis/adaptors/octave/reference.py:66-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options": {
+          "status": "reviewed",
+          "explanation": "The derivative has no settings; leave options empty or omit them. The result depends only on the input table's x and y.",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:32"
+          ],
+          "examples": [
+            {}
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose table is differentiated; its x must be strictly increasing.",
+          "label": "Input table",
+          "examples": [
+            "smoothed"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:55",
+            "src/schemaxis/adaptors/octave/reference.py:67"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8": {
+          "status": "reviewed",
+          "explanation": "Choose integral for the running trapezoidal integral of y over x, starting from a chosen initial value.",
+          "examples": [
+            {
+              "id": "integral",
+              "filter": "integral",
+              "inputs": {
+                "input": "irregular"
+              },
+              "options": {
+                "initial": 2
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:32",
+            "src/schemaxis/adaptors/octave/worker.py:49-50"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options": {
+          "status": "reviewed",
+          "explanation": "The integral has a single setting, the constant of integration. Omitted, Schemaxis starts from 0.",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:32"
+          ],
+          "examples": [
+            {
+              "initial": 2
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/initial": {
+          "status": "reviewed",
+          "explanation": "Value of the running integral at the first x, added to every output value; for example the starting position when integrating velocity. Units are y units times x units.",
+          "label": "Initial value",
+          "units": "y units times x units",
+          "defaultMeaning": "Schemaxis default: 0.",
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:32",
+            "src/schemaxis/adaptors/octave/worker.py:50",
+            "src/schemaxis/adaptors/octave/reference.py:71"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose table is integrated; its x must be strictly increasing.",
+          "label": "Input table",
+          "examples": [
+            "irregular"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:55",
+            "src/schemaxis/adaptors/octave/reference.py:70"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9": {
+          "status": "reviewed",
+          "explanation": "Choose linearFit to replace y by the least-squares straight line through the data, evaluated at the original x; slope, intercept and residual sum of squares go to the run's native evidence.",
+          "examples": [
+            {
+              "id": "fit",
+              "filter": "linearFit",
+              "inputs": {
+                "input": "measurements"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/worker.py:51-54",
+            "src/schemaxis/adaptors/octave/reference.py:74-83"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options": {
+          "status": "reviewed",
+          "explanation": "The fit has no settings; it is always an ordinary least-squares line of degree 1 with equal weights. Leave options empty or omit them.",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:32",
+            "src/schemaxis/adaptors/octave/worker.py:52"
+          ],
+          "examples": [
+            {}
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose table is fitted; its x values must not all be equal. Order does not matter for the fit.",
+          "label": "Input table",
+          "examples": [
+            "measurements"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:55",
+            "src/schemaxis/adaptors/octave/reference.py:75-77"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10": {
+          "status": "reviewed",
+          "explanation": "Choose fft to convert a uniformly sampled signal into its one-sided amplitude spectrum, with frequency (cycles per x unit) as the new x.",
+          "examples": [
+            {
+              "id": "spectrum",
+              "filter": "fft",
+              "inputs": {
+                "input": "signal"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/worker.py:55-60",
+            "src/schemaxis/adaptors/octave/reference.py:84-92"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options": {
+          "status": "reviewed",
+          "explanation": "The spectrum has no settings: no window, padding or detrending is applied, and the amplitude scaling is fixed. Leave options empty or omit them.",
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:32",
+            "src/schemaxis/adaptors/octave/worker.py:55-60"
+          ],
+          "examples": [
+            {}
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose signal is transformed; it needs strictly increasing, evenly spaced x and a power-of-two sample count from 4 to 8192.",
+          "label": "Input table",
+          "examples": [
+            "signal"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:55",
+            "src/schemaxis/adaptors/octave/reference.py:85-88"
+          ]
+        },
+        "/properties/outputs": {
+          "status": "reviewed",
+          "explanation": "The ids of the tables to publish, each as <id>.csv with columns x and y, in the listed order, followed by statistics.json with summary statistics of each listed table's y. Unlisted nodes are still computed and verified but are kept only in native evidence.",
+          "label": "Published tables",
+          "pitfalls": [
+            "Artifact indices in workflows follow this order, with statistics.json last; reordering the list changes which file an $artifact index selects."
+          ],
+          "examples": [
+            [
+              "signal",
+              "spectrum"
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:60-63",
+            "src/schemaxis/adaptors/octave/adaptor.py:88-90",
+            "src/schemaxis/adaptors/octave/worker.py:69-82",
+            "docs/numerical-analysis.md#connect-analysis-spreadsheets-and-geometry"
+          ]
+        },
+        "/properties/outputs/items": {
+          "status": "reviewed",
+          "explanation": "The id of one declared node to publish; each id may appear only once.",
+          "examples": [
+            "spectrum"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/octave/adaptor.py:61-62"
+          ]
+        }
+      }
+    }
+  }
+}

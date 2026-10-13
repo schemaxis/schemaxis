@@ -1,0 +1,353 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "json": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.qgis/1"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "readVector"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "file"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "reproject"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "crs": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 11
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "crs"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "centroid"
+              },
+              "options": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "buffer"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "distance": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 100000
+                  },
+                  "segments": {
+                    "type": "integer",
+                    "minimum": 4,
+                    "maximum": 64,
+                    "default": 16
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "distance"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "clip"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "bounds": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -1000000000.0,
+                      "maximum": 1000000000.0
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "bounds"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          }
+        ]
+      }
+    },
+    "output": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    },
+    "preview": {
+      "type": "boolean",
+      "default": true
+    },
+    "dimensions": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    },
+    "definitions": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    },
+    "settings": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "nodes",
+    "output"
+  ]
+}

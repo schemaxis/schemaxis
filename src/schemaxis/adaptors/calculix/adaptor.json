@@ -1,0 +1,88 @@
+{
+  "id": "calculix",
+  "version": "schemaxis.calculix/1",
+  "adaptor": "schemaxis.adaptors.calculix.adaptor",
+  "runtimeFamily": "2.23",
+  "executables": [
+    "ccx"
+  ],
+  "execution": "Bounded isotropic elastic cantilevers with independent equilibrium, mesh convergence and interior stress assessment",
+  "keywords": [
+    "cantilever",
+    "FEA",
+    "elasticity",
+    "deflection",
+    "stress",
+    "mesh convergence",
+    "CalculiX"
+  ],
+  "capabilities": "schemaxis.adaptors.calculix.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.calculix/1",
+    "operation": "cantileverBeam",
+    "beam": {
+      "length_m": 0.4,
+      "width_m": 0.02,
+      "height_m": 0.02
+    },
+    "material": {
+      "youngsModulus_Pa": 210000000000.0,
+      "poissonRatio": 0.3
+    },
+    "load": {
+      "tipForceZ_N": -100
+    },
+    "mesh": {
+      "lengthCells": 12,
+      "sectionCells": 2
+    },
+    "requirements": [
+      {
+        "name": "tip_serviceability",
+        "quantity": "absTipDeflection_m",
+        "maximum": 0.0008
+      },
+      {
+        "name": "interior_samples",
+        "quantity": "maxInteriorSampleNormalStress_Pa",
+        "maximum": 20000000.0
+      }
+    ]
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "routes": {
+    "schemaxis.calculix/1": {
+      "module": "schemaxis.adaptors.calculix.adaptor",
+      "schema": "schemaxis.adaptors.calculix.adaptor:schema",
+      "schemaName": "calculix",
+      "graphEditing": false,
+      "workflow": true,
+      "scheduled": true,
+      "compose": true,
+      "acceptedArtifacts": [],
+      "hooks": {
+        "query": "schemaxis.adaptors.calculix.adaptor:query",
+        "reusableInputs": "schemaxis.adaptors.calculix.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.calculix.adaptor:resources"
+      }
+    }
+  },
+  "cliOptions": [
+    {
+      "flag": "--calculix",
+      "dest": "calculix",
+      "help": "Absolute qualified CalculiX 2.23 executable"
+    }
+  ]
+}

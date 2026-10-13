@@ -1,0 +1,1139 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "readVector": {
+      "status": "reviewed",
+      "explanation": "Loads one vector layer from a single-file GeoJSON or GeoPackage as the start of a vector chain, keeping its geometry, attributes and declared CRS. Schemaxis copies the file into the run before QGIS opens the copy through the OGR provider. Choose it for every input layer; other operations take a reader or a later node as input. The layer must hold valid, nonempty 2D geometry with an EPSG CRS, at most 10000 features and one million vertices.",
+      "sources": [
+        "src/schemaxis/adaptors/qgis/adaptor.py:23",
+        "src/schemaxis/adaptors/qgis/adaptor.py:53",
+        "src/schemaxis/adaptors/qgis/adaptor.py:81-89",
+        "src/schemaxis/adaptors/qgis/adaptor.py:123-134",
+        "src/schemaxis/adaptors/qgis/native_worker.py:22-51",
+        "src/schemaxis/adaptors/qgis/native_worker.py:93-98",
+        "docs/qgis.md#operations",
+        "src/schemaxis/adaptors/qgis/capabilities.json"
+      ],
+      "pitfalls": [
+        "A GeoPackage must contain exactly one vector layer, and must be closed: -wal, -shm or -journal sidecar files cause UNSUPPORTED_RESOURCE.",
+        "Z or M coordinates, invalid geometry, nonprimitive attribute types or a non-EPSG CRS fail during execution; repair the data in QGIS first.",
+        "Shapefiles, rasters, web services and multi-file inputs are not supported."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/qgis-site-analysis.json",
+          "purpose": "Read two GeoJSON points, reproject, buffer by 100 m and clip a 50 x 50 m study rectangle."
+        }
+      ]
+    },
+    "reproject": {
+      "status": "reviewed",
+      "explanation": "Transforms every feature's coordinates from the input layer's CRS to an explicit EPSG target CRS with QgsCoordinateTransform, keeping attributes. Choose it before buffer or centroid, which need a projected CRS (buffer in metres), or to match another layer's CRS before clipping. Ballpark and fallback transformations are disabled, so a missing datum grid makes the run fail instead of silently losing accuracy.",
+      "sources": [
+        "src/schemaxis/adaptors/qgis/adaptor.py:24",
+        "src/schemaxis/adaptors/qgis/adaptor.py:54-55",
+        "src/schemaxis/adaptors/qgis/native_worker.py:55-62",
+        "src/schemaxis/adaptors/qgis/native_worker.py:73-74",
+        "docs/qgis.md#operations",
+        "https://api.qgis.org/api/classQgsCoordinateTransform.html",
+        "src/schemaxis/adaptors/qgis/capabilities.json"
+      ],
+      "pitfalls": [
+        "Pick a projected CRS suited to the study area (for example the local UTM zone) for distances and areas; Web Mercator (EPSG:3857) distorts lengths away from the equator.",
+        "Datum grid files and EPSG definitions come from the QGIS installation; a transform that needs an absent grid fails."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/qgis-site-analysis.json",
+          "purpose": "Reproject GeoJSON points to EPSG:3857 before buffering (a test fixture near the equator)."
+        }
+      ]
+    },
+    "centroid": {
+      "status": "reviewed",
+      "explanation": "Replaces each polygon or multipolygon feature by its planar area-weighted centre of mass (QgsGeometry.centroid), producing a point layer that keeps attributes and CRS. Choose it to reduce parcels or zones to representative points, for example before buffering around their centres. The input must be a polygon layer in a projected CRS; the boundary and area are not retained.",
+      "sources": [
+        "src/schemaxis/adaptors/qgis/adaptor.py:25",
+        "src/schemaxis/adaptors/qgis/native_worker.py:66-69",
+        "src/schemaxis/adaptors/qgis/native_worker.py:76",
+        "docs/qgis.md#projected-polygon-centroids",
+        "https://api.qgis.org/api/classQgsGeometry.html#a9af6067caef47d380d45c32569abc10b",
+        "src/schemaxis/adaptors/qgis/capabilities.json"
+      ],
+      "pitfalls": [
+        "Requires polygon geometry and a projected CRS; reproject explicitly first. Geographic coordinates and point or line layers fail during execution.",
+        "The point can lie outside a concave polygon or inside a hole; it is not a point-on-surface label position or a geodesic centre."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/qgis-centroids.json",
+          "purpose": "Find the centre of a known rectangular parcel."
+        }
+      ]
+    },
+    "buffer": {
+      "status": "reviewed",
+      "explanation": "Replaces each feature by the area within a fixed distance of it (QgsGeometry.buffer), so points become discs, lines become corridors and polygons grow outward; attributes are kept. Choose it for proximity zones such as setbacks or catchments. The layer must be in a projected CRS whose map units are metres; geographic coordinates are rejected rather than buffering in degrees.",
+      "sources": [
+        "src/schemaxis/adaptors/qgis/adaptor.py:26-27",
+        "src/schemaxis/adaptors/qgis/native_worker.py:63-65",
+        "src/schemaxis/adaptors/qgis/native_worker.py:75",
+        "docs/qgis.md#operations",
+        "https://api.qgis.org/api/classQgsGeometry.html#ab73aa9ad3c0e75690f780feff20a09e7",
+        "src/schemaxis/adaptors/qgis/capabilities.json"
+      ],
+      "pitfalls": [
+        "Reproject first: a layer in EPSG:4326 fails with 'buffer requires a projected CRS in metres'.",
+        "Overlapping buffers stay separate features; nothing is dissolved or merged.",
+        "This calls the geometry API directly, not the Processing 'Buffer' algorithm; its end-cap and join options are not exposed."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/qgis-site-analysis.json",
+          "purpose": "Buffer projected points by 100 m with 32 segments."
+        }
+      ]
+    },
+    "clip": {
+      "status": "reviewed",
+      "explanation": "Intersects each feature with an axis-aligned rectangle given in the input layer's CRS (QgsGeometry.intersection with a rectangle), keeping attributes. Features entirely outside the rectangle are dropped; those crossing its edge are cut. Choose it to restrict analysis to a study area; there is no clipping by another layer's polygons.",
+      "sources": [
+        "src/schemaxis/adaptors/qgis/adaptor.py:28-29",
+        "src/schemaxis/adaptors/qgis/adaptor.py:56-57",
+        "src/schemaxis/adaptors/qgis/native_worker.py:77-84",
+        "docs/qgis.md#example",
+        "https://api.qgis.org/api/classQgsGeometry.html#a141ccfd0d611f0a9e1bc4d346052aac9",
+        "src/schemaxis/adaptors/qgis/capabilities.json"
+      ],
+      "pitfalls": [
+        "Bounds use the coordinates of the layer as it reaches this node: after a reproject they are in the target CRS, not the original.",
+        "If no feature survives, or clipping leaves features of different geometry types, the run fails."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/qgis-site-analysis.json",
+          "purpose": "Clip 100 m point buffers to a 50 x 50 m study rectangle, leaving one 2500 square-metre square with the original name attribute."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.qgis/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A bounded QGIS vector analysis: up to 32 nodes that read GeoJSON or GeoPackage layers and reproject, buffer, clip or reduce them to centroids, run headless in an isolated QGIS 3 Python process. One selected layer is published as result.gpkg (layer 'result'), with an editable project.qgz and, by default, a 640 x 480 preview.png. Geometry, attributes and CRS are compared before and after GeoPackage export and again after the project is reopened in a fresh QGIS process.",
+          "pitfalls": [
+            "Configure a Python interpreter that can import QGIS (--qgis or QGIS_PYTHON), not the qgis_process executable.",
+            "Only 2D vector data with primitive attributes is supported; feature ids (fid) are regenerated in the output."
+          ],
+          "examples": [
+            {
+              "version": "schemaxis.qgis/1",
+              "nodes": [
+                {
+                  "id": "sites",
+                  "filter": "readVector",
+                  "options": {
+                    "file": "/data/qgis-sites.geojson"
+                  }
+                },
+                {
+                  "id": "metric",
+                  "filter": "reproject",
+                  "inputs": {
+                    "input": "sites"
+                  },
+                  "options": {
+                    "crs": "EPSG:3857"
+                  }
+                },
+                {
+                  "id": "zones",
+                  "filter": "buffer",
+                  "inputs": {
+                    "input": "metric"
+                  },
+                  "options": {
+                    "distance": 100,
+                    "segments": 32
+                  }
+                },
+                {
+                  "id": "study",
+                  "filter": "clip",
+                  "inputs": {
+                    "input": "zones"
+                  },
+                  "options": {
+                    "bounds": [
+                      200,
+                      -25,
+                      250,
+                      25
+                    ]
+                  }
+                }
+              ],
+              "output": "study",
+              "preview": true
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:33-64",
+            "src/schemaxis/adaptors/qgis/adaptor.py:97-159",
+            "src/schemaxis/adaptors/qgis/native_worker.py:89-142",
+            "docs/qgis.md",
+            "examples/schemaxis/qgis-site-analysis.json"
+          ]
+        },
+        "/properties/version": {
+          "status": "reference",
+          "explanation": "Identifies the document format and chooses its adaptor. Keep the version matching the selected schema.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reviewed",
+          "explanation": "The vector layers of the analysis, 1-32 nodes in dependency order. Each non-reader node's inputs.input names any earlier node, so several branches may share one reader, and several readers are allowed. Every node's layer is checked (valid, nonempty 2D geometry, EPSG CRS, feature and vertex limits), not only the published one.",
+          "label": "Nodes",
+          "pitfalls": [
+            "A node can only reference nodes listed before it; reorder the list rather than referencing forward."
+          ],
+          "examples": [
+            [
+              {
+                "id": "parcel",
+                "filter": "readVector",
+                "options": {
+                  "file": "/data/qgis-parcel.geojson"
+                }
+              },
+              {
+                "id": "centre",
+                "filter": "centroid",
+                "inputs": {
+                  "input": "parcel"
+                },
+                "options": {}
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:39-58",
+            "src/schemaxis/adaptors/qgis/native_worker.py:89-101"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reviewed",
+          "explanation": "One vector layer step. Its filter selects the operation: readVector starts from a file; reproject, centroid, buffer and clip transform the layer of an earlier node.",
+          "examples": [
+            {
+              "id": "metric",
+              "filter": "reproject",
+              "inputs": {
+                "input": "sites"
+              },
+              "options": {
+                "crs": "EPSG:32633"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:19-29"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Choose readVector to bring a GeoJSON or GeoPackage layer into the analysis. It has no inputs; transformations then reference its id.",
+          "examples": [
+            {
+              "id": "sites",
+              "filter": "readVector",
+              "options": {
+                "file": "/data/sites.geojson"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:23",
+            "src/schemaxis/adaptors/qgis/native_worker.py:93-98"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options": {
+          "status": "reviewed",
+          "explanation": "The reader has a single required setting, the file. The layer's CRS is taken from the file; it cannot be overridden here, so use reproject to change it.",
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:23",
+            "src/schemaxis/adaptors/qgis/native_worker.py:97"
+          ],
+          "examples": [
+            {
+              "file": "/data/sites.geojson"
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path of a .geojson or .gpkg file holding exactly one vector layer. Schemaxis records its digest during planning, copies its bytes into the run and fails if the file changes in between; QGIS reads only the copy. All readVector inputs together are limited to 64 MiB.",
+          "label": "Vector file",
+          "defaultMeaning": "Required; there is no default.",
+          "fileExtensions": [
+            ".geojson",
+            ".gpkg"
+          ],
+          "pitfalls": [
+            "Relative paths fail planning with INVALID_RESOURCE; give the full path.",
+            "Close the GeoPackage in QGIS or other tools first; WAL or journal sidecar files are rejected."
+          ],
+          "examples": [
+            "/data/sites.geojson"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:53",
+            "src/schemaxis/adaptors/qgis/adaptor.py:81-89",
+            "src/schemaxis/adaptors/qgis/adaptor.py:124-133",
+            "src/schemaxis/adaptors/qgis/native_worker.py:94-97"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose reproject to change the layer's coordinate reference system, most often to a projected metric CRS before buffer or centroid, or to match a study-area rectangle's CRS before clip.",
+          "examples": [
+            {
+              "id": "metric",
+              "filter": "reproject",
+              "inputs": {
+                "input": "sites"
+              },
+              "options": {
+                "crs": "EPSG:32633"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:24",
+            "src/schemaxis/adaptors/qgis/native_worker.py:55-62"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options": {
+          "status": "reviewed",
+          "explanation": "The transformation has a single required setting, the target CRS. The source CRS is always the input layer's own CRS, and Schemaxis disables ballpark and fallback transformations.",
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:24",
+            "src/schemaxis/adaptors/qgis/native_worker.py:56-61"
+          ],
+          "examples": [
+            {
+              "crs": "EPSG:32633"
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/crs": {
+          "status": "reviewed",
+          "explanation": "Target coordinate reference system as an EPSG authority identifier, written EPSG: followed by a 3-6 digit code (for example EPSG:4326 for WGS 84 latitude/longitude, or EPSG:32633 for WGS 84 / UTM zone 33N). The output geometry, and every later clip bound and buffer distance, are expressed in this CRS. A projected CRS with metre units is needed for buffer, and any projected CRS for centroid.",
+          "label": "Target CRS",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "PROJ strings, WKT and ESRI or IGNF codes are rejected; only EPSG:<code> is accepted.",
+            "Choosing a geographic CRS such as EPSG:4326 makes a following buffer or centroid fail."
+          ],
+          "examples": [
+            "EPSG:32633"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:18",
+            "src/schemaxis/adaptors/qgis/adaptor.py:54-55",
+            "src/schemaxis/adaptors/qgis/native_worker.py:56-57",
+            "https://epsg.org/crs_32633/WGS-84-UTM-zone-33N.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose layer is reprojected; its CRS is the source of the transformation.",
+          "label": "Input layer",
+          "examples": [
+            "sites"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:50-52",
+            "src/schemaxis/adaptors/qgis/native_worker.py:53-58"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Choose centroid to turn a projected polygon layer into one centre-of-mass point per feature, keeping attributes. Use clip first to take centroids of only part of each polygon.",
+          "examples": [
+            {
+              "id": "centre",
+              "filter": "centroid",
+              "inputs": {
+                "input": "parcel"
+              },
+              "options": {}
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:25",
+            "src/schemaxis/adaptors/qgis/native_worker.py:66-69",
+            "docs/qgis.md#projected-polygon-centroids"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options": {
+          "status": "reviewed",
+          "explanation": "The centroid has no settings; leave options empty. The result depends only on the input polygons and their CRS.",
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:25"
+          ],
+          "examples": [
+            {}
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node with a polygon or multipolygon layer in a projected CRS, usually a reproject or clip node.",
+          "label": "Input layer",
+          "examples": [
+            "metric"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:50-52",
+            "src/schemaxis/adaptors/qgis/native_worker.py:66-69"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3": {
+          "status": "reviewed",
+          "explanation": "Choose buffer to replace each feature by the area within a given distance of it, for proximity or exclusion zones. The input must be in a projected CRS measured in metres.",
+          "examples": [
+            {
+              "id": "zones",
+              "filter": "buffer",
+              "inputs": {
+                "input": "metric"
+              },
+              "options": {
+                "distance": 100
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:26-27",
+            "src/schemaxis/adaptors/qgis/native_worker.py:63-65"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options": {
+          "status": "reviewed",
+          "explanation": "The buffer distance (required) decides the zone size; segments only refines how smoothly rounded parts are drawn. Omitted segments takes the Schemaxis default of 16.",
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:26-27"
+          ],
+          "examples": [
+            {
+              "distance": 100,
+              "segments": 32
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/distance": {
+          "status": "reviewed",
+          "explanation": "Buffer radius: how far the zone extends from each feature, in metres along the projected map plane. Larger values give larger, more overlapping zones. Schemaxis checks before buffering that the layer's CRS is projected with metre map units, so the number is never applied to degrees or feet.",
+          "label": "Distance",
+          "units": "Metres (projected CRS map units)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "Projected distances are only true ground distances where the projection's scale distortion is small; choose a local CRS for engineering accuracy.",
+            "Negative distances (shrinking polygons) are not accepted; the minimum is 0.001 m."
+          ],
+          "examples": [
+            100
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:26",
+            "src/schemaxis/adaptors/qgis/native_worker.py:63-65",
+            "src/schemaxis/adaptors/qgis/native_worker.py:75",
+            "docs/qgis.md#operations"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/segments": {
+          "status": "reviewed",
+          "explanation": "Number of straight segments QGIS uses to approximate curved parts of the buffer; for rounded corners this is the count per quarter circle. More segments give smoother outlines and areas closer to a true circle, at the cost of more vertices (which count toward the one-million-vertex limit).",
+          "label": "Segments",
+          "defaultMeaning": "Schemaxis default: 16. (QGIS's Processing Buffer algorithm defaults to 5, but Schemaxis calls QgsGeometry.buffer with its own default.)",
+          "pitfalls": [
+            "With few segments a point buffer is a polygon whose area is noticeably below pi times the radius squared; raise segments when areas matter."
+          ],
+          "examples": [
+            32
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:27",
+            "src/schemaxis/adaptors/qgis/native_worker.py:75",
+            "https://api.qgis.org/api/classQgsGeometry.html#ab73aa9ad3c0e75690f780feff20a09e7",
+            "https://docs.qgis.org/latest/en/docs/user_manual/processing_algs/qgis/vectorgeometry.html#buffer"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose layer is buffered; it must be in a projected CRS with metre units, usually a reproject node.",
+          "label": "Input layer",
+          "examples": [
+            "metric"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:50-52",
+            "src/schemaxis/adaptors/qgis/native_worker.py:63-65"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4": {
+          "status": "reviewed",
+          "explanation": "Choose clip to keep only the parts of features inside a rectangular study area. Features wholly outside are removed and features crossing the edge are cut.",
+          "examples": [
+            {
+              "id": "study",
+              "filter": "clip",
+              "inputs": {
+                "input": "zones"
+              },
+              "options": {
+                "bounds": [
+                  200,
+                  -25,
+                  250,
+                  25
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:28-29",
+            "src/schemaxis/adaptors/qgis/native_worker.py:77-82"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options": {
+          "status": "reviewed",
+          "explanation": "The clip has a single required setting, the rectangle bounds, in the coordinates of the input layer.",
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:28-29"
+          ],
+          "examples": [
+            {
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/bounds": {
+          "status": "reviewed",
+          "explanation": "The clipping rectangle as [xmin, ymin, xmax, ymax] in the input layer's CRS and coordinate units: metres for a metric projected CRS, degrees for a geographic one. x is the first coordinate of the layer's geometries (easting or longitude) and y the second. xmin must be below xmax and ymin below ymax.",
+          "label": "Rectangle bounds",
+          "units": "Input layer CRS units (no conversion)",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "The order is xmin, ymin, xmax, ymax, not two corner points: [200, -25, 250, 25] spans x 200 to 250 and y -25 to 25.",
+            "Bounds written for the original CRS no longer match after a reproject; express them in the CRS reaching this node."
+          ],
+          "examples": [
+            [
+              200,
+              -25,
+              250,
+              25
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:28-29",
+            "src/schemaxis/adaptors/qgis/adaptor.py:56-57",
+            "src/schemaxis/adaptors/qgis/native_worker.py:77",
+            "https://www.rfc-editor.org/rfc/rfc7946#section-3.1.1",
+            "docs/qgis.md#example"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/bounds/items": {
+          "status": "reviewed",
+          "explanation": "One rectangle coordinate in the input layer's CRS units; its position selects the meaning (xmin, ymin, xmax, ymax).",
+          "examples": [
+            250
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:28-29",
+            "src/schemaxis/adaptors/qgis/adaptor.py:56-57"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of an earlier node whose layer is clipped; the bounds are interpreted in that layer's CRS.",
+          "label": "Input layer",
+          "examples": [
+            "zones"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:50-52",
+            "src/schemaxis/adaptors/qgis/native_worker.py:77"
+          ]
+        },
+        "/properties/output": {
+          "status": "reviewed",
+          "explanation": "The id of the node whose layer is published as result.gpkg and in project.qgz. It may be any declared node, not only the last; all other nodes remain intermediate and are not published.",
+          "label": "Published layer",
+          "pitfalls": [
+            "Only one layer is published per run; use a workflow or separate documents for several outputs."
+          ],
+          "examples": [
+            "study"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:59-60",
+            "src/schemaxis/adaptors/qgis/native_worker.py:102-116"
+          ]
+        },
+        "/properties/preview": {
+          "status": "reviewed",
+          "explanation": "Whether to also publish preview.png, a 640 x 480 map of the published layer in QGIS's default style on a white background, framed on the layer extent enlarged by 10%. It is a presentation image only, not a georeferenced raster. Disable it when only the data is needed.",
+          "label": "Map preview",
+          "defaultMeaning": "Schemaxis default: true (the preview is published).",
+          "pitfalls": [
+            "Verification only checks that the image has the right size and is not blank; it does not check the map content."
+          ],
+          "examples": [
+            false
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:41",
+            "src/schemaxis/adaptors/qgis/adaptor.py:77",
+            "src/schemaxis/adaptors/qgis/adaptor.py:97-99",
+            "src/schemaxis/adaptors/qgis/adaptor.py:196-199",
+            "src/schemaxis/adaptors/qgis/native_worker.py:117-125"
+          ]
+        },
+        "/properties/dimensions": {
+          "status": "reviewed",
+          "explanation": "Optional named measurements for this document, such as a buffer radius or study-area bounds, that node options reference with {\"$document\": \"/dimensions/name\"} and may combine with $expr. They are resolved and validated before planning and never reach QGIS directly, so they have no effect unless referenced.",
+          "label": "Dimensions",
+          "defaultMeaning": "Omitted: no named measurements.",
+          "pitfalls": [
+            "Values are copied without unit conversion; a radius used as buffer distance is still read as metres."
+          ],
+          "examples": [
+            {
+              "radius": 100,
+              "study": [
+                200,
+                -25,
+                250,
+                25
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:35-37",
+            "src/schemaxis/adaptor_runtime.py:21",
+            "src/schemaxis/adaptor_runtime.py:259-272",
+            "docs/adaptor-runtime.md#inputs-and-finite-iteration",
+            "docs/qgis.md#authored-inputs"
+          ]
+        },
+        "/properties/dimensions/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "A single number, string, Boolean or null as the whole dimensions value, referenced as /dimensions. Choose the object form instead when you need more than one named measurement.",
+          "examples": [
+            100
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/dollar-reference.md"
+          ]
+        },
+        "/properties/dimensions/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "A list of measurements, referenced by zero-based index such as /dimensions/0. Useful for a short ordered set; the object form gives clearer names.",
+          "examples": [
+            [
+              50,
+              100,
+              200
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/dollar-reference.md"
+          ]
+        },
+        "/properties/dimensions/anyOf/1/items": {
+          "status": "reviewed",
+          "explanation": "The recursive JSON value shape shared by dimensions, definitions and settings: any scalar, list or object, nested to any depth. Values may contain $document, $expr and $value markers, which are resolved before the nodes are validated.",
+          "examples": [
+            {
+              "radius": 100,
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
+            "docs/schema-guide.md",
+            "guidance:/$defs/json"
+          ]
+        },
+        "/properties/dimensions/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "Named measurements, each referenced as /dimensions/<name>. This is the usual form: one key per quantity, with numbers, lists or nested objects as values.",
+          "examples": [
+            {
+              "radius": 100
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/adaptor-runtime.md#inputs-and-finite-iteration"
+          ]
+        },
+        "/properties/dimensions/anyOf/2/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The recursive JSON value shape shared by dimensions, definitions and settings: any scalar, list or object, nested to any depth. Values may contain $document, $expr and $value markers, which are resolved before the nodes are validated.",
+          "examples": [
+            {
+              "radius": 100,
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
+            "docs/schema-guide.md",
+            "guidance:/$defs/json"
+          ]
+        },
+        "/properties/definitions": {
+          "status": "reviewed",
+          "explanation": "Optional reusable JSON for this document, typically whole option objects or node fragments, inserted where referenced with {\"$document\": \"/definitions/name\"} or combined with $expr (for example overlay). Definitions are resolved before typed validation and removed before planning, so the result must still satisfy the operation's own schema.",
+          "label": "Definitions",
+          "defaultMeaning": "Omitted: no reusable fragments.",
+          "examples": [
+            {
+              "zone": {
+                "distance": 100,
+                "segments": 32
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:35-37",
+            "src/schemaxis/adaptor_runtime.py:259-272",
+            "docs/json-input.md",
+            "docs/qgis.md#authored-inputs"
+          ]
+        },
+        "/properties/definitions/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "A single scalar as the whole definitions value, referenced as /definitions. Choose the object form to keep several named fragments.",
+          "examples": [
+            "EPSG:32633"
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/dollar-reference.md"
+          ]
+        },
+        "/properties/definitions/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "A list of reusable fragments, referenced by zero-based index such as /definitions/0.",
+          "examples": [
+            [
+              {
+                "distance": 50
+              },
+              {
+                "distance": 100
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/dollar-reference.md"
+          ]
+        },
+        "/properties/definitions/anyOf/1/items": {
+          "status": "reviewed",
+          "explanation": "The recursive JSON value shape shared by dimensions, definitions and settings: any scalar, list or object, nested to any depth. Values may contain $document, $expr and $value markers, which are resolved before the nodes are validated.",
+          "examples": [
+            {
+              "radius": 100,
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
+            "docs/schema-guide.md",
+            "guidance:/$defs/json"
+          ]
+        },
+        "/properties/definitions/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "Named reusable fragments, each referenced as /definitions/<name>; the usual form for sharing option objects between nodes or documents.",
+          "examples": [
+            {
+              "studyArea": {
+                "bounds": [
+                  0,
+                  0,
+                  1000,
+                  1000
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/json-input.md"
+          ]
+        },
+        "/properties/definitions/anyOf/2/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The recursive JSON value shape shared by dimensions, definitions and settings: any scalar, list or object, nested to any depth. Values may contain $document, $expr and $value markers, which are resolved before the nodes are validated.",
+          "examples": [
+            {
+              "radius": 100,
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
+            "docs/schema-guide.md",
+            "guidance:/$defs/json"
+          ]
+        },
+        "/properties/settings": {
+          "status": "reviewed",
+          "explanation": "Optional named choices for this document, such as the input file, analysis CRS or buffer radius, that node options reference with {\"$document\": \"/settings/name\"}. Workflows can expose them as parameters. Like dimensions, they are resolved before validation and never passed to QGIS directly.",
+          "label": "Settings",
+          "defaultMeaning": "Omitted: no named settings.",
+          "examples": [
+            {
+              "crs": "EPSG:32633",
+              "radius": 100
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/qgis/adaptor.py:35-37",
+            "src/schemaxis/adaptor_runtime.py:259-272",
+            "src/schemaxis/adaptors/qgis/studio.json",
+            "docs/qgis.md#authored-inputs"
+          ]
+        },
+        "/properties/settings/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "A single scalar as the whole settings value, referenced as /settings. Choose the object form for several named settings.",
+          "examples": [
+            100
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/dollar-reference.md"
+          ]
+        },
+        "/properties/settings/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "A list of settings, referenced by zero-based index such as /settings/0.",
+          "examples": [
+            [
+              "EPSG:32633",
+              100
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/dollar-reference.md"
+          ]
+        },
+        "/properties/settings/anyOf/1/items": {
+          "status": "reviewed",
+          "explanation": "The recursive JSON value shape shared by dimensions, definitions and settings: any scalar, list or object, nested to any depth. Values may contain $document, $expr and $value markers, which are resolved before the nodes are validated.",
+          "examples": [
+            {
+              "radius": 100,
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
+            "docs/schema-guide.md",
+            "guidance:/$defs/json"
+          ]
+        },
+        "/properties/settings/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "Named settings, each referenced as /settings/<name>; the usual form.",
+          "examples": [
+            {
+              "radius": 100
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/human-input.md"
+          ]
+        },
+        "/properties/settings/anyOf/2/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The recursive JSON value shape shared by dimensions, definitions and settings: any scalar, list or object, nested to any depth. Values may contain $document, $expr and $value markers, which are resolved before the nodes are validated.",
+          "examples": [
+            {
+              "radius": 100,
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
+            "docs/schema-guide.md",
+            "guidance:/$defs/json"
+          ]
+        },
+        "/$defs/json": {
+          "status": "reviewed",
+          "explanation": "The recursive JSON value shape shared by dimensions, definitions and settings: any scalar, list or object, nested to any depth. Values may contain $document, $expr and $value markers, which are resolved before the nodes are validated.",
+          "examples": [
+            {
+              "radius": 100,
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
+            "docs/schema-guide.md"
+          ]
+        },
+        "/$defs/json/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "A leaf value inside authoring data: a number, string, Boolean or null.",
+          "examples": [
+            "EPSG:32633"
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161"
+          ]
+        },
+        "/$defs/json/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "A list inside authoring data, addressed by zero-based index in $document pointers; its elements may themselves be any JSON value.",
+          "examples": [
+            [
+              0,
+              0,
+              1000,
+              1000
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/dollar-reference.md"
+          ]
+        },
+        "/$defs/json/anyOf/1/items": {
+          "status": "reviewed",
+          "explanation": "The recursive JSON value shape shared by dimensions, definitions and settings: any scalar, list or object, nested to any depth. Values may contain $document, $expr and $value markers, which are resolved before the nodes are validated.",
+          "examples": [
+            {
+              "radius": 100,
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
+            "docs/schema-guide.md",
+            "guidance:/$defs/json"
+          ]
+        },
+        "/$defs/json/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "An object inside authoring data, addressed by key in $document pointers (escape / as ~1 and ~ as ~0 in keys).",
+          "examples": [
+            {
+              "distance": 100
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "docs/dollar-reference.md"
+          ]
+        },
+        "/$defs/json/anyOf/2/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The recursive JSON value shape shared by dimensions, definitions and settings: any scalar, list or object, nested to any depth. Values may contain $document, $expr and $value markers, which are resolved before the nodes are validated.",
+          "examples": [
+            {
+              "radius": 100,
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/schema.py:157-161",
+            "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
+            "docs/schema-guide.md",
+            "guidance:/$defs/json"
+          ]
+        }
+      }
+    }
+  }
+}

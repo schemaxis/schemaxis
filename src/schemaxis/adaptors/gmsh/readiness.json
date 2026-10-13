@@ -1,0 +1,457 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.gmsh/1": {
+      "guide": "docs/gmsh.md",
+      "context": {
+        "purpose": "Mesh a solid under named-boundary resolution rules, assess independently measured cell quality, and run bounded refinement until explicit requirements pass.",
+        "assumptions": "An isolated Python environment with Gmsh 4.15.x. Coordinates and target element sizes are explicitly millimetres; the STEP importer normalises native units to mm.",
+        "constraints": "One solid and one tetrahedral node, 16 MiB STEP, 50000 nodes, 200000 cells. One volume, up to twelve disjoint axis-aligned planar face groups and a nonempty remainder boundary. No source face labels, automatic boundary conditions, high-order elements, solver setup or MPI.",
+        "inspection": "Read mesh-summary.json for named groups, mm units, positive cell volumes, cell counts, bounds and CAD/mesh volume discrepancy. Open volume.vtu and boundary.vtu in a mesh viewer; numeric physicalTag maps to summary group names. boundaryGroups measures each named surface area in mm^2 and its bounds; face membership is checked from every triangle coordinate. quality reports mean-ratio shape, edge-length distributions, per-boundary resolution and worst-cell indices/centroids. Feedback studies retain study-summary.json and a human-readable study.html explaining each decision.",
+        "recovery": "Increase size for RESOURCE_LIMIT or excessive cell counts. Refine size when mesh volume exceeds volumeTolerance. Supply exactly one valid STEP solid, distinct physical names, a configured Gmsh Python and a fresh output directory; retain build/reopen logs. STUDY_REQUIREMENTS_NOT_MET retains a verified decision history without exporting a rejected mesh; inspect failed checks and the stop reason before changing requirements or budgets."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/gmsh-minimal.json"
+        },
+        {
+          "id": "duplicate-groups",
+          "document": {
+            "version": "schemaxis.gmsh/1",
+            "units": "mm",
+            "nodes": [
+              {
+                "id": "solid",
+                "filter": "box",
+                "options": {
+                  "size": [
+                    10,
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "mesh",
+                "filter": "tetrahedral",
+                "inputs": {
+                  "input": "solid"
+                },
+                "options": {
+                  "size": 3,
+                  "volumeName": "domain",
+                  "boundaryName": "domain",
+                  "volumeTolerance": 1e-06
+                }
+              }
+            ],
+            "output": "mesh"
+          },
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": true
+        },
+        {
+          "id": "faces",
+          "reference": "examples/schemaxis/gmsh-face-groups.json"
+        },
+        {
+          "id": "boundary-sizing",
+          "reference": "examples/schemaxis/gmsh-boundary-sizing.json"
+        },
+        {
+          "id": "refinement",
+          "reference": "examples/schemaxis/gmsh-refinement.json"
+        },
+        {
+          "id": "boundary-refinement",
+          "reference": "examples/schemaxis/gmsh-boundary-refinement.json"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_gmsh_admission.py",
+        "tests/unit/test_gmsh_quality.py",
+        "tests/unit/test_feedback.py"
+      ],
+      "acceptance": [
+        "tools/qualify_gmsh.py",
+        "tools/qualify_gmsh_studies.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "FreeCAD STEP artifact into Gmsh; volume/boundary VTU into ParaView through explicit declared readers. Retain units and name map in the mesh summary.",
+          "references": [
+            "docs/gmsh.md",
+            "tools/qualify_gmsh.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://gmsh.info/doc/texinfo/#Gmsh-API",
+          "https://gmsh.info/doc/texinfo/#MSH-file-format-version-2-_0028Legacy_0029"
+        ],
+        "lifecycle": {
+          "timeout": "One total timeout bounds the two native processes; the shared conformance watchdog also bounds host parsing and cleanup.",
+          "cancellation": "Shared owned-process cancellation with retained partial evidence; cancellation is checked before publication.",
+          "logs": "Fresh attempt retains authored input, effective plan, captured STEP bytes/digest, worker source, build/reopen stdout/stderr, runtime observations and independently checked publications.",
+          "verification": "Fresh Gmsh process reopens MSH. Independent host parser checks positive tetrahedral determinants, full manifold boundary, physical groups, CAD-volume tolerance, bounds and matching VTU connectivity/tags; literal analytic cases check volumes/bounds. Recompute all quality arrays from mesh coordinates and compare native edge extrema. Replay feedback proposals, every verified observation, requirements and stopping decisions; reject altered rejected attempts and chosen publications."
+        },
+        "data": [
+          {
+            "id": "step",
+            "direction": "input",
+            "kind": "cad",
+            "format": "STEP ISO-10303-21",
+            "traits": {
+              "units": "normalised to mm",
+              "solids": 1
+            },
+            "losses": [
+              "Feature history and source labels are not retained."
+            ],
+            "scope": "Single local STEP solid, at most 16 MiB; captured and hashed before import."
+          },
+          {
+            "id": "native-mesh",
+            "direction": "output",
+            "kind": "mesh",
+            "format": "MSH 2.2 ASCII",
+            "traits": {
+              "units": "mm",
+              "cellTypes": [
+                "triangle3",
+                "tetrahedron4"
+              ],
+              "physicalGroups": true
+            },
+            "losses": [
+              "Curved CAD becomes piecewise linear.",
+              "Authored whole-volume, planar-face and remainder names survive; STEP labels do not."
+            ],
+            "scope": "One linear solid mesh with physical names embedded; names/units also published in summary."
+          },
+          {
+            "id": "vtk",
+            "direction": "output",
+            "kind": "geometry",
+            "format": "VTU ASCII",
+            "traits": {
+              "units": "mm",
+              "physicalTag": true,
+              "qualityArrays": [
+                "meanRatio",
+                "maximumEdgeLength",
+                "volume"
+              ]
+            },
+            "losses": [
+              "Separate volume and boundary files contain numeric physicalTag; group names and units require mesh-summary.json.",
+              "No CAD history or solver/boundary-condition semantics."
+            ],
+            "scope": "Loss-declared MSH-to-VTU conversion verified for identical selected coordinates/connectivity/tags; not a general mesh converter."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect summary units, bounds, counts, volumes, names and loss declarations. Inspect quality distributions, declared acceptance checks and selected/rejected candidate history; study.html renders the same independently replayed report.",
+            "limits": "Geometry is inspected via published VTU and a viewer; no native interactive Gmsh inspector hook."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "baseline",
+          "reuse": "Edit box dimensions or absolute STEP file and tetrahedral size/names using source or JSON pointer edits. Replan, run in a fresh directory, compare summary volume/bounds and inspect VTU."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "FreeCAD STEP artifact into Gmsh; volume/boundary VTU into ParaView through explicit declared readers. Retain units and name map in the mesh summary."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement native-inspection."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement mpi."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Captured STEP digest changes invalidate reuse; inline boxes have no external source."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement time-batches."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared revision-bound JSON source editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON pointer edits to dimensions, size and physical names."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement native-save."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Only the explicit MSH 2.2 linear triangle/tetrahedron to VTU subset described in the data contracts."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Analytic rectangular volume is length*width*height in mm^3; bounds equal origin and opposite corner, independent of tetrahedralisation. Native and independent mesh topology/volume verification must also pass.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 1000,
+                "relative": 1e-10,
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/bounds",
+                "expected": [
+                  0,
+                  0,
+                  0,
+                  10,
+                  10,
+                  10
+                ],
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/groups",
+                "expected": [
+                  {
+                    "dimension": 2,
+                    "tag": 2,
+                    "name": "boundary"
+                  },
+                  {
+                    "dimension": 3,
+                    "tag": 1,
+                    "name": "domain"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/size",
+                "value": [
+                  20,
+                  10,
+                  10
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/size",
+                "value": 2.5
+              }
+            ],
+            "scope": "Analytic rectangular volume is length*width*height in mm^3; bounds equal origin and opposite corner, independent of tetrahedralisation. Native and independent mesh topology/volume verification must also pass.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 2000,
+                "relative": 1e-10,
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/bounds",
+                "expected": [
+                  0,
+                  0,
+                  0,
+                  20,
+                  10,
+                  10
+                ],
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/groups",
+                "expected": [
+                  {
+                    "dimension": 2,
+                    "tag": 2,
+                    "name": "boundary"
+                  },
+                  {
+                    "dimension": 3,
+                    "tag": 1,
+                    "name": "domain"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "faces",
+            "example": "faces",
+            "edits": [],
+            "scope": "Analytic box end-face areas equal width*height, with literal plane bounds; a translated box checks world coordinates and changed area. Host classifies every triangle independently; no native entity number is assumed.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 1000,
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryGroups/1/area",
+                "expected": 100,
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryGroups/2/area",
+                "expected": 100,
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryGroups/1/bounds",
+                "expected": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  10,
+                  10
+                ],
+                "absolute": 1e-07
+              }
+            ]
+          },
+          {
+            "id": "translated-faces",
+            "example": "faces",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/size",
+                "value": [
+                  10,
+                  20,
+                  10
+                ]
+              },
+              {
+                "op": "add",
+                "path": "/nodes/0/options/origin",
+                "value": [
+                  5,
+                  -3,
+                  2
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/0/coordinate",
+                "value": 5
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/1/coordinate",
+                "value": 15
+              }
+            ],
+            "scope": "Analytic box end-face areas equal width*height, with literal plane bounds; a translated box checks world coordinates and changed area. Host classifies every triangle independently; no native entity number is assumed.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 2000,
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryGroups/1/area",
+                "expected": 200,
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryGroups/2/area",
+                "expected": 200,
+                "absolute": 1e-07
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryGroups/1/bounds",
+                "expected": [
+                  5,
+                  -3,
+                  2,
+                  5,
+                  17,
+                  12
+                ],
+                "absolute": 1e-07
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Primary route: preserved conceptual guidance and examples; curated discovery phrases, Studio Add and contextual Help. Native behaviour is unchanged.",
+        "review": [
+          "verification/2026-10-10-adaptor-completion.md"
+        ],
+        "notApplicable": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "studioCatalogue": "schemaxis.adaptors.paraview.studio:catalogue",
+  "studioInspect": "schemaxis.adaptors.paraview.studio:inspect_input",
+  "version": "schemaxis/1",
+  "declarations": "schemaxis.adaptors.paraview.filters:catalogue",
+  "runtimeFamily": "5.13.3",
+  "executables": [
+    "pvbatch"
+  ],
+  "execution": "serial and MPI pvbatch; native distributed CFD outputs; decomposed-case reading",
+  "keywords": [
+    "OpenFOAM",
+    "CFD",
+    "slices",
+    "contours",
+    "scientific visualisation"
+  ],
+  "id": "paraview",
+  "adaptor": "schemaxis.adaptors.paraview.job",
+  "executionCapabilities": {
+    "modes": [
+      "serial",
+      "mpi"
+    ],
+    "mpiDriver": "normal pvbatch (one Python driver)",
+    "geometry": "native parallel XML writers and distributed exact piece verification",
+    "mpiOperations": [
+      "calculator",
+      "foam",
+      "integrate",
+      "merge",
+      "outline",
+      "readParallelPolyData",
+      "readParallelUnstructuredGrid",
+      "slice",
+      "sphere",
+      "surface"
+    ],
+    "measurements": "bounded native integrate reductions",
+    "clusterQualification": false
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": true,
+    "visualReferences": true,
+    "geometryReferences": true,
+    "imagePixelReferences": true,
+    "imageReferenceRequirement": "a current native PNG preview; no inferred object identity",
+    "nativeEditReverseSync": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis/1",
+    "nodes": [],
+    "scenes": []
+  },
+  "nativeExtension": ".pvsm",
+  "consoleHooks": {
+    "validate": "schemaxis.adaptors.paraview.console:validate",
+    "add": "schemaxis.adaptors.paraview.console:add",
+    "show": "schemaxis.adaptors.paraview.console:show"
+  },
+  "liveSaveName": "state.pvsm",
+  "cliOptions": [
+    {
+      "flag": "--paraview-root",
+      "dest": "roots",
+      "action": "append",
+      "help": "ParaView installation root"
+    }
+  ],
+  "locationKind": "roots",
+  "default": true,
+  "registerFunctions": "schemaxis.adaptors.paraview.functions:register",
+  "coverage": "schemaxis.adaptors.paraview.catalogue:coverage",
+  "threadEnvironment": [
+    "VTK_SMP_MAX_THREADS"
+  ],
+  "routes": {
+    "schemaxis/1": {
+      "module": "schemaxis.adaptors.paraview.job",
+      "workflow": true,
+      "scheduled": false,
+      "compose": true,
+      "graph": true,
+      "timeBatches": true,
+      "schemaName": "paraview",
+      "acceptedArtifacts": [
+        "geometry",
+        "gltf"
+      ],
+      "planIndex": 2,
+      "schema": "schemaxis.adaptors.paraview.schema:document_schema",
+      "hooks": {
+        "verify": "schemaxis.adaptors.paraview.integration:verify",
+        "verifyAttempt": "schemaxis.adaptors.paraview.integration:verifyAttempt",
+        "verifyLegacy": "schemaxis.adaptors.paraview.integration:verifyLegacy",
+        "reusableInputs": "schemaxis.adaptors.paraview.integration:reusableInputs",
+        "query": "schemaxis.adaptors.paraview.integration:query",
+        "inspectionSetup": "schemaxis.adaptors.paraview.integration:inspectionSetup",
+        "nativeInspection": "schemaxis.adaptors.paraview.integration:nativeInspection",
+        "validateExecution": "schemaxis.adaptors.paraview.execution:validate_mpi"
+      },
+      "schemaOrder": 0
+    }
+  },
+  "sections": {
+    "style": "schemaxis.adaptors.paraview.schema:style_schema",
+    "time-selection": "schemaxis.adaptors.paraview.schema:time_schema"
+  },
+  "referenceSettings": {
+    "ParaView appearance": "schemaxis.adaptors.paraview.publication:STYLE"
+  },
+  "runtimeSchema": "schemaxis.adaptors.paraview.schema:runtime_variants",
+  "liveArguments": [
+    "--force-offscreen-rendering"
+  ],
+  "liveExecutable": "bin/pvpython",
+  "liveGraph": "schemaxis.adaptors.paraview.integration:liveGraph",
+  "capabilities": "schemaxis.adaptors.paraview.capabilities:catalogue"
+}

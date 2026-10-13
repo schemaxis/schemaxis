@@ -1,0 +1,1190 @@
+{
+  "version": "schemaxis/1",
+  "dimensions": {
+    "model": {
+      "min": [
+        -0.881434,
+        -1.05855,
+        -0.33061
+      ],
+      "max": [
+        3.26831,
+        1.05855,
+        0.802693
+      ]
+    },
+    "ground": -0.332088,
+    "stream": {
+      "maximumLength": 18,
+      "tubeRadius": 0.008,
+      "seedX": {
+        "$expr": {
+          "op": "subtract",
+          "args": [
+            {
+              "$document": "/dimensions/model/min/0"
+            },
+            0.3
+          ]
+        }
+      },
+      "seedZ": {
+        "$expr": {
+          "op": "add",
+          "args": [
+            {
+              "$document": "/dimensions/ground"
+            },
+            0.35
+          ]
+        }
+      },
+      "leftY": {
+        "$document": "/dimensions/model/min/1"
+      },
+      "rightY": {
+        "$document": "/dimensions/model/max/1"
+      },
+      "sweepZ": [
+        0.05,
+        0.3,
+        0.55
+      ]
+    },
+    "mirror": {
+      "min": [
+        0.25,
+        0.78,
+        0.25
+      ],
+      "max": [
+        0.55,
+        1.05,
+        0.48
+      ]
+    },
+    "localSeed": {
+      "x": {
+        "$expr": {
+          "op": "subtract",
+          "args": [
+            {
+              "$document": "/dimensions/mirror/min/0"
+            },
+            0.15
+          ]
+        }
+      },
+      "y0": {
+        "$document": "/dimensions/mirror/min/1"
+      },
+      "y1": {
+        "$document": "/dimensions/mirror/max/1"
+      },
+      "z0": {
+        "$document": "/dimensions/mirror/min/2"
+      },
+      "z1": {
+        "$document": "/dimensions/mirror/max/2"
+      },
+      "tubeRadius": 0.002,
+      "maximumLength": 3
+    },
+    "probeY": {
+      "$expr": {
+        "op": "add",
+        "args": [
+          {
+            "$document": "/dimensions/mirror/max/1"
+          },
+          {
+            "$expr": {
+              "op": "subtract",
+              "args": [
+                {
+                  "$document": "/dimensions/mirror/max/1"
+                },
+                {
+                  "$document": "/dimensions/mirror/min/1"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "views": {
+    "modelAndWake": {
+      "$value": "boundsFrame",
+      "args": {
+        "bounds": {
+          "$document": "/dimensions/model"
+        },
+        "before": [
+          1,
+          1,
+          0
+        ],
+        "after": [
+          2.5,
+          1,
+          0
+        ],
+        "floor": {
+          "$document": "/dimensions/ground"
+        },
+        "aspect": {
+          "$document": "/settings/aspect"
+        }
+      }
+    },
+    "vehicle": {
+      "$value": "boundsExtend",
+      "args": {
+        "bounds": {
+          "$document": "/dimensions/model"
+        },
+        "before": [
+          0.15,
+          0.3,
+          0.1
+        ],
+        "after": [
+          0.25,
+          0.3,
+          0.5
+        ]
+      }
+    },
+    "wakeBox": {
+      "$document": "/views/modelAndWake"
+    },
+    "mirrorOne": {
+      "$value": "boundsExtend",
+      "args": {
+        "bounds": {
+          "$document": "/dimensions/mirror"
+        },
+        "before": [
+          1,
+          1,
+          1
+        ],
+        "after": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    "mirrorTwo": {
+      "$value": "boundsExtend",
+      "args": {
+        "bounds": {
+          "$document": "/dimensions/mirror"
+        },
+        "before": [
+          2,
+          2,
+          2
+        ],
+        "after": [
+          2,
+          2,
+          2
+        ]
+      }
+    }
+  },
+  "settings": {
+    "case": "/absolute/path/to/case.foam",
+    "sliceCount": 3,
+    "orbitCount": 12,
+    "imageSize": [
+      960,
+      540
+    ],
+    "aspect": [
+      16,
+      9
+    ],
+    "fields": {
+      "pressure": {
+        "field": [
+          "CELLS",
+          "p"
+        ],
+        "preset": "Cool to Warm",
+        "legend": true,
+        "legendTitle": "Pressure (p)",
+        "range": [
+          -500,
+          500
+        ]
+      },
+      "speed": {
+        "field": [
+          "CELLS",
+          "U"
+        ],
+        "component": -1,
+        "preset": "Viridis (matplotlib)",
+        "legend": true,
+        "legendTitle": "Velocity (U)",
+        "range": [
+          0,
+          50
+        ]
+      },
+      "viscosity": {
+        "field": [
+          "CELLS",
+          "nut"
+        ],
+        "preset": "Inferno (matplotlib)",
+        "legend": true,
+        "legendTitle": "Turbulent viscosity (nut)",
+        "range": [
+          0,
+          0.1
+        ]
+      }
+    },
+    "contour": {
+      "value": -250,
+      "colour": "xkcd:radioactive green"
+    },
+    "patches": {
+      "tyres": [
+        "//wheels_FL_Tyre",
+        "//wheels_FR_Tyre",
+        "//wheels_RL_Tyre",
+        "//wheels_RR_Tyre"
+      ],
+      "body": [
+        "//body_upper",
+        "//enginebay_engine",
+        "//wheels_FL_movingPatch",
+        "//wheels_FR_movingPatch",
+        "//wheels_RL_movingPatch",
+        "//wheels_RR_movingPatch"
+      ]
+    },
+    "stream": {
+      "seedCount": 20,
+      "sweepCount": 3
+    },
+    "regionStatus": "Provisional side region: confirm against the actual mirror before presenting as a mirror measurement.",
+    "mirrorBoundsConfirmed": false
+  },
+  "times": {
+    "source": "case",
+    "select": {
+      "latest": 1
+    }
+  },
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {
+          "$document": "/settings/case"
+        },
+        "regions": {
+          "$value": "foamRegions",
+          "args": {
+            "groups": {
+              "$document": "/settings/patches"
+            }
+          }
+        },
+        "cellArrays": [
+          "p",
+          "U",
+          "nut"
+        ],
+        "skipZero": true
+      }
+    },
+    {
+      "id": "internal",
+      "filter": "extractBlock",
+      "inputs": {
+        "input": "case"
+      },
+      "options": {
+        "selectors": [
+          "//internalMesh"
+        ]
+      }
+    },
+    {
+      "id": "fluid",
+      "filter": "merge",
+      "inputs": {
+        "input": "internal"
+      }
+    },
+    {
+      "id": "sliceX",
+      "filter": "slice",
+      "inputs": {
+        "input": "fluid"
+      },
+      "options": {
+        "normal": "x+",
+        "origin": {
+          "$analytic": {
+            "type": "values",
+            "values": {
+              "$value": "slicePositions",
+              "args": {
+                "bounds": {
+                  "$document": "/views/modelAndWake"
+                },
+                "axis": "x",
+                "count": {
+                  "$document": "/settings/sliceCount"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sliceY",
+      "filter": "slice",
+      "inputs": {
+        "input": "fluid"
+      },
+      "options": {
+        "normal": "y+",
+        "origin": {
+          "$analytic": {
+            "type": "values",
+            "values": {
+              "$value": "slicePositions",
+              "args": {
+                "bounds": {
+                  "$document": "/views/modelAndWake"
+                },
+                "axis": "y",
+                "count": {
+                  "$document": "/settings/sliceCount"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "sliceZ",
+      "filter": "slice",
+      "inputs": {
+        "input": "fluid"
+      },
+      "options": {
+        "normal": "z+",
+        "origin": {
+          "$analytic": {
+            "type": "values",
+            "values": {
+              "$value": "slicePositions",
+              "args": {
+                "bounds": {
+                  "$document": "/views/modelAndWake"
+                },
+                "axis": "z",
+                "count": {
+                  "$document": "/settings/sliceCount"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "tyres",
+      "filter": "extractBlock",
+      "inputs": {
+        "input": "case"
+      },
+      "options": {
+        "selectors": {
+          "$document": "/settings/patches/tyres"
+        }
+      }
+    },
+    {
+      "id": "body",
+      "filter": "extractBlock",
+      "inputs": {
+        "input": "case"
+      },
+      "options": {
+        "selectors": {
+          "$document": "/settings/patches/body"
+        }
+      }
+    },
+    {
+      "id": "pressureAtPoints",
+      "filter": "cellToPoint",
+      "inputs": {
+        "input": "fluid"
+      },
+      "options": {
+        "allArrays": false,
+        "arrays": [
+          "p"
+        ]
+      }
+    },
+    {
+      "id": "pressureContour",
+      "filter": "contour",
+      "inputs": {
+        "input": "pressureAtPoints"
+      },
+      "options": {
+        "field": [
+          "POINTS",
+          "p"
+        ],
+        "values": [
+          {
+            "$document": "/settings/contour/value"
+          }
+        ]
+      }
+    },
+    {
+      "id": "velocityAtPoints",
+      "filter": "cellToPoint",
+      "options": {
+        "allArrays": false,
+        "arrays": [
+          "U"
+        ]
+      },
+      "inputs": {
+        "input": "fluid"
+      }
+    },
+    {
+      "id": "seed",
+      "filter": "line",
+      "options": {
+        "start": [
+          {
+            "$document": "/dimensions/stream/seedX"
+          },
+          {
+            "$document": "/dimensions/stream/leftY"
+          },
+          {
+            "$axis": "seedHeight"
+          }
+        ],
+        "end": [
+          {
+            "$document": "/dimensions/stream/seedX"
+          },
+          {
+            "$document": "/dimensions/stream/rightY"
+          },
+          {
+            "$axis": "seedHeight"
+          }
+        ],
+        "resolution": {
+          "$document": "/settings/stream/seedCount"
+        }
+      }
+    },
+    {
+      "id": "stream",
+      "filter": "streamTracer",
+      "options": {
+        "vectors": [
+          "POINTS",
+          "U"
+        ],
+        "direction": "FORWARD",
+        "maximumLength": {
+          "$document": "/dimensions/stream/maximumLength"
+        },
+        "maximumSteps": 3000
+      },
+      "inputs": {
+        "input": "velocityAtPoints",
+        "seed": "seed"
+      }
+    },
+    {
+      "id": "tubes",
+      "filter": "tube",
+      "options": {
+        "radius": {
+          "$document": "/dimensions/stream/tubeRadius"
+        },
+        "sides": 8
+      },
+      "inputs": {
+        "input": "stream"
+      }
+    },
+    {
+      "id": "mirrorOneX",
+      "filter": "slice",
+      "options": {
+        "normal": "x+",
+        "origin": {
+          "$value": "boundsCentre3D",
+          "args": {
+            "bounds": {
+              "$document": "/dimensions/mirror"
+            }
+          }
+        }
+      },
+      "inputs": {
+        "input": "fluid"
+      }
+    },
+    {
+      "id": "mirrorOneY",
+      "filter": "slice",
+      "options": {
+        "normal": "y+",
+        "origin": {
+          "$value": "boundsCentre3D",
+          "args": {
+            "bounds": {
+              "$document": "/dimensions/mirror"
+            }
+          }
+        }
+      },
+      "inputs": {
+        "input": "fluid"
+      }
+    },
+    {
+      "id": "mirrorOneZ",
+      "filter": "slice",
+      "options": {
+        "normal": "z+",
+        "origin": {
+          "$value": "boundsCentre3D",
+          "args": {
+            "bounds": {
+              "$document": "/dimensions/mirror"
+            }
+          }
+        }
+      },
+      "inputs": {
+        "input": "fluid"
+      }
+    },
+    {
+      "id": "mirrorTwoX",
+      "filter": "slice",
+      "options": {
+        "normal": "x+",
+        "origin": {
+          "$value": "boundsCentre3D",
+          "args": {
+            "bounds": {
+              "$document": "/dimensions/mirror"
+            }
+          }
+        }
+      },
+      "inputs": {
+        "input": "fluid"
+      }
+    },
+    {
+      "id": "mirrorTwoY",
+      "filter": "slice",
+      "options": {
+        "normal": "y+",
+        "origin": {
+          "$value": "boundsCentre3D",
+          "args": {
+            "bounds": {
+              "$document": "/dimensions/mirror"
+            }
+          }
+        }
+      },
+      "inputs": {
+        "input": "fluid"
+      }
+    },
+    {
+      "id": "mirrorTwoZ",
+      "filter": "slice",
+      "options": {
+        "normal": "z+",
+        "origin": {
+          "$value": "boundsCentre3D",
+          "args": {
+            "bounds": {
+              "$document": "/dimensions/mirror"
+            }
+          }
+        }
+      },
+      "inputs": {
+        "input": "fluid"
+      }
+    },
+    {
+      "id": "localSeed",
+      "filter": "line",
+      "options": {
+        "start": [
+          {
+            "$document": "/dimensions/localSeed/x"
+          },
+          {
+            "$document": "/dimensions/localSeed/y0"
+          },
+          {
+            "$axis": "localHeight"
+          }
+        ],
+        "end": [
+          {
+            "$document": "/dimensions/localSeed/x"
+          },
+          {
+            "$document": "/dimensions/localSeed/y1"
+          },
+          {
+            "$axis": "localHeight"
+          }
+        ],
+        "resolution": 12
+      }
+    },
+    {
+      "id": "localStreams",
+      "filter": "streamTracer",
+      "inputs": {
+        "input": "velocityAtPoints",
+        "seed": "localSeed"
+      },
+      "options": {
+        "vectors": [
+          "POINTS",
+          "U"
+        ],
+        "maximumLength": {
+          "$document": "/dimensions/localSeed/maximumLength"
+        }
+      }
+    },
+    {
+      "id": "localTubes",
+      "filter": "tube",
+      "inputs": {
+        "input": "localStreams"
+      },
+      "options": {
+        "radius": {
+          "$document": "/dimensions/localSeed/tubeRadius"
+        },
+        "sides": 8
+      }
+    },
+    {
+      "id": "wakeProbe",
+      "filter": "probeLine",
+      "inputs": {
+        "input": "velocityOnly"
+      },
+      "options": {
+        "start": [
+          {
+            "$document": "/dimensions/mirror/min/0"
+          },
+          {
+            "$document": "/dimensions/probeY"
+          },
+          {
+            "$document": "/dimensions/mirror/max/2"
+          }
+        ],
+        "end": [
+          {
+            "$expr": {
+              "op": "add",
+              "args": [
+                {
+                  "$document": "/dimensions/mirror/max/0"
+                },
+                {
+                  "$expr": {
+                    "op": "multiply",
+                    "args": [
+                      2,
+                      {
+                        "$expr": {
+                          "op": "subtract",
+                          "args": [
+                            {
+                              "$document": "/dimensions/mirror/max/0"
+                            },
+                            {
+                              "$document": "/dimensions/mirror/min/0"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "$document": "/dimensions/probeY"
+          },
+          {
+            "$document": "/dimensions/mirror/max/2"
+          }
+        ],
+        "resolution": 40
+      }
+    },
+    {
+      "id": "velocityOnly",
+      "filter": "passArrays",
+      "inputs": {
+        "input": "velocityAtPoints"
+      },
+      "options": {
+        "pointArrays": [
+          "U"
+        ]
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "mirrorOneX",
+      "visible": {
+        "mirrorOneX": {
+          "$document": "/settings/fields/speed"
+        },
+        "body": {
+          "colour": "grey",
+          "opacity": 0.4
+        }
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/mirrorOne"
+                },
+                "direction": "x+",
+                "up": "z+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mirrorOneY",
+      "visible": {
+        "mirrorOneY": {
+          "$document": "/settings/fields/speed"
+        },
+        "body": {
+          "colour": "grey",
+          "opacity": 0.4
+        }
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/mirrorOne"
+                },
+                "direction": "y+",
+                "up": "z+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mirrorOneZ",
+      "visible": {
+        "mirrorOneZ": {
+          "$document": "/settings/fields/speed"
+        },
+        "body": {
+          "colour": "grey",
+          "opacity": 0.4
+        }
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/mirrorOne"
+                },
+                "direction": "z+",
+                "up": "y+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mirrorTwoX",
+      "visible": {
+        "mirrorTwoX": {
+          "$document": "/settings/fields/speed"
+        },
+        "body": {
+          "colour": "grey",
+          "opacity": 0.4
+        }
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/mirrorTwo"
+                },
+                "direction": "x+",
+                "up": "z+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mirrorTwoY",
+      "visible": {
+        "mirrorTwoY": {
+          "$document": "/settings/fields/speed"
+        },
+        "body": {
+          "colour": "grey",
+          "opacity": 0.4
+        }
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/mirrorTwo"
+                },
+                "direction": "y+",
+                "up": "z+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mirrorTwoZ",
+      "visible": {
+        "mirrorTwoZ": {
+          "$document": "/settings/fields/speed"
+        },
+        "body": {
+          "colour": "grey",
+          "opacity": 0.4
+        }
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/mirrorTwo"
+                },
+                "direction": "z+",
+                "up": "y+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "localStreamsOne",
+      "visible": {
+        "body": {
+          "colour": "grey"
+        },
+        "localTubes": {
+          "field": [
+            "POINTS",
+            "U"
+          ],
+          "component": -1,
+          "range": [
+            0,
+            50
+          ],
+          "legend": true,
+          "preset": "Viridis (matplotlib)"
+        }
+      },
+      "geometry": [
+        "localTubes"
+      ],
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/mirrorOne"
+                },
+                "direction": [
+                  1,
+                  2,
+                  1
+                ],
+                "up": "z+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "localOrbitOne",
+      "visible": {
+        "body": {
+          "colour": "grey"
+        },
+        "pressureContour": {
+          "colour": "steelblue",
+          "opacity": 0.6
+        }
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": {
+            "$value": "orbitCameras",
+            "args": {
+              "bounds": {
+                "$document": "/views/mirrorOne"
+              },
+              "count": 6,
+              "elevation": 20,
+              "aspect": {
+                "$document": "/settings/aspect"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "localStreamsTwo",
+      "visible": {
+        "body": {
+          "colour": "grey"
+        },
+        "localTubes": {
+          "field": [
+            "POINTS",
+            "U"
+          ],
+          "component": -1,
+          "range": [
+            0,
+            50
+          ],
+          "legend": true,
+          "preset": "Viridis (matplotlib)"
+        }
+      },
+      "geometry": [
+        "localTubes"
+      ],
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/mirrorTwo"
+                },
+                "direction": [
+                  1,
+                  2,
+                  1
+                ],
+                "up": "z+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "localOrbitTwo",
+      "visible": {
+        "body": {
+          "colour": "grey"
+        },
+        "pressureContour": {
+          "colour": "steelblue",
+          "opacity": 0.6
+        }
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": {
+            "$value": "orbitCameras",
+            "args": {
+              "bounds": {
+                "$document": "/views/mirrorTwo"
+              },
+              "count": 6,
+              "elevation": 20,
+              "aspect": {
+                "$document": "/settings/aspect"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "lineSample",
+      "measurements": [
+        {
+          "node": "wakeProbe",
+          "association": "POINTS"
+        }
+      ]
+    }
+  ],
+  "axes": [
+    {
+      "name": "seedHeight",
+      "values": {
+        "$document": "/dimensions/stream/sweepZ"
+      }
+    },
+    {
+      "name": "localHeight",
+      "values": [
+        {
+          "$document": "/dimensions/localSeed/z0"
+        },
+        {
+          "$document": "/dimensions/localSeed/z1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,308 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.workflow-design/2",
+    "workflow": {
+      "version": "schemaxis.workflow/1",
+      "operations": [
+        {
+          "id": "analyse",
+          "document": {
+            "version": "schemaxis.octave/1",
+            "nodes": [
+              {
+                "id": "samples",
+                "filter": "sequence",
+                "options": {
+                  "start": 0,
+                  "stop": 1,
+                  "count": 11
+                }
+              }
+            ],
+            "outputs": [
+              "samples"
+            ]
+          }
+        }
+      ]
+    },
+    "ports": {},
+    "connections": [],
+    "controllers": {},
+    "parameters": {},
+    "outputs": {},
+    "naming": {},
+    "layout": {}
+  },
+  "categories": [
+    {
+      "id": "ports",
+      "title": "Named ports",
+      "icon": "layers"
+    },
+    {
+      "id": "parameters",
+      "title": "Template parameters",
+      "icon": "layers"
+    },
+    {
+      "id": "outputs",
+      "title": "Published outputs",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "table-output-port",
+      "title": "Named table output port",
+      "category": "ports",
+      "icon": "layers",
+      "description": "Name the numeric operation publication so a Designer connection can refer to its table output.",
+      "fields": {
+        "table-output-port": {
+          "label": "Named table output port",
+          "type": "json",
+          "required": true,
+          "default": {
+            "outputs": {
+              "table": {
+                "artifact": 0,
+                "kind": "artifact",
+                "data": {
+                  "kind": "table",
+                  "formats": [
+                    "csv"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/ports/analyse",
+          "values": [
+            {
+              "$fill": "table-output-port"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "count-input-port",
+      "title": "Named sample-count input port",
+      "category": "ports",
+      "icon": "layers",
+      "description": "Expose the operation sample-count location as a value input port for subsequent wiring.",
+      "fields": {
+        "count-input-port": {
+          "label": "Named sample-count input port",
+          "type": "json",
+          "required": true,
+          "default": {
+            "inputs": {
+              "count": {
+                "target": "/nodes/0/options/count",
+                "kind": "value",
+                "data": {
+                  "kind": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/ports/analyse",
+          "values": [
+            {
+              "$fill": "count-input-port"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "expose-count",
+      "title": "Expose a sample-count parameter",
+      "category": "parameters",
+      "icon": "layers",
+      "description": "Create a design whose shared sample count can be bound by a user case file.",
+      "fields": {
+        "count": {
+          "label": "Samples",
+          "type": "integer",
+          "required": true,
+          "default": 11,
+          "minimum": 2,
+          "maximum": 10000
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.workflow-design/2",
+              "workflow": {
+                "version": "schemaxis.workflow/1",
+                "operations": [
+                  {
+                    "id": "analyse",
+                    "document": {
+                      "version": "schemaxis.octave/1",
+                      "nodes": [
+                        {
+                          "id": "samples",
+                          "filter": "sequence",
+                          "options": {
+                            "start": 0,
+                            "stop": 1,
+                            "count": {
+                              "$document": "/settings/count",
+                              "scope": "workflow"
+                            }
+                          }
+                        }
+                      ],
+                      "outputs": [
+                        "samples"
+                      ]
+                    }
+                  }
+                ],
+                "settings": {
+                  "count": {
+                    "$fill": "count"
+                  }
+                }
+              },
+              "ports": {},
+              "connections": [],
+              "controllers": {},
+              "parameters": {
+                "count": {
+                  "label": "Samples",
+                  "kind": "integer",
+                  "constraints": {
+                    "minimum": 2,
+                    "maximum": 10000
+                  },
+                  "target": {
+                    "scope": "workflow",
+                    "pointer": "/settings/count"
+                  }
+                }
+              },
+              "outputs": {},
+              "naming": {},
+              "layout": {}
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "named-table",
+      "title": "Named result table",
+      "category": "outputs",
+      "icon": "layers",
+      "description": "Declare a template output alias for the verified table artifact.",
+      "fields": {
+        "named-table": {
+          "label": "Named result table",
+          "type": "json",
+          "required": true,
+          "default": {
+            "results": {
+              "operation": "analyse",
+              "artifact": 0,
+              "kind": "table"
+            }
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/outputs",
+          "values": [
+            {
+              "$fill": "named-table"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "output-pattern",
+      "title": "Post-verification output naming",
+      "category": "outputs",
+      "icon": "layers",
+      "description": "Set a portable output naming pattern and six-digit sequence width without changing native artifact names.",
+      "fields": {
+        "output-pattern": {
+          "label": "Post-verification output naming",
+          "type": "json",
+          "required": true,
+          "default": {
+            "pattern": "{index}-{operation}-{output}{ext}",
+            "indexWidth": 6
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/naming",
+          "values": [
+            {
+              "$fill": "output-pattern"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": "parameterised-analysis",
+      "title": "Parameterised numerical design",
+      "description": "Expose an integer sample-count parameter on an Octave coordinate-sequence workflow.",
+      "file": "studio/templates/parameterised-analysis.json",
+      "fields": {
+        "count": {
+          "label": "Sample count",
+          "type": "integer",
+          "required": true,
+          "default": 11,
+          "minimum": 2,
+          "maximum": 10000
+        }
+      }
+    },
+    {
+      "id": "named-analysis",
+      "title": "Named table publication design",
+      "description": "Publish the Octave output table under the named results alias for later workflow connections.",
+      "file": "studio/templates/named-analysis.json",
+      "fields": {
+        "count": {
+          "label": "Sample count",
+          "type": "integer",
+          "required": true,
+          "default": 11,
+          "minimum": 2,
+          "maximum": 10000
+        }
+      }
+    }
+  ],
+  "viewers": [
+    "table",
+    "text"
+  ]
+}

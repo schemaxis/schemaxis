@@ -1,0 +1,443 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.cantera/1": {
+      "guide": "docs/cantera.md",
+      "context": {
+        "purpose": "Compute frozen-composition ideal-gas properties or TP/HP equilibrium sweeps for the ten-species hydrogen/oxygen h2o2 mechanism; export independently checked numeric state tables.",
+        "assumptions": "Isolated Cantera 3.2.x Python with the qualified h2o2.yaml SHA256. Only ideal-gas ohmech phase. SI K, Pa, kg, J; composition amounts are explicitly mole or mass basis and normalised.",
+        "constraints": "Two nodes, 2\u2013100 independent temperature samples, 300\u20133500 K initial and final temperatures, 1000\u201310000000 Pa. H2,H,O,O2,OH,H2O,HO2,H2O2,AR,N2 only. N2/Ar are inert; no NOx, carbon, condensed phases, kinetics, transport or ignition delay.",
+        "inspection": "Read results.csv with numeric columns including units and X_/Y_ species fractions. chemistry-summary.json explains mechanism hash, phase, input basis and independent element/equilibrium residuals. Keep both when handing the table to Calc.",
+        "recovery": "INVALID_COMPOSITION needs distinct supported species and positive total amount. INTERPRETER_NOT_FOUND needs a configured Cantera Python. A changed mechanism needs explicit requalification. HP states outside 300\u20133500 K fail verification; choose a supported initial state/composition. Native failures retain logs; use a fresh directory after correcting input."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/cantera-minimal.json"
+        },
+        {
+          "id": "equilibrium",
+          "reference": "examples/schemaxis/cantera-equilibrium.json"
+        },
+        {
+          "id": "adiabatic",
+          "reference": "examples/schemaxis/cantera-adiabatic.json"
+        },
+        {
+          "id": "zero-composition",
+          "document": {
+            "version": "schemaxis.cantera/1",
+            "nodes": [
+              {
+                "id": "gas",
+                "filter": "gas",
+                "options": {
+                  "pressure": 101325,
+                  "basis": "mole",
+                  "composition": [
+                    {
+                      "species": "AR",
+                      "amount": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "table",
+                "filter": "thermoSweep",
+                "inputs": {
+                  "input": "gas"
+                },
+                "options": {
+                  "temperatures": [
+                    300,
+                    600,
+                    900
+                  ]
+                }
+              }
+            ],
+            "output": "table"
+          },
+          "expect": "invalid",
+          "fault": "INVALID_COMPOSITION",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_cantera_admission.py"
+      ],
+      "acceptance": [
+        "tools/qualify_cantera.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified numeric results.csv into Calc readCSV; preserve chemistry-summary.json for units, species and mechanism limits. Unchanged Cantera and workbook attempts can be reused.",
+          "references": [
+            "docs/cantera.md",
+            "tools/qualify_cantera.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://cantera.org/stable/python/thermo.html",
+          "https://cantera.org/stable/reference/thermo/species-thermo.html",
+          "https://raw.githubusercontent.com/Cantera/cantera/v3.2.0/data/h2o2.yaml"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline bounds build and fresh-process CSV reopen. Kit watchdog independently bounds the entire attempt.",
+          "cancellation": "Shared owned native process cancellation; final cancellation check precedes publication.",
+          "logs": "authored.json, plan.json, built/reopened native records, captured mechanism bytes/hash, worker source, stage stdout/stderr, CSV, summary and incomplete/failure results remain in each fresh attempt.",
+          "verification": "Pure host NASA7/ideal-gas formulas verify all thermodynamic properties, normalised mass/mole fractions and element inventories. Equilibrium checks all accessible species chemical potentials against element potentials; TP holds T/P, HP holds enthalpy/P. A second Cantera process reloads the saved CSV states. No success flag substitutes for numerical checks."
+        },
+        "data": [
+          {
+            "id": "states",
+            "direction": "output",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "units": "SI in column names; mole/mass fractions dimensionless",
+              "columns": 30,
+              "phase": "ideal-gas ohmech"
+            },
+            "losses": [
+              "CSV alone omits input basis and mechanism provenance; retain summary.",
+              "No kinetics, transport, phase transitions, carbon or NOx chemistry."
+            ],
+            "scope": "One row per independent initial temperature, ten species X and Y; at most 100 rows."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "mechanism": "h2o2.yaml",
+              "phase": "ohmech"
+            },
+            "losses": [
+              "Independent residuals qualify this ideal-gas mechanism, not its suitability for an experiment."
+            ],
+            "scope": "Input basis, normalised initial composition, mechanism identity, per-row conservation/equilibrium residuals and limits."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "Inspect temperatures, pressure, density, energies, heat capacities and mole/mass fractions in results.csv.",
+            "limits": "2\u2013100 finite numeric rows; no native chemistry viewer."
+          },
+          {
+            "panel": "text",
+            "scope": "Read chemistry-summary.json for mechanism identity, units, independent checks and loss limits.",
+            "limits": "A bounded summary, not interactive native state inspection."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "baseline",
+          "reuse": "Edit gas pressure, composition and basis, then table temperatures/mode using shared source/property authoring. Plan a fresh revision; execute and inspect the same CSV/summary. Use the equilibrium/adiabatic examples for reactive states."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified numeric results.csv into Calc readCSV; preserve chemistry-summary.json for units, species and mechanism limits. Unchanged Cantera and workbook attempts can be reused."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement native-inspection."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement mpi."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Inline inputs and a pinned built-in mechanism; empty external resource set permits verified reuse."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement time-batches."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared durable draft JSON editing with revision checks and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON pointer editing of gas composition, pressure, temperature arrays and equilibrium mode."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This bounded batch route does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "argon",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Monatomic ideal argon: cp=5R/(2M), cv=3R/(2M), rho=PM/(RT), h=5R(T-298.15)/(2M), X_AR=Y_AR=1. Independent literal analytic expectations.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/3",
+                "expected": 1.622848417231445,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/7",
+                "expected": 520.30429400208,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/2/4",
+                "expected": 313145.1393451519,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/18",
+                "expected": 1,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "argon-pressure",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/pressure",
+                "value": 202650
+              }
+            ],
+            "scope": "Doubling pressure doubles ideal argon density; cp remains 5R/(2M).",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/3",
+                "expected": 3.24569683446289,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/7",
+                "expected": 520.30429400208,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "hydrogen-oxygen-TP",
+            "example": "equilibrium",
+            "edits": [],
+            "scope": "Fixed T/P and normalised mass fractions are literal; independent host NASA7 chemical potentials prove equilibrium with conserved element inventories on every row.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/1",
+                "expected": 1000,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/2/1",
+                "expected": 2000,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/1/2",
+                "expected": 101325,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "hydrogen-air-HP",
+            "example": "adiabatic",
+            "edits": [],
+            "scope": "Adiabatic equilibrium conserves initial specific enthalpy and elemental moles per kg; host NASA7 and chemical-potential checks apply to all rows. Literal initial T/P prevent a successful wrong sweep.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/0",
+                "expected": 300,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/2/0",
+                "expected": 500,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/1/2",
+                "expected": 101325,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "hydrogen-dissociation",
+            "example": "equilibrium",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/composition",
+                "value": [
+                  {
+                    "species": "H2",
+                    "amount": 1
+                  }
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/temperatures",
+                "value": [
+                  2000,
+                  2500
+                ]
+              }
+            ],
+            "scope": "Independent analytic H2 dissociation extent from NASA7 Kp: alpha=sqrt(Kp/(4P/P0+Kp)), X_H=2alpha/(1+alpha). No native result is used for this expectation.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/11",
+                "expected": 0.0016261097022829897,
+                "absolute": 1e-10,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/10",
+                "expected": 0.9983738902977171,
+                "absolute": 1e-10,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "mass-basis-boundaries",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/basis",
+                "value": "mass"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/composition",
+                "value": [
+                  {
+                    "species": "H2",
+                    "amount": 2.016
+                  },
+                  {
+                    "species": "O2",
+                    "amount": 31.998
+                  }
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/temperatures",
+                "value": [
+                  300,
+                  1000,
+                  3500
+                ]
+              }
+            ],
+            "scope": "Mass amounts equal molecular weights give equimolar H2/O2 with X_H2=X_O2=0.5 and Y_H2=2.016/(2.016+31.998), at both temperature limits and the NASA7 range boundary.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/10",
+                "expected": 0.5,
+                "absolute": 1e-10
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/1/13",
+                "expected": 0.5,
+                "absolute": 1e-10
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/2/20",
+                "expected": 0.05926971247133533,
+                "absolute": 1e-10
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/2/1",
+                "expected": 3500,
+                "absolute": 1e-07
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

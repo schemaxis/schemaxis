@@ -1,0 +1,472 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.inkscape/1": {
+      "guide": "docs/inkscape.md",
+      "context": {
+        "purpose": "Build bounded technical block diagrams with explicit editable geometry, labelled boxes and orthogonal directed connectors; assess declared layout before publication. flowDiagram declares directed dependencies and derives an accountable DAG rank/lane layout without manual x/y geometry.",
+        "assumptions": "All coordinates, font sizes, clearances and padding use mm. Stable Inkscape 1.4.x public CLI query-all/export supports native visits; fonts are supplied by its runtime. Labels are single-line plain text.",
+        "constraints": "Maximum 32 boxes, 48 links, page 20\u2013500 mm and PNG at most 4096 pixels per axis. Connections run left-to-right through a midpoint dogleg. No arbitrary SVG input, CSS, scripts, CLI actions, imports, general routing optimisation or typography certification. Connector crossings with other connectors are allowed and not assessed. Flow cards use longest-path ranks and lexical lanes, uniform card/gap budgets; cyclic, oversized or colliding layouts fail explicitly. No general automatic routing optimiser or automatic font search.",
+        "inspection": "Reconstruct the exact SVG from authored semantics; compare native stroked box, connector and arrow bounds within 0.015 mm; measure native label padding; decode PNG size and opaque page/box colour probes. Raster probes are bounded evidence, not pixel-perfect whole-image fidelity. For flowDiagram independently replay DAG ranks, card positions and required page budgets before checking all native geometry/text.",
+        "recovery": "INVALID_LAYOUT identifies invalid authored geometry before launch; move or resize boxes and preserve clearance. LABEL_OVERFLOW identifies actual font-dependent text bounds; widen/heighten a box, shorten the label or lower fontSize. Preserve failed measurements and rerun in a fresh directory; altered evidence gives VERIFICATION_FAILED. FLOW_CYCLE removes cycles; FLOW_PAGE_OVERFLOW reports required page dimensions/ranks; FLOW_ROUTING_COLLISION reports the colliding dependency and requires another graph/layout choice or explicit blockDiagram geometry."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/inkscape-diagram.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/inkscape-diagram-variant.json"
+        },
+        {
+          "id": "overlap",
+          "reference": "examples/schemaxis/inkscape-overlap-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_LAYOUT"
+        },
+        {
+          "id": "flow-baseline",
+          "reference": "examples/schemaxis/inkscape-flow.json"
+        },
+        {
+          "id": "flow-variant",
+          "reference": "examples/schemaxis/inkscape-flow-variant.json"
+        },
+        {
+          "id": "flow-label-overflow",
+          "reference": "examples/schemaxis/inkscape-flow-label-overflow.json"
+        },
+        {
+          "id": "flow-cycle",
+          "reference": "examples/schemaxis/inkscape-flow-cycle-invalid.json",
+          "expect": "invalid",
+          "fault": "FLOW_CYCLE"
+        },
+        {
+          "id": "flow-page",
+          "reference": "examples/schemaxis/inkscape-flow-page-invalid.json",
+          "expect": "invalid",
+          "fault": "FLOW_PAGE_OVERFLOW"
+        },
+        {
+          "id": "flow-routing",
+          "reference": "examples/schemaxis/inkscape-flow-routing-invalid.json",
+          "expect": "invalid",
+          "fault": "FLOW_ROUTING_COLLISION"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_inkscape.py"
+      ],
+      "acceptance": [
+        "tools/qualify_inkscape.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Three ordered publications: editable SVG text, PNG image, measured geometry JSON text; self-contained source fingerprint and scheduler verification permit reuse.",
+          "references": [
+            "docs/inkscape.md",
+            "tests/unit/test_inkscape.py",
+            "tools/qualify_inkscape.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared pure expressions and document composition resolve before diagram planning.",
+          "references": [
+            "docs/inkscape.md"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://inkscape.org/doc/inkscape-man.html",
+          "https://wiki.inkscape.org/wiki/Using_the_Command_Line",
+          "https://inkscape.org/doc/release_notes/1.4.4/Inkscape_1.4.4.html",
+          "https://lists.inkscape.org/hyperkitty/list/inkscape-docs@lists.inkscape.org/thread/OCEYDBJCKK2ZF65O3FNKZOSTL7JBTZND/"
+        ],
+        "lifecycle": {
+          "timeout": "One finite timeout covers version/query/export native visits and shared process-tree cancellation.",
+          "cancellation": "Shared process supervisor honours cancellation; no publication is accepted until verification finishes.",
+          "logs": "Each native visit retains stdout, stderr and submission metadata; failed input/plan/result remain in the attempt directory.",
+          "verification": "Host independently reconstructs SVG, checks queried geometry and label fit, decodes PNG dimensions/colour probes and compares all three publication hashes."
+        },
+        "data": [
+          {
+            "id": "svg",
+            "direction": "output",
+            "kind": "text",
+            "format": "SVG",
+            "traits": {
+              "units": "mm",
+              "editable": true
+            },
+            "losses": [
+              "General imported SVG is unsupported; native typography depends on installed fonts."
+            ],
+            "scope": "Generated bounded rect/text/path/polygon technical diagrams."
+          },
+          {
+            "id": "preview",
+            "direction": "output",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "units": "pixels",
+              "colour": "RGBA8",
+              "background": "opaque white"
+            },
+            "losses": [
+              "Flattened image loses text and vector editability."
+            ],
+            "scope": "Native page export with measured dimensions and bounded interior colour probes."
+          },
+          {
+            "id": "measurements",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.inkscape.measurements/1",
+            "traits": {
+              "units": "mm"
+            },
+            "losses": [
+              "Bounds and padding are not a whole-image or typography-quality certificate."
+            ],
+            "scope": "Native queried box/label/link/arrow geometry and analytic clearance."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "image",
+            "scope": "Inspect native flattened page export alongside measured labels/clearance.",
+            "limits": "No general colour management or whole-image fidelity guarantee."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect retained SVG and structured measurements.",
+            "limits": "Batch measurements; no live native editor reverse sync."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit source or JSON pointers, replan explicit mm geometry and rerun; scheduler rechecks source and actual publications before reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Three ordered publications: editable SVG text, PNG image, measured geometry JSON text; self-contained source fingerprint and scheduler verification permit reuse."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Batch native query evidence is retained; no interactive native inspection hook."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared pure expressions and document composition resolve before diagram planning."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial native command visits only."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "No external inputs: authored document identity plus adaptor verification controls whole-job reuse."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No time-dependent scene."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON draft and revision authoring for the document route."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared atomic JSON pointer edits preserve validation and undo."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Independent native visits; no persistent native editor reverse synchronisation."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The editable SVG is an ordinary published artifact; no console live native-save hook."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No authored import/conversion operation; native PNG is the diagram publication preview."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Independent literal page dimensions and box/link counts; native rectangle/connector/arrow bounds checked analytically and text padding measured from the saved SVG. Variant adds a 15 mm dogleg and changes label/colour.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/boxCount",
+                "expected": 2
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/linkCount",
+                "expected": 1
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/width",
+                "expected": 454
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/height",
+                "expected": 227
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/probes/3/rgba",
+                "expected": [
+                  220,
+                  252,
+                  231,
+                  255
+                ]
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/minimumClearance",
+                "expected": 34.6,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "scope": "Independent literal page dimensions and box/link counts; native rectangle/connector/arrow bounds checked analytically and text padding measured from the saved SVG. Variant adds a 15 mm dogleg and changes label/colour.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/boxCount",
+                "expected": 2
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/linkCount",
+                "expected": 1
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/width",
+                "expected": 454
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/height",
+                "expected": 227
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/probes/3/rgba",
+                "expected": [
+                  254,
+                  243,
+                  199,
+                  255
+                ]
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/minimumClearance",
+                "expected": 34.6,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "flow-baseline",
+            "example": "flow-baseline",
+            "edits": [],
+            "scope": "Independent branching/merging DAG longest-path ranks and lexical lanes; centred uniform cards under page budgets. Native SVG/readback reconstructs geometry, checks connector/arrow extents and measures fixed-font label fit.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/width",
+                "expected": 567
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/height",
+                "expected": 340
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/boxCount",
+                "expected": 4
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/linkCount",
+                "expected": 4
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/algorithm",
+                "expected": "dag-longest-path/1"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/rankCount",
+                "expected": 3
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/laneCounts",
+                "expected": [
+                  1,
+                  2,
+                  1
+                ]
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/ranks",
+                "expected": {
+                  "input": 0,
+                  "model": 1,
+                  "result": 2,
+                  "simulate": 1
+                }
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/requiredSize/0",
+                "expected": 109.2,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/requiredSize/1",
+                "expected": 36.8,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "flow-variant",
+            "example": "flow-variant",
+            "edits": [],
+            "scope": "Independent branching/merging DAG longest-path ranks and lexical lanes; centred uniform cards under page budgets. Native SVG/readback reconstructs geometry, checks connector/arrow extents and measures fixed-font label fit.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/width",
+                "expected": 680
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/height",
+                "expected": 378
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/boxCount",
+                "expected": 5
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/linkCount",
+                "expected": 5
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/algorithm",
+                "expected": "dag-longest-path/1"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/rankCount",
+                "expected": 4
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/laneCounts",
+                "expected": [
+                  1,
+                  2,
+                  1,
+                  1
+                ]
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/ranks",
+                "expected": {
+                  "input": 0,
+                  "model": 1,
+                  "result": 3,
+                  "simulate": 1,
+                  "validate": 2
+                }
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/requiredSize/0",
+                "expected": 150.6,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layout/requiredSize/1",
+                "expected": 36.8,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

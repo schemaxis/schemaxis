@@ -1,0 +1,679 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "gas": {
+      "status": "reviewed",
+      "explanation": "Defines the starting gas state for the table node: a pressure in pascals and a hydrogen/oxygen/inert mixture drawn from the ten species of Cantera's h2o2.yaml ideal-gas phase ohmech. It produces no table itself; it is always the first of the two nodes, and the thermoSweep or equilibrate node that follows evaluates it at each requested temperature. Amounts are proportions on the chosen mole or mass basis and are normalised, so they need not sum to one. Choose another tool when the mixture contains carbon, NOx or condensed phases; this mechanism cannot represent them.",
+      "sources": [
+        "src/schemaxis/adaptors/cantera/adaptor.py:21-28",
+        "src/schemaxis/adaptors/cantera/adaptor.py:41-43",
+        "src/schemaxis/adaptors/cantera/adaptor.py:59-69",
+        "src/schemaxis/adaptors/cantera/native.py:30-35",
+        "docs/cantera.md#authoring-and-units",
+        "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.TPX",
+        "src/schemaxis/adaptors/cantera/capabilities.py"
+      ],
+      "pitfalls": [
+        "Each species may appear only once and the amounts must have a positive total, otherwise planning fails with INVALID_COMPOSITION.",
+        "N2 and AR are inert in this mechanism: no nitrogen oxides or argon compounds ever form, even at high temperature.",
+        "The gas is ideal; no real-gas correction is applied, so states near condensation or at the upper pressure limit are idealised."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/cantera-equilibrium.json",
+          "purpose": "Stoichiometric hydrogen/air (H2 2, O2 1, N2 3.76 on a mole basis) at 101325 Pa."
+        }
+      ]
+    },
+    "thermoSweep": {
+      "status": "reviewed",
+      "explanation": "Evaluates the gas at each listed temperature with its composition and pressure frozen, publishing results.csv (one row per temperature: density, specific enthalpy, internal energy, entropy, cp, cv, mean molecular weight and the unchanged mole and mass fractions) plus chemistry-summary.json. Choose it for property tables of a non-reacting mixture, for example heat capacity of a diluent or density of a fixed fuel/air mixture; choose equilibrate when the composition should be allowed to react to chemical equilibrium. The host recomputes every property from the public NASA7 coefficients and a second Cantera process reloads the saved states before the run is accepted.",
+      "sources": [
+        "src/schemaxis/adaptors/cantera/adaptor.py:29",
+        "src/schemaxis/adaptors/cantera/adaptor.py:39",
+        "src/schemaxis/adaptors/cantera/native.py:25-38",
+        "src/schemaxis/adaptors/cantera/thermo.py:16-18",
+        "src/schemaxis/adaptors/cantera/thermo.py:95-116",
+        "docs/cantera.md#publications-and-handoff",
+        "docs/cantera.md#independent-verification",
+        "src/schemaxis/adaptors/cantera/capabilities.py"
+      ],
+      "pitfalls": [
+        "No reaction occurs: a hydrogen/oxygen mixture listed at 3000 K is reported unreacted, which is physically unstable; use equilibrate for reacting states.",
+        "Rows are independent states, not a heating process; their order carries no history.",
+        "Keep chemistry-summary.json with the CSV; the CSV alone does not record the mechanism, basis or units."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/cantera-minimal.json",
+          "purpose": "Verify monatomic argon heat capacity and density analytically."
+        },
+        {
+          "reference": "examples/schemaxis/cantera-to-calc.json",
+          "purpose": "Import the argon property table into a verified Calc workbook."
+        }
+      ]
+    },
+    "equilibrate": {
+      "status": "reviewed",
+      "explanation": "For each listed initial temperature, sets the gas to that temperature and its pressure and then calls Cantera's ThermoPhase.equilibrate with the element-potential solver, holding either temperature and pressure (TP) or specific enthalpy and pressure (HP, adiabatic). It publishes the same results.csv columns as thermoSweep, now with the equilibrium composition and, for HP, the adiabatic final temperature, plus chemistry-summary.json with element-conservation and chemical-potential residuals. Choose it for dissociation at fixed temperature or adiabatic flame temperatures of hydrogen mixtures; choose thermoSweep for a non-reacting property table.",
+      "sources": [
+        "src/schemaxis/adaptors/cantera/adaptor.py:30-31",
+        "src/schemaxis/adaptors/cantera/native.py:33-38",
+        "src/schemaxis/adaptors/cantera/thermo.py:68-92",
+        "src/schemaxis/adaptors/cantera/thermo.py:115-123",
+        "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.equilibrate",
+        "docs/cantera.md#authoring-and-units",
+        "src/schemaxis/adaptors/cantera/capabilities.py"
+      ],
+      "pitfalls": [
+        "Rows are independent starting states, not a transient trajectory; equilibrium says nothing about how fast the state is reached.",
+        "In HP mode the final temperature must also lie within 300-3500 K; an undiluted hot mixture can exceed it and fail verification, so add N2 or AR or lower the initial temperature.",
+        "Independent verification checks element inventories, NASA7 properties and that every accessible species' chemical potential matches the element potentials within 2e-5 RT."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/cantera-equilibrium.json",
+          "purpose": "Inspect temperature-dependent hydrogen/oxygen equilibrium."
+        },
+        {
+          "reference": "examples/schemaxis/cantera-adiabatic.json",
+          "purpose": "Inspect adiabatic equilibrium temperatures for hydrogen/air."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.cantera/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A Cantera thermochemistry document: one gas node defining pressure and composition, followed by one thermoSweep or equilibrate node that evaluates it at a list of temperatures, run in an isolated Cantera 3.2.x Python process with the qualified h2o2.yaml mechanism. A successful run publishes results.csv (30 numeric columns in SI units: K, Pa, kg/m3, J/kg, J/(kg K), kg/kmol and mole and mass fractions) and chemistry-summary.json, after the host has recomputed every row from public NASA7 data and a second Cantera process has reloaded the saved states.",
+          "pitfalls": [
+            "Only the ten-species hydrogen/oxygen mechanism is available; no external mechanism files, carbon chemistry, kinetics or transport properties can be requested.",
+            "Configure an absolute Python interpreter that has Cantera 3.2.x (--cantera or CANTERA_PYTHON), otherwise the run fails with INTERPRETER_NOT_FOUND."
+          ],
+          "examples": [
+            {
+              "version": "schemaxis.cantera/1",
+              "nodes": [
+                {
+                  "id": "gas",
+                  "filter": "gas",
+                  "options": {
+                    "pressure": 101325,
+                    "basis": "mole",
+                    "composition": [
+                      {
+                        "species": "H2",
+                        "amount": 2
+                      },
+                      {
+                        "species": "O2",
+                        "amount": 1
+                      },
+                      {
+                        "species": "N2",
+                        "amount": 3.76
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "table",
+                  "filter": "equilibrate",
+                  "inputs": {
+                    "input": "gas"
+                  },
+                  "options": {
+                    "temperatures": [
+                      300,
+                      400,
+                      500
+                    ],
+                    "mode": "HP"
+                  }
+                }
+              ],
+              "output": "table"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:39-75",
+            "src/schemaxis/adaptors/cantera/adaptor.py:115-148",
+            "src/schemaxis/adaptors/cantera/thermo.py:16-18",
+            "docs/cantera.md",
+            "examples/schemaxis/cantera-adiabatic.json"
+          ]
+        },
+        "/properties/version": {
+          "status": "reference",
+          "explanation": "Identifies the document format and chooses its adaptor. Keep the version matching the selected schema.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reviewed",
+          "explanation": "The calculation chain, always exactly two nodes in a fixed order: first the gas node, then a thermoSweep or equilibrate node whose inputs.input names the gas node's id. Node ids must be distinct. Any other count or order fails planning with INVALID_DOCUMENT or INVALID_DEPENDENCY.",
+          "label": "Nodes",
+          "pitfalls": [
+            "To switch from a property table to equilibrium, change the second node's filter (and add mode) rather than adding a third node."
+          ],
+          "examples": [
+            [
+              {
+                "id": "gas",
+                "filter": "gas",
+                "options": {
+                  "composition": [
+                    {
+                      "species": "AR",
+                      "amount": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "table",
+                "filter": "thermoSweep",
+                "inputs": {
+                  "input": "gas"
+                },
+                "options": {
+                  "temperatures": [
+                    300,
+                    600,
+                    900
+                  ]
+                }
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:50-64",
+            "docs/cantera.md#authoring-and-units"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reviewed",
+          "explanation": "One node of the two-node chain. Its filter selects the operation: gas is valid only in the first position, and thermoSweep or equilibrate only in the second.",
+          "examples": [
+            {
+              "id": "gas",
+              "filter": "gas",
+              "options": {
+                "pressure": 101325,
+                "basis": "mole",
+                "composition": [
+                  {
+                    "species": "AR",
+                    "amount": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:54-60"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "The gas node, which must be the first node. It fixes the pressure and the initial composition that every row of the following table starts from; it has no inputs and is never the document output.",
+          "examples": [
+            {
+              "id": "gas",
+              "filter": "gas",
+              "options": {
+                "pressure": 101325,
+                "basis": "mole",
+                "composition": [
+                  {
+                    "species": "H2",
+                    "amount": 2
+                  },
+                  {
+                    "species": "O2",
+                    "amount": 1
+                  },
+                  {
+                    "species": "N2",
+                    "amount": 3.76
+                  }
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:59-71",
+            "docs/cantera.md#authoring-and-units"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options": {
+          "status": "reviewed",
+          "explanation": "The gas state: composition (required) decides which species can exist and therefore which elements are conserved, basis decides whether the amounts are mole or mass proportions, and pressure applies to every row. Omitted settings take the Schemaxis defaults: pressure 101325 Pa and basis mole.",
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:22-28",
+            "src/schemaxis/adaptors/cantera/native.py:30-35"
+          ],
+          "examples": [
+            {
+              "pressure": 101325,
+              "basis": "mole",
+              "composition": [
+                {
+                  "species": "H2",
+                  "amount": 2
+                },
+                {
+                  "species": "O2",
+                  "amount": 1
+                },
+                {
+                  "species": "N2",
+                  "amount": 3.76
+                }
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/pressure": {
+          "status": "reviewed",
+          "explanation": "Absolute pressure of the gas, applied at every temperature in the table and held constant by both TP and HP equilibrium. For an ideal gas, density scales in proportion to pressure; at equilibrium, higher pressure suppresses dissociation (less H, O and OH at a given temperature).",
+          "label": "Pressure",
+          "units": "Pascals (absolute)",
+          "defaultMeaning": "Schemaxis default: 101325 Pa (one standard atmosphere).",
+          "pitfalls": [
+            "The value is in Pa, not bar or atm: 1 bar is 100000 and 10 atm is 1013250.",
+            "Gauge pressure is not accepted; add the ambient pressure first."
+          ],
+          "examples": [
+            101325
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:23",
+            "src/schemaxis/adaptors/cantera/native.py:34-35",
+            "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.TPX",
+            "docs/cantera.md#authoring-and-units"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/basis": {
+          "status": "reviewed",
+          "explanation": "Whether the composition amounts are mole (number) proportions or mass proportions. With mole, Schemaxis sets the state with Cantera's TPX; with mass, with TPY, so the same numbers describe a different mixture. Choose mole for stoichiometric recipes such as H2 2, O2 1; choose mass when the mixture is specified by weight. The table always reports both mole fractions (X_) and mass fractions (Y_).",
+          "label": "Composition basis",
+          "defaultMeaning": "Schemaxis default: mole.",
+          "pitfalls": [
+            "Changing the basis without changing the amounts changes the mixture: H2 1, O2 1 by mass is mostly hydrogen by mole."
+          ],
+          "examples": [
+            "mass"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:24",
+            "src/schemaxis/adaptors/cantera/native.py:34-35",
+            "src/schemaxis/adaptors/cantera/thermo.py:30-38",
+            "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.TPY"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/composition": {
+          "status": "reviewed",
+          "explanation": "The initial mixture as a list of species with relative amounts on the chosen basis. Amounts are normalised to fractions summing to one, so H2 2, O2 1 and H2 0.667, O2 0.333 describe the same gas; species not listed start at zero. Which elements are present (H, O, N, Ar) determines which species equilibrate may form.",
+          "label": "Composition",
+          "defaultMeaning": "Required; there is no default.",
+          "pitfalls": [
+            "A species may appear only once; repeated species fail planning with INVALID_COMPOSITION instead of being summed.",
+            "Air is entered explicitly, for example O2 1 and N2 3.76 on a mole basis; there is no AIR species."
+          ],
+          "examples": [
+            [
+              {
+                "species": "H2",
+                "amount": 2
+              },
+              {
+                "species": "O2",
+                "amount": 1
+              },
+              {
+                "species": "N2",
+                "amount": 3.76
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:25-28",
+            "src/schemaxis/adaptors/cantera/adaptor.py:65-69",
+            "src/schemaxis/adaptors/cantera/native.py:30-33",
+            "src/schemaxis/adaptors/cantera/thermo.py:30-38",
+            "docs/cantera.md#authoring-and-units"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/composition/items": {
+          "status": "reviewed",
+          "explanation": "One species and its relative amount in the initial mixture. The order of entries does not matter; each species may appear only once.",
+          "examples": [
+            {
+              "species": "H2",
+              "amount": 2
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:25-28",
+            "src/schemaxis/adaptors/cantera/adaptor.py:65-67"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/composition/items/properties/species": {
+          "status": "reviewed",
+          "explanation": "A species name from the ohmech phase of Cantera's h2o2.yaml: the reactive H2, H, O, O2, OH, H2O, HO2 and H2O2, and the inert AR and N2. Names are case-sensitive and argon is spelled AR, as in the mechanism.",
+          "label": "Species",
+          "pitfalls": [
+            "N2 never reacts in this mechanism, so it acts purely as a diluent; NO and NO2 are not available."
+          ],
+          "examples": [
+            "O2"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:27",
+            "src/schemaxis/adaptors/cantera/thermochemistry.json",
+            "https://raw.githubusercontent.com/Cantera/cantera/v3.2.0/data/h2o2.yaml"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/composition/items/properties/amount": {
+          "status": "reviewed",
+          "explanation": "Relative amount of this species on the node's basis (moles or mass). Only ratios between the amounts matter, because the composition is normalised; zero is allowed but the amounts together must have a positive total.",
+          "label": "Amount",
+          "units": "Dimensionless proportion (mole or mass, per basis)",
+          "pitfalls": [
+            "Do not enter partial pressures in Pa; enter proportions and set the total pressure separately."
+          ],
+          "examples": [
+            3.76
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:28",
+            "src/schemaxis/adaptors/cantera/adaptor.py:68-69",
+            "src/schemaxis/adaptors/cantera/thermo.py:30-38"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose the thermoSweep node to tabulate frozen-composition ideal-gas properties of the gas at several temperatures; the composition and pressure are identical in every row. Choose equilibrate instead when the mixture should be allowed to react to chemical equilibrium.",
+          "examples": [
+            {
+              "id": "table",
+              "filter": "thermoSweep",
+              "inputs": {
+                "input": "gas"
+              },
+              "options": {
+                "temperatures": [
+                  300,
+                  600,
+                  900
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:29",
+            "src/schemaxis/adaptors/cantera/native.py:33-38",
+            "docs/cantera.md#authoring-and-units"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options": {
+          "status": "reviewed",
+          "explanation": "The thermoSweep node has a single setting, the list of temperatures at which the frozen gas is evaluated. Omitted, Schemaxis evaluates 300, 600 and 900 K.",
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:19-20",
+            "src/schemaxis/adaptors/cantera/adaptor.py:29"
+          ],
+          "examples": [
+            {
+              "temperatures": [
+                300,
+                500,
+                1000,
+                1500,
+                2000
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/temperatures": {
+          "status": "reviewed",
+          "explanation": "Temperatures at which the frozen mixture is evaluated, each producing one CSV row in the listed order. They are independent states, so values need not be sorted or evenly spaced. The 300-3500 K range is where the NASA7 polynomials of all ten species are defined (AR and N2 data start at 300 K; the reactive species end at 3500 K).",
+          "label": "Temperatures",
+          "units": "Kelvin",
+          "defaultMeaning": "Schemaxis default: [300, 600, 900].",
+          "pitfalls": [
+            "Values are in K, not degrees Celsius: 25 C is 298.15 K, which is below the allowed minimum of 300 K."
+          ],
+          "examples": [
+            [
+              300,
+              500,
+              1000,
+              1500,
+              2000
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:19-20",
+            "src/schemaxis/adaptors/cantera/thermochemistry.json",
+            "src/schemaxis/adaptors/cantera/native.py:33-38",
+            "docs/cantera.md#authoring-and-units"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/temperatures/items": {
+          "status": "reviewed",
+          "explanation": "One temperature, in kelvin, at which the frozen mixture is evaluated; it becomes the initialTemperature_K and temperature_K of one table row.",
+          "examples": [
+            1000
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:19-20",
+            "src/schemaxis/adaptors/cantera/thermo.py:16-18"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of the gas node that supplies the pressure and composition. It must name the first node exactly; any other reference fails planning with INVALID_DEPENDENCY.",
+          "label": "Gas",
+          "examples": [
+            "gas"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:62-64"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Choose the equilibrate node to compute chemical equilibrium of the gas for each initial temperature, either at fixed temperature (TP) or adiabatically at fixed enthalpy (HP). The table then reports the equilibrium composition and, for HP, the final temperature. Choose thermoSweep instead for non-reacting property tables.",
+          "examples": [
+            {
+              "id": "table",
+              "filter": "equilibrate",
+              "inputs": {
+                "input": "gas"
+              },
+              "options": {
+                "temperatures": [
+                  1000,
+                  1500,
+                  2000
+                ],
+                "mode": "TP"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:30-31",
+            "src/schemaxis/adaptors/cantera/native.py:33-38",
+            "docs/cantera.md#authoring-and-units"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options": {
+          "status": "reviewed",
+          "explanation": "The starting temperatures and the equilibrium constraint. mode decides the physics: TP keeps each listed temperature, HP keeps the specific enthalpy of the starting state and solves the final temperature. Omitted settings take the Schemaxis defaults: temperatures [1000, 1500, 2000] and mode TP. Solver settings are fixed by Schemaxis (element_potential, rtol 1e-10, max_steps 2000, max_iter 200).",
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:30-31",
+            "src/schemaxis/adaptors/cantera/native.py:36-37",
+            "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.equilibrate"
+          ],
+          "examples": [
+            {
+              "temperatures": [
+                300,
+                400,
+                500
+              ],
+              "mode": "HP"
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/temperatures": {
+          "status": "reviewed",
+          "explanation": "Initial temperatures, one CSV row each, in the listed order. In TP mode each value is also the equilibrium temperature; in HP mode it sets the starting enthalpy and the equilibrium temperature is solved and reported in temperature_K, while initialTemperature_K keeps the listed value. Every initial and final temperature must lie within 300-3500 K, the range of the mechanism's NASA7 data.",
+          "label": "Initial temperatures",
+          "units": "Kelvin",
+          "defaultMeaning": "Schemaxis default: [1000, 1500, 2000].",
+          "pitfalls": [
+            "In HP mode a hot or undiluted starting state can push the final temperature above 3500 K, which fails verification; start cooler or dilute with N2 or AR.",
+            "Values are in K, not degrees Celsius."
+          ],
+          "examples": [
+            [
+              300,
+              400,
+              500
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:30",
+            "src/schemaxis/adaptors/cantera/thermo.py:105-123",
+            "src/schemaxis/adaptors/cantera/native.py:33-38",
+            "docs/cantera.md#authoring-and-units"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/temperatures/items": {
+          "status": "reviewed",
+          "explanation": "One starting temperature in kelvin; it is reported as initialTemperature_K of one table row, and as temperature_K too in TP mode.",
+          "examples": [
+            1500
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:30",
+            "src/schemaxis/adaptors/cantera/thermo.py:16-18"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/mode": {
+          "status": "reviewed",
+          "explanation": "The property pair Cantera holds fixed while minimising the Gibbs energy. TP keeps temperature and pressure: use it to see how composition (for example H2O dissociation into H2, O2, OH, H, O) varies with temperature. HP keeps the starting specific enthalpy and pressure, which is the adiabatic constant-pressure case: use it for adiabatic flame temperatures, where temperature_K reports the result.",
+          "label": "Equilibrium constraint",
+          "defaultMeaning": "Schemaxis default: TP.",
+          "pitfalls": [
+            "TP does not conserve energy; its temperature is imposed, so it cannot predict a flame temperature."
+          ],
+          "examples": [
+            "HP"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:31",
+            "src/schemaxis/adaptors/cantera/native.py:36-37",
+            "src/schemaxis/adaptors/cantera/thermo.py:118-121",
+            "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.equilibrate"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "The id of the gas node that supplies the pressure and the starting composition for every equilibrium row. It must name the first node exactly; any other reference fails planning with INVALID_DEPENDENCY.",
+          "label": "Gas",
+          "examples": [
+            "gas"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:62-64"
+          ]
+        },
+        "/properties/output": {
+          "status": "reviewed",
+          "explanation": "The id of the node whose table is published. It must be the second node (thermoSweep or equilibrate); the gas node has no table and cannot be selected.",
+          "label": "Output node",
+          "pitfalls": [
+            "After renaming the second node, update output too, otherwise planning fails with INVALID_SELECTION."
+          ],
+          "examples": [
+            "table"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:71"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,3031 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "material": {
+      "status": "reviewed",
+      "explanation": "Creates a Godot StandardMaterial3D resource with an opaque base colour, roughness and metallic value; it is not a scene node by itself. Choose it once per distinct surface look and connect it to the material input of box, sphere, cylinder, plane, capsule, torus or readGLTF nodes; several meshes may share one material. The resource is saved inside scene.tscn as each mesh's material override, and the reopened values are compared with the authored ones.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:41-42",
+        "src/schemaxis/adaptors/godot/adaptor.py:151-155",
+        "src/schemaxis/adaptors/godot/scripts.py:166-173",
+        "src/schemaxis/adaptors/godot/scripts.py:279",
+        "src/schemaxis/adaptors/godot/adaptor.py:271",
+        "https://docs.godotengine.org/en/stable/classes/class_basematerial3d.html",
+        "docs/godot.md#authoring"
+      ],
+      "pitfalls": [
+        "Every material must feed at least one geometry node; an unused material fails planning with INVALID_SELECTION.",
+        "Declare the material before the meshes that use it; inputs may only refer to earlier nodes.",
+        "Transparency, textures and emission are not available; alpha is always 1. Schemaxis qualified this operation natively only on small CPU-only scenes with Godot 4.7.2 (build, fresh-process reopen and readback); visual quality and GUI editing were not qualified."
+      ]
+    },
+    "box": {
+      "status": "reviewed",
+      "explanation": "Creates a MeshInstance3D holding a native BoxMesh centred on position, with edge lengths size in metres and the connected material. Choose it for blocks, walls, platforms or bounding volumes; it is the simplest primitive and the box readback (12 triangles, exact bounds) is the easiest to check. The mesh stays an editable BoxMesh in Godot. Use plane for a zero-thickness floor and readGLTF for shapes that are not primitives.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:43-47",
+        "src/schemaxis/adaptors/godot/adaptor.py:62-80",
+        "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+        "src/schemaxis/adaptors/godot/scripts.py:218-279",
+        "src/schemaxis/adaptors/godot/adaptor.py:266-287",
+        "src/schemaxis/adaptors/godot/scripts.py:222-224",
+        "docs/godot.md#authoring"
+      ],
+      "pitfalls": [
+        "size holds full edge lengths, not half-extents: size [2, 2, 2] spans -1 to 1 around position.",
+        "It needs a material input naming an earlier material node. Schemaxis qualified this operation natively only on small CPU-only scenes with Godot 4.7.2 (build, fresh-process reopen and readback); visual quality and GUI editing were not qualified."
+      ]
+    },
+    "sphere": {
+      "status": "reviewed",
+      "explanation": "Creates a MeshInstance3D holding a full native SphereMesh of the given radius, centred on position. Schemaxis fixes the height at twice the radius and the tessellation at 32 radial segments and 15 rings (1024 triangles), so a sphere always reopens with exactly those native parameters. Choose it for balls, markers and material comparisons; for an ellipsoid, apply a non-uniform scale.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:43-47",
+        "src/schemaxis/adaptors/godot/adaptor.py:62-80",
+        "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+        "src/schemaxis/adaptors/godot/scripts.py:218-279",
+        "src/schemaxis/adaptors/godot/adaptor.py:266-287",
+        "src/schemaxis/adaptors/godot/scripts.py:225-230",
+        "src/schemaxis/adaptors/godot/adaptor.py:279-281",
+        "docs/godot.md#authoring",
+        "docs/godot.md#authoring"
+      ],
+      "pitfalls": [
+        "The surface is a polygon approximation with 32 segments around; it is not suitable as an exact analytic sphere.",
+        "It needs a material input naming an earlier material node. Schemaxis qualified this operation natively only on small CPU-only scenes with Godot 4.7.2 (build, fresh-process reopen and readback); visual quality and GUI editing were not qualified."
+      ]
+    },
+    "cylinder": {
+      "status": "reviewed",
+      "explanation": "Creates a MeshInstance3D holding a native CylinderMesh with equal top and bottom radius, standing along its local Y axis and centred on position (it extends height/2 above and below). Tessellation is fixed at 32 radial segments and one ring (192 triangles). Choose it for posts, pipes and columns; rotate it to lie along another axis. Cones are not available because only one radius is accepted.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:43-47",
+        "src/schemaxis/adaptors/godot/adaptor.py:62-80",
+        "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+        "src/schemaxis/adaptors/godot/scripts.py:218-279",
+        "src/schemaxis/adaptors/godot/adaptor.py:266-287",
+        "src/schemaxis/adaptors/godot/scripts.py:231-237",
+        "src/schemaxis/adaptors/godot/adaptor.py:282-284",
+        "docs/godot.md#authoring"
+      ],
+      "pitfalls": [
+        "position is the centre of the cylinder, not its base: to stand a 1.2 m post on the ground at y = 0, use position y = 0.6.",
+        "It needs a material input naming an earlier material node. Schemaxis qualified this operation natively only on small CPU-only scenes with Godot 4.7.2 (build, fresh-process reopen and readback); visual quality and GUI editing were not qualified."
+      ]
+    },
+    "plane": {
+      "status": "reviewed",
+      "explanation": "Creates a MeshInstance3D holding a native PlaneMesh: a flat, zero-thickness rectangle (2 triangles) in its local XZ plane, facing +Y and centred on position. Choose it for floors, ground or backdrop panels; size gives its X and Z extents. Rotate it to make a wall. The default 10 x 10 m plane suits a ground under the default camera.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:43-47",
+        "src/schemaxis/adaptors/godot/adaptor.py:62-80",
+        "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+        "src/schemaxis/adaptors/godot/scripts.py:218-279",
+        "src/schemaxis/adaptors/godot/adaptor.py:266-287",
+        "src/schemaxis/adaptors/godot/scripts.py:250-252",
+        "https://docs.godotengine.org/en/stable/classes/class_planemesh.html",
+        "https://docs.godotengine.org/en/stable/classes/class_basematerial3d.html",
+        "docs/godot.md#authoring"
+      ],
+      "pitfalls": [
+        "With the default material settings Godot draws only the face pointing along the plane's +Y normal, so a plane seen from below or from behind is invisible; rotate it so its normal faces the camera.",
+        "It needs a material input naming an earlier material node. Schemaxis qualified this operation natively only on small CPU-only scenes with Godot 4.7.2 (build, fresh-process reopen and readback); visual quality and GUI editing were not qualified."
+      ]
+    },
+    "readGLTF": {
+      "status": "reviewed",
+      "explanation": "Imports one static triangle mesh from a self-contained .gltf 2.0 file with Godot's GLTFDocument and places it as an editable ArrayMesh in a MeshInstance3D, using the connected material and the authored position, rotation and scale. Choose it to bring CAD or modelling output into a scene when no primitive fits. Schemaxis accepts only a narrow subset (one scene, one untransformed node, one mesh with one TRIANGLES primitive, embedded base64 buffers, POSITION and optional NORMAL, at most 8 MiB) and rejects anything else instead of discarding it. The file bytes are captured and hashed before import, and the native bounds and triangle count are checked against values measured from those bytes.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:48-49",
+        "src/schemaxis/adaptors/godot/adaptor.py:145-146",
+        "src/schemaxis/adaptors/godot/adaptor.py:331-355",
+        "src/schemaxis/adaptors/godot/gltf.py:9-105",
+        "src/schemaxis/adaptors/godot/scripts.py:253-274",
+        "src/schemaxis/adaptors/godot/adaptor.py:272-273",
+        "docs/godot.md#geometry-import-and-loss-limits",
+        "https://docs.godotengine.org/en/stable/classes/class_gltfdocument.html",
+        "https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#coordinate-system-and-units"
+      ],
+      "pitfalls": [
+        "GLB files, external .bin or texture URIs, node transforms, glTF materials, animation, skins and extensions are rejected with UNSUPPORTED_RESOURCE; export a plain embedded .gltf mesh instead.",
+        "The glTF's own materials are not imported; the surface look comes only from the material input.",
+        "Verification establishes bounds and triangle count, not vertex-by-vertex or normal equivalence. Schemaxis qualified this operation natively only on small CPU-only scenes with Godot 4.7.2 (build, fresh-process reopen and readback); visual quality and GUI editing were not qualified."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/godot-gltf.json",
+          "purpose": "Template scene importing one embedded glTF mesh; replace the absolute file path."
+        }
+      ]
+    },
+    "sprite3D": {
+      "status": "reviewed",
+      "explanation": "Embeds a PNG image as an editable Sprite3D with an ImageTexture: a flat, double-sided picture centred on position, facing +Z, whose world size is the image size in pixels multiplied by pixelSize. Choose it to show pixel art, a sprite sheet from an Aseprite operation or any other PNG inside a 3D scene; it needs no material and counts as the visible geometry a scene requires. Schemaxis uses nearest-neighbour filtering so pixels stay crisp, and checks the reopened texture's dimensions and RGBA pixel digest.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:50-52",
+        "src/schemaxis/adaptors/godot/adaptor.py:147-148",
+        "src/schemaxis/adaptors/godot/adaptor.py:288-292",
+        "src/schemaxis/adaptors/godot/adaptor.py:459-462",
+        "src/schemaxis/adaptors/godot/scripts.py:185-196",
+        "src/schemaxis/png.py:6-25",
+        "docs/media-workflows.md#godot-image-placement",
+        "https://docs.godotengine.org/en/stable/classes/class_spritebase3d.html"
+      ],
+      "pitfalls": [
+        "Only non-interlaced 8-bit RGB or RGBA PNG up to 4096 x 4096 pixels is accepted; palette, greyscale, 16-bit and interlaced files fail with INVALID_IMAGE.",
+        "The sprite is not a billboard and has no rotation or scale option: it always faces +Z, so a camera looking along +Z sees its back (mirrored).",
+        "A whole sprite sheet is shown as one picture; frames are not animated."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/sprite-to-godot.json",
+          "purpose": "Workflow placing an Aseprite sprite sheet in a Godot scene with pixelSize 0.05."
+        }
+      ]
+    },
+    "camera": {
+      "status": "reviewed",
+      "explanation": "Creates the scene's single perspective Camera3D at position, turned with look_at so that it looks at target with +Y up, and makes it the current camera. Every Godot document needs exactly one camera node; it frames the optional preview image and the view when the saved project is run. With orbit enabled, a fixed trusted script lets a user orbit, zoom and reset the view interactively in Godot.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:53-55",
+        "src/schemaxis/adaptors/godot/adaptor.py:139-144",
+        "src/schemaxis/adaptors/godot/adaptor.py:151-152",
+        "src/schemaxis/adaptors/godot/adaptor.py:293-300",
+        "src/schemaxis/adaptors/godot/scripts.py:19-46",
+        "src/schemaxis/adaptors/godot/scripts.py:175-184",
+        "src/schemaxis/adaptors/godot/scripts.py:283-287",
+        "https://docs.godotengine.org/en/stable/classes/class_camera3d.html",
+        "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+        "docs/godot.md#native-output-and-verification"
+      ],
+      "pitfalls": [
+        "A camera directly above or below its target (no horizontal separation) is rejected, because the Y-up look-at direction would be undefined; offset position slightly in X or Z for a near top-down view.",
+        "Schemaxis does not check that geometry is inside the view; a preview can be valid but empty if the camera misses it.",
+        "A second camera node fails planning with INVALID_SELECTION."
+      ]
+    },
+    "directionalLight": {
+      "status": "reviewed",
+      "explanation": "Creates a DirectionalLight3D: parallel light from a distant source such as the sun, whose direction comes only from rotation (light travels along the node's rotated -Z axis); it has no position and lights the whole scene equally. Choose it as the main key or sun light; add omniLight or spotLight for local light. Shadows are not offered for this operation. Schemaxis does not require any light node; add one when the preview or running project should show directional shading.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:56-58",
+        "src/schemaxis/adaptors/godot/scripts.py:213-217",
+        "src/schemaxis/adaptors/godot/adaptor.py:301-302",
+        "https://docs.godotengine.org/en/stable/classes/class_directionallight3d.html",
+        "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+      ],
+      "pitfalls": [
+        "Rotation [0, 0, 0] points the light horizontally along -Z; tilt it downward with a negative X angle (the default is [-45, -30, 0])."
+      ]
+    },
+    "capsule": {
+      "status": "reviewed",
+      "explanation": "Creates a MeshInstance3D holding a native CapsuleMesh: a cylinder with hemispherical ends standing along its local Y axis, centred on position. height is the total height including both caps, so it must be at least twice the radius; tessellation is fixed at 32 radial segments and 8 rings. Choose it for character or obstacle placeholders and rounded rods.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:43-47",
+        "src/schemaxis/adaptors/godot/adaptor.py:62-80",
+        "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+        "src/schemaxis/adaptors/godot/scripts.py:218-279",
+        "src/schemaxis/adaptors/godot/adaptor.py:266-287",
+        "src/schemaxis/adaptors/godot/scripts.py:238-243",
+        "src/schemaxis/adaptors/godot/adaptor.py:135-136",
+        "https://docs.godotengine.org/en/stable/classes/class_capsulemesh.html",
+        "docs/godot.md#authoring"
+      ],
+      "pitfalls": [
+        "A height below 2 x radius fails planning with INVALID_ARGUMENT; with height exactly 2 x radius the capsule is a sphere.",
+        "It needs a material input naming an earlier material node. Schemaxis qualified this operation natively only on small CPU-only scenes with Godot 4.7.2 (build, fresh-process reopen and readback); visual quality and GUI editing were not qualified."
+      ]
+    },
+    "torus": {
+      "status": "reviewed",
+      "explanation": "Creates a MeshInstance3D holding a native TorusMesh: a ring lying in its local XZ plane around the local Y axis, centred on position. innerRadius is the radius of the hole and outerRadius the overall radius, so the tube is outerRadius - innerRadius thick. Tessellation is fixed at 32 rings and 16 ring segments. Choose it for rings, wheels and seals.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:43-47",
+        "src/schemaxis/adaptors/godot/adaptor.py:62-80",
+        "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+        "src/schemaxis/adaptors/godot/scripts.py:218-279",
+        "src/schemaxis/adaptors/godot/adaptor.py:266-287",
+        "src/schemaxis/adaptors/godot/scripts.py:244-249",
+        "src/schemaxis/adaptors/godot/adaptor.py:137-138",
+        "src/schemaxis/adaptors/godot/adaptor.py:205-206",
+        "https://docs.godotengine.org/en/stable/classes/class_torusmesh.html",
+        "docs/godot.md#authoring"
+      ],
+      "pitfalls": [
+        "innerRadius must be smaller than outerRadius; equal or reversed values fail planning with INVALID_ARGUMENT.",
+        "It needs a material input naming an earlier material node. Schemaxis qualified this operation natively only on small CPU-only scenes with Godot 4.7.2 (build, fresh-process reopen and readback); visual quality and GUI editing were not qualified."
+      ]
+    },
+    "omniLight": {
+      "status": "reviewed",
+      "explanation": "Creates an OmniLight3D: a point light at position that shines in all directions and lights nothing beyond range metres. attenuation shapes how brightness falls with distance inside that radius, and shadows can be enabled. Choose it for lamps, fill and rim lights; use spotLight for a directed cone and directionalLight for sunlight.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:67-70",
+        "src/schemaxis/adaptors/godot/scripts.py:197-212",
+        "src/schemaxis/adaptors/godot/adaptor.py:301-302",
+        "https://docs.godotengine.org/en/stable/classes/class_omnilight3d.html",
+        "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+      ],
+      "pitfalls": [
+        "Objects farther than range from the light receive none of its light, however high energy is."
+      ]
+    },
+    "spotLight": {
+      "status": "reviewed",
+      "explanation": "Creates a SpotLight3D: a cone of light from position along the node's rotated -Z axis, with angle as the cone's half-angle and range as its reach in metres. attenuation and angleAttenuation shape the fall-off with distance and towards the cone edge; shadows can be enabled. Choose it for key lights, stage lights or torches; use omniLight for light in all directions.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/adaptor.py:71-75",
+        "src/schemaxis/adaptors/godot/scripts.py:197-212",
+        "src/schemaxis/adaptors/godot/adaptor.py:301-302",
+        "https://docs.godotengine.org/en/stable/classes/class_spotlight3d.html",
+        "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+      ],
+      "pitfalls": [
+        "With rotation [0, 0, 0] the cone points horizontally along -Z; aim it with a negative X angle (downward) and a Y angle (heading).",
+        "angle is measured from the cone axis to its edge, so 45 gives a 90-degree wide cone."
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.godot/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A Godot scene document: an ordered list of material, geometry, sprite, light and camera nodes that Schemaxis builds into an editable Godot 4 project (project.godot) and scene (scene.tscn) in metres, then reopens in a fresh Godot process and checks node by node. It needs exactly one camera and at least one mesh or sprite; set preview to also render a 640 x 480 PNG from that camera.",
+          "pitfalls": [
+            "Editing the saved scene in Godot is supported but invalidates the original verification receipt; keep the whole output directory together."
+          ],
+          "examples": [
+            {
+              "version": "schemaxis.godot/1",
+              "units": "m",
+              "nodes": [
+                {
+                  "id": "paint",
+                  "filter": "material"
+                },
+                {
+                  "id": "block",
+                  "filter": "box",
+                  "inputs": {
+                    "material": "paint"
+                  },
+                  "options": {
+                    "size": [
+                      2,
+                      2,
+                      2
+                    ]
+                  }
+                },
+                {
+                  "id": "view",
+                  "filter": "camera"
+                },
+                {
+                  "id": "sun",
+                  "filter": "directionalLight"
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:99-159",
+            "src/schemaxis/adaptors/godot/adaptor.py:162-174",
+            "src/schemaxis/adaptors/godot/adaptor.py:452-456",
+            "docs/godot.md#authoring",
+            "docs/media-workflows.md#published-artifact-order"
+          ]
+        },
+        "/properties/version": {
+          "status": "reference",
+          "explanation": "Identifies the document format and chooses its adaptor. Keep the version matching the selected schema.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/units": {
+          "status": "reviewed",
+          "explanation": "Declares that every length and position in the document is in metres, matching Godot's convention of one unit per metre. Only \"m\" is accepted; Schemaxis performs no unit conversion.",
+          "label": "Length units",
+          "defaultMeaning": "Optional; when omitted, Schemaxis treats the document as metres.",
+          "pitfalls": [
+            "Any other value, such as \"cm\", fails planning with UNSUPPORTED_UNITS; convert lengths to metres instead."
+          ],
+          "examples": [
+            "m"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:106-107",
+            "docs/godot.md#authoring"
+          ]
+        },
+        "/properties/preview": {
+          "status": "reviewed",
+          "explanation": "When true, Schemaxis runs a third Godot process that renders the saved scene through the scene camera into a 640 x 480 preview.png, using Godot's OpenGL compatibility renderer with software Mesa in an isolated Xvfb display, and publishes it as a third artifact (kind image). When false, only the project and scene are produced and no display is needed.",
+          "label": "Render preview image",
+          "defaultMeaning": "Schemaxis default: false (no preview image).",
+          "pitfalls": [
+            "Preview needs Linux xvfb-run and an X11-capable Godot build; otherwise the run fails with PREVIEW_UNAVAILABLE. Set false on machines without them.",
+            "A successful preview is not proof that geometry is visible: an empty image means the camera misses it.",
+            "Rendering shares the run's total timeout with the build and reopen stages."
+          ],
+          "examples": [
+            true
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:102-103",
+            "src/schemaxis/adaptors/godot/adaptor.py:159",
+            "src/schemaxis/adaptors/godot/adaptor.py:305-318",
+            "src/schemaxis/adaptors/godot/adaptor.py:415-425",
+            "src/schemaxis/adaptors/godot/scripts.py:327-362",
+            "docs/godot.md#optional-rendered-console-image"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reviewed",
+          "explanation": "The scene's declarations, 1 to 128 nodes, processed in order. Materials must appear before the meshes that use them, there must be exactly one camera and at least one geometry or sprite3D node, and node ids must be unique. Every node except materials becomes a direct child of the saved scene root, named by its id.",
+          "label": "Scene nodes",
+          "pitfalls": [
+            "Order matters only for references: a material input naming a later node fails with INVALID_DEPENDENCY."
+          ],
+          "examples": [
+            [
+              {
+                "id": "paint",
+                "filter": "material"
+              },
+              {
+                "id": "ball",
+                "filter": "sphere",
+                "inputs": {
+                  "material": "paint"
+                }
+              },
+              {
+                "id": "view",
+                "filter": "camera"
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:108-155",
+            "src/schemaxis/adaptors/godot/scripts.py:158-288"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reviewed",
+          "explanation": "One declaration in the scene. Its filter chooses the operation: material creates a reusable surface; box, sphere, cylinder, plane, capsule, torus and readGLTF create meshes that need a material input; sprite3D places a PNG; camera, directionalLight, omniLight and spotLight need no inputs.",
+          "examples": [
+            {
+              "id": "lamp",
+              "filter": "omniLight",
+              "options": {
+                "position": [
+                  0,
+                  3,
+                  0
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:40-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:112-150"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Choose a material node to define one opaque surface look (base colour, roughness, metallic) that one or more meshes reference through their material input. It adds no scene node of its own.",
+          "examples": [
+            {
+              "id": "steel",
+              "filter": "material",
+              "options": {
+                "colour": [
+                  0.6,
+                  0.6,
+                  0.65
+                ],
+                "roughness": 0.3,
+                "metallic": 1
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:41-42",
+            "src/schemaxis/adaptors/godot/scripts.py:166-173"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options": {
+          "status": "reviewed",
+          "explanation": "The physically based surface parameters of the StandardMaterial3D. colour sets the hue and brightness, while roughness and metallic decide how reflective and how metal-like the surface looks under lights. Omitted settings take the Schemaxis defaults: colour [0.3, 0.6, 0.9], roughness 0.6, metallic 0.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:41-42",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125",
+            "src/schemaxis/adaptors/godot/scripts.py:166-173"
+          ],
+          "examples": [
+            {
+              "colour": [
+                0.8,
+                0.2,
+                0.1
+              ],
+              "roughness": 0.9
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colour": {
+          "status": "reviewed",
+          "explanation": "Base (albedo) colour of the surface as [red, green, blue], each from 0 to 1, written to albedo_color with alpha 1. Lit surfaces show this colour modulated by lights; for metallic surfaces it tints the reflections instead of the diffuse colour.",
+          "label": "Base colour",
+          "units": "Fraction 0-1 per RGB channel",
+          "defaultMeaning": "Schemaxis default: [0.3, 0.6, 0.9] (light blue); Godot's own default would be white.",
+          "pitfalls": [
+            "Use 0-1 fractions, not 0-255 bytes: [255, 0, 0] is rejected; write [1, 0, 0]."
+          ],
+          "examples": [
+            [
+              0.9,
+              0.45,
+              0.15
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:42",
+            "src/schemaxis/adaptors/godot/scripts.py:73-74",
+            "src/schemaxis/adaptors/godot/scripts.py:169",
+            "https://docs.godotengine.org/en/stable/classes/class_basematerial3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/colour/items": {
+          "status": "reviewed",
+          "explanation": "One colour channel from 0 (none) to 1 (full); the first element is red, the second green, the third blue.",
+          "examples": [
+            0.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:42",
+            "src/schemaxis/adaptors/godot/scripts.py:73-74"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/roughness": {
+          "status": "reviewed",
+          "explanation": "How rough the surface is, from 0 to 1. Godot treats 0 as a perfect mirror and 1 as fully blurred reflection; intermediate values give broader, softer highlights as the value increases.",
+          "label": "Roughness",
+          "units": "Dimensionless 0-1",
+          "defaultMeaning": "Schemaxis default: 0.6 (Godot's own default is 1).",
+          "pitfalls": [
+            "Roughness changes how highlights and reflections spread, not the surface colour; to make a surface darker, change colour."
+          ],
+          "examples": [
+            0.2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:42",
+            "src/schemaxis/adaptors/godot/scripts.py:170",
+            "https://docs.godotengine.org/en/stable/classes/class_basematerial3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/metallic": {
+          "status": "reviewed",
+          "explanation": "How metal-like the surface is, from 0 (dielectric such as plastic or paint) to 1 (metal). Metals use the base colour to tint reflections and have no diffuse colour; Godot recommends 0 or 1 and intermediate values only for blending between metal and non-metal.",
+          "label": "Metallic",
+          "units": "Dimensionless 0-1",
+          "defaultMeaning": "Schemaxis default: 0 (non-metal), the same as Godot's default.",
+          "pitfalls": [
+            "A fully metallic material with little to reflect can appear very dark; lower roughness and add lights, or keep metallic at 0."
+          ],
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:42",
+            "src/schemaxis/adaptors/godot/scripts.py:171",
+            "https://docs.godotengine.org/en/stable/classes/class_basematerial3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Choose a box node for a rectangular block (wall, platform, crate, bounding volume) given by three edge lengths and a centre; it needs a material input. Verification checks its exact bounds and 12 triangles.",
+          "examples": [
+            {
+              "id": "block",
+              "filter": "box",
+              "inputs": {
+                "material": "paint"
+              },
+              "options": {
+                "size": [
+                  2,
+                  1,
+                  0.5
+                ],
+                "position": [
+                  0,
+                  0.5,
+                  0
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:43",
+            "src/schemaxis/adaptors/godot/scripts.py:222-224",
+            "src/schemaxis/adaptors/godot/adaptor.py:203-204"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options": {
+          "status": "reviewed",
+          "explanation": "Placement and dimensions of the box. size decides the shape; position, rotation and scale form the node transform. Omitted settings take the Schemaxis defaults: a 1 m cube at the origin, unrotated and unscaled.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:43",
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "size": [
+                4,
+                0.2,
+                3
+              ],
+              "position": [
+                0,
+                1.5,
+                0
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] of the box centre in metres (the BoxMesh is centred on its node). A box resting on the ground at y = 0 needs y equal to half its height.",
+          "label": "Centre position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "pitfalls": [
+            "position is the centre, not a corner: a 2 m cube at [0, 0, 0] spans -1 to 1 on every axis."
+          ],
+          "examples": [
+            [
+              0,
+              0.5,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:38",
+            "src/schemaxis/adaptors/godot/adaptor.py:43",
+            "src/schemaxis/adaptors/godot/scripts.py:278",
+            "src/schemaxis/adaptors/godot/adaptor.py:212",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            0.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/size": {
+          "status": "reviewed",
+          "explanation": "Full edge lengths [x, y, z] of the box in metres before rotation and scale, written to BoxMesh size. The box extends half of each length on either side of position.",
+          "label": "Edge lengths",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (a 1 m cube).",
+          "pitfalls": [
+            "These are lengths, not half-extents or a far corner."
+          ],
+          "examples": [
+            [
+              2,
+              1,
+              0.5
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:43",
+            "src/schemaxis/adaptors/godot/scripts.py:224",
+            "src/schemaxis/adaptors/godot/adaptor.py:203-204",
+            "src/schemaxis/adaptors/godot/adaptor.py:275-276"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/size/items": {
+          "status": "reviewed",
+          "explanation": "One positive edge length in metres (0.001 to 10000); the first element is the X length, the second Y (height), the third Z.",
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:43"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Orientation of the box as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. A box rotated [0, 45, 0] turns its faces 45 degrees about the vertical axis.",
+          "label": "Rotation",
+          "units": "Degrees",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
+          "pitfalls": [
+            "Angles are limited to -180 to 180; write 270 degrees as -90.",
+            "Verification compares the full transform basis, so the order matters: [90, 90, 0] differs from [0, 90, 90]."
+          ],
+          "examples": [
+            [
+              0,
+              45,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-96",
+            "src/schemaxis/adaptors/godot/scripts.py:276",
+            "src/schemaxis/adaptors/godot/adaptor.py:270",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "tests/unit/test_adaptor_geometry_expansion.py:202-205"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One Euler angle in degrees between -180 and 180; the first element turns about X, the second about Y, the third about Z.",
+          "examples": [
+            45
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Scale factors [x, y, z] along the box's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. For a box, changing size is usually clearer than scaling; scale keeps BoxMesh size unchanged and stretches the node.",
+          "label": "Scale",
+          "units": "Dimensionless factor per axis",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
+          "pitfalls": [
+            "Factors must be positive (0.001 to 1000); mirroring with negative scale is not available."
+          ],
+          "examples": [
+            [
+              2,
+              1,
+              1
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+            "src/schemaxis/adaptors/godot/scripts.py:277",
+            "src/schemaxis/adaptors/godot/adaptor.py:198-215",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/scale/items": {
+          "status": "reviewed",
+          "explanation": "One positive scale factor; the first element scales the local X axis, the second Y, the third Z. 1 keeps the declared dimension.",
+          "examples": [
+            1.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs/properties/material": {
+          "status": "reviewed",
+          "explanation": "Id of an earlier material node whose StandardMaterial3D becomes this box's material override. Required; several geometry nodes may name the same material. The reopened scene must report the same colour, roughness and metallic values.",
+          "label": "Material",
+          "pitfalls": [
+            "Naming a later node fails with INVALID_DEPENDENCY, and naming a non-material node fails with TYPE_MISMATCH."
+          ],
+          "examples": [
+            "paint"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:39",
+            "src/schemaxis/adaptors/godot/adaptor.py:126-134",
+            "src/schemaxis/adaptors/godot/scripts.py:279",
+            "src/schemaxis/adaptors/godot/adaptor.py:271"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Choose a sphere node for balls, markers or material samples: a full sphere of one radius centred on position, tessellated with 32 segments and 15 rings. Use scale for an ellipsoid.",
+          "examples": [
+            {
+              "id": "ball",
+              "filter": "sphere",
+              "inputs": {
+                "material": "paint"
+              },
+              "options": {
+                "radius": 0.25,
+                "position": [
+                  0,
+                  0.25,
+                  0
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:44",
+            "src/schemaxis/adaptors/godot/scripts.py:225-230"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options": {
+          "status": "reviewed",
+          "explanation": "Size and placement of the sphere. radius decides its size; position, rotation and scale form the node transform. Omitted settings take the Schemaxis defaults: radius 0.5 m at the origin, unrotated and unscaled.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:44",
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "radius": 1,
+              "position": [
+                1.5,
+                1,
+                0
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] of the sphere centre in metres. A sphere resting on the ground at y = 0 needs y equal to its radius.",
+          "label": "Centre position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "examples": [
+            [
+              0,
+              0.5,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:44",
+            "src/schemaxis/adaptors/godot/scripts.py:278",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Radius of the sphere in metres, from 0.001 to 10000. Schemaxis also sets the native SphereMesh height to twice this value, so the result is always a full sphere with diameter 2 x radius.",
+          "label": "Radius",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 0.5 (a 1 m diameter sphere).",
+          "pitfalls": [
+            "This is the radius, not the diameter."
+          ],
+          "examples": [
+            0.25
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:44",
+            "src/schemaxis/adaptors/godot/scripts.py:226-230",
+            "src/schemaxis/adaptors/godot/adaptor.py:209-211",
+            "src/schemaxis/adaptors/godot/adaptor.py:279-281",
+            "https://docs.godotengine.org/en/stable/classes/class_spheremesh.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Orientation of the sphere as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation is visible only when scale is non-uniform or the material shows the tessellation; it still changes the verified transform.",
+          "label": "Rotation",
+          "units": "Degrees",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
+          "pitfalls": [
+            "Angles are limited to -180 to 180; write 270 degrees as -90.",
+            "Verification compares the full transform basis, so the order matters: [90, 90, 0] differs from [0, 90, 90]."
+          ],
+          "examples": [
+            [
+              0,
+              0,
+              30
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-96",
+            "src/schemaxis/adaptors/godot/scripts.py:276",
+            "src/schemaxis/adaptors/godot/adaptor.py:270",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "tests/unit/test_adaptor_geometry_expansion.py:202-205"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One Euler angle in degrees between -180 and 180; the first element turns about X, the second about Y, the third about Z.",
+          "examples": [
+            30
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Scale factors [x, y, z] along the sphere's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal factors turn the sphere into an ellipsoid with semi-axes radius x factor.",
+          "label": "Scale",
+          "units": "Dimensionless factor per axis",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
+          "pitfalls": [
+            "Factors must be positive (0.001 to 1000); mirroring with negative scale is not available."
+          ],
+          "examples": [
+            [
+              1,
+              0.5,
+              1
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+            "src/schemaxis/adaptors/godot/scripts.py:277",
+            "src/schemaxis/adaptors/godot/adaptor.py:198-215",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/scale/items": {
+          "status": "reviewed",
+          "explanation": "One positive scale factor; the first element scales the local X axis, the second Y, the third Z. 1 keeps the declared dimension.",
+          "examples": [
+            0.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs/properties/material": {
+          "status": "reviewed",
+          "explanation": "Id of an earlier material node whose StandardMaterial3D becomes this sphere's material override. Required; several geometry nodes may name the same material. The reopened scene must report the same colour, roughness and metallic values.",
+          "label": "Material",
+          "pitfalls": [
+            "Naming a later node fails with INVALID_DEPENDENCY, and naming a non-material node fails with TYPE_MISMATCH."
+          ],
+          "examples": [
+            "paint"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:39",
+            "src/schemaxis/adaptors/godot/adaptor.py:126-134",
+            "src/schemaxis/adaptors/godot/scripts.py:279",
+            "src/schemaxis/adaptors/godot/adaptor.py:271"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3": {
+          "status": "reviewed",
+          "explanation": "Choose a cylinder node for posts, pipes, columns or wheels: a straight circular cylinder along its local Y axis, centred on position, with one radius for both ends. Rotate it to lie along X or Z.",
+          "examples": [
+            {
+              "id": "post",
+              "filter": "cylinder",
+              "inputs": {
+                "material": "paint"
+              },
+              "options": {
+                "radius": 0.15,
+                "height": 1.2,
+                "position": [
+                  0,
+                  0.6,
+                  0
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:45-46",
+            "src/schemaxis/adaptors/godot/scripts.py:231-237"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options": {
+          "status": "reviewed",
+          "explanation": "Dimensions and placement of the cylinder. radius and height decide the shape; position, rotation and scale form the node transform. Omitted settings take the Schemaxis defaults: radius 0.5 m, height 1 m, at the origin, upright and unscaled.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:45-46",
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "radius": 0.1,
+              "height": 2,
+              "rotation": [
+                0,
+                0,
+                90
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] of the cylinder centre in metres, half-way along its axis. An upright cylinder standing on the ground at y = 0 needs y equal to height / 2.",
+          "label": "Centre position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "pitfalls": [
+            "position is not the base of the cylinder; a default cylinder at the origin extends from y = -0.5 to 0.5."
+          ],
+          "examples": [
+            [
+              0,
+              0.6,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:45",
+            "src/schemaxis/adaptors/godot/scripts.py:278",
+            "src/schemaxis/adaptors/godot/adaptor.py:209-212"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            0.6
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Radius of the cylinder in metres, written to both the top and bottom radius of the native CylinderMesh, so the sides are straight.",
+          "label": "Radius",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 0.5.",
+          "pitfalls": [
+            "This is the radius, not the diameter; a 0.3 m wide post has radius 0.15."
+          ],
+          "examples": [
+            0.15
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:45",
+            "src/schemaxis/adaptors/godot/scripts.py:233-234",
+            "src/schemaxis/adaptors/godot/adaptor.py:283-284"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/height": {
+          "status": "reviewed",
+          "explanation": "Length of the cylinder along its local Y axis in metres; it extends height / 2 on either side of position.",
+          "label": "Height",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "examples": [
+            1.2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:46",
+            "src/schemaxis/adaptors/godot/scripts.py:235",
+            "src/schemaxis/adaptors/godot/adaptor.py:209-211"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Orientation of the cylinder as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the cylinder along the X axis; [90, 0, 0] lays it along Z.",
+          "label": "Rotation",
+          "units": "Degrees",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
+          "pitfalls": [
+            "Angles are limited to -180 to 180; write 270 degrees as -90.",
+            "Verification compares the full transform basis, so the order matters: [90, 90, 0] differs from [0, 90, 90]."
+          ],
+          "examples": [
+            [
+              0,
+              0,
+              90
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-96",
+            "src/schemaxis/adaptors/godot/scripts.py:276",
+            "src/schemaxis/adaptors/godot/adaptor.py:270",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "tests/unit/test_adaptor_geometry_expansion.py:202-205"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One Euler angle in degrees between -180 and 180; the first element turns about X, the second about Y, the third about Z.",
+          "examples": [
+            90
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Scale factors [x, y, z] along the cylinder's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal X and Z factors give an elliptical cross-section; the Y factor multiplies the height.",
+          "label": "Scale",
+          "units": "Dimensionless factor per axis",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
+          "pitfalls": [
+            "Factors must be positive (0.001 to 1000); mirroring with negative scale is not available."
+          ],
+          "examples": [
+            [
+              1,
+              2,
+              1
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+            "src/schemaxis/adaptors/godot/scripts.py:277",
+            "src/schemaxis/adaptors/godot/adaptor.py:198-215",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/scale/items": {
+          "status": "reviewed",
+          "explanation": "One positive scale factor; the first element scales the local X axis, the second Y, the third Z. 1 keeps the declared dimension.",
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs/properties/material": {
+          "status": "reviewed",
+          "explanation": "Id of an earlier material node whose StandardMaterial3D becomes this cylinder's material override. Required; several geometry nodes may name the same material. The reopened scene must report the same colour, roughness and metallic values.",
+          "label": "Material",
+          "pitfalls": [
+            "Naming a later node fails with INVALID_DEPENDENCY, and naming a non-material node fails with TYPE_MISMATCH."
+          ],
+          "examples": [
+            "paint"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:39",
+            "src/schemaxis/adaptors/godot/adaptor.py:126-134",
+            "src/schemaxis/adaptors/godot/scripts.py:279",
+            "src/schemaxis/adaptors/godot/adaptor.py:271"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4": {
+          "status": "reviewed",
+          "explanation": "Choose a plane node for a floor, ground or flat panel: a zero-thickness rectangle in its local XZ plane, facing +Y, centred on position. Rotate it to make a wall or backdrop.",
+          "examples": [
+            {
+              "id": "floor",
+              "filter": "plane",
+              "inputs": {
+                "material": "paint"
+              },
+              "options": {
+                "size": [
+                  8,
+                  8
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:47",
+            "src/schemaxis/adaptors/godot/scripts.py:250-252"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options": {
+          "status": "reviewed",
+          "explanation": "Extent and placement of the plane. size gives its X and Z lengths; position, rotation and scale form the node transform. Omitted settings take the Schemaxis defaults: a 10 x 10 m horizontal plane centred at the origin.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:47",
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "size": [
+                12,
+                12
+              ],
+              "position": [
+                0,
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] of the plane centre in metres. For a ground plane, y is the ground height; objects meant to rest on it must be placed relative to this height.",
+          "label": "Centre position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "examples": [
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:47",
+            "src/schemaxis/adaptors/godot/scripts.py:278",
+            "src/schemaxis/adaptors/godot/adaptor.py:207-208"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            0
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/size": {
+          "status": "reviewed",
+          "explanation": "Lengths [x, z] of the rectangle in metres: the first element is the extent along local X, the second along local Z. The plane has no thickness; it extends half of each length on either side of position.",
+          "label": "Plane size",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: [10, 10] (Godot's own PlaneMesh default would be 2 x 2).",
+          "pitfalls": [
+            "The second number is the Z length, not a height: the plane is horizontal until rotated."
+          ],
+          "examples": [
+            [
+              12,
+              8
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:47",
+            "src/schemaxis/adaptors/godot/scripts.py:252",
+            "src/schemaxis/adaptors/godot/adaptor.py:207-208",
+            "https://docs.godotengine.org/en/stable/classes/class_planemesh.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/size/items": {
+          "status": "reviewed",
+          "explanation": "One positive length in metres (0.001 to 10000); the first element is along local X, the second along local Z.",
+          "examples": [
+            10
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:47"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Orientation of the plane as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] turns the horizontal plane into a wall facing +Z; [-90, 0, 0] faces it towards -Z.",
+          "label": "Rotation",
+          "units": "Degrees",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
+          "pitfalls": [
+            "Angles are limited to -180 to 180; write 270 degrees as -90.",
+            "Verification compares the full transform basis, so the order matters: [90, 90, 0] differs from [0, 90, 90]."
+          ],
+          "examples": [
+            [
+              90,
+              0,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-96",
+            "src/schemaxis/adaptors/godot/scripts.py:276",
+            "src/schemaxis/adaptors/godot/adaptor.py:270",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "tests/unit/test_adaptor_geometry_expansion.py:202-205"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One Euler angle in degrees between -180 and 180; the first element turns about X, the second about Y, the third about Z.",
+          "examples": [
+            90
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Scale factors [x, y, z] along the plane's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The X and Z factors multiply the two size lengths; the Y factor has no visible effect on a flat plane.",
+          "label": "Scale",
+          "units": "Dimensionless factor per axis",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
+          "pitfalls": [
+            "Factors must be positive (0.001 to 1000); mirroring with negative scale is not available."
+          ],
+          "examples": [
+            [
+              2,
+              1,
+              1
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+            "src/schemaxis/adaptors/godot/scripts.py:277",
+            "src/schemaxis/adaptors/godot/adaptor.py:198-215",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/scale/items": {
+          "status": "reviewed",
+          "explanation": "One positive scale factor; the first element scales the local X axis, the second Y, the third Z. 1 keeps the declared dimension.",
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs/properties/material": {
+          "status": "reviewed",
+          "explanation": "Id of an earlier material node whose StandardMaterial3D becomes this plane's material override. Required; several geometry nodes may name the same material. The reopened scene must report the same colour, roughness and metallic values.",
+          "label": "Material",
+          "pitfalls": [
+            "Naming a later node fails with INVALID_DEPENDENCY, and naming a non-material node fails with TYPE_MISMATCH."
+          ],
+          "examples": [
+            "paint"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:39",
+            "src/schemaxis/adaptors/godot/adaptor.py:126-134",
+            "src/schemaxis/adaptors/godot/scripts.py:279",
+            "src/schemaxis/adaptors/godot/adaptor.py:271"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5": {
+          "status": "reviewed",
+          "explanation": "Choose a readGLTF node to place one mesh from an existing .gltf file, for example a part exported from a CAD or modelling tool, when no primitive fits. Only the documented single-mesh, embedded-buffer subset is accepted; the mesh gets the connected material.",
+          "examples": [
+            {
+              "id": "part",
+              "filter": "readGLTF",
+              "inputs": {
+                "material": "paint"
+              },
+              "options": {
+                "file": "/data/part.gltf"
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:48-49",
+            "src/schemaxis/adaptors/godot/gltf.py:12-105",
+            "src/schemaxis/adaptors/godot/scripts.py:253-274"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options": {
+          "status": "reviewed",
+          "explanation": "The glTF file to import and the transform applied to its mesh. file is required; position, rotation and scale default to no transform, so the mesh appears exactly at its own glTF coordinates.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:48-49",
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "file": "/data/part.gltf",
+              "position": [
+                0,
+                0,
+                0
+              ],
+              "scale": [
+                0.001,
+                0.001,
+                0.001
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] in metres where the glTF mesh's own origin is placed. The mesh is not re-centred: if its vertices lie away from their origin, the mesh appears offset from position by the same amount.",
+          "label": "Origin position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0] (keep the glTF coordinates).",
+          "examples": [
+            [
+              0,
+              1,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:48",
+            "src/schemaxis/adaptors/godot/scripts.py:278",
+            "src/schemaxis/adaptors/godot/adaptor.py:200-201",
+            "src/schemaxis/adaptors/godot/adaptor.py:212-215"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the .gltf 2.0 file to import. The file must contain one scene with one untransformed node, one mesh with one TRIANGLES primitive, embedded base64 buffers, float POSITION and optional NORMAL, at most 100000 elements per accessor and 8 MiB in size. Its bytes are copied into the run directory and hashed before import. glTF coordinates are metres with +Y up, the same convention as Godot, so vertices are used without axis or unit conversion. In a workflow, a gltf artifact from an earlier operation can supply this file.",
+          "label": "glTF file",
+          "pitfalls": [
+            "Relative paths and .glb files fail planning with UNSUPPORTED_RESOURCE; give an absolute path to a text .gltf with embedded buffers.",
+            "Geometry modelled in millimetres appears 1000 times too large; use scale 0.001 or export in metres.",
+            "All imported glTF and PNG files in one document together may not exceed 32 MiB."
+          ],
+          "examples": [
+            "/data/models/part.gltf"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:145-146",
+            "src/schemaxis/adaptors/godot/adaptor.py:341-355",
+            "src/schemaxis/adaptors/godot/gltf.py:9-105",
+            "src/schemaxis/adaptors/godot/integration.py:5-11",
+            "docs/godot.md#geometry-import-and-loss-limits",
+            "https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#coordinate-system-and-units"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Orientation of the imported mesh as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation turns the mesh about its glTF origin, not about its centre.",
+          "label": "Rotation",
+          "units": "Degrees",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
+          "pitfalls": [
+            "Angles are limited to -180 to 180; write 270 degrees as -90.",
+            "Verification compares the full transform basis, so the order matters: [90, 90, 0] differs from [0, 90, 90]."
+          ],
+          "examples": [
+            [
+              0,
+              90,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-96",
+            "src/schemaxis/adaptors/godot/scripts.py:276",
+            "src/schemaxis/adaptors/godot/adaptor.py:270",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "tests/unit/test_adaptor_geometry_expansion.py:202-205"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One Euler angle in degrees between -180 and 180; the first element turns about X, the second about Y, the third about Z.",
+          "examples": [
+            90
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Scale factors [x, y, z] along the imported mesh's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Use it to convert a model authored in other length units, for example 0.001 for millimetres; scaling is about the glTF origin.",
+          "label": "Scale",
+          "units": "Dimensionless factor per axis",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
+          "pitfalls": [
+            "Factors must be positive (0.001 to 1000); mirroring with negative scale is not available."
+          ],
+          "examples": [
+            [
+              0.001,
+              0.001,
+              0.001
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+            "src/schemaxis/adaptors/godot/scripts.py:277",
+            "src/schemaxis/adaptors/godot/adaptor.py:198-215",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/scale/items": {
+          "status": "reviewed",
+          "explanation": "One positive scale factor; the first element scales the local X axis, the second Y, the third Z. 1 keeps the declared dimension.",
+          "examples": [
+            0.001
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs/properties/material": {
+          "status": "reviewed",
+          "explanation": "Id of an earlier material node whose StandardMaterial3D becomes this imported mesh's material override. Required; several geometry nodes may name the same material. The reopened scene must report the same colour, roughness and metallic values.",
+          "label": "Material",
+          "pitfalls": [
+            "Naming a later node fails with INVALID_DEPENDENCY, and naming a non-material node fails with TYPE_MISMATCH."
+          ],
+          "examples": [
+            "paint"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:39",
+            "src/schemaxis/adaptors/godot/adaptor.py:126-134",
+            "src/schemaxis/adaptors/godot/scripts.py:279",
+            "src/schemaxis/adaptors/godot/adaptor.py:271"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6": {
+          "status": "reviewed",
+          "explanation": "Choose a sprite3D node to show a PNG picture (pixel art, a sprite sheet or a rendered image) as a flat textured rectangle in the scene. It needs no material, faces +Z and is sized by pixelSize.",
+          "examples": [
+            {
+              "id": "sprite",
+              "filter": "sprite3D",
+              "options": {
+                "file": "/data/sheet.png",
+                "pixelSize": 0.05
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:50-52",
+            "src/schemaxis/adaptors/godot/scripts.py:185-196"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options": {
+          "status": "reviewed",
+          "explanation": "The image to embed and how large and where it appears. file is required; pixelSize converts image pixels to metres. Omitted settings take the Schemaxis defaults: 0.01 m per pixel, centred at the origin.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:50-52",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "file": "/data/sprite.png",
+              "pixelSize": 0.05,
+              "position": [
+                0,
+                1,
+                0
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] in metres of the centre of the sprite rectangle. The picture lies in a plane parallel to XY through this point.",
+          "label": "Centre position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "pitfalls": [
+            "To stand the sprite on the ground at y = 0, raise it by half its height: image height in pixels x pixelSize / 2."
+          ],
+          "examples": [
+            [
+              0,
+              0.8,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:50",
+            "src/schemaxis/adaptors/godot/scripts.py:195",
+            "https://docs.godotengine.org/en/stable/classes/class_spritebase3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            0.8
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the PNG image to show. Schemaxis decodes the actual pixels, copies the file into the run directory and embeds the texture in the saved scene, so the original file may later move. Accepted images are non-interlaced 8-bit RGB or RGBA PNG up to 4096 x 4096 pixels; transparent pixels stay transparent. In a workflow, an image or spriteSheet artifact (for example an Aseprite preview or sheet) can supply this file.",
+          "label": "PNG file",
+          "pitfalls": [
+            "Relative paths fail planning with UNSUPPORTED_RESOURCE.",
+            "Palette (indexed), greyscale, 16-bit and interlaced PNGs fail with INVALID_IMAGE; re-save as 8-bit RGBA."
+          ],
+          "examples": [
+            "/data/sprites/sheet.png"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:147-148",
+            "src/schemaxis/adaptors/godot/adaptor.py:341-355",
+            "src/schemaxis/adaptors/godot/adaptor.py:459-462",
+            "src/schemaxis/png.py:6-25",
+            "docs/media-workflows.md#godot-image-placement"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/pixelSize": {
+          "status": "reviewed",
+          "explanation": "Width and height in metres of one image pixel in the scene, written to Sprite3D pixel_size. The sprite's world size is its pixel dimensions times this value: a 16 x 16 image with pixelSize 0.05 is 0.8 m square.",
+          "label": "Pixel size",
+          "units": "Metres per image pixel",
+          "defaultMeaning": "Schemaxis default: 0.01 (the same as Godot's default), so 100 pixels span 1 m.",
+          "pitfalls": [
+            "Small pixel-art images look tiny at the default; a 16-pixel sprite is only 0.16 m wide. Increase pixelSize or move the camera closer."
+          ],
+          "examples": [
+            0.05
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:52",
+            "src/schemaxis/adaptors/godot/scripts.py:194",
+            "src/schemaxis/adaptors/godot/adaptor.py:290",
+            "https://docs.godotengine.org/en/stable/classes/class_spritebase3d.html",
+            "docs/media-workflows.md#godot-image-placement"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7": {
+          "status": "reviewed",
+          "explanation": "Choose the camera node to set the single viewpoint of the scene: an eye position, a point to look at and the perspective settings. Each document needs exactly one.",
+          "examples": [
+            {
+              "id": "view",
+              "filter": "camera",
+              "options": {
+                "position": [
+                  0,
+                  2,
+                  6
+                ],
+                "target": [
+                  0,
+                  1,
+                  0
+                ],
+                "fov": 50
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:53-55",
+            "src/schemaxis/adaptors/godot/adaptor.py:151-152",
+            "src/schemaxis/adaptors/godot/scripts.py:175-184"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options": {
+          "status": "reviewed",
+          "explanation": "Viewpoint and projection of the camera. position and target decide what is in view, fov how wide the view is, and near and far the visible depth range; orbit adds interactive controls in Godot. Omitted settings take the Schemaxis defaults: position [5, 4, 7] looking at the origin, fov 55, near 0.05, far 1000, orbit on.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:53-55",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "position": [
+                0,
+                3,
+                8
+              ],
+              "target": [
+                0,
+                0.5,
+                0
+              ],
+              "orbit": false
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] of the camera eye in metres. Together with target it fixes the view direction; the camera has no separate rotation setting. Its distance from target must be 0.01 m to 100 km and it must not be directly above or below target.",
+          "label": "Eye position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [5, 4, 7], above and to the side of the origin.",
+          "pitfalls": [
+            "position [0, 5, 0] with target [0, 0, 0] is straight down and fails planning; use [0, 5, 0.01] or more horizontal offset for a top view."
+          ],
+          "examples": [
+            [
+              0,
+              2,
+              6
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:53",
+            "src/schemaxis/adaptors/godot/adaptor.py:139-142",
+            "src/schemaxis/adaptors/godot/scripts.py:177",
+            "src/schemaxis/adaptors/godot/scripts.py:283-284"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            6
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/target": {
+          "status": "reviewed",
+          "explanation": "World point [x, y, z] in metres that the camera looks at; Schemaxis calls Godot's look_at with +Y as up, so the camera never rolls. With orbit enabled, it is also the pivot the interactive orbit turns around.",
+          "label": "Look-at target",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0] (the world origin).",
+          "pitfalls": [
+            "Aim at the centre of the objects of interest, not at the ground under them, to keep them in the middle of the view."
+          ],
+          "examples": [
+            [
+              0,
+              1,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:53",
+            "src/schemaxis/adaptors/godot/adaptor.py:294-300",
+            "src/schemaxis/adaptors/godot/scripts.py:181-184",
+            "src/schemaxis/adaptors/godot/scripts.py:283-284",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/target/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            0
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/fov": {
+          "status": "reviewed",
+          "explanation": "Field-of-view angle of the perspective camera in degrees, written to Camera3D fov. With Godot's default aspect mode (keep height) this is the vertical angle; the horizontal angle follows from the window or preview aspect ratio. Smaller values zoom in and flatten perspective; larger values widen the view and exaggerate perspective.",
+          "label": "Field of view",
+          "units": "Degrees (vertical)",
+          "defaultMeaning": "Schemaxis default: 55 (Godot's own default is 75).",
+          "pitfalls": [
+            "To fit more of the scene, moving the camera back often distorts less than raising fov beyond about 90."
+          ],
+          "examples": [
+            40
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:54",
+            "src/schemaxis/adaptors/godot/scripts.py:178",
+            "src/schemaxis/adaptors/godot/adaptor.py:298-299",
+            "https://docs.godotengine.org/en/stable/classes/class_camera3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/near": {
+          "status": "reviewed",
+          "explanation": "Distance in metres from the camera to the near clipping plane, written to Camera3D near; anything closer is not drawn. It must be smaller than far. With orbit on, it also limits how close the wheel can zoom.",
+          "label": "Near clip distance",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 0.05 (the same as Godot's default).",
+          "pitfalls": [
+            "Very small near values with a large far value reduce depth precision and can cause flickering surfaces; raise near when the scene is large."
+          ],
+          "examples": [
+            0.1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:54",
+            "src/schemaxis/adaptors/godot/adaptor.py:143-144",
+            "src/schemaxis/adaptors/godot/scripts.py:43",
+            "src/schemaxis/adaptors/godot/scripts.py:179",
+            "https://docs.godotengine.org/en/stable/classes/class_camera3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/far": {
+          "status": "reviewed",
+          "explanation": "Distance in metres from the camera to the far clipping plane, written to Camera3D far; anything farther is not drawn. It must be greater than near.",
+          "label": "Far clip distance",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 1000 (Godot's own default is 4000).",
+          "pitfalls": [
+            "A far plane closer than the farthest geometry silently cuts it off; set far beyond the scene extent."
+          ],
+          "examples": [
+            200
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:54",
+            "src/schemaxis/adaptors/godot/adaptor.py:143-144",
+            "src/schemaxis/adaptors/godot/scripts.py:180",
+            "https://docs.godotengine.org/en/stable/classes/class_camera3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/options/properties/orbit": {
+          "status": "reviewed",
+          "explanation": "When true, Schemaxis attaches its fixed, trusted orbit.gd script to the camera: in the running Godot project, left-drag orbits around target, the mouse wheel zooms and R resets the view. When false, the camera is fixed and has no script. It does not change the saved view or the preview image.",
+          "label": "Interactive orbit",
+          "defaultMeaning": "Schemaxis default: true (orbit script attached).",
+          "pitfalls": [
+            "Mouse interaction itself has not been qualified; only the presence of the script and its target are verified."
+          ],
+          "examples": [
+            false
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:55",
+            "src/schemaxis/adaptors/godot/scripts.py:19-46",
+            "src/schemaxis/adaptors/godot/scripts.py:181-183",
+            "src/schemaxis/adaptors/godot/scripts.py:139",
+            "docs/godot.md#native-output-and-verification"
+          ]
+        },
+        "/properties/nodes/items/oneOf/7/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8": {
+          "status": "reviewed",
+          "explanation": "Choose a directional light for sunlight or a main key light: parallel rays from one direction across the whole scene, set by rotation only.",
+          "examples": [
+            {
+              "id": "sun",
+              "filter": "directionalLight",
+              "options": {
+                "rotation": [
+                  -60,
+                  20,
+                  0
+                ],
+                "energy": 1.2
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:56-58",
+            "src/schemaxis/adaptors/godot/scripts.py:213-217",
+            "https://docs.godotengine.org/en/stable/classes/class_directionallight3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options": {
+          "status": "reviewed",
+          "explanation": "Direction, colour and strength of the sunlight. rotation has the largest effect because it decides which faces are lit. Omitted settings take the Schemaxis defaults: rotation [-45, -30, 0], white, energy 1. There is no position or shadow setting.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:56-58",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "rotation": [
+                -30,
+                120,
+                0
+              ],
+              "colour": [
+                1,
+                0.95,
+                0.85
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Orientation of the light as Euler angles [x, y, z] in degrees (Godot YXZ order), written to rotation_degrees. The light travels along the node's rotated -Z axis: the X angle tilts it up or down (negative is downward) and the Y angle turns its heading about the vertical axis; the Z angle has no visible effect. Moving the node would not matter, so there is no position.",
+          "label": "Light direction",
+          "units": "Degrees",
+          "defaultMeaning": "Schemaxis default: [-45, -30, 0], light coming down at 45 degrees and travelling towards +X and -Z.",
+          "pitfalls": [
+            "[0, 0, 0] gives horizontal light along -Z, which barely lights a floor; use a negative X angle.",
+            "Faces turned away from the travel direction stay dark; check that the camera sees the lit side."
+          ],
+          "examples": [
+            [
+              -60,
+              20,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:57",
+            "src/schemaxis/adaptors/godot/scripts.py:215",
+            "src/schemaxis/adaptors/godot/adaptor.py:302",
+            "https://docs.godotengine.org/en/stable/classes/class_directionallight3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One Euler angle in degrees between -180 and 180; the first element tilts the light about X, the second turns it about Y, the third rolls it about Z.",
+          "examples": [
+            -45
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:57",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/colour": {
+          "status": "reviewed",
+          "explanation": "Colour of the light as [red, green, blue], each 0 to 1, written to light_color (Godot interprets it as non-linear sRGB). Lit surfaces are tinted by it; white leaves material colours unchanged.",
+          "label": "Light colour",
+          "units": "Fraction 0-1 per RGB channel",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (white).",
+          "examples": [
+            [
+              1,
+              0.95,
+              0.85
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:57",
+            "src/schemaxis/adaptors/godot/scripts.py:216",
+            "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/colour/items": {
+          "status": "reviewed",
+          "explanation": "One light colour channel from 0 to 1; the first element is red, the second green, the third blue.",
+          "examples": [
+            0.9
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:57",
+            "src/schemaxis/adaptors/godot/scripts.py:73-74"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/energy": {
+          "status": "reviewed",
+          "explanation": "Brightness multiplier of the sunlight, written to light_energy. Godot states it is not a physical unit: 2 is twice as bright as 1 and 0 switches the light off.",
+          "label": "Energy",
+          "units": "Dimensionless multiplier (not a physical unit)",
+          "defaultMeaning": "Schemaxis default: 1 (the same as Godot's default).",
+          "pitfalls": [
+            "Large values wash out materials to white; adjust material colour or add a second light instead."
+          ],
+          "examples": [
+            1.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:58",
+            "src/schemaxis/adaptors/godot/scripts.py:217",
+            "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9": {
+          "status": "reviewed",
+          "explanation": "Choose a capsule node for a rounded rod or a character placeholder: a cylinder with hemispherical ends along its local Y axis, centred on position.",
+          "examples": [
+            {
+              "id": "body",
+              "filter": "capsule",
+              "inputs": {
+                "material": "paint"
+              },
+              "options": {
+                "radius": 0.35,
+                "height": 1.8,
+                "position": [
+                  0,
+                  0.9,
+                  0
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:63-64",
+            "src/schemaxis/adaptors/godot/scripts.py:238-243"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options": {
+          "status": "reviewed",
+          "explanation": "Dimensions and placement of the capsule. radius and total height decide the shape; position, rotation and scale form the node transform. Omitted settings take the Schemaxis defaults: radius 0.5 m and height 2 m at the origin, upright.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:63-64",
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "radius": 0.3,
+              "height": 1.8,
+              "position": [
+                0,
+                0.9,
+                0
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] of the capsule centre in metres, half-way along its axis. An upright capsule standing on the ground at y = 0 needs y equal to height / 2.",
+          "label": "Centre position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "examples": [
+            [
+              0,
+              1,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:63",
+            "src/schemaxis/adaptors/godot/scripts.py:278",
+            "src/schemaxis/adaptors/godot/adaptor.py:209-212"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Radius in metres of the capsule body and of its two hemispherical ends. It may be at most half of height.",
+          "label": "Radius",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 0.5.",
+          "pitfalls": [
+            "Increasing radius without increasing height can violate height >= 2 x radius and fail planning."
+          ],
+          "examples": [
+            0.35
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:64",
+            "src/schemaxis/adaptors/godot/adaptor.py:135-136",
+            "src/schemaxis/adaptors/godot/scripts.py:241",
+            "https://docs.godotengine.org/en/stable/classes/class_capsulemesh.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options/properties/height": {
+          "status": "reviewed",
+          "explanation": "Total length of the capsule along its local Y axis in metres, including both hemispherical ends, so the straight part is height - 2 x radius long. It must be at least twice the radius.",
+          "label": "Total height",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 2.",
+          "pitfalls": [
+            "height is not the length of the straight section: radius 0.5 and height 2 give a 1 m straight part."
+          ],
+          "examples": [
+            1.8
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:64",
+            "src/schemaxis/adaptors/godot/adaptor.py:135-136",
+            "src/schemaxis/adaptors/godot/scripts.py:240",
+            "src/schemaxis/adaptors/godot/adaptor.py:209-211",
+            "https://docs.godotengine.org/en/stable/classes/class_capsulemesh.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Orientation of the capsule as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the capsule along the X axis.",
+          "label": "Rotation",
+          "units": "Degrees",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
+          "pitfalls": [
+            "Angles are limited to -180 to 180; write 270 degrees as -90.",
+            "Verification compares the full transform basis, so the order matters: [90, 90, 0] differs from [0, 90, 90]."
+          ],
+          "examples": [
+            [
+              15,
+              30,
+              45
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-96",
+            "src/schemaxis/adaptors/godot/scripts.py:276",
+            "src/schemaxis/adaptors/godot/adaptor.py:270",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "tests/unit/test_adaptor_geometry_expansion.py:202-205"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One Euler angle in degrees between -180 and 180; the first element turns about X, the second about Y, the third about Z.",
+          "examples": [
+            15
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Scale factors [x, y, z] along the capsule's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Non-uniform factors distort the round ends into ellipsoidal caps; prefer radius and height for size changes.",
+          "label": "Scale",
+          "units": "Dimensionless factor per axis",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
+          "pitfalls": [
+            "Factors must be positive (0.001 to 1000); mirroring with negative scale is not available."
+          ],
+          "examples": [
+            [
+              1,
+              1.5,
+              0.5
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+            "src/schemaxis/adaptors/godot/scripts.py:277",
+            "src/schemaxis/adaptors/godot/adaptor.py:198-215",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/options/properties/scale/items": {
+          "status": "reviewed",
+          "explanation": "One positive scale factor; the first element scales the local X axis, the second Y, the third Z. 1 keeps the declared dimension.",
+          "examples": [
+            1.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/inputs/properties/material": {
+          "status": "reviewed",
+          "explanation": "Id of an earlier material node whose StandardMaterial3D becomes this capsule's material override. Required; several geometry nodes may name the same material. The reopened scene must report the same colour, roughness and metallic values.",
+          "label": "Material",
+          "pitfalls": [
+            "Naming a later node fails with INVALID_DEPENDENCY, and naming a non-material node fails with TYPE_MISMATCH."
+          ],
+          "examples": [
+            "paint"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:39",
+            "src/schemaxis/adaptors/godot/adaptor.py:126-134",
+            "src/schemaxis/adaptors/godot/scripts.py:279",
+            "src/schemaxis/adaptors/godot/adaptor.py:271"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10": {
+          "status": "reviewed",
+          "explanation": "Choose a torus node for a ring, wheel or seal: a doughnut shape lying in its local XZ plane around the local Y axis, centred on position.",
+          "examples": [
+            {
+              "id": "ring",
+              "filter": "torus",
+              "inputs": {
+                "material": "paint"
+              },
+              "options": {
+                "innerRadius": 0.5,
+                "outerRadius": 1.2,
+                "position": [
+                  1,
+                  1,
+                  0
+                ]
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:65-66",
+            "src/schemaxis/adaptors/godot/scripts.py:244-249"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options": {
+          "status": "reviewed",
+          "explanation": "Radii and placement of the torus. innerRadius and outerRadius decide the hole and overall size; position, rotation and scale form the node transform. Omitted settings take the Schemaxis defaults: inner radius 0.5 m and outer radius 1 m at the origin, lying flat.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:65-66",
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "innerRadius": 0.8,
+              "outerRadius": 1,
+              "rotation": [
+                90,
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] of the torus centre (the centre of the hole) in metres.",
+          "label": "Centre position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "pitfalls": [
+            "A flat torus at y = 0 is half below the ground; raise it by (outerRadius - innerRadius) / 2 to rest on it."
+          ],
+          "examples": [
+            [
+              1,
+              1,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:65",
+            "src/schemaxis/adaptors/godot/scripts.py:278",
+            "src/schemaxis/adaptors/godot/adaptor.py:205-206"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/innerRadius": {
+          "status": "reviewed",
+          "explanation": "Radius of the hole in metres: the distance from the torus centre to the inner edge of the tube, written to TorusMesh inner_radius. It must be smaller than outerRadius; the tube thickness is outerRadius - innerRadius.",
+          "label": "Inner radius",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 0.5.",
+          "pitfalls": [
+            "This is not the tube radius: for a tube of radius t around a centre-line radius R, use innerRadius R - t and outerRadius R + t."
+          ],
+          "examples": [
+            0.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:66",
+            "src/schemaxis/adaptors/godot/adaptor.py:137-138",
+            "src/schemaxis/adaptors/godot/scripts.py:247",
+            "src/schemaxis/adaptors/godot/adaptor.py:205-206",
+            "https://docs.godotengine.org/en/stable/classes/class_torusmesh.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/outerRadius": {
+          "status": "reviewed",
+          "explanation": "Overall radius of the torus in metres: the distance from the centre to the outer edge of the tube, written to TorusMesh outer_radius. The torus is 2 x outerRadius wide in X and Z.",
+          "label": "Outer radius",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "pitfalls": [
+            "outerRadius must exceed innerRadius; equal values fail planning with INVALID_ARGUMENT."
+          ],
+          "examples": [
+            1.2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:66",
+            "src/schemaxis/adaptors/godot/adaptor.py:137-138",
+            "src/schemaxis/adaptors/godot/scripts.py:246",
+            "src/schemaxis/adaptors/godot/adaptor.py:205-206",
+            "https://docs.godotengine.org/en/stable/classes/class_torusmesh.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Orientation of the torus as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] stands the ring upright, with its hole facing along Z.",
+          "label": "Rotation",
+          "units": "Degrees",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
+          "pitfalls": [
+            "Angles are limited to -180 to 180; write 270 degrees as -90.",
+            "Verification compares the full transform basis, so the order matters: [90, 90, 0] differs from [0, 90, 90]."
+          ],
+          "examples": [
+            [
+              90,
+              0,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-96",
+            "src/schemaxis/adaptors/godot/scripts.py:276",
+            "src/schemaxis/adaptors/godot/adaptor.py:270",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "tests/unit/test_adaptor_geometry_expansion.py:202-205"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One Euler angle in degrees between -180 and 180; the first element turns about X, the second about Y, the third about Z.",
+          "examples": [
+            90
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Scale factors [x, y, z] along the torus's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The Y factor changes the tube thickness in the vertical direction only, flattening or stretching the ring.",
+          "label": "Scale",
+          "units": "Dimensionless factor per axis",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
+          "pitfalls": [
+            "Factors must be positive (0.001 to 1000); mirroring with negative scale is not available."
+          ],
+          "examples": [
+            [
+              1,
+              0.5,
+              1
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90",
+            "src/schemaxis/adaptors/godot/scripts.py:277",
+            "src/schemaxis/adaptors/godot/adaptor.py:198-215",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/scale/items": {
+          "status": "reviewed",
+          "explanation": "One positive scale factor; the first element scales the local X axis, the second Y, the third Z. 1 keeps the declared dimension.",
+          "examples": [
+            0.5
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:79-80"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/inputs/properties/material": {
+          "status": "reviewed",
+          "explanation": "Id of an earlier material node whose StandardMaterial3D becomes this torus's material override. Required; several geometry nodes may name the same material. The reopened scene must report the same colour, roughness and metallic values.",
+          "label": "Material",
+          "pitfalls": [
+            "Naming a later node fails with INVALID_DEPENDENCY, and naming a non-material node fails with TYPE_MISMATCH."
+          ],
+          "examples": [
+            "paint"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:39",
+            "src/schemaxis/adaptors/godot/adaptor.py:126-134",
+            "src/schemaxis/adaptors/godot/scripts.py:279",
+            "src/schemaxis/adaptors/godot/adaptor.py:271"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11": {
+          "status": "reviewed",
+          "explanation": "Choose an omni light for a lamp, bulb or fill light: a point light that shines equally in all directions up to a limited range.",
+          "examples": [
+            {
+              "id": "lamp",
+              "filter": "omniLight",
+              "options": {
+                "position": [
+                  0,
+                  4,
+                  2
+                ],
+                "energy": 3,
+                "range": 12
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:67-70",
+            "src/schemaxis/adaptors/godot/scripts.py:197-212",
+            "https://docs.godotengine.org/en/stable/classes/class_omnilight3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/options": {
+          "status": "reviewed",
+          "explanation": "Location, colour, strength, reach and fall-off of the point light. position, range and energy most affect what is lit. Omitted settings take the Schemaxis defaults: at the origin, white, energy 1, range 5 m, attenuation 1, shadows off.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:67-70",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "position": [
+                -3,
+                2,
+                2
+              ],
+              "energy": 0.5,
+              "range": 10,
+              "colour": [
+                0.6,
+                0.75,
+                1
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] of the light source in metres. Light spreads from this point in all directions.",
+          "label": "Light position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "pitfalls": [
+            "A light left at the default origin may sit inside an object placed there; move it above or beside the objects it should light."
+          ],
+          "examples": [
+            [
+              0,
+              4,
+              2
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:67",
+            "src/schemaxis/adaptors/godot/scripts.py:209",
+            "src/schemaxis/adaptors/godot/adaptor.py:302"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            4
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/options/properties/colour": {
+          "status": "reviewed",
+          "explanation": "Colour of the light as [red, green, blue], each 0 to 1, written to light_color (non-linear sRGB in Godot). A cool fill light such as [0.6, 0.75, 1] contrasts with a warm key light.",
+          "label": "Light colour",
+          "units": "Fraction 0-1 per RGB channel",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (white).",
+          "examples": [
+            [
+              0.6,
+              0.75,
+              1
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:68",
+            "src/schemaxis/adaptors/godot/scripts.py:210",
+            "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/options/properties/colour/items": {
+          "status": "reviewed",
+          "explanation": "One light colour channel from 0 to 1; the first element is red, the second green, the third blue.",
+          "examples": [
+            0.75
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:68",
+            "src/schemaxis/adaptors/godot/scripts.py:73-74"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/options/properties/energy": {
+          "status": "reviewed",
+          "explanation": "Brightness multiplier of the light, written to light_energy; Godot states it is not a physical unit. For omni lights it changes intensity only, not how far the light reaches (that is range).",
+          "label": "Energy",
+          "units": "Dimensionless multiplier (not a physical unit)",
+          "defaultMeaning": "Schemaxis default: 1 (the same as Godot's default).",
+          "examples": [
+            3
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:68",
+            "src/schemaxis/adaptors/godot/scripts.py:211",
+            "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/options/properties/range": {
+          "status": "reviewed",
+          "explanation": "Radius in metres of the sphere the light can reach, written to omni_range. Nothing outside this radius receives any of its light, whatever the attenuation; inside it, brightness falls off according to attenuation.",
+          "label": "Range",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 5 (the same as Godot's default).",
+          "pitfalls": [
+            "Range must cover the distance from the light to the surfaces you want lit; raising energy cannot compensate for a short range."
+          ],
+          "examples": [
+            12
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:69",
+            "src/schemaxis/adaptors/godot/scripts.py:200",
+            "https://docs.godotengine.org/en/stable/classes/class_omnilight3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/options/properties/attenuation": {
+          "status": "reviewed",
+          "explanation": "Shape of the brightness fall-off with distance inside range, written to omni_attenuation. Godot describes values near 0 as nearly constant brightness that fades only at the edge of range, and 2 as physically accurate inverse-square fall-off; 1 is in between.",
+          "label": "Distance attenuation",
+          "units": "Dimensionless curve exponent",
+          "defaultMeaning": "Schemaxis default: 1 (the same as Godot's default).",
+          "pitfalls": [
+            "With 2 or more and a large range, distant objects get almost no light; increase energy or reduce attenuation.",
+            "Godot warns that values above 10 may give unexpected results, although Schemaxis accepts up to 16."
+          ],
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:69",
+            "src/schemaxis/adaptors/godot/scripts.py:201",
+            "https://docs.godotengine.org/en/stable/classes/class_omnilight3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/options/properties/shadows": {
+          "status": "reviewed",
+          "explanation": "When true, the light casts real-time shadows (Light3D shadow_enabled), so objects block it from surfaces behind them. Godot notes this has a significant rendering cost. It affects the preview image and the running project, not the verified geometry.",
+          "label": "Cast shadows",
+          "defaultMeaning": "Schemaxis default: false (no shadows), the same as Godot's default.",
+          "examples": [
+            true
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:70",
+            "src/schemaxis/adaptors/godot/scripts.py:212",
+            "src/schemaxis/adaptors/godot/adaptor.py:302",
+            "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12": {
+          "status": "reviewed",
+          "explanation": "Choose a spot light for a key light, stage light or torch: a cone of light from a point, aimed with rotation, with a limited angle and range.",
+          "examples": [
+            {
+              "id": "spot",
+              "filter": "spotLight",
+              "options": {
+                "position": [
+                  3,
+                  4,
+                  3
+                ],
+                "rotation": [
+                  -45,
+                  45,
+                  0
+                ],
+                "range": 15,
+                "angle": 35,
+                "shadows": true
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:71-75",
+            "src/schemaxis/adaptors/godot/scripts.py:197-212",
+            "https://docs.godotengine.org/en/stable/classes/class_spotlight3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options": {
+          "status": "reviewed",
+          "explanation": "Location, aim, colour, strength, reach and cone shape of the spot light. position and rotation decide what the cone hits, angle its width and range its reach. Omitted settings take the Schemaxis defaults: at the origin pointing along -Z, white, energy 1, range 5 m, attenuation 1, angle 45 degrees, angleAttenuation 1, shadows off.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:71-75",
+            "src/schemaxis/adaptors/godot/adaptor.py:124-125"
+          ],
+          "examples": [
+            {
+              "position": [
+                3,
+                4,
+                4
+              ],
+              "rotation": [
+                -40,
+                35,
+                0
+              ],
+              "range": 15,
+              "angle": 40
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "World position [x, y, z] of the cone apex in metres, the point the light shines from.",
+          "label": "Light position",
+          "units": "Metres (world coordinates, Y up)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0].",
+          "examples": [
+            [
+              3,
+              4,
+              3
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:71",
+            "src/schemaxis/adaptors/godot/scripts.py:209",
+            "src/schemaxis/adaptors/godot/adaptor.py:302"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate in metres; the first element is X, the second Y (up) and the third Z (Godot cameras look along -Z by default).",
+          "examples": [
+            3
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:28-30",
+            "src/schemaxis/adaptors/godot/scripts.py:67-68"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Aim of the spot light as Euler angles [x, y, z] in degrees (Godot YXZ order), written to rotation_degrees. The cone axis is the node's rotated -Z axis: the X angle tilts it (negative points downward) and the Y angle sets its heading; the Z angle only rolls the cone about its own axis.",
+          "label": "Aim direction",
+          "units": "Degrees",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0], pointing horizontally along -Z.",
+          "pitfalls": [
+            "To aim from position p at the origin, use Y angle atan2(p.x, p.z) and X angle -atan(p.y / horizontal distance); for p = [3, 4, 4] that is about [-39, 37, 0]."
+          ],
+          "examples": [
+            [
+              -40,
+              35,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:72",
+            "src/schemaxis/adaptors/godot/scripts.py:204",
+            "src/schemaxis/adaptors/godot/adaptor.py:302",
+            "https://docs.godotengine.org/en/stable/classes/class_spotlight3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One Euler angle in degrees between -180 and 180; the first element tilts the cone about X, the second turns it about Y, the third rolls it about Z.",
+          "examples": [
+            -40
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:72",
+            "src/schemaxis/adaptors/godot/adaptor.py:83-90"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/colour": {
+          "status": "reviewed",
+          "explanation": "Colour of the light as [red, green, blue], each 0 to 1, written to light_color (non-linear sRGB in Godot).",
+          "label": "Light colour",
+          "units": "Fraction 0-1 per RGB channel",
+          "defaultMeaning": "Schemaxis default: [1, 1, 1] (white).",
+          "examples": [
+            [
+              1,
+              0.9,
+              0.7
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:72",
+            "src/schemaxis/adaptors/godot/scripts.py:210",
+            "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/colour/items": {
+          "status": "reviewed",
+          "explanation": "One light colour channel from 0 to 1; the first element is red, the second green, the third blue.",
+          "examples": [
+            0.7
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:72",
+            "src/schemaxis/adaptors/godot/scripts.py:73-74"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/energy": {
+          "status": "reviewed",
+          "explanation": "Brightness multiplier of the spot light, written to light_energy; Godot states it is not a physical unit. It changes intensity only, not the reach (range) or cone width (angle).",
+          "label": "Energy",
+          "units": "Dimensionless multiplier (not a physical unit)",
+          "defaultMeaning": "Schemaxis default: 1 (the same as Godot's default).",
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:73",
+            "src/schemaxis/adaptors/godot/scripts.py:211",
+            "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/range": {
+          "status": "reviewed",
+          "explanation": "Maximum distance in metres the cone reaches along its axis, written to spot_range. Surfaces beyond it receive no light from this spot.",
+          "label": "Range",
+          "units": "Metres",
+          "defaultMeaning": "Schemaxis default: 5 (the same as Godot's default).",
+          "pitfalls": [
+            "A light 5 m above and beside its target needs a range of more than about 7 m to reach it."
+          ],
+          "examples": [
+            15
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:73",
+            "src/schemaxis/adaptors/godot/scripts.py:205",
+            "https://docs.godotengine.org/en/stable/classes/class_spotlight3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/attenuation": {
+          "status": "reviewed",
+          "explanation": "Shape of the brightness fall-off with distance along the cone, written to spot_attenuation. As for omni lights, values near 0 keep brightness nearly constant until the edge of range, and 2 gives physically accurate inverse-square fall-off.",
+          "label": "Distance attenuation",
+          "units": "Dimensionless curve exponent",
+          "defaultMeaning": "Schemaxis default: 1 (the same as Godot's default).",
+          "pitfalls": [
+            "Godot warns that values above 10 may give unexpected results, although Schemaxis accepts up to 16."
+          ],
+          "examples": [
+            2
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:74",
+            "src/schemaxis/adaptors/godot/scripts.py:206",
+            "https://docs.godotengine.org/en/stable/classes/class_spotlight3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/angle": {
+          "status": "reviewed",
+          "explanation": "Half-angle of the cone in degrees, written to spot_angle: the angle from the cone axis to its edge. The lit cone is twice this wide, so the default 45 lights a 90-degree cone. Schemaxis accepts 1 to 89 degrees.",
+          "label": "Cone half-angle",
+          "units": "Degrees (from axis to edge)",
+          "defaultMeaning": "Schemaxis default: 45 (the same as Godot's default).",
+          "pitfalls": [
+            "Entering the full beam width doubles the cone: a 40-degree wide beam needs angle 20."
+          ],
+          "examples": [
+            35
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:74",
+            "src/schemaxis/adaptors/godot/scripts.py:207",
+            "https://docs.godotengine.org/en/stable/classes/class_spotlight3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/angleAttenuation": {
+          "status": "reviewed",
+          "explanation": "Shape of the brightness fall-off from the cone axis towards its edge, written to spot_angle_attenuation. Godot documents it as the angular attenuation curve; changing it changes how soft or hard the edge of the light pool looks.",
+          "label": "Angular attenuation",
+          "units": "Dimensionless curve value",
+          "defaultMeaning": "Schemaxis default: 1 (the same as Godot's default).",
+          "pitfalls": [
+            "Godot does not document a mapping from values to edge softness; compare preview images when tuning it."
+          ],
+          "examples": [
+            1
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:74",
+            "src/schemaxis/adaptors/godot/scripts.py:208",
+            "https://docs.godotengine.org/en/stable/classes/class_spotlight3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/options/properties/shadows": {
+          "status": "reviewed",
+          "explanation": "When true, the spot light casts real-time shadows (Light3D shadow_enabled), so objects in the cone block light from surfaces behind them. Godot notes a significant rendering cost. It affects the preview image and running project, not the verified geometry.",
+          "label": "Cast shadows",
+          "defaultMeaning": "Schemaxis default: false (no shadows), the same as Godot's default.",
+          "examples": [
+            true
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/godot/adaptor.py:75",
+            "src/schemaxis/adaptors/godot/scripts.py:212",
+            "src/schemaxis/adaptors/godot/adaptor.py:302",
+            "https://docs.godotengine.org/en/stable/classes/class_light3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/12/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        }
+      }
+    }
+  }
+}

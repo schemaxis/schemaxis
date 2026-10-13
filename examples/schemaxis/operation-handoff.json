@@ -1,0 +1,70 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "produce",
+      "document": {
+        "version": "schemaxis/1",
+        "nodes": [
+          {
+            "id": "ball",
+            "filter": "sphere",
+            "options": {
+              "radius": 2
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "shape",
+            "geometry": [
+              "ball"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "consume",
+      "document": {
+        "version": "schemaxis/1",
+        "nodes": [
+          {
+            "id": "surface",
+            "filter": "readSurface",
+            "options": {
+              "files": [
+                {
+                  "$artifact": "produce",
+                  "index": 0
+                }
+              ]
+            }
+          },
+          {
+            "id": "moved",
+            "filter": "transform",
+            "inputs": {
+              "input": "surface"
+            },
+            "options": {
+              "translate": [
+                1,
+                2,
+                3
+              ]
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "shifted",
+            "geometry": [
+              "moved"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

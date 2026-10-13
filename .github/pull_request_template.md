@@ -1,0 +1,4 @@
+- [ ] Unit tests pass: `PYTHONPATH=src python3 -m unittest discover -s tests/unit -q`
+- [ ] `python3 tools/release_gate.py` is clean
+- [ ] Native options have tests and a bounded native example
+- [ ] Commits are signed off (`git commit -s`)

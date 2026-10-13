@@ -1,0 +1,414 @@
+{
+  "version": "schemaxis/1",
+  "times": {"source": "fluid", "select": {"latest": 1}},
+  "nodes": [
+    {
+      "id": "fluid",
+      "filter": "foam",
+      "options": {
+        "file": "cases/coupe/coupe_AMI.foam",
+        "cellArrays": ["p", "U", "nut"],
+        "skipZero": true
+      }
+    },
+    {"id": "mesh", "filter": "merge", "inputs": {"input": "fluid"}},
+    {
+      "id": "planeX",
+      "filter": "slice",
+      "inputs": {"input": "mesh"},
+      "options": {
+        "origin": {"$analytic": {"type": "linear", "start": [-5.031178, 0, 0], "end": [13.64267, 0, 0], "count": 9}},
+        "normal": "x+"
+      }
+    },
+    {
+      "id": "cropXYmin",
+      "filter": "clip",
+      "inputs": {"input": "planeX"},
+      "options": {"origin": [0, -3.17565, 0], "normal": "y+"}
+    },
+    {
+      "id": "cropXYmax",
+      "filter": "clip",
+      "inputs": {"input": "cropXYmin"},
+      "options": {"origin": [0, 3.17565, 0], "normal": "y-"}
+    },
+    {
+      "id": "cropXZmin",
+      "filter": "clip",
+      "inputs": {"input": "cropXYmax"},
+      "options": {"origin": [0, 0, -0.332088], "normal": "z+"}
+    },
+    {
+      "id": "sliceX",
+      "filter": "clip",
+      "inputs": {"input": "cropXZmin"},
+      "options": {"origin": [0, 0, 3.24051825], "normal": "z-"}
+    },
+    {
+      "id": "planeY",
+      "filter": "slice",
+      "inputs": {"input": "mesh"},
+      "options": {
+        "origin": {"$analytic": {"type": "linear", "start": [0, -3.17565, 0], "end": [0, 3.17565, 0], "count": 9}},
+        "normal": "y+"
+      }
+    },
+    {
+      "id": "cropYXmin",
+      "filter": "clip",
+      "inputs": {"input": "planeY"},
+      "options": {"origin": [-5.031178, 0, 0], "normal": "x+"}
+    },
+    {
+      "id": "cropYXmax",
+      "filter": "clip",
+      "inputs": {"input": "cropYXmin"},
+      "options": {"origin": [13.64267, 0, 0], "normal": "x-"}
+    },
+    {
+      "id": "cropYZmin",
+      "filter": "clip",
+      "inputs": {"input": "cropYXmax"},
+      "options": {"origin": [0, 0, -0.332088], "normal": "z+"}
+    },
+    {
+      "id": "sliceY",
+      "filter": "clip",
+      "inputs": {"input": "cropYZmin"},
+      "options": {"origin": [0, 0, 3.24051825], "normal": "z-"}
+    },
+    {
+      "id": "planeZ",
+      "filter": "slice",
+      "inputs": {"input": "mesh"},
+      "options": {
+        "origin": {"$analytic": {"type": "linear", "start": [0, 0, -0.332088], "end": [0, 0, 3.24051825], "count": 9}},
+        "normal": "z+"
+      }
+    },
+    {
+      "id": "cropZXmin",
+      "filter": "clip",
+      "inputs": {"input": "planeZ"},
+      "options": {"origin": [-5.031178, 0, 0], "normal": "x+"}
+    },
+    {
+      "id": "cropZXmax",
+      "filter": "clip",
+      "inputs": {"input": "cropZXmin"},
+      "options": {"origin": [13.64267, 0, 0], "normal": "x-"}
+    },
+    {
+      "id": "cropZYmin",
+      "filter": "clip",
+      "inputs": {"input": "cropZXmax"},
+      "options": {"origin": [0, -3.17565, 0], "normal": "y+"}
+    },
+    {
+      "id": "sliceZ",
+      "filter": "clip",
+      "inputs": {"input": "cropZYmin"},
+      "options": {"origin": [0, 3.17565, 0], "normal": "y-"}
+    },
+    {
+      "id": "tyreReader",
+      "filter": "foam",
+      "options": {
+        "file": "cases/coupe/coupe_AMI.foam",
+        "regions": ["patch/wheels_FL_Tyre", "patch/wheels_RR_Tyre", "patch/wheels_RL_Tyre", "patch/wheels_FR_Tyre"],
+        "cellArrays": ["p"],
+        "skipZero": true
+      }
+    },
+    {
+      "id": "bodyReader",
+      "filter": "foam",
+      "options": {
+        "file": "cases/coupe/coupe_AMI.foam",
+        "regions": [
+          "patch/body_upper",
+          "patch/enginebay_engine",
+          "patch/wheels_FR_movingPatch",
+          "patch/wheels_RL_movingPatch",
+          "patch/wheels_RR_movingPatch",
+          "patch/wheels_FL_movingPatch"
+        ],
+        "cellArrays": ["p"],
+        "skipZero": true
+      }
+    },
+    {
+      "id": "tyres",
+      "filter": "extractBlock",
+      "inputs": {"input": "tyreReader"},
+      "options": {"selectors": ["//wheels_FL_Tyre", "//wheels_RR_Tyre", "//wheels_RL_Tyre", "//wheels_FR_Tyre"]}
+    },
+    {
+      "id": "body",
+      "filter": "extractBlock",
+      "inputs": {"input": "bodyReader"},
+      "options": {
+        "selectors": [
+          "//body_upper",
+          "//enginebay_engine",
+          "//wheels_FR_movingPatch",
+          "//wheels_RL_movingPatch",
+          "//wheels_RR_movingPatch",
+          "//wheels_FL_movingPatch"
+        ]
+      }
+    },
+    {
+      "id": "pressureAtPoints",
+      "filter": "cellToPoint",
+      "inputs": {"input": "mesh"},
+      "options": {"allArrays": false, "arrays": ["p"]}
+    },
+    {
+      "id": "pressureContour",
+      "filter": "contour",
+      "inputs": {"input": "pressureAtPoints"},
+      "options": {"field": ["POINTS", "p"], "values": [-250]}
+    }
+  ],
+  "scenes": [
+    {
+      "id": "slicesX",
+      "visible": {
+        "sliceX": {
+          "field": ["CELLS", "p"],
+          "component": -1,
+          "preset": "Cool to Warm",
+          "legend": true,
+          "legendTitle": "Pressure (p)",
+          "range": [-500, 500]
+        }
+      },
+      "appearances": [
+        {},
+        {
+          "sliceX": {
+            "field": ["CELLS", "U"],
+            "component": -1,
+            "preset": "Viridis (matplotlib)",
+            "legend": true,
+            "legendTitle": "Velocity (U)",
+            "range": [0, 50]
+          }
+        },
+        {
+          "sliceX": {
+            "field": ["CELLS", "nut"],
+            "component": -1,
+            "preset": "Inferno (matplotlib)",
+            "legend": true,
+            "legendTitle": "Turbulent viscosity (nut)",
+            "range": [0, 0.1]
+          }
+        }
+      ],
+      "images": [
+        {
+          "id": "view",
+          "size": [1600, 900],
+          "cameras": [
+            {
+              "direction": [1, 0, 0],
+              "up": [0, 0, 1],
+              "parallel": true,
+              "bounds": [-5.031178, 13.64267, -3.17565, 3.17565, -0.332088, 3.24051825],
+              "scale": 2.14356375
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "slicesY",
+      "visible": {
+        "sliceY": {
+          "field": ["CELLS", "p"],
+          "component": -1,
+          "preset": "Cool to Warm",
+          "legend": true,
+          "legendTitle": "Pressure (p)",
+          "range": [-500, 500]
+        }
+      },
+      "appearances": [
+        {},
+        {
+          "sliceY": {
+            "field": ["CELLS", "U"],
+            "component": -1,
+            "preset": "Viridis (matplotlib)",
+            "legend": true,
+            "legendTitle": "Velocity (U)",
+            "range": [0, 50]
+          }
+        },
+        {
+          "sliceY": {
+            "field": ["CELLS", "nut"],
+            "component": -1,
+            "preset": "Inferno (matplotlib)",
+            "legend": true,
+            "legendTitle": "Turbulent viscosity (nut)",
+            "range": [0, 0.1]
+          }
+        }
+      ],
+      "images": [
+        {
+          "id": "view",
+          "size": [1600, 900],
+          "cameras": [
+            {
+              "direction": [0, 1, 0],
+              "up": [0, 0, 1],
+              "parallel": true,
+              "bounds": [-5.031178, 13.64267, -3.17565, 3.17565, -0.332088, 3.24051825],
+              "scale": 6.3024237
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "slicesZ",
+      "visible": {
+        "sliceZ": {
+          "field": ["CELLS", "p"],
+          "component": -1,
+          "preset": "Cool to Warm",
+          "legend": true,
+          "legendTitle": "Pressure (p)",
+          "range": [-500, 500]
+        }
+      },
+      "appearances": [
+        {},
+        {
+          "sliceZ": {
+            "field": ["CELLS", "U"],
+            "component": -1,
+            "preset": "Viridis (matplotlib)",
+            "legend": true,
+            "legendTitle": "Velocity (U)",
+            "range": [0, 50]
+          }
+        },
+        {
+          "sliceZ": {
+            "field": ["CELLS", "nut"],
+            "component": -1,
+            "preset": "Inferno (matplotlib)",
+            "legend": true,
+            "legendTitle": "Turbulent viscosity (nut)",
+            "range": [0, 0.1]
+          }
+        }
+      ],
+      "images": [
+        {
+          "id": "view",
+          "size": [1600, 900],
+          "cameras": [
+            {
+              "direction": [0, 0, 1],
+              "up": [0, 1, 0],
+              "parallel": true,
+              "bounds": [-5.031178, 13.64267, -3.17565, 3.17565, -0.332088, 3.24051825],
+              "scale": 6.3024237
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vehicleOrbit",
+      "visible": {"tyres": {"colour": "black"}, "body": {"colour": "grey"}, "pressureContour": {"colour": "yellow"}},
+      "images": [
+        {
+          "id": "orbit",
+          "size": [1600, 900],
+          "cameras": [
+            {
+              "direction": [0.906308, 0.0, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [0.784886, 0.453154, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [0.453154, 0.784886, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [0.0, 0.906308, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [-0.453154, 0.784886, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [-0.784886, 0.453154, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [-0.906308, 0.0, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [-0.784886, -0.453154, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [-0.453154, -0.784886, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [-0.0, -0.906308, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [0.453154, -0.784886, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            },
+            {
+              "direction": [0.784886, -0.453154, 0.422618],
+              "parallel": false,
+              "distance": 15,
+              "focalPoint": [1.193438, 0, 0.2360415]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

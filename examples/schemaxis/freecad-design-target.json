@@ -1,0 +1,91 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "blank",
+      "filter": "box",
+      "options": {
+        "length": 20,
+        "width": 10,
+        "height": 5
+      }
+    },
+    {
+      "id": "rounded",
+      "filter": "fillet",
+      "inputs": {
+        "base": "blank"
+      },
+      "options": {
+        "radius": 1,
+        "edges": {
+          "where": {
+            "curve": "line",
+            "parallelTo": [
+              0,
+              0,
+              1
+            ]
+          },
+          "expect": 4
+        }
+      }
+    }
+  ],
+  "output": "rounded",
+  "measurements": [
+    {
+      "id": "finishedVolume",
+      "node": "rounded",
+      "quantity": "volume"
+    },
+    {
+      "id": "finishedArea",
+      "node": "rounded",
+      "quantity": "surfaceArea"
+    },
+    {
+      "id": "height",
+      "node": "rounded",
+      "quantity": "extentZ"
+    },
+    {
+      "id": "centre",
+      "node": "rounded",
+      "quantity": "centreOfMass"
+    },
+    {
+      "id": "verticalEdgeLength",
+      "node": "blank",
+      "quantity": "totalEdgeLength",
+      "edges": {
+        "where": {
+          "parallelTo": [
+            0,
+            0,
+            1
+          ]
+        },
+        "expect": 4
+      }
+    }
+  ],
+  "designStudy": {
+    "parameter": {
+      "node": "blank",
+      "option": "height",
+      "minimum": 4,
+      "maximum": 6
+    },
+    "target": {
+      "measurement": "finishedVolume",
+      "value": 1000,
+      "tolerance": 0.1,
+      "units": "mm^3"
+    },
+    "response": "increasing",
+    "maxIterations": 16,
+    "minimumStep": 1e-06
+  }
+}

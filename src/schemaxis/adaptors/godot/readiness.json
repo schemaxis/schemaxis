@@ -1,0 +1,268 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.godot/1": {
+      "guide": "docs/godot.md",
+      "context": {
+        "purpose": "Create editable Godot projects and scenes from declared primitives, materials, lights, cameras and supported glTF/PNG inputs.",
+        "assumptions": "Godot 4.x; metres, explicit transforms and intrinsic YXZ Euler rotation semantics. Resources must remain with the project. Preview rendering needs an available graphics environment.",
+        "constraints": "No arbitrary GDScript; only trusted generated project/orbit scripts. Bounded self-contained glTF subset. No live reverse synchronisation or universal material preservation.",
+        "inspection": "Inspect fresh-process scene node membership, transforms, bounds, material/light settings and optional decoded PNG preview. Headless case acceptance does not qualify graphical rendering.",
+        "recovery": "UNSUPPORTED_UNITS requires metres. Correct missing materials/resources and unsupported glTF features; preserve build/reopen logs. Use headless acceptance when preview graphics are unavailable."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/godot-admission.json"
+        },
+        {
+          "id": "invalid-input",
+          "document": {
+            "version": "schemaxis.godot/1",
+            "nodes": [
+              {
+                "id": "paint",
+                "filter": "material"
+              },
+              {
+                "id": "box",
+                "filter": "box",
+                "inputs": {
+                  "material": "paint"
+                },
+                "options": {
+                  "size": [
+                    2,
+                    2,
+                    2
+                  ]
+                }
+              },
+              {
+                "id": "view",
+                "filter": "camera"
+              },
+              {
+                "id": "sun",
+                "filter": "directionalLight"
+              }
+            ],
+            "units": "cm"
+          },
+          "expect": "invalid",
+          "fault": "UNSUPPORTED_UNITS",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_schemaxis_godot.py",
+        "tests/unit/test_adaptor_migration.py"
+      ],
+      "acceptance": [
+        "tools/qualify_adaptor_migration.py",
+        "tools/qualify_godot.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses.",
+          "references": [
+            "docs/godot.md",
+            "tests/unit/test_schemaxis_godot.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://docs.godotengine.org/en/stable/classes/"
+        ],
+        "lifecycle": {
+          "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
+          "cancellation": "Shared owned-process cancellation retains partial evidence. Pre-launch cancellation is tested separately from shared in-flight cleanup.",
+          "logs": "Fresh run directory retains authored input, effective plan, native submissions/stdout/stderr, publications and verification evidence.",
+          "verification": "Check fresh scene readback against independently computed primitive bounds/transforms and declared node/material values; verify project/resource membership and bytes."
+        },
+        "data": [
+          {
+            "id": "input-0",
+            "direction": "input",
+            "kind": "gltf",
+            "format": "self-contained glTF 2.0",
+            "traits": {
+              "units": "m"
+            },
+            "losses": [
+              "Only the documented glTF/material subset is imported; sprite timing metadata is not inferred from a PNG."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "input-1",
+            "direction": "input",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "pixelSize": "explicit metres"
+            },
+            "losses": [
+              "Only the documented glTF/material subset is imported; sprite timing metadata is not inferred from a PNG."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "input-2",
+            "direction": "input",
+            "kind": "spriteSheet",
+            "format": "PNG",
+            "traits": {
+              "layout": "pixels only"
+            },
+            "losses": [
+              "Only the documented glTF/material subset is imported; sprite timing metadata is not inferred from a PNG."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-0",
+            "direction": "output",
+            "kind": "scene",
+            "format": "Godot project/tscn",
+            "traits": {
+              "units": "m",
+              "editable": true
+            },
+            "losses": [
+              "Only the documented glTF/material subset is imported; sprite timing metadata is not inferred from a PNG."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "image",
+            "scope": "Inspect fresh-process scene node membership, transforms, bounds, material/light settings and optional decoded PNG preview. Headless case acceptance does not qualify graphical rendering.",
+            "limits": "No arbitrary GDScript; only trusted generated project/orbit scripts. Bounded self-contained glTF subset. No live reverse synchronisation or universal material preservation."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect fresh-process scene node membership, transforms, bounds, material/light settings and optional decoded PNG preview. Headless case acceptance does not qualify graphical rendering.",
+            "limits": "No arbitrary GDScript; only trusted generated project/orbit scripts. Bounded self-contained glTF subset. No live reverse synchronisation or universal material preservation."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "baseline",
+          "reuse": "Edit the example with source or JSON pointer patches; inspect declared units and losses, replan the new revision, and verify a fresh run against independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This route does not implement native-inspection; use its documented batch/source workflow."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This route does not implement mpi; use its documented batch/source workflow."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Registered input fingerprint hook may decline reuse for unsupported input shapes; never assume hashes for unknown companions."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This route does not implement time-batches; use its documented batch/source workflow."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON draft, revision checking, recovery and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Atomic JSON pointer edits through the shared draft model."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This route does not implement live-editing; use its documented batch/source workflow."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This route does not implement native-save; use its documented batch/source workflow."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This route does not implement conversion; use its documented batch/source workflow."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Check fresh scene readback against independently computed primitive bounds/transforms and declared node/material values; verify project/resource membership and bytes. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/box/bounds",
+                "expected": [
+                  -1,
+                  -1,
+                  -1,
+                  1,
+                  1,
+                  1
+                ],
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/size",
+                "value": [
+                  4,
+                  2,
+                  2
+                ]
+              }
+            ],
+            "scope": "Check fresh scene readback against independently computed primitive bounds/transforms and declared node/material values; verify project/resource membership and bytes. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/box/bounds",
+                "expected": [
+                  -2,
+                  -1,
+                  -1,
+                  2,
+                  1,
+                  1
+                ],
+                "absolute": 1e-06
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "version": "schemaxis.workflow/1",
+  "execution": {
+    "maxWorkers": 1,
+    "cpus": 2,
+    "memoryMB": 12000,
+    "gpus": 0
+  },
+  "operations": [
+    {
+      "id": "cfd",
+      "execution": {
+        "ranks": 2,
+        "threads": 1,
+        "memoryMB": 12000,
+        "mpiexec": "/absolute/path/to/matching/mpi/bin/mpiexec"
+      },
+      "document": {
+        "version": "schemaxis/1",
+        "times": {
+          "source": "case",
+          "select": {
+            "latest": 1
+          }
+        },
+        "nodes": [
+          {
+            "id": "case",
+            "filter": "foam",
+            "options": {
+              "file": "/absolute/path/to/decomposed/case.foam",
+              "cellArrays": [
+                "U",
+                "p"
+              ]
+            }
+          },
+          {
+            "id": "mesh",
+            "filter": "merge",
+            "inputs": {
+              "input": "case"
+            }
+          },
+          {
+            "id": "speed",
+            "filter": "calculator",
+            "inputs": {
+              "input": "mesh"
+            },
+            "options": {
+              "expression": "mag(U)",
+              "result": "Umag",
+              "association": "Cell Data"
+            }
+          },
+          {
+            "id": "cut",
+            "filter": "slice",
+            "inputs": {
+              "input": "speed"
+            },
+            "options": {
+              "origin": [
+                0,
+                0,
+                0
+              ],
+              "normal": [
+                0,
+                1,
+                0
+              ]
+            }
+          },
+          {
+            "id": "totals",
+            "filter": "integrate",
+            "inputs": {
+              "input": "speed"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "flow",
+            "geometry": [
+              "speed",
+              "cut"
+            ],
+            "visible": {
+              "cut": {
+                "field": [
+                  "CELLS",
+                  "p"
+                ],
+                "range": [
+                  -500,
+                  500
+                ],
+                "legend": true,
+                "legendTitle": "Pressure"
+              }
+            },
+            "appearances": [
+              {}
+            ],
+            "images": [
+              {
+                "id": "overview",
+                "size": [
+                  640,
+                  360
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      0,
+                      -1,
+                      0
+                    ],
+                    "focalPoint": [
+                      2.5,
+                      0,
+                      1.4
+                    ],
+                    "scale": 3,
+                    "distance": 30
+                  }
+                ]
+              }
+            ],
+            "measurements": [
+              {
+                "node": "totals",
+                "association": "CELLS"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "reuse",
+      "execution": {
+        "ranks": 2,
+        "threads": 1,
+        "memoryMB": 12000,
+        "mpiexec": "/absolute/path/to/matching/mpi/bin/mpiexec"
+      },
+      "document": {
+        "version": "schemaxis/1",
+        "nodes": [
+          {
+            "id": "volume",
+            "filter": "readParallelUnstructuredGrid",
+            "options": {
+              "files": [
+                {
+                  "$artifact": "cfd",
+                  "index": 0
+                }
+              ]
+            }
+          },
+          {
+            "id": "totals",
+            "filter": "integrate",
+            "inputs": {
+              "input": "volume"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "check",
+            "measurements": [
+              {
+                "node": "totals",
+                "association": "CELLS"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

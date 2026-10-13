@@ -1,0 +1,54 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "circuit",
+      "document": {
+        "version": "schemaxis.ngspice/1",
+        "operation": "dcSweep",
+        "circuit": {
+          "source": "in",
+          "resistors": [
+            {
+              "name": "r1",
+              "a": "in",
+              "b": "out",
+              "resistance": 1000
+            },
+            {
+              "name": "r2",
+              "a": "out",
+              "b": "0",
+              "resistance": 2000
+            }
+          ],
+          "capacitors": [],
+          "probes": [
+            "out"
+          ]
+        },
+        "start": 0,
+        "stop": 5,
+        "points": 6
+      }
+    },
+    {
+      "id": "workbook",
+      "document": {
+        "version": "schemaxis.calc/1",
+        "nodes": [
+          {
+            "id": "voltages",
+            "filter": "readCSV",
+            "options": {
+              "file": {
+                "$artifact": "circuit",
+                "index": 0
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

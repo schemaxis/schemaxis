@@ -1,0 +1,340 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "cantileverBeam": {
+      "status": "reviewed",
+      "explanation": "Analyses a straight rectangular cantilever in linear static elasticity: the x = 0 end is fully clamped and a vertical (z) force acts on the free end. Schemaxis generates CalculiX C3D20R quadratic solid meshes at three resolutions, solves them, and checks tip deflection against Euler-Bernoulli theory, support reactions against the load, and interior bending stress. It publishes the fine editable deck beam.inp, interior-stress.csv (Gauss-point stresses in Pa for 0.3 <= x/L <= 0.7) and beam-assessment.json. Choose it for quick stiffness/serviceability checks of slender beams; it is not a general FEA tool.",
+      "sources": [
+        "src/schemaxis/adaptors/calculix/capabilities.py",
+        "src/schemaxis/adaptors/calculix/adaptor.py:24-84",
+        "docs/calculix.md"
+      ],
+      "pitfalls": [
+        "Geometry must be slender (length / larger section side 20 to 40, width/height 0.5 to 2) and the predicted tip deflection at most 1% of the length; otherwise planning fails with INVALID_BEAM.",
+        "Only linear elasticity: no yield, plasticity, buckling, contact, dynamics or temperature effects are modelled.",
+        "The stress output excludes the clamp and the loaded end, so it is not the peak stress of the beam; do not use it for yield or fatigue checks.",
+        "A correctly solved beam can still fail its declared requirements (PERFORMANCE_NOT_MET); its results are retained but not published to later steps."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/calculix-beam.json",
+          "purpose": "Steel beam with deflection and interior sampled stress limits."
+        },
+        {
+          "reference": "examples/schemaxis/calculix-beam-material.json",
+          "purpose": "Change elastic stiffness and measure the resulting compliance."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.calculix/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A CalculiX cantilever study: a rectangular beam, an isotropic linear elastic material, one end force and an optional mesh and requirements, all in SI units (m, N, Pa). Schemaxis derives the mesh, solves it and accepts the result only if refinement, equilibrium and beam-theory checks pass.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "pitfalls": [
+            "The study covers one clamped rectangular cantilever only; other geometries, supports or load cases cannot be expressed."
+          ],
+          "examples": [
+            {
+              "version": "schemaxis.calculix/1",
+              "operation": "cantileverBeam",
+              "beam": {
+                "length_m": 0.4,
+                "width_m": 0.02,
+                "height_m": 0.02
+              },
+              "material": {
+                "youngsModulus_Pa": 210000000000.0,
+                "poissonRatio": 0.3
+              },
+              "load": {
+                "tipForceZ_N": -100
+              },
+              "mesh": {
+                "lengthCells": 12,
+                "sectionCells": 2
+              },
+              "requirements": [
+                {
+                  "name": "tip_serviceability",
+                  "quantity": "absTipAreaMeanUz_m",
+                  "maximum": 0.0008
+                },
+                {
+                  "name": "interior_samples",
+                  "quantity": "maxInteriorSampleNormalStress_Pa",
+                  "maximum": 20000000.0
+                }
+              ]
+            }
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis document; it must be \"schemaxis.calculix/1\". It is separate from the CalculiX solver release (the adaptor targets CalculiX 2.23).",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            "schemaxis.calculix/1"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The only analysis offered: cantileverBeam, a slender isotropic elastic beam fully fixed at x = 0 and loaded in global z on its opposite end face.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            "cantileverBeam"
+          ]
+        },
+        "/properties/beam": {
+          "status": "reviewed",
+          "explanation": "Beam geometry in metres. The beam runs along positive x from the clamp (x = 0) to the loaded end; the rectangular section is centred on y = z = 0 with width along y and height along z. The slenderness and section-shape limits keep the beam within the range where the beam-theory comparison is valid.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "pitfalls": [
+            "Planning rejects length / max(width, height) outside 20 to 40 or width / height outside 0.5 to 2; adjust the dimensions rather than the mesh."
+          ],
+          "examples": [
+            {
+              "length_m": 0.4,
+              "width_m": 0.02,
+              "height_m": 0.02
+            }
+          ]
+        },
+        "/properties/beam/properties/length_m": {
+          "status": "reviewed",
+          "explanation": "Distance from the clamped end to the loaded end along positive x, 0.001 to 10 m. Tip deflection grows with the cube of the length; length divided by the larger section side must lie between 20 and 40.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            0.4
+          ],
+          "units": "Metres"
+        },
+        "/properties/beam/properties/width_m": {
+          "status": "reviewed",
+          "explanation": "Section width along y, 0.00001 to 1 m. Bending stiffness is proportional to width, so doubling it halves the deflection; width / height must lie between 0.5 and 2.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            0.02
+          ],
+          "units": "Metres"
+        },
+        "/properties/beam/properties/height_m": {
+          "status": "reviewed",
+          "explanation": "Section depth along z, the bending direction, 0.00001 to 1 m. Stiffness scales with height cubed and interior bending stress with 1/height squared. This is physical geometry, not mesh resolution.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            0.02
+          ],
+          "units": "Metres"
+        },
+        "/properties/material": {
+          "status": "reviewed",
+          "explanation": "Uniform isotropic linear elastic material defined by Young's modulus and Poisson's ratio. There is no yield law, temperature dependence, damage or failure assessment.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            {
+              "youngsModulus_Pa": 210000000000.0,
+              "poissonRatio": 0.3
+            }
+          ]
+        },
+        "/properties/material/properties/youngsModulus_Pa": {
+          "status": "reviewed",
+          "explanation": "Young's modulus E, 1e6 to 1e12 Pa (for example 2.1e11 for steel, 7e10 for aluminium). Doubling E halves the tip deflection for a given force but leaves the bending stress unchanged.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "pitfalls": [
+            "Enter pascals, not GPa or MPa: 210 GPa is 210000000000."
+          ],
+          "examples": [
+            210000000000.0
+          ],
+          "units": "Pascals"
+        },
+        "/properties/material/properties/poissonRatio": {
+          "status": "reviewed",
+          "explanation": "Poisson's ratio, dimensionless, 0 to 0.35 (0.3 is typical for steel). It has little effect on slender-beam deflection but changes the three-dimensional stress state near the clamp, which beam theory does not capture.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            0.3
+          ],
+          "units": "Dimensionless"
+        },
+        "/properties/load": {
+          "status": "reviewed",
+          "explanation": "The single external load: a total force along global z spread uniformly over the free end face (x = length). Internally it is distributed to the quadratic face nodes with the consistent weights (corner nodes -1/12, mid-side nodes +1/3 of each face's share); these negative corner values are a property of the element and do not represent reverse loading.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            {
+              "tipForceZ_N": -100
+            }
+          ]
+        },
+        "/properties/load/properties/tipForceZ_N": {
+          "status": "reviewed",
+          "explanation": "Total end force along global z in newtons; its magnitude must be between 0.01 and 1e8. Positive values bend the beam up (+z), negative values down. Deflection and stress scale linearly with it.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "pitfalls": [
+            "Planning rejects loads whose predicted tip deflection exceeds 1% of the length or whose root bending strain (stress/E) exceeds 0.001; reduce the force or stiffen the beam."
+          ],
+          "examples": [
+            -100
+          ],
+          "units": "Newtons"
+        },
+        "/properties/mesh": {
+          "status": "reviewed",
+          "explanation": "Resolution of the base C3D20R (20-node quadratic brick) mesh. Each run also solves a mesh with twice the axial cells and a fine mesh with twice the cells in every direction; each refinement must change the area-mean tip deflection by at most 1% of the theory value, and the fine result must be within 3% of theory.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            {
+              "lengthCells": 12,
+              "sectionCells": 2
+            }
+          ],
+          "defaultMeaning": "Schemaxis default: {\"lengthCells\": 12, \"sectionCells\": 2}."
+        },
+        "/properties/mesh/properties/lengthCells": {
+          "status": "reviewed",
+          "explanation": "Number of base-mesh elements along the beam length, 12 to 24. The axially refined and fine meshes use twice this number. The element length divided by the smallest section cell must not exceed 10.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "pitfalls": [
+            "More cells do not guarantee acceptance; NUMERICAL_ACCEPTANCE_FAILED means the refinement or theory check failed and the measured changes are reported."
+          ],
+          "examples": [
+            12
+          ],
+          "defaultMeaning": "Schemaxis default: 12."
+        },
+        "/properties/mesh/properties/sectionCells": {
+          "status": "reviewed",
+          "explanation": "Number of base-mesh elements across each of the width and height, 2 or 3. The fine mesh doubles this in both directions, exposing any error from too coarse a section.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            2
+          ],
+          "defaultMeaning": "Schemaxis default: 2."
+        },
+        "/properties/requirements": {
+          "status": "reviewed",
+          "explanation": "Optional list of up to 16 named upper limits on measured results (tip deflection or interior stress). A numerically valid solve can still fail these serviceability limits; the run then fails with PERFORMANCE_NOT_MET, keeps the measurements and signed margins, and is not used by later workflow steps.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            [
+              {
+                "name": "tip_serviceability",
+                "quantity": "absTipAreaMeanUz_m",
+                "maximum": 0.0008
+              }
+            ]
+          ],
+          "defaultMeaning": "Schemaxis default: [] (no serviceability limits)."
+        },
+        "/properties/requirements/items": {
+          "status": "reviewed",
+          "explanation": "One named limit: a measured quantity and its nonnegative maximum. The measured value passes when it is less than or equal to the maximum; no safety factor or tolerance is added.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            {
+              "name": "interior_samples",
+              "quantity": "maxInteriorSampleNormalStress_Pa",
+              "maximum": 20000000.0
+            }
+          ]
+        },
+        "/properties/requirements/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Unique name for this limit, used in the assessment report: a lowercase letter followed by up to 63 lowercase letters, digits or underscores.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "examples": [
+            "tip_serviceability"
+          ]
+        },
+        "/properties/requirements/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "absTipAreaMeanUz_m: absolute z displacement of the loaded end face, averaged over its area (not the largest nodal value), in metres. maxInteriorSampleNormalStress_Pa: largest absolute axial normal stress Sxx at fine-mesh Gauss points with 0.3 <= x/L <= 0.7, in pascals.",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "pitfalls": [
+            "The stress quantity excludes the clamp region where the real peak stress occurs; it is not a yield or fatigue check."
+          ],
+          "examples": [
+            "absTipAreaMeanUz_m"
+          ]
+        },
+        "/properties/requirements/items/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Upper limit, 0 to 1e12, in the units of the chosen quantity: metres for absTipAreaMeanUz_m, pascals for maxInteriorSampleNormalStress_Pa. Equality passes; the report gives the signed margin (maximum minus measured).",
+          "sources": [
+            "docs/calculix.md",
+            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+          ],
+          "pitfalls": [
+            "A negative margin fails the run; stiffen the beam (E, section), reduce the force or revise the limit, then run again in a fresh directory."
+          ],
+          "examples": [
+            0.0008
+          ]
+        }
+      }
+    }
+  }
+}

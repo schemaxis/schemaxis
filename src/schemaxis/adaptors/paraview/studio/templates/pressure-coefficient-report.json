@@ -1,0 +1,101 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {
+          "$fill": "file"
+        },
+        "caseType": "Reconstructed Case",
+        "cellArrays": [
+          "U",
+          "p"
+        ],
+        "regions": {
+          "$fill": "readerRegions"
+        }
+      }
+    },
+    {
+      "id": "body",
+      "filter": "extractBlock",
+      "options": {
+        "selectors": {
+          "$fill": "regions"
+        }
+      },
+      "inputs": {
+        "input": "case"
+      }
+    },
+    {
+      "id": "wall",
+      "filter": "surface",
+      "inputs": {
+        "input": "body"
+      }
+    },
+    {
+      "id": "points",
+      "filter": "cellToPoint",
+      "inputs": {
+        "input": "wall"
+      }
+    },
+    {
+      "id": "cp",
+      "filter": "calculator",
+      "options": {
+        "expression": {
+          "$fill": "expression"
+        },
+        "result": "Cp"
+      },
+      "inputs": {
+        "input": "points"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "pressure",
+      "visible": {
+        "cp": {
+          "field": [
+            "POINTS",
+            "Cp"
+          ],
+          "range": [
+            -1,
+            1
+          ],
+          "legend": true,
+          "legendTitle": "Cp"
+        }
+      },
+      "geometry": [
+        "cp"
+      ],
+      "images": [
+        {
+          "id": "orbit",
+          "size": [
+            800,
+            600
+          ],
+          "cameras": {
+            "$analytic": {
+              "type": "orbit",
+              "start": 0,
+              "end": 300,
+              "count": 6,
+              "elevation": 20
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

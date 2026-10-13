@@ -1,0 +1,116 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "plyImport",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.06,
+                0.27,
+                0.42,
+                1
+              ],
+              "metallic": 0.35,
+              "roughness": 0.3
+            }
+          },
+          {
+            "id": "ply",
+            "filter": "readPLY",
+            "options": {
+              "file": "examples/schemaxis/expanded/tetrahedron.ply",
+              "scale": 2
+            }
+          },
+          {
+            "id": "out",
+            "filter": "assignMaterial",
+            "inputs": {
+              "input": "ply",
+              "material": "paint"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "mesh",
+            "visible": [
+              "out"
+            ],
+            "meshes": [
+              "out"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 24,
+              "denoise": true
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  640,
+                  480
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1.3
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "measure",
+      "document": {
+        "version": "schemaxis/1",
+        "nodes": [
+          {
+            "id": "stl",
+            "filter": "readSTL",
+            "options": {
+              "files": [
+                {
+                  "$artifact": "plyImport",
+                  "index": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "measures",
+            "filter": "cellSize",
+            "inputs": {
+              "input": "stl"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "mesh",
+            "geometry": [
+              "measures"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

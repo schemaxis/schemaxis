@@ -1,0 +1,291 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis/1": {
+      "guide": "docs/paraview-catalogue.md",
+      "context": {
+        "purpose": "Inspect, transform and publish scientific datasets and CFD results with explicit arrays, times and loss policies. Curated interfaces and generated native bindings have different evidence scopes.",
+        "assumptions": "Dataset units and coordinate frames come from the input. Inspect array association, native types and available times before choosing operations. The installed 5.13.3 catalogue supplies generated bindings and captured native help.",
+        "constraints": "No arbitrary Python, programmable filters or implicit conversions. Native domains, data-dependent fields and specialised readers require real fixtures. MPI is restricted to the manifest allowlist and compatible runtime/launcher; the kit recipe is serial.",
+        "inspection": "Use native geometry/field inspection and retained XML readback snapshots; inspect arrays, topology, bounds and selected times. Screenshots alone do not establish numerical correctness.",
+        "recovery": "TIME_INSPECTION_REQUIRED means inspect the source before selecting times. Correct missing dependencies, array associations or unsupported output formats; preserve native faults and rerun in a fresh directory."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/paraview-admission.json"
+        },
+        {
+          "id": "invalid-input",
+          "document": {
+            "version": "schemaxis/1",
+            "nodes": [
+              {
+                "id": "line",
+                "filter": "line",
+                "options": {
+                  "start": [
+                    -1,
+                    0,
+                    0
+                  ],
+                  "end": [
+                    1,
+                    0,
+                    0
+                  ],
+                  "resolution": 4
+                }
+              }
+            ],
+            "scenes": [
+              {
+                "id": "analytic",
+                "geometry": [
+                  "absent"
+                ]
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "UNKNOWN_NODE",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_schemaxis_pipeline.py",
+        "tests/unit/test_adaptor_migration.py"
+      ],
+      "acceptance": [
+        "tools/qualify_adaptor_migration.py",
+        "tools/qualify_paraview_catalogue.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses.",
+          "references": [
+            "docs/paraview-catalogue.md",
+            "tests/unit/test_schemaxis_pipeline.py"
+          ]
+        },
+        "native-inspection": {
+          "scope": "Registered geometry/field observation hooks; bounded views do not prove physical correctness.",
+          "references": [
+            "docs/paraview-catalogue.md",
+            "tests/unit/test_schemaxis_pipeline.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        },
+        "mpi": {
+          "scope": "Restricted ParaView operation allowlist and matching MPI runtime/launcher; serial kit cases do not qualify MPI.",
+          "references": [
+            "docs/paraview-catalogue.md",
+            "tests/unit/test_schemaxis_pipeline.py",
+            "docs/parallel-execution.md",
+            "tools/qualify_paraview_mpi.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://www.paraview.org/paraview-docs/latest/python/paraview.simple.html"
+        ],
+        "lifecycle": {
+          "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
+          "cancellation": "Shared owned-process cancellation retains partial evidence. Pre-launch cancellation is tested separately from shared in-flight cleanup.",
+          "logs": "Fresh run directory retains authored input, effective plan, native submissions/stdout/stderr, publications and verification evidence.",
+          "verification": "Native publication readback compares topology, arrays and values; host verification recompiles authored input and checks plan, state, publication membership and fingerprints."
+        },
+        "data": [
+          {
+            "id": "input-0",
+            "direction": "input",
+            "kind": "geometry",
+            "format": "VTK XML / STL / PLY",
+            "traits": {
+              "units": null,
+              "association": "explicit point/cell arrays"
+            },
+            "losses": [
+              "Surface extraction drops interior cells; image/glTF outputs are representations. Writer losses require explicit acceptance."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "input-1",
+            "direction": "input",
+            "kind": "gltf",
+            "format": "embedded glTF 2.0",
+            "traits": {
+              "units": null,
+              "frame": "explicit"
+            },
+            "losses": [
+              "Surface extraction drops interior cells; image/glTF outputs are representations. Writer losses require explicit acceptance."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-0",
+            "direction": "output",
+            "kind": "geometry",
+            "format": "VTK XML",
+            "traits": {
+              "units": null,
+              "arrays": "native readback"
+            },
+            "losses": [
+              "Surface extraction drops interior cells; image/glTF outputs are representations. Writer losses require explicit acceptance."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "geometry",
+            "scope": "Use native geometry/field inspection and retained XML readback snapshots; inspect arrays, topology, bounds and selected times. Screenshots alone do not establish numerical correctness.",
+            "limits": "No arbitrary Python, programmable filters or implicit conversions. Native domains, data-dependent fields and specialised readers require real fixtures. MPI is restricted to the manifest allowlist and compatible runtime/launcher; the kit recipe is serial."
+          },
+          {
+            "panel": "table",
+            "scope": "Use native geometry/field inspection and retained XML readback snapshots; inspect arrays, topology, bounds and selected times. Screenshots alone do not establish numerical correctness.",
+            "limits": "No arbitrary Python, programmable filters or implicit conversions. Native domains, data-dependent fields and specialised readers require real fixtures. MPI is restricted to the manifest allowlist and compatible runtime/launcher; the kit recipe is serial."
+          },
+          {
+            "panel": "image",
+            "scope": "Use native geometry/field inspection and retained XML readback snapshots; inspect arrays, topology, bounds and selected times. Screenshots alone do not establish numerical correctness.",
+            "limits": "No arbitrary Python, programmable filters or implicit conversions. Native domains, data-dependent fields and specialised readers require real fixtures. MPI is restricted to the manifest allowlist and compatible runtime/launcher; the kit recipe is serial."
+          },
+          {
+            "panel": "text",
+            "scope": "Use native geometry/field inspection and retained XML readback snapshots; inspect arrays, topology, bounds and selected times. Screenshots alone do not establish numerical correctness.",
+            "limits": "No arbitrary Python, programmable filters or implicit conversions. Native domains, data-dependent fields and specialised readers require real fixtures. MPI is restricted to the manifest allowlist and compatible runtime/launcher; the kit recipe is serial."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "baseline",
+          "reuse": "Edit the example with source or JSON pointer patches; inspect declared units and losses, replan the new revision, and verify a fresh run against independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses."
+          },
+          "native-inspection": {
+            "status": "supported",
+            "scope": "Registered geometry/field observation hooks; bounded views do not prove physical correctness."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "supported",
+            "scope": "Restricted ParaView operation allowlist and matching MPI runtime/launcher; serial kit cases do not qualify MPI."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Registered input fingerprint hook may decline reuse for unsupported input shapes; never assume hashes for unknown companions."
+          },
+          "time-batches": {
+            "status": "supported",
+            "scope": "Finite declared visits; inspect native time availability before selecting source times."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON draft, revision checking, recovery and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Atomic JSON pointer edits through the shared draft model."
+          },
+          "live-editing": {
+            "status": "supported",
+            "scope": "Registered persistent native editing session; the batch kit cases do not qualify live-session behaviour."
+          },
+          "native-save": {
+            "status": "supported",
+            "scope": "Declared native extension available to the console; retain dependent resources and inspect reopen evidence."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Only explicit declared readers/writers or table/vector transformations, with the data losses listed here; no automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Native publication readback compares topology, arrays and values; host verification recompiles authored input and checks plan, state, publication membership and fingerprints. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/states/0/observations/line/points",
+                "expected": 5
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/states/0/observations/line/bounds",
+                "expected": [
+                  -1,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/end",
+                "value": [
+                  3,
+                  0,
+                  0
+                ]
+              }
+            ],
+            "scope": "Native publication readback compares topology, arrays and values; host verification recompiles authored input and checks plan, state, publication membership and fingerprints. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/states/0/observations/line/points",
+                "expected": 5
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/states/0/observations/line/bounds",
+                "expected": [
+                  -1,
+                  3,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

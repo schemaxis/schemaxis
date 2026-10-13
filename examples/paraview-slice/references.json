@@ -1,0 +1,23 @@
+{
+  "documentVersion": "schemaxis.workflow/0.1",
+  "dimensions": {
+    "modelExtents": {"min": -5, "max": 5},
+    "centre": [0, 0, 0]
+  },
+  "directions": {"crossStream": [1, 0, 0]},
+  "sampling": {
+    "start": {"$document": "/dimensions/modelExtents/min"},
+    "end": {"$document": "/dimensions/modelExtents/max"},
+    "count": 3
+  },
+  "steps": [{
+    "id": "sweep",
+    "use": "paraview.slice_export",
+    "arguments": {
+      "origin": {"$document": "/dimensions/centre"},
+      "normal": {"$document": "/directions/crossStream"},
+      "sweep": {"$document": "/sampling"},
+      "outputDirectory": "reference-sweep-result"
+    }
+  }]
+}

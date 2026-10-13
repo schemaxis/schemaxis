@@ -1,0 +1,1682 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "categories": [
+    {
+      "id": "primitives",
+      "title": "Primitives",
+      "icon": "cube"
+    },
+    {
+      "id": "materials",
+      "title": "Materials",
+      "icon": "image"
+    },
+    {
+      "id": "lighting",
+      "title": "Lighting",
+      "icon": "sun"
+    },
+    {
+      "id": "camera",
+      "title": "Camera & scene",
+      "icon": "camera"
+    },
+    {
+      "id": "import",
+      "title": "Import & sprites",
+      "icon": "file"
+    },
+    {
+      "id": "recipes",
+      "title": "Scene recipes",
+      "icon": "layers"
+    }
+  ],
+  "baseDocument": {
+    "version": "schemaxis.godot/1",
+    "units": "m",
+    "nodes": [
+      {
+        "id": "paint",
+        "filter": "material"
+      },
+      {
+        "id": "base",
+        "filter": "box",
+        "inputs": {
+          "material": "paint"
+        }
+      },
+      {
+        "id": "view",
+        "filter": "camera"
+      }
+    ],
+    "preview": false
+  },
+  "templates": [
+    {
+      "id": "stage-and-sun-template",
+      "title": "Ground plane and sunlight",
+      "description": "Add a wide stage and a directional key light.",
+      "file": "studio/templates/stage-and-sun-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Scene prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "size": {
+          "label": "Stage size (metres)",
+          "type": "json",
+          "required": true,
+          "default": [
+            12,
+            12
+          ]
+        }
+      }
+    },
+    {
+      "id": "three-point-lighting-template",
+      "title": "Three-point lighting",
+      "description": "Place key, fill and rim lights around an object at the origin.",
+      "file": "studio/templates/three-point-lighting-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Scene prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "energy": {
+          "label": "Key-light energy",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 16,
+          "default": 2
+        }
+      }
+    },
+    {
+      "id": "material-comparison-template",
+      "title": "Matte and metal comparison",
+      "description": "Compare two deliberately different materials on nearby spheres.",
+      "file": "studio/templates/material-comparison-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Scene prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "colour": {
+          "label": "Surface colour",
+          "type": "colour",
+          "required": true,
+          "default": [
+            0.3,
+            0.6,
+            0.9
+          ]
+        }
+      }
+    },
+    {
+      "id": "flat-sprite",
+      "title": "Flat sprite scene",
+      "description": "Place an existing PNG as a flat Sprite3D facing +Z in a scene with a single inspection camera.",
+      "file": "studio/templates/flat-sprite.json",
+      "fields": {
+        "file": {
+          "label": "PNG image",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "png"
+          ]
+        },
+        "scale": {
+          "label": "Metres per pixel",
+          "type": "number",
+          "required": true,
+          "minimum": 1e-05,
+          "maximum": 10,
+          "default": 0.01
+        }
+      },
+      "testValues": {
+        "file": "/library-fixtures/sprite.png"
+      },
+      "requires": "An existing PNG is needed at execution."
+    }
+  ],
+  "snippets": [
+    {
+      "id": "add-material",
+      "title": "Material",
+      "category": "materials",
+      "description": "Add a material together with a visible sample box; every declared material must be used.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newMaterial"
+        },
+        "colour": {
+          "label": "Colour",
+          "type": "colour",
+          "required": true,
+          "default": [
+            0.3,
+            0.6,
+            0.9
+          ]
+        },
+        "roughness": {
+          "label": "Roughness",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.6
+        },
+        "metallic": {
+          "label": "Metallic",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "material",
+              "options": {
+                "colour": {
+                  "$fill": "colour"
+                },
+                "roughness": {
+                  "$fill": "roughness"
+                },
+                "metallic": {
+                  "$fill": "metallic"
+                }
+              }
+            },
+            {
+              "id": "${id}Sample",
+              "filter": "box",
+              "options": {
+                "position": [
+                  2,
+                  0,
+                  0
+                ]
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "id"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-box",
+      "title": "Box",
+      "category": "primitives",
+      "description": "Add a material-bound box with explicit size and position in metres.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newBox"
+        },
+        "size": {
+          "label": "Size",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            1,
+            1,
+            1
+          ]
+        },
+        "position": {
+          "label": "Position",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "box",
+              "options": {
+                "size": {
+                  "$fill": "size"
+                },
+                "position": {
+                  "$fill": "position"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-sphere",
+      "title": "Sphere",
+      "category": "primitives",
+      "description": "Add a material-bound sphere positioned in metres.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newSphere"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 10000,
+          "default": 0.5
+        },
+        "position": {
+          "label": "Position",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "sphere",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "position": {
+                  "$fill": "position"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-cylinder",
+      "title": "Cylinder",
+      "category": "primitives",
+      "description": "Add a material-bound cylinder with radius and height.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newCylinder"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 10000,
+          "default": 0.5
+        },
+        "height": {
+          "label": "Height",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 10000,
+          "default": 1
+        },
+        "position": {
+          "label": "Position",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "cylinder",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "height": {
+                  "$fill": "height"
+                },
+                "position": {
+                  "$fill": "position"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-plane",
+      "title": "Plane",
+      "category": "primitives",
+      "description": "Add a material-bound horizontal ground plane.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newPlane"
+        },
+        "size": {
+          "label": "Size",
+          "type": "json",
+          "required": true,
+          "default": [
+            10,
+            10
+          ]
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "plane",
+              "options": {
+                "size": {
+                  "$fill": "size"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-readGLTF",
+      "title": "Read gltf",
+      "category": "import",
+      "description": "Import a self-contained .gltf asset (embedded base64 buffers only) as a static ArrayMesh; external URIs are rejected.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newReadGLTF"
+        },
+        "file": {
+          "label": "Source .gltf file",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "gltf"
+          ]
+        },
+        "position": {
+          "label": "Position",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "readGLTF",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                },
+                "position": {
+                  "$fill": "position"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "testValues": {
+        "file": "/library-fixtures/asset.gltf"
+      },
+      "requires": "An existing absolute .gltf path is required for native execution; GLB is not supported."
+    },
+    {
+      "id": "add-sprite3D",
+      "title": "Sprite3d",
+      "category": "import",
+      "description": "Place an existing PNG as a flat Sprite3D (facing +Z, not camera-facing) with an explicit pixel scale.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newSprite3D"
+        },
+        "file": {
+          "label": "Source .png file",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "png"
+          ]
+        },
+        "pixelSize": {
+          "label": "Pixel size",
+          "type": "number",
+          "required": true,
+          "minimum": 1e-05,
+          "maximum": 10,
+          "default": 0.01
+        },
+        "position": {
+          "label": "Position",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "sprite3D",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                },
+                "pixelSize": {
+                  "$fill": "pixelSize"
+                },
+                "position": {
+                  "$fill": "position"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "testValues": {
+        "file": "/library-fixtures/asset.png"
+      },
+      "requires": "An existing absolute PNG path is required for native execution."
+    },
+    {
+      "id": "configure-camera",
+      "title": "Camera",
+      "category": "camera",
+      "description": "Configure the existing camera; the scene keeps exactly one camera.",
+      "fields": {
+        "position": {
+          "label": "Position",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            5,
+            4,
+            7
+          ]
+        },
+        "target": {
+          "label": "Target",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "fov": {
+          "label": "Fov",
+          "type": "number",
+          "required": true,
+          "minimum": 10,
+          "maximum": 120,
+          "default": 55
+        },
+        "orbit": {
+          "label": "Orbit",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "merge": {
+            "position": {
+              "$fill": "position"
+            },
+            "target": {
+              "$fill": "target"
+            },
+            "fov": {
+              "$fill": "fov"
+            },
+            "orbit": {
+              "$fill": "orbit"
+            }
+          }
+        }
+      ],
+      "testCursor": "/nodes/2/options",
+      "requires": "Place the caret inside the existing camera options object; exactly one camera is supported."
+    },
+    {
+      "id": "add-directionalLight",
+      "title": "Directional light",
+      "category": "lighting",
+      "description": "Add a directional key light with explicit rotation, colour and energy.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newDirectionalLight"
+        },
+        "rotation": {
+          "label": "Rotation",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            -45,
+            -30,
+            0
+          ]
+        },
+        "energy": {
+          "label": "Energy",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 16,
+          "default": 1
+        },
+        "colour": {
+          "label": "Colour",
+          "type": "colour",
+          "required": true,
+          "default": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "directionalLight",
+              "options": {
+                "rotation": {
+                  "$fill": "rotation"
+                },
+                "energy": {
+                  "$fill": "energy"
+                },
+                "colour": {
+                  "$fill": "colour"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-capsule",
+      "title": "Capsule",
+      "category": "primitives",
+      "description": "Add a capsule with height at least twice its radius.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newCapsule"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 10000,
+          "default": 0.5
+        },
+        "height": {
+          "label": "Height",
+          "type": "number",
+          "required": true,
+          "minimum": 0.002,
+          "maximum": 10000,
+          "default": 2
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "capsule",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "height": {
+                  "$fill": "height"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-torus",
+      "title": "Torus",
+      "category": "primitives",
+      "description": "Add a torus with ordered inner and outer radii.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newTorus"
+        },
+        "innerRadius": {
+          "label": "Inner radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 10000,
+          "default": 0.5
+        },
+        "outerRadius": {
+          "label": "Outer radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.002,
+          "maximum": 10000,
+          "default": 1
+        },
+        "material": {
+          "label": "Material",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "material"
+          ],
+          "default": "paint"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "torus",
+              "options": {
+                "innerRadius": {
+                  "$fill": "innerRadius"
+                },
+                "outerRadius": {
+                  "$fill": "outerRadius"
+                }
+              },
+              "inputs": {
+                "material": {
+                  "$fill": "material"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-omniLight",
+      "title": "Omni light",
+      "category": "lighting",
+      "description": "Add a local omnidirectional light with bounded range and optional shadows.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newOmniLight"
+        },
+        "position": {
+          "label": "Position",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "energy": {
+          "label": "Energy",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 16,
+          "default": 1
+        },
+        "range": {
+          "label": "Range",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 5
+        },
+        "shadows": {
+          "label": "Shadows",
+          "type": "boolean",
+          "required": true,
+          "default": false
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "omniLight",
+              "options": {
+                "position": {
+                  "$fill": "position"
+                },
+                "energy": {
+                  "$fill": "energy"
+                },
+                "range": {
+                  "$fill": "range"
+                },
+                "shadows": {
+                  "$fill": "shadows"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-spotLight",
+      "title": "Spot light",
+      "category": "lighting",
+      "description": "Add a spotlight with position, beam angle, rotation and optional shadows.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newSpotLight"
+        },
+        "position": {
+          "label": "Position",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "rotation": {
+          "label": "Rotation",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "energy": {
+          "label": "Energy",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 16,
+          "default": 1
+        },
+        "range": {
+          "label": "Range",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 5
+        },
+        "angle": {
+          "label": "Angle",
+          "type": "number",
+          "required": true,
+          "minimum": 1,
+          "maximum": 89,
+          "default": 45
+        },
+        "shadows": {
+          "label": "Shadows",
+          "type": "boolean",
+          "required": true,
+          "default": false
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "spotLight",
+              "options": {
+                "position": {
+                  "$fill": "position"
+                },
+                "rotation": {
+                  "$fill": "rotation"
+                },
+                "energy": {
+                  "$fill": "energy"
+                },
+                "range": {
+                  "$fill": "range"
+                },
+                "angle": {
+                  "$fill": "angle"
+                },
+                "shadows": {
+                  "$fill": "shadows"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stage-and-sun",
+      "title": "Ground plane and sunlight",
+      "category": "recipes",
+      "description": "Add a wide stage and a directional key light.",
+      "fields": {
+        "prefix": {
+          "label": "Prefab prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "size": {
+          "label": "Stage size (metres)",
+          "type": "json",
+          "required": true,
+          "default": [
+            12,
+            12
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Floor",
+              "filter": "plane",
+              "options": {
+                "size": {
+                  "$fill": "size"
+                }
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Sun",
+              "filter": "directionalLight",
+              "options": {
+                "rotation": [
+                  -45,
+                  -30,
+                  0
+                ],
+                "energy": 1.2
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "three-point-lighting",
+      "title": "Three-point lighting",
+      "category": "recipes",
+      "description": "Place key, fill and rim lights around an object at the origin.",
+      "fields": {
+        "prefix": {
+          "label": "Prefab prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "energy": {
+          "label": "Key-light energy",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 16,
+          "default": 2
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Key",
+              "filter": "spotLight",
+              "options": {
+                "position": [
+                  3,
+                  4,
+                  4
+                ],
+                "rotation": [
+                  -40,
+                  35,
+                  0
+                ],
+                "energy": {
+                  "$fill": "energy"
+                },
+                "range": 15,
+                "angle": 40,
+                "shadows": true
+              }
+            },
+            {
+              "id": "${prefix}Fill",
+              "filter": "omniLight",
+              "options": {
+                "position": [
+                  -3,
+                  2,
+                  2
+                ],
+                "energy": 0.5,
+                "range": 10,
+                "colour": [
+                  0.6,
+                  0.75,
+                  1
+                ]
+              }
+            },
+            {
+              "id": "${prefix}Rim",
+              "filter": "omniLight",
+              "options": {
+                "position": [
+                  0,
+                  3,
+                  -3
+                ],
+                "energy": 1.5,
+                "range": 10
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "obstacle-lane",
+      "title": "Obstacle lane",
+      "category": "recipes",
+      "description": "Lay out three separate boxes for a simple spatial scene inspection.",
+      "fields": {
+        "prefix": {
+          "label": "Prefab prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "size": {
+          "label": "Obstacle size",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Near",
+              "filter": "box",
+              "options": {
+                "position": [
+                  -3,
+                  0.5,
+                  0
+                ],
+                "size": {
+                  "$fill": "size"
+                }
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Middle",
+              "filter": "box",
+              "options": {
+                "position": [
+                  0,
+                  0.5,
+                  0
+                ],
+                "size": {
+                  "$fill": "size"
+                }
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Far",
+              "filter": "box",
+              "options": {
+                "position": [
+                  3,
+                  0.5,
+                  0
+                ],
+                "size": {
+                  "$fill": "size"
+                }
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "raised-platform",
+      "title": "Raised platform on posts",
+      "category": "recipes",
+      "description": "Compose a slab and four supporting cylindrical posts.",
+      "fields": {
+        "prefix": {
+          "label": "Prefab prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "radius": {
+          "label": "Post radius (metres)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 0.5,
+          "default": 0.12
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Deck",
+              "filter": "box",
+              "options": {
+                "position": [
+                  0,
+                  1.5,
+                  0
+                ],
+                "size": [
+                  4,
+                  0.2,
+                  3
+                ]
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Post0",
+              "filter": "cylinder",
+              "options": {
+                "position": [
+                  -1.6,
+                  0.7,
+                  -1.1
+                ],
+                "radius": {
+                  "$fill": "radius"
+                },
+                "height": 1.4
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Post1",
+              "filter": "cylinder",
+              "options": {
+                "position": [
+                  -1.6,
+                  0.7,
+                  1.1
+                ],
+                "radius": {
+                  "$fill": "radius"
+                },
+                "height": 1.4
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Post2",
+              "filter": "cylinder",
+              "options": {
+                "position": [
+                  1.6,
+                  0.7,
+                  -1.1
+                ],
+                "radius": {
+                  "$fill": "radius"
+                },
+                "height": 1.4
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Post3",
+              "filter": "cylinder",
+              "options": {
+                "position": [
+                  1.6,
+                  0.7,
+                  1.1
+                ],
+                "radius": {
+                  "$fill": "radius"
+                },
+                "height": 1.4
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "lit-bollard",
+      "title": "Bollard with local light",
+      "category": "recipes",
+      "description": "Place a cylindrical bollard and an elevated local light.",
+      "fields": {
+        "prefix": {
+          "label": "Prefab prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "energy": {
+          "label": "Lamp energy",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 16,
+          "default": 2
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Post",
+              "filter": "cylinder",
+              "options": {
+                "radius": 0.15,
+                "height": 1.2,
+                "position": [
+                  0,
+                  0.6,
+                  0
+                ]
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Lamp",
+              "filter": "omniLight",
+              "options": {
+                "position": [
+                  0,
+                  1.4,
+                  0
+                ],
+                "energy": {
+                  "$fill": "energy"
+                },
+                "range": 6
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "material-comparison",
+      "title": "Matte and metal comparison",
+      "category": "recipes",
+      "description": "Compare two deliberately different materials on nearby spheres.",
+      "fields": {
+        "prefix": {
+          "label": "Prefab prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "colour": {
+          "label": "Surface colour",
+          "type": "colour",
+          "required": true,
+          "default": [
+            0.3,
+            0.6,
+            0.9
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Matte",
+              "filter": "material",
+              "options": {
+                "colour": {
+                  "$fill": "colour"
+                },
+                "roughness": 0.9,
+                "metallic": 0
+              }
+            },
+            {
+              "id": "${prefix}Metal",
+              "filter": "material",
+              "options": {
+                "colour": {
+                  "$fill": "colour"
+                },
+                "roughness": 0.2,
+                "metallic": 1
+              }
+            },
+            {
+              "id": "${prefix}Left",
+              "filter": "sphere",
+              "options": {
+                "position": [
+                  -1.5,
+                  1,
+                  0
+                ]
+              },
+              "inputs": {
+                "material": "${prefix}Matte"
+              }
+            },
+            {
+              "id": "${prefix}Right",
+              "filter": "sphere",
+              "options": {
+                "position": [
+                  1.5,
+                  1,
+                  0
+                ]
+              },
+              "inputs": {
+                "material": "${prefix}Metal"
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "capsule-character",
+      "title": "Capsule and ground blockout",
+      "category": "recipes",
+      "description": "Build a capsule-scale character placeholder on a ground plane.",
+      "fields": {
+        "prefix": {
+          "label": "Prefab prefix",
+          "type": "id",
+          "required": true,
+          "default": "scene"
+        },
+        "height": {
+          "label": "Capsule height (metres)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.7,
+          "maximum": 4,
+          "default": 2
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Body",
+              "filter": "capsule",
+              "options": {
+                "radius": 0.35,
+                "height": {
+                  "$fill": "height"
+                },
+                "position": [
+                  0,
+                  1,
+                  0
+                ]
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            },
+            {
+              "id": "${prefix}Floor",
+              "filter": "plane",
+              "options": {
+                "size": [
+                  8,
+                  8
+                ]
+              },
+              "inputs": {
+                "material": "paint"
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "preview-project",
+      "title": "Enable bounded scene preview",
+      "category": "camera",
+      "description": "Request the adaptor\u2019s preview image alongside the generated scene project.",
+      "fields": {
+        "enabled": {
+          "label": "Generate preview",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        }
+      },
+      "inserts": [
+        {
+          "at": "/preview",
+          "values": [
+            {
+              "$fill": "enabled"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "camera-static",
+      "title": "Static inspection camera",
+      "category": "camera",
+      "description": "Disable orbit control and aim the existing camera at an explicit target.",
+      "fields": {
+        "target": {
+          "label": "Target (metres)",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "merge": {
+            "target": {
+              "$fill": "target"
+            },
+            "orbit": false
+          }
+        }
+      ],
+      "testCursor": "/nodes/2/options",
+      "requires": "Place the caret inside the existing camera options object."
+    }
+  ],
+  "viewers": [
+    "3d",
+    "image",
+    "text"
+  ]
+}

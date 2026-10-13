@@ -1,0 +1,152 @@
+{
+  "version": "schemaxis/1",
+  "maxPublications": 200,
+  "nodes": [
+    {
+      "id": "source",
+      "filter": "wavelet"
+    },
+    {
+      "id": "velocity",
+      "filter": "calculator",
+      "inputs": {
+        "input": "source"
+      },
+      "options": {
+        "expression": "iHat",
+        "result": "velocity"
+      }
+    },
+    {
+      "id": "scalar",
+      "filter": "calculator",
+      "inputs": {
+        "input": "velocity"
+      },
+      "options": {
+        "expression": "coordsX",
+        "result": "positionX"
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "slice",
+      "inputs": {
+        "input": "scalar"
+      },
+      "options": {
+        "origin": {
+          "$axis": "height"
+        },
+        "normal": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "iso",
+      "filter": "contour",
+      "inputs": {
+        "input": "scalar"
+      },
+      "options": {
+        "field": [
+          "POINTS",
+          "positionX"
+        ],
+        "values": {
+          "$axis": "level"
+        }
+      }
+    },
+    {
+      "id": "outline",
+      "filter": "outline",
+      "inputs": {
+        "input": "source"
+      }
+    },
+    {
+      "id": "unused",
+      "filter": "sphere",
+      "options": {
+        "radius": 100
+      }
+    }
+  ],
+  "axes": [
+    {
+      "name": "height",
+      "values": [
+        [
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "name": "level",
+      "values": [
+        [
+          2
+        ]
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "overview",
+      "visible": {
+        "cut": {
+          "field": [
+            "POINTS",
+            "positionX"
+          ],
+          "range": [
+            -10,
+            10
+          ]
+        },
+        "iso": {
+          "colour": [
+            1,
+            0.2,
+            0.1
+          ],
+          "opacity": 0.5
+        },
+        "outline": {
+          "colour": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "geometry": [
+        "cut",
+        "iso"
+      ],
+      "appearances": [
+        {},
+        {
+          "cut": {
+            "field": [
+              "POINTS",
+              "RTData"
+            ],
+            "range": [
+              0,
+              300
+            ]
+          }
+        }
+      ],
+      "images": [],
+      "gltf": true
+    }
+  ]
+}

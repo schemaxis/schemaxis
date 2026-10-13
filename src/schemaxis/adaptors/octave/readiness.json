@@ -1,0 +1,307 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.octave/1": {
+      "guide": "docs/numerical-analysis.md",
+      "context": {
+        "purpose": "Bounded real-valued one-dimensional analysis with numeric CSV publications; use for signals and fitted trends, not arbitrary MATLAB programs.",
+        "assumptions": "Finite real x/y samples; callers own physical units. Frequency is cycles per x unit and phase is radians. Native APIs are described by the public GNU Octave manual; the supported subset is defined by the declarations.",
+        "constraints": "Derivatives, integrals and resampling require strictly increasing x; FFT requires uniform power-of-two sampling. Complex values, missing data, plotting and user functions are unsupported. Some data-dependent constraints are checked during execution, after host planning.",
+        "inspection": "Inspect output CSV x/y values and statistics.json; native.json retains intermediates and fit/FFT metadata. Run verify to compare retained native results and publications with independent host arithmetic (relative 2e-8, absolute 2e-9). The embedded derivative example should publish y=[2,2,2].",
+        "recovery": "INVALID_TABLE requires matching x/y lengths and numeric columns. INVALID_SAMPLING requires correcting order, spacing, sample count or smoothing window. A SINGULAR_FIT needs varying x. Repair input, plan again and use a fresh output directory; do not relax verification tolerances to hide disagreement."
+      },
+      "examples": [
+        {
+          "id": "linear-derivative",
+          "document": {
+            "version": "schemaxis.octave/1",
+            "nodes": [
+              {
+                "id": "signal",
+                "filter": "samples",
+                "options": {
+                  "x": [
+                    0,
+                    1,
+                    2
+                  ],
+                  "y": [
+                    1,
+                    3,
+                    5
+                  ]
+                }
+              },
+              {
+                "id": "gradient",
+                "filter": "derivative",
+                "inputs": {
+                  "input": "signal"
+                }
+              }
+            ],
+            "outputs": [
+              "gradient"
+            ]
+          }
+        },
+        {
+          "id": "unequal-samples",
+          "document": {
+            "version": "schemaxis.octave/1",
+            "nodes": [
+              {
+                "id": "signal",
+                "filter": "samples",
+                "options": {
+                  "x": [
+                    0,
+                    1,
+                    2
+                  ],
+                  "y": [
+                    1,
+                    3
+                  ]
+                }
+              },
+              {
+                "id": "gradient",
+                "filter": "derivative",
+                "inputs": {
+                  "input": "signal"
+                }
+              }
+            ],
+            "outputs": [
+              "gradient"
+            ]
+          },
+          "expect": "invalid",
+          "fault": "INVALID_TABLE"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_numeric_analysis.py"
+      ],
+      "acceptance": [
+        "tools/qualify_analysis.py",
+        "docs/numerical-analysis.md#qualification"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Numeric UTF-8 CSV with named columns; caller supplies units. readCSV consumes table artifacts. No nulls or implicit unit conversion. Verify ordering and hashes before reuse.",
+          "references": [
+            "docs/numerical-analysis.md#connect-analysis-spreadsheets-and-geometry",
+            "tests/unit/test_numeric_analysis.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://docs.octave.org/latest/"
+        ],
+        "lifecycle": {
+          "timeout": "One isolated Octave worker receives the runner timeout; input validation precedes launch.",
+          "cancellation": "Shared process-tree cancellation through native_command.execute; authored input and partial result records remain.",
+          "logs": "Retain analysis.stdout, analysis.stderr, analysis-submission.json and dispatch metrics.",
+          "verification": "Recompute every intermediate with independent host arithmetic, compare numeric CSV/statistics, source hashes and artifact membership."
+        },
+        "data": [
+          {
+            "id": "numeric-input",
+            "direction": "input",
+            "kind": "table",
+            "format": "UTF-8 numeric CSV",
+            "traits": {
+              "units": "caller-defined",
+              "columns": [
+                "x",
+                "y"
+              ],
+              "scalarType": "finite-real",
+              "nulls": false,
+              "sampleOrder": "authored",
+              "precision": "binary64"
+            },
+            "losses": [],
+            "scope": "Named numeric x/y columns; no implied units."
+          },
+          {
+            "id": "numeric-output",
+            "direction": "output",
+            "kind": "table",
+            "format": "UTF-8 numeric CSV",
+            "traits": {
+              "units": "caller-defined",
+              "columns": [
+                "x",
+                "y"
+              ],
+              "scalarType": "finite-real",
+              "nulls": false,
+              "sampleOrder": "authored",
+              "precision": "binary64"
+            },
+            "losses": [
+              "Floating-point and chosen operation approximation."
+            ],
+            "scope": "Two-column ordered numeric output; integration and FFT change interpretation."
+          },
+          {
+            "id": "statistics",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "units": "derived-from-y",
+              "nulls": false
+            },
+            "losses": [],
+            "scope": "Numeric summary and fit/FFT metadata in retained evidence."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "Inspect output CSV columns and selected rows.",
+            "limits": "CSV input is bounded to 8 MiB; table pages are bounded by the shared inspection service."
+          },
+          {
+            "panel": "series",
+            "scope": "Inspect finite numeric x/y samples.",
+            "limits": "Series views require explicit numeric columns and strictly increasing x."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "linear-derivative",
+          "reuse": "Change the declared dimensions or numeric options using JSON pointer edits; plan the new revision, use a fresh run directory and compare independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact receipts, scheduler provenance and explicit handoffs; verify each consumer format."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Inspect retained publications and receipts; no native node inspection hook is advertised."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Only serial execution is qualified; do not request multiple ranks."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The registered hook hashes external inputs for scheduler reuse."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No finite native time-list batching support in this route."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit ordinary JSON through the shared draft source; planning checks the current revision."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Use atomic JSON pointer patches through the shared draft model; node commands apply only to node-shaped routes."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Use bounded batch execution; no persistent native editing session is promised."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Inspect and reuse declared publications; no console native-save extension is advertised for this route."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "derivative-baseline",
+            "example": "linear-derivative",
+            "edits": [],
+            "scope": "Analytic linear-sample derivative; no FFT or arbitrary signal qualification.",
+            "checks": [
+              {
+                "file": "gradient.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    0,
+                    2
+                  ],
+                  [
+                    1,
+                    2
+                  ],
+                  [
+                    2,
+                    2
+                  ]
+                ],
+                "relative": 1e-09,
+                "absolute": 1e-09
+              }
+            ]
+          },
+          {
+            "id": "derivative-variant",
+            "example": "linear-derivative",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/y",
+                "value": [
+                  2,
+                  5,
+                  8
+                ]
+              }
+            ],
+            "scope": "Analytic linear-sample derivative; no FFT or arbitrary signal qualification.",
+            "checks": [
+              {
+                "file": "gradient.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    0,
+                    3
+                  ],
+                  [
+                    1,
+                    3
+                  ],
+                  [
+                    2,
+                    3
+                  ]
+                ],
+                "relative": 1e-09,
+                "absolute": 1e-09
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "documentVersion": "schemaxis.workflow/0.1",
+  "templates": {
+    "camera": {"up": [0, 0, 1]},
+    "writer": {"name": "overview", "size": [640, 480]},
+    "case": {
+      "file": "cases/coupe-a/coupe_AMI.foam",
+      "times": {"values": [0.8, 1], "tolerance": 0},
+      "fractions": [
+        {"$expr": {"op": "divide", "args": [1, 4]}},
+        0.5,
+        {"$expr": {"op": "subtract", "args": [1, 0.25]}}
+      ]
+    }
+  },
+  "steps": [{
+    "id": "coupe", "use": "paraview.slice_export",
+    "arguments": {
+      "case": {"$expr": {"op": "overlay", "args": [
+        {"$document": "/templates/case"},
+        {"writers": [{"$expr": {"op": "overlay", "args": [
+          {"$document": "/templates/writer"},
+          {"cameras": [
+            {"$expr": {"op": "overlay", "args": [{"$document": "/templates/camera"}, {"direction": [1, 0, 0]}]}},
+            {"$expr": {"op": "overlay", "args": [{"$document": "/templates/camera"}, {"direction": [-1, 0, 0]}]}},
+            {"$expr": {"op": "overlay", "args": [{"$document": "/templates/camera"}, {"direction": [1, 1, 1]}]}},
+            {"$expr": {"op": "overlay", "args": [{"$document": "/templates/camera"}, {"direction": [-1, -1, 1]}]}}
+          ]}
+        ]}}]}
+      ]}},
+      "timeout": 1200,
+      "outputDirectory": "coupe-mvp"
+    }
+  }]
+}

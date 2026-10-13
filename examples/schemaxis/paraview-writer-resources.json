@@ -1,0 +1,77 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "sphere",
+      "filter": "pvSphere",
+      "options": {
+        "Radius": 1
+      }
+    },
+    {
+      "id": "height",
+      "filter": "pvElevation",
+      "inputs": {
+        "Input": "sphere"
+      },
+      "options": {
+        "LowPoint": [
+          0,
+          0,
+          -1
+        ],
+        "HighPoint": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "colours",
+      "filter": "pvResourcePVLookupTable",
+      "options": {
+        "RGBPoints": [
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          0,
+          0
+        ],
+        "ColorSpace": "RGB"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "colouredPly",
+      "exports": [
+        {
+          "id": "ply",
+          "node": "height",
+          "writer": "pvWritePPLYWriter",
+          "resources": {
+            "LookupTable": "colours"
+          },
+          "options": {
+            "EnableColoring": true,
+            "ColorArrayName": [
+              "POINTS",
+              "Elevation"
+            ]
+          },
+          "acceptLosses": [
+            "fields",
+            "point-identity",
+            "interior-cells",
+            "structure"
+          ],
+          "tolerance": 1e-06
+        }
+      ]
+    }
+  ]
+}

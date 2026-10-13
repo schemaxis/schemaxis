@@ -1,0 +1,3025 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "categories": [
+    {
+      "id": "primitives",
+      "title": "Primitives",
+      "icon": "cube"
+    },
+    {
+      "id": "profiles",
+      "title": "Sketches & profiles",
+      "icon": "file-code"
+    },
+    {
+      "id": "features",
+      "title": "Features & booleans",
+      "icon": "layers"
+    },
+    {
+      "id": "finish",
+      "title": "Fillets & chamfers",
+      "icon": "layers"
+    },
+    {
+      "id": "measure",
+      "title": "Measurements",
+      "icon": "table"
+    },
+    {
+      "id": "studies",
+      "title": "Design studies",
+      "icon": "gear"
+    },
+    {
+      "id": "assembly",
+      "title": "Assemblies",
+      "icon": "flow"
+    },
+    {
+      "id": "io",
+      "title": "Import & export",
+      "icon": "file"
+    }
+  ],
+  "baseDocument": {
+    "version": "schemaxis.freecad/1",
+    "units": "mm",
+    "nodes": [
+      {
+        "id": "base",
+        "filter": "box",
+        "options": {
+          "length": 30,
+          "width": 20,
+          "height": 10
+        }
+      },
+      {
+        "id": "tool",
+        "filter": "cylinder",
+        "options": {
+          "radius": 4,
+          "height": 12,
+          "origin": [
+            15,
+            10,
+            -1
+          ]
+        }
+      },
+      {
+        "id": "profile",
+        "filter": "circle",
+        "options": {
+          "radius": 8
+        }
+      },
+      {
+        "id": "upperProfile",
+        "filter": "circle",
+        "options": {
+          "radius": 4,
+          "origin": [
+            0,
+            0,
+            20
+          ]
+        }
+      }
+    ],
+    "output": "base"
+  },
+  "templates": [
+    {
+      "id": "solid-box",
+      "title": "Parametric solid",
+      "file": "templates/solid-box.json",
+      "description": "A millimetre-scale box ready for CAD export."
+    },
+    {
+      "id": "drilled-block-template",
+      "title": "Drilled mounting block",
+      "description": "Drill a through-hole in a dimensioned block.",
+      "file": "studio/templates/drilled-block-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Feature prefix",
+          "type": "id",
+          "required": true,
+          "default": "part"
+        },
+        "height": {
+          "label": "Block height (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 1,
+          "maximum": 20,
+          "default": 10
+        },
+        "radius": {
+          "label": "Hole radius (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.1,
+          "maximum": 10,
+          "default": 4
+        }
+      }
+    },
+    {
+      "id": "hollow-bushing-template",
+      "title": "Hollow bushing",
+      "description": "Subtract an axial bore from a short cylindrical sleeve.",
+      "file": "studio/templates/hollow-bushing-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Feature prefix",
+          "type": "id",
+          "required": true,
+          "default": "part"
+        },
+        "radius": {
+          "label": "Bore radius (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.1,
+          "maximum": 11,
+          "default": 8
+        }
+      }
+    },
+    {
+      "id": "l-profile-template",
+      "title": "L-section extrusion",
+      "description": "Extrude a closed L-shaped polygon as a structural angle.",
+      "file": "studio/templates/l-profile-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Feature prefix",
+          "type": "id",
+          "required": true,
+          "default": "part"
+        },
+        "length": {
+          "label": "Extrusion length (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.1,
+          "default": 80
+        }
+      }
+    },
+    {
+      "id": "loft-transition-template",
+      "title": "Circular loft transition",
+      "description": "Loft between separated circular sections of different radii.",
+      "file": "studio/templates/loft-transition-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Feature prefix",
+          "type": "id",
+          "required": true,
+          "default": "part"
+        },
+        "radius": {
+          "label": "Outlet radius (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.1,
+          "default": 10
+        },
+        "ruled": {
+          "label": "Ruled sides",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        }
+      }
+    },
+    {
+      "id": "fixed-assembly",
+      "title": "Fixed plate-and-post assembly",
+      "description": "A grounded base, two linked posts and a lid connected by an acyclic fixed-joint tree.",
+      "file": "studio/templates/fixed-assembly.json",
+      "fields": {
+        "thickness": {
+          "label": "Plate thickness (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 5
+        },
+        "height": {
+          "label": "Post height (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 20
+        }
+      }
+    }
+  ],
+  "snippets": [
+    {
+      "id": "add-box",
+      "title": "Add a box",
+      "category": "primitives",
+      "description": "Append a dimensioned box and select it for CAD export.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "box"
+        },
+        "length": {
+          "label": "Length",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 10
+        },
+        "width": {
+          "label": "Width",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 10
+        },
+        "height": {
+          "label": "Height",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 10
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "box",
+              "options": {
+                "length": {
+                  "$fill": "length"
+                },
+                "width": {
+                  "$fill": "width"
+                },
+                "height": {
+                  "$fill": "height"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-cylinder",
+      "title": "Cylinder",
+      "category": "primitives",
+      "description": "Create an axial cylindrical solid with explicit radius, height and direction.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newCylinder"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 5
+        },
+        "height": {
+          "label": "Height",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 10
+        },
+        "axis": {
+          "label": "Axis",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            1
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "cylinder",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "height": {
+                  "$fill": "height"
+                },
+                "axis": {
+                  "$fill": "axis"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-cut",
+      "title": "Cut",
+      "category": "features",
+      "description": "Subtract the tool solid from the base and select the result.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newCut"
+        },
+        "base": {
+          "label": "Base",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        },
+        "tool": {
+          "label": "Tool",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "tool"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "cut",
+              "inputs": {
+                "base": {
+                  "$fill": "base"
+                },
+                "tool": {
+                  "$fill": "tool"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-fuse",
+      "title": "Fuse",
+      "category": "features",
+      "description": "Unite two intersecting solids and select the result.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newFuse"
+        },
+        "base": {
+          "label": "Base",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        },
+        "tool": {
+          "label": "Tool",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "tool"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "fuse",
+              "inputs": {
+                "base": {
+                  "$fill": "base"
+                },
+                "tool": {
+                  "$fill": "tool"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-sphere",
+      "title": "Sphere",
+      "category": "primitives",
+      "description": "Create a spherical solid for a ball, rounded tool or Boolean operand.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newSphere"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 10
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "sphere",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-cone",
+      "title": "Cone",
+      "category": "primitives",
+      "description": "Create a tapered solid with independent base and top radii.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newCone"
+        },
+        "radius1": {
+          "label": "Radius1",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 10
+        },
+        "radius2": {
+          "label": "Radius2",
+          "type": "number",
+          "required": true,
+          "minimum": 0,
+          "maximum": 100000,
+          "default": 5
+        },
+        "height": {
+          "label": "Height",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 20
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "cone",
+              "options": {
+                "radius1": {
+                  "$fill": "radius1"
+                },
+                "radius2": {
+                  "$fill": "radius2"
+                },
+                "height": {
+                  "$fill": "height"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-torus",
+      "title": "Torus",
+      "category": "primitives",
+      "description": "Create a ring; keep the minor radius smaller than the major radius.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newTorus"
+        },
+        "majorRadius": {
+          "label": "Major radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 20
+        },
+        "minorRadius": {
+          "label": "Minor radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 5
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "torus",
+              "options": {
+                "majorRadius": {
+                  "$fill": "majorRadius"
+                },
+                "minorRadius": {
+                  "$fill": "minorRadius"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-common",
+      "title": "Common",
+      "category": "features",
+      "description": "Retain the shared volume of two overlapping solids.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newCommon"
+        },
+        "base": {
+          "label": "Base",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        },
+        "tool": {
+          "label": "Tool",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "tool"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "common",
+              "inputs": {
+                "base": {
+                  "$fill": "base"
+                },
+                "tool": {
+                  "$fill": "tool"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-polygon",
+      "title": "Polygon",
+      "category": "profiles",
+      "description": "Create a closed planar polygon without repeating the first vertex; extrude or revolve it next.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newPolygon"
+        },
+        "points": {
+          "label": "Points",
+          "type": "json",
+          "required": true,
+          "default": [
+            [
+              0,
+              0
+            ],
+            [
+              20,
+              0
+            ],
+            [
+              10,
+              15
+            ]
+          ]
+        },
+        "plane": {
+          "label": "Plane",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "XY",
+            "XZ",
+            "YZ"
+          ],
+          "default": "XY"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "polygon",
+              "options": {
+                "points": {
+                  "$fill": "points"
+                },
+                "plane": {
+                  "$fill": "plane"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-rectangle",
+      "title": "Rectangle",
+      "category": "profiles",
+      "description": "Add a centred, dimensionally constrained rectangular profile; the existing solid remains the output.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newRectangle"
+        },
+        "width": {
+          "label": "Width",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 80
+        },
+        "height": {
+          "label": "Height",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 50
+        },
+        "plane": {
+          "label": "Plane",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "XY",
+            "XZ",
+            "YZ"
+          ],
+          "default": "XY"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "rectangle",
+              "options": {
+                "width": {
+                  "$fill": "width"
+                },
+                "height": {
+                  "$fill": "height"
+                },
+                "plane": {
+                  "$fill": "plane"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-circle",
+      "title": "Circle",
+      "category": "profiles",
+      "description": "Add a centred, dimensionally constrained circular profile for extrusion or lofting.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newCircle"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 5
+        },
+        "plane": {
+          "label": "Plane",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "XY",
+            "XZ",
+            "YZ"
+          ],
+          "default": "XY"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "circle",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "plane": {
+                  "$fill": "plane"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-extrude",
+      "title": "Extrude",
+      "category": "features",
+      "description": "Turn an existing profile into a solid along a nonzero direction.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newExtrude"
+        },
+        "length": {
+          "label": "Length",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 10
+        },
+        "direction": {
+          "label": "Direction",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        "profile": {
+          "label": "Profile",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "profile"
+          ],
+          "default": "profile"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "extrude",
+              "options": {
+                "length": {
+                  "$fill": "length"
+                },
+                "direction": {
+                  "$fill": "direction"
+                }
+              },
+              "inputs": {
+                "profile": {
+                  "$fill": "profile"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-revolve",
+      "title": "Revolve",
+      "category": "features",
+      "description": "Revolve an existing profile about a chosen axis; choose a profile that avoids self-intersection.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newRevolve"
+        },
+        "angle": {
+          "label": "Angle",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 360,
+          "default": 360
+        },
+        "axis": {
+          "label": "Axis",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        "profile": {
+          "label": "Profile",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "profile"
+          ],
+          "default": "profile"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "revolve",
+              "options": {
+                "angle": {
+                  "$fill": "angle"
+                },
+                "axis": {
+                  "$fill": "axis"
+                }
+              },
+              "inputs": {
+                "profile": {
+                  "$fill": "profile"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "base",
+            "filter": "box",
+            "options": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            }
+          },
+          {
+            "id": "tool",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 12,
+              "origin": [
+                15,
+                10,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "profile",
+            "filter": "circle",
+            "options": {
+              "radius": 5,
+              "plane": "XZ",
+              "origin": [
+                15,
+                0,
+                0
+              ]
+            }
+          },
+          {
+            "id": "upperProfile",
+            "filter": "circle",
+            "options": {
+              "radius": 4,
+              "origin": [
+                0,
+                0,
+                20
+              ]
+            }
+          }
+        ],
+        "output": "base"
+      }
+    },
+    {
+      "id": "add-fillet",
+      "title": "Fillet",
+      "category": "finish",
+      "description": "Round explicitly selected edges of an existing solid. Native topology determines feasibility.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newFillet"
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 1
+        },
+        "edges": {
+          "label": "Edges",
+          "type": "json",
+          "required": true,
+          "default": [
+            1
+          ]
+        },
+        "base": {
+          "label": "Base",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "fillet",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "edges": {
+                  "$fill": "edges"
+                }
+              },
+              "inputs": {
+                "base": {
+                  "$fill": "base"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-chamfer",
+      "title": "Chamfer",
+      "category": "finish",
+      "description": "Bevel explicitly selected edges of an existing solid.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newChamfer"
+        },
+        "distance": {
+          "label": "Distance",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 1
+        },
+        "edges": {
+          "label": "Edges",
+          "type": "json",
+          "required": true,
+          "default": [
+            1
+          ]
+        },
+        "base": {
+          "label": "Base",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "chamfer",
+              "options": {
+                "distance": {
+                  "$fill": "distance"
+                },
+                "edges": {
+                  "$fill": "edges"
+                }
+              },
+              "inputs": {
+                "base": {
+                  "$fill": "base"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-readSTEP",
+      "title": "Read step",
+      "category": "io",
+      "description": "Load one valid solid from a STEP file and select it for export.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newReadSTEP"
+        },
+        "file": {
+          "label": "Source .step file",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "step",
+            "stp"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "readSTEP",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ],
+      "requires": "A STEP file containing one valid solid is needed at execution.",
+      "testValues": {
+        "file": "/library-fixtures/part.step"
+      }
+    },
+    {
+      "id": "add-loft",
+      "title": "Loft",
+      "category": "features",
+      "description": "Create a solid transition through two or more ordered, distinct profile nodes.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newLoft"
+        },
+        "ruled": {
+          "label": "Ruled",
+          "type": "boolean",
+          "required": true,
+          "default": false
+        },
+        "sections": {
+          "label": "Sections",
+          "type": "json",
+          "required": true,
+          "default": [
+            "profile",
+            "upperProfile"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "loft",
+              "options": {
+                "ruled": {
+                  "$fill": "ruled"
+                }
+              },
+              "inputs": {
+                "sections": {
+                  "$fill": "sections"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-multiFuse",
+      "title": "Multi fuse",
+      "category": "features",
+      "description": "Fuse an ordered list of distinct solids and optionally refine residual edges.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "newMultiFuse"
+        },
+        "refine": {
+          "label": "Refine",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        },
+        "shapes": {
+          "label": "Shapes",
+          "type": "json",
+          "required": true,
+          "default": [
+            "base",
+            "tool"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "multiFuse",
+              "options": {
+                "refine": {
+                  "$fill": "refine"
+                }
+              },
+              "inputs": {
+                "shapes": {
+                  "$fill": "shapes"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "measure-volume",
+      "title": "Solid volume",
+      "category": "measure",
+      "description": "Publish solid volume as a named verified measurement with declared units.",
+      "fields": {
+        "id": {
+          "label": "Measurement ID",
+          "type": "id",
+          "required": true,
+          "default": "volume"
+        },
+        "source": {
+          "label": "Solid to measure",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "node": {
+                "$fill": "source"
+              },
+              "quantity": "volume"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "measure-surfaceArea",
+      "title": "Surface area",
+      "category": "measure",
+      "description": "Publish surface area as a named verified measurement with declared units.",
+      "fields": {
+        "id": {
+          "label": "Measurement ID",
+          "type": "id",
+          "required": true,
+          "default": "surfaceArea"
+        },
+        "source": {
+          "label": "Solid to measure",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "node": {
+                "$fill": "source"
+              },
+              "quantity": "surfaceArea"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "measure-bounds",
+      "title": "Bounding box",
+      "category": "measure",
+      "description": "Publish bounding box as a named verified measurement with declared units.",
+      "fields": {
+        "id": {
+          "label": "Measurement ID",
+          "type": "id",
+          "required": true,
+          "default": "bounds"
+        },
+        "source": {
+          "label": "Solid to measure",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "node": {
+                "$fill": "source"
+              },
+              "quantity": "bounds"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "measure-centreOfMass",
+      "title": "Centre of mass",
+      "category": "measure",
+      "description": "Publish centre of mass as a named verified measurement with declared units.",
+      "fields": {
+        "id": {
+          "label": "Measurement ID",
+          "type": "id",
+          "required": true,
+          "default": "centreOfMass"
+        },
+        "source": {
+          "label": "Solid to measure",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "node": {
+                "$fill": "source"
+              },
+              "quantity": "centreOfMass"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "measure-extentX",
+      "title": "X extent",
+      "category": "measure",
+      "description": "Publish x extent as a named verified measurement with declared units.",
+      "fields": {
+        "id": {
+          "label": "Measurement ID",
+          "type": "id",
+          "required": true,
+          "default": "extentX"
+        },
+        "source": {
+          "label": "Solid to measure",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "node": {
+                "$fill": "source"
+              },
+              "quantity": "extentX"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "measure-extentY",
+      "title": "Y extent",
+      "category": "measure",
+      "description": "Publish y extent as a named verified measurement with declared units.",
+      "fields": {
+        "id": {
+          "label": "Measurement ID",
+          "type": "id",
+          "required": true,
+          "default": "extentY"
+        },
+        "source": {
+          "label": "Solid to measure",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "node": {
+                "$fill": "source"
+              },
+              "quantity": "extentY"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "measure-extentZ",
+      "title": "Z extent",
+      "category": "measure",
+      "description": "Publish z extent as a named verified measurement with declared units.",
+      "fields": {
+        "id": {
+          "label": "Measurement ID",
+          "type": "id",
+          "required": true,
+          "default": "extentZ"
+        },
+        "source": {
+          "label": "Solid to measure",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "node": {
+                "$fill": "source"
+              },
+              "quantity": "extentZ"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "measure-edgeCount",
+      "title": "Selected edge count",
+      "category": "measure",
+      "description": "Publish selected edge count as a named verified measurement with declared units.",
+      "fields": {
+        "id": {
+          "label": "Measurement ID",
+          "type": "id",
+          "required": true,
+          "default": "edgeCount"
+        },
+        "source": {
+          "label": "Solid to measure",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        },
+        "edges": {
+          "label": "Edge selection",
+          "type": "json",
+          "required": true,
+          "default": {
+            "where": {
+              "parallelTo": [
+                0,
+                0,
+                1
+              ]
+            },
+            "expect": 4
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "node": {
+                "$fill": "source"
+              },
+              "quantity": "edgeCount",
+              "edges": {
+                "$fill": "edges"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "measure-totalEdgeLength",
+      "title": "Selected edge length",
+      "category": "measure",
+      "description": "Publish selected edge length as a named verified measurement with declared units.",
+      "fields": {
+        "id": {
+          "label": "Measurement ID",
+          "type": "id",
+          "required": true,
+          "default": "totalEdgeLength"
+        },
+        "source": {
+          "label": "Solid to measure",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "solid"
+          ],
+          "default": "base"
+        },
+        "edges": {
+          "label": "Edge selection",
+          "type": "json",
+          "required": true,
+          "default": {
+            "where": {
+              "parallelTo": [
+                0,
+                0,
+                1
+              ]
+            },
+            "expect": 4
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "node": {
+                "$fill": "source"
+              },
+              "quantity": "totalEdgeLength",
+              "edges": {
+                "$fill": "edges"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "select-vertical",
+      "title": "Vertical line edges",
+      "category": "finish",
+      "description": "Replace an edge selector with a geometric predicate and an explicit expected match count.",
+      "fields": {
+        "selection": {
+          "label": "Semantic edge selector",
+          "type": "json",
+          "required": true,
+          "default": {
+            "where": {
+              "curve": "line",
+              "parallelTo": [
+                0,
+                0,
+                1
+              ]
+            },
+            "expect": 4
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "$fill": "selection"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "base",
+            "filter": "box",
+            "options": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            }
+          },
+          {
+            "id": "tool",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 12,
+              "origin": [
+                15,
+                10,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "profile",
+            "filter": "circle",
+            "options": {
+              "radius": 8
+            }
+          },
+          {
+            "id": "upperProfile",
+            "filter": "circle",
+            "options": {
+              "radius": 4,
+              "origin": [
+                0,
+                0,
+                20
+              ]
+            }
+          },
+          {
+            "id": "finish",
+            "filter": "fillet",
+            "options": {
+              "radius": 0.5,
+              "edges": [
+                1
+              ]
+            },
+            "inputs": {
+              "base": "base"
+            }
+          }
+        ],
+        "output": "finish"
+      },
+      "testCursor": "/nodes/4/options/edges"
+    },
+    {
+      "id": "select-top",
+      "title": "Edges on the top plane",
+      "category": "finish",
+      "description": "Replace an edge selector with a geometric predicate and an explicit expected match count.",
+      "fields": {
+        "selection": {
+          "label": "Semantic edge selector",
+          "type": "json",
+          "required": true,
+          "default": {
+            "where": {
+              "onPlane": {
+                "axis": "z",
+                "coordinate": 10
+              }
+            },
+            "expect": 4
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "$fill": "selection"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "base",
+            "filter": "box",
+            "options": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            }
+          },
+          {
+            "id": "tool",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 12,
+              "origin": [
+                15,
+                10,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "profile",
+            "filter": "circle",
+            "options": {
+              "radius": 8
+            }
+          },
+          {
+            "id": "upperProfile",
+            "filter": "circle",
+            "options": {
+              "radius": 4,
+              "origin": [
+                0,
+                0,
+                20
+              ]
+            }
+          },
+          {
+            "id": "finish",
+            "filter": "fillet",
+            "options": {
+              "radius": 0.5,
+              "edges": [
+                1
+              ]
+            },
+            "inputs": {
+              "base": "base"
+            }
+          }
+        ],
+        "output": "finish"
+      },
+      "testCursor": "/nodes/4/options/edges"
+    },
+    {
+      "id": "select-length",
+      "title": "Edges in a length band",
+      "category": "finish",
+      "description": "Replace an edge selector with a geometric predicate and an explicit expected match count.",
+      "fields": {
+        "selection": {
+          "label": "Semantic edge selector",
+          "type": "json",
+          "required": true,
+          "default": {
+            "where": {
+              "length": {
+                "minimum": 19.9,
+                "maximum": 20.1
+              }
+            },
+            "expect": 4
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "$fill": "selection"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "base",
+            "filter": "box",
+            "options": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            }
+          },
+          {
+            "id": "tool",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 12,
+              "origin": [
+                15,
+                10,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "profile",
+            "filter": "circle",
+            "options": {
+              "radius": 8
+            }
+          },
+          {
+            "id": "upperProfile",
+            "filter": "circle",
+            "options": {
+              "radius": 4,
+              "origin": [
+                0,
+                0,
+                20
+              ]
+            }
+          },
+          {
+            "id": "finish",
+            "filter": "fillet",
+            "options": {
+              "radius": 0.5,
+              "edges": [
+                1
+              ]
+            },
+            "inputs": {
+              "base": "base"
+            }
+          }
+        ],
+        "output": "finish"
+      },
+      "testCursor": "/nodes/4/options/edges"
+    },
+    {
+      "id": "select-circular",
+      "title": "Circular rim edges",
+      "category": "finish",
+      "description": "Replace an edge selector with a geometric predicate and an explicit expected match count.",
+      "fields": {
+        "selection": {
+          "label": "Semantic edge selector",
+          "type": "json",
+          "required": true,
+          "default": {
+            "where": {
+              "curve": "circle"
+            },
+            "expect": 2
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "$fill": "selection"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "base",
+            "filter": "box",
+            "options": {
+              "length": 30,
+              "width": 20,
+              "height": 10
+            }
+          },
+          {
+            "id": "tool",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 12,
+              "origin": [
+                15,
+                10,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "profile",
+            "filter": "circle",
+            "options": {
+              "radius": 8
+            }
+          },
+          {
+            "id": "upperProfile",
+            "filter": "circle",
+            "options": {
+              "radius": 4,
+              "origin": [
+                0,
+                0,
+                20
+              ]
+            }
+          },
+          {
+            "id": "finish",
+            "filter": "fillet",
+            "options": {
+              "radius": 0.5,
+              "edges": [
+                1
+              ]
+            },
+            "inputs": {
+              "base": "tool"
+            }
+          }
+        ],
+        "output": "finish"
+      },
+      "testCursor": "/nodes/4/options/edges"
+    },
+    {
+      "id": "drilled-block",
+      "title": "Drilled mounting block",
+      "category": "features",
+      "description": "Drill a through-hole in a dimensioned block.",
+      "fields": {
+        "prefix": {
+          "label": "Feature prefix",
+          "type": "id",
+          "required": true,
+          "default": "cad"
+        },
+        "height": {
+          "label": "Block height (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 1,
+          "maximum": 20,
+          "default": 10
+        },
+        "radius": {
+          "label": "Hole radius (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.1,
+          "maximum": 10,
+          "default": 4
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Blank",
+              "filter": "box",
+              "options": {
+                "length": 40,
+                "width": 30,
+                "height": {
+                  "$fill": "height"
+                }
+              }
+            },
+            {
+              "id": "${prefix}Drill",
+              "filter": "cylinder",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "height": 22,
+                "origin": [
+                  20,
+                  15,
+                  -1
+                ]
+              }
+            },
+            {
+              "id": "${prefix}Part",
+              "filter": "cut",
+              "inputs": {
+                "base": "${prefix}Blank",
+                "tool": "${prefix}Drill"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}Part"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "hollow-bushing",
+      "title": "Hollow bushing",
+      "category": "features",
+      "description": "Subtract an axial bore from a short cylindrical sleeve.",
+      "fields": {
+        "prefix": {
+          "label": "Feature prefix",
+          "type": "id",
+          "required": true,
+          "default": "cad"
+        },
+        "radius": {
+          "label": "Bore radius (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.1,
+          "maximum": 11,
+          "default": 8
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Outer",
+              "filter": "cylinder",
+              "options": {
+                "radius": 12,
+                "height": 20
+              }
+            },
+            {
+              "id": "${prefix}Bore",
+              "filter": "cylinder",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "height": 22,
+                "origin": [
+                  0,
+                  0,
+                  -1
+                ]
+              }
+            },
+            {
+              "id": "${prefix}Part",
+              "filter": "cut",
+              "inputs": {
+                "base": "${prefix}Outer",
+                "tool": "${prefix}Bore"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}Part"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "l-profile",
+      "title": "L-section extrusion",
+      "category": "features",
+      "description": "Extrude a closed L-shaped polygon as a structural angle.",
+      "fields": {
+        "prefix": {
+          "label": "Feature prefix",
+          "type": "id",
+          "required": true,
+          "default": "cad"
+        },
+        "length": {
+          "label": "Extrusion length (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.1,
+          "default": 80,
+          "maximum": 100000
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Profile",
+              "filter": "polygon",
+              "options": {
+                "points": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    30,
+                    0
+                  ],
+                  [
+                    30,
+                    5
+                  ],
+                  [
+                    5,
+                    5
+                  ],
+                  [
+                    5,
+                    30
+                  ],
+                  [
+                    0,
+                    30
+                  ]
+                ]
+              }
+            },
+            {
+              "id": "${prefix}Part",
+              "filter": "extrude",
+              "options": {
+                "length": {
+                  "$fill": "length"
+                }
+              },
+              "inputs": {
+                "profile": "${prefix}Profile"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}Part"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "loft-transition",
+      "title": "Circular loft transition",
+      "category": "features",
+      "description": "Loft between separated circular sections of different radii.",
+      "fields": {
+        "prefix": {
+          "label": "Feature prefix",
+          "type": "id",
+          "required": true,
+          "default": "cad"
+        },
+        "radius": {
+          "label": "Outlet radius (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.1,
+          "default": 10,
+          "maximum": 100000
+        },
+        "ruled": {
+          "label": "Ruled sides",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Inlet",
+              "filter": "circle",
+              "options": {
+                "radius": 20
+              }
+            },
+            {
+              "id": "${prefix}Outlet",
+              "filter": "circle",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "origin": [
+                  0,
+                  0,
+                  40
+                ]
+              }
+            },
+            {
+              "id": "${prefix}Part",
+              "filter": "loft",
+              "options": {
+                "ruled": {
+                  "$fill": "ruled"
+                }
+              },
+              "inputs": {
+                "sections": [
+                  "${prefix}Inlet",
+                  "${prefix}Outlet"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}Part"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "rounded-block",
+      "title": "Block with rounded vertical edges",
+      "category": "features",
+      "description": "Select vertical edges geometrically and apply a finishing radius.",
+      "fields": {
+        "prefix": {
+          "label": "Feature prefix",
+          "type": "id",
+          "required": true,
+          "default": "cad"
+        },
+        "radius": {
+          "label": "Fillet radius (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.1,
+          "maximum": 4,
+          "default": 2
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}Blank",
+              "filter": "box",
+              "options": {
+                "length": 40,
+                "width": 30,
+                "height": 10
+              }
+            },
+            {
+              "id": "${prefix}Part",
+              "filter": "fillet",
+              "options": {
+                "radius": {
+                  "$fill": "radius"
+                },
+                "edges": {
+                  "where": {
+                    "parallelTo": [
+                      0,
+                      0,
+                      1
+                    ]
+                  },
+                  "expect": 4
+                }
+              },
+              "inputs": {
+                "base": "${prefix}Blank"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}Part"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "shared-length",
+      "title": "Shared block length",
+      "category": "studies",
+      "description": "Store a shared dimension and reference it from the base solid.",
+      "fields": {
+        "value": {
+          "label": "Shared block length (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 30
+        }
+      },
+      "inserts": [
+        {
+          "at": "/dimensions",
+          "merge": {
+            "length": {
+              "$fill": "value"
+            }
+          }
+        },
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "$document": "/dimensions/length"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "testCursor": "/nodes/0/options/length",
+      "requires": "Place the caret on the scalar dimension value that should use this shared setting."
+    },
+    {
+      "id": "shared-height",
+      "title": "Shared block height",
+      "category": "studies",
+      "description": "Store a shared dimension and reference it from the base solid.",
+      "fields": {
+        "value": {
+          "label": "Shared block height (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 10
+        }
+      },
+      "inserts": [
+        {
+          "at": "/dimensions",
+          "merge": {
+            "height": {
+              "$fill": "value"
+            }
+          }
+        },
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "$document": "/dimensions/height"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "testCursor": "/nodes/0/options/height",
+      "requires": "Place the caret on the scalar dimension value that should use this shared setting."
+    },
+    {
+      "id": "study-volume",
+      "title": "Solve height for a target volume",
+      "category": "studies",
+      "description": "Run the supported bounded scalar dimension search; the declared response is checked at sampled candidates.",
+      "fields": {
+        "target": {
+          "label": "Target (mm^3)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 6000
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": "studyMeasure",
+              "node": "base",
+              "quantity": "volume"
+            }
+          ]
+        },
+        {
+          "at": "/designStudy",
+          "values": [
+            {
+              "parameter": {
+                "node": "base",
+                "option": "height",
+                "minimum": 5,
+                "maximum": 15
+              },
+              "target": {
+                "measurement": "studyMeasure",
+                "value": {
+                  "$fill": "target"
+                },
+                "tolerance": 0.1,
+                "units": "mm^3"
+              },
+              "response": "increasing",
+              "maxIterations": 16
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "study-area",
+      "title": "Solve height for a target area",
+      "category": "studies",
+      "description": "Run the supported bounded scalar dimension search; the declared response is checked at sampled candidates.",
+      "fields": {
+        "target": {
+          "label": "Target (mm^2)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 2200
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": "studyMeasure",
+              "node": "base",
+              "quantity": "surfaceArea"
+            }
+          ]
+        },
+        {
+          "at": "/designStudy",
+          "values": [
+            {
+              "parameter": {
+                "node": "base",
+                "option": "height",
+                "minimum": 5,
+                "maximum": 15
+              },
+              "target": {
+                "measurement": "studyMeasure",
+                "value": {
+                  "$fill": "target"
+                },
+                "tolerance": 0.1,
+                "units": "mm^2"
+              },
+              "response": "increasing",
+              "maxIterations": 16
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "study-length",
+      "title": "Solve block length for an X extent",
+      "category": "studies",
+      "description": "Run the supported bounded scalar dimension search; the declared response is checked at sampled candidates.",
+      "fields": {
+        "target": {
+          "label": "Target (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 30
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": "studyMeasure",
+              "node": "base",
+              "quantity": "extentX"
+            }
+          ]
+        },
+        {
+          "at": "/designStudy",
+          "values": [
+            {
+              "parameter": {
+                "node": "base",
+                "option": "length",
+                "minimum": 20,
+                "maximum": 40
+              },
+              "target": {
+                "measurement": "studyMeasure",
+                "value": {
+                  "$fill": "target"
+                },
+                "tolerance": 0.1,
+                "units": "mm"
+              },
+              "response": "increasing",
+              "maxIterations": 16
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "study-height",
+      "title": "Solve block height for a Z extent",
+      "category": "studies",
+      "description": "Run the supported bounded scalar dimension search; the declared response is checked at sampled candidates.",
+      "fields": {
+        "target": {
+          "label": "Target (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 10
+        }
+      },
+      "inserts": [
+        {
+          "at": "/measurements/-",
+          "values": [
+            {
+              "id": "studyMeasure",
+              "node": "base",
+              "quantity": "extentZ"
+            }
+          ]
+        },
+        {
+          "at": "/designStudy",
+          "values": [
+            {
+              "parameter": {
+                "node": "base",
+                "option": "height",
+                "minimum": 5,
+                "maximum": 15
+              },
+              "target": {
+                "measurement": "studyMeasure",
+                "value": {
+                  "$fill": "target"
+                },
+                "tolerance": 0.1,
+                "units": "mm"
+              },
+              "response": "increasing",
+              "maxIterations": 16
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "mesh-deflection",
+      "title": "Mesh export tolerance",
+      "category": "io",
+      "description": "Control the linear deflection used when tessellating the exported CAD solid.",
+      "fields": {
+        "deflection": {
+          "label": "Linear deflection (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 1,
+          "default": 0.05
+        }
+      },
+      "inserts": [
+        {
+          "at": "/linearDeflection",
+          "values": [
+            {
+              "$fill": "deflection"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "assembly-post-height",
+      "title": "Assembly post height",
+      "category": "assembly",
+      "description": "Change the shared post height in a fixed-joint assembly; linked components share the declared part.",
+      "fields": {
+        "height": {
+          "label": "Post height (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "maximum": 10000,
+          "default": 20
+        }
+      },
+      "inserts": [
+        {
+          "at": "/dimensions/postHeight",
+          "values": [
+            {
+              "$fill": "height"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.freecad.assembly/1",
+        "units": "mm",
+        "dimensions": {
+          "plateThickness": 5,
+          "postHeight": 20
+        },
+        "parts": [
+          {
+            "id": "plate",
+            "type": "box",
+            "options": {
+              "length": 40,
+              "width": 30,
+              "height": {
+                "$document": "/dimensions/plateThickness"
+              }
+            }
+          },
+          {
+            "id": "post",
+            "type": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": {
+                "$document": "/dimensions/postHeight"
+              }
+            }
+          }
+        ],
+        "components": [
+          {
+            "id": "base",
+            "part": "plate",
+            "position": [
+              10,
+              20,
+              0
+            ],
+            "rotation": 30
+          },
+          {
+            "id": "postLeft",
+            "part": "post",
+            "position": [
+              80,
+              60,
+              30
+            ]
+          },
+          {
+            "id": "postRight",
+            "part": "post",
+            "position": [
+              -40,
+              0,
+              40
+            ]
+          },
+          {
+            "id": "lid",
+            "part": "plate",
+            "position": [
+              20,
+              50,
+              80
+            ]
+          }
+        ],
+        "grounded": "base",
+        "joints": [
+          {
+            "id": "leftMount",
+            "type": "fixed",
+            "parent": {
+              "component": "base",
+              "face": "top"
+            },
+            "child": {
+              "component": "postLeft",
+              "face": "bottom"
+            },
+            "offset": [
+              -10,
+              0,
+              0
+            ]
+          },
+          {
+            "id": "rightMount",
+            "type": "fixed",
+            "parent": {
+              "component": "base",
+              "face": "top"
+            },
+            "child": {
+              "component": "postRight",
+              "face": "bottom"
+            },
+            "offset": [
+              10,
+              0,
+              0
+            ]
+          },
+          {
+            "id": "lidMount",
+            "type": "fixed",
+            "parent": {
+              "component": "postLeft",
+              "face": "top"
+            },
+            "child": {
+              "component": "lid",
+              "face": "bottom"
+            },
+            "offset": [
+              10,
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "requires": "Use in a schemaxis.freecad.assembly/1 document with the shared postHeight dimension."
+    }
+  ],
+  "viewers": [
+    "3d",
+    "image",
+    "table",
+    "text"
+  ]
+}

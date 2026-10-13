@@ -1,0 +1,73 @@
+{
+  "version": "schemaxis.blender/1",
+  "nodes": [
+    {
+      "id": "paint",
+      "filter": "material"
+    },
+    {
+      "id": "${prefix}Blank",
+      "filter": "cube",
+      "options": {
+        "size": {
+          "$fill": "size"
+        }
+      },
+      "inputs": {
+        "material": "paint"
+      }
+    },
+    {
+      "id": "${prefix}Bevel",
+      "filter": "bevel",
+      "options": {
+        "width": 0.12,
+        "segments": 3
+      },
+      "inputs": {
+        "input": "${prefix}Blank"
+      }
+    },
+    {
+      "id": "${prefix}Final",
+      "filter": "weightedNormal",
+      "options": {
+        "keepSharp": true
+      },
+      "inputs": {
+        "input": "${prefix}Bevel"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "main",
+      "visible": [
+        "${prefix}Final"
+      ],
+      "images": [
+        {
+          "id": "view",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -2,
+                1
+              ]
+            }
+          ]
+        }
+      ],
+      "render": {
+        "device": "CPU",
+        "samples": 16,
+        "threads": 1
+      }
+    }
+  ]
+}

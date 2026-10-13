@@ -1,0 +1,39 @@
+{
+  "documentVersion": "schemaxis.workflow/0.1",
+  "name": "fixture-terrain-products",
+  "policies": {
+    "overwrite": "forbid"
+  },
+  "resources": {
+    "elevation": {
+      "source": {"kind": "file", "uri": "elevation.fixture.json"},
+      "reader": "fixture.geo.open"
+    }
+  },
+  "steps": [
+    {
+      "id": "slope",
+      "use": "fixture.geo.slope",
+      "inputs": {"dataset": {"ref": "resources.elevation.outputs.dataset"}},
+      "arguments": {}
+    },
+    {
+      "id": "contours",
+      "use": "fixture.geo.contours",
+      "inputs": {"dataset": {"ref": "resources.elevation.outputs.dataset"}},
+      "arguments": {}
+    }
+  ],
+  "outputs": {
+    "slopeRaster": {
+      "writer": "fixture.geo.write",
+      "input": {"ref": "steps.slope.outputs.dataset"},
+      "destination": {"kind": "file", "uri": "results/slope.fixture.json"}
+    },
+    "contoursVector": {
+      "writer": "fixture.geo.write",
+      "input": {"ref": "steps.contours.outputs.dataset"},
+      "destination": {"kind": "file", "uri": "results/contours.fixture.json"}
+    }
+  }
+}

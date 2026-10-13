@@ -1,0 +1,128 @@
+{
+  "version": "schemaxis.freecad.assembly/1",
+  "units": "mm",
+  "dimensions": {
+    "plateThickness": {
+      "$fill": "thickness"
+    },
+    "postHeight": {
+      "$fill": "height"
+    }
+  },
+  "parts": [
+    {
+      "id": "plate",
+      "type": "box",
+      "options": {
+        "length": 40,
+        "width": 30,
+        "height": {
+          "$document": "/dimensions/plateThickness"
+        }
+      }
+    },
+    {
+      "id": "post",
+      "type": "cylinder",
+      "options": {
+        "radius": 4,
+        "height": {
+          "$document": "/dimensions/postHeight"
+        }
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "base",
+      "part": "plate",
+      "position": [
+        10,
+        20,
+        0
+      ],
+      "rotation": 30
+    },
+    {
+      "id": "postLeft",
+      "part": "post",
+      "position": [
+        80,
+        60,
+        30
+      ]
+    },
+    {
+      "id": "postRight",
+      "part": "post",
+      "position": [
+        -40,
+        0,
+        40
+      ]
+    },
+    {
+      "id": "lid",
+      "part": "plate",
+      "position": [
+        20,
+        50,
+        80
+      ]
+    }
+  ],
+  "grounded": "base",
+  "joints": [
+    {
+      "id": "leftMount",
+      "type": "fixed",
+      "parent": {
+        "component": "base",
+        "face": "top"
+      },
+      "child": {
+        "component": "postLeft",
+        "face": "bottom"
+      },
+      "offset": [
+        -10,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "rightMount",
+      "type": "fixed",
+      "parent": {
+        "component": "base",
+        "face": "top"
+      },
+      "child": {
+        "component": "postRight",
+        "face": "bottom"
+      },
+      "offset": [
+        10,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "lidMount",
+      "type": "fixed",
+      "parent": {
+        "component": "postLeft",
+        "face": "top"
+      },
+      "child": {
+        "component": "lid",
+        "face": "bottom"
+      },
+      "offset": [
+        10,
+        0,
+        0
+      ]
+    }
+  ]
+}

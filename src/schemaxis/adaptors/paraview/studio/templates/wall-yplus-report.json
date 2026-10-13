@@ -1,0 +1,101 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {
+          "$fill": "file"
+        },
+        "caseType": "Reconstructed Case",
+        "cellArrays": [
+          "yPlus"
+        ],
+        "regions": {
+          "$fill": "readerRegions"
+        }
+      }
+    },
+    {
+      "id": "patches",
+      "filter": "extractBlock",
+      "options": {
+        "selectors": {
+          "$fill": "regions"
+        }
+      },
+      "inputs": {
+        "input": "case"
+      }
+    },
+    {
+      "id": "walls",
+      "filter": "surface",
+      "inputs": {
+        "input": "patches"
+      }
+    },
+    {
+      "id": "highYPlus",
+      "filter": "threshold",
+      "options": {
+        "field": [
+          "CELLS",
+          "yPlus"
+        ],
+        "lower": {
+          "$fill": "limit"
+        },
+        "upper": 1000000000000.0
+      },
+      "inputs": {
+        "input": "walls"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "wallCheck",
+      "visible": {
+        "walls": {
+          "field": [
+            "CELLS",
+            "yPlus"
+          ],
+          "range": [
+            0,
+            100
+          ],
+          "legend": true
+        },
+        "highYPlus": {
+          "colour": "red",
+          "representation": "Surface With Edges"
+        }
+      },
+      "geometry": [
+        "walls",
+        "highYPlus"
+      ],
+      "images": [
+        {
+          "id": "overview",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -1,
+                0.6
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1362 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "categories": [
+    {
+      "id": "canvas",
+      "title": "Canvas & palette",
+      "icon": "image"
+    },
+    {
+      "id": "layers",
+      "title": "Layers & frames",
+      "icon": "layers"
+    },
+    {
+      "id": "drawing",
+      "title": "Drawing",
+      "icon": "file-code"
+    },
+    {
+      "id": "animation",
+      "title": "Animation",
+      "icon": "play"
+    },
+    {
+      "id": "recipes",
+      "title": "Sprite recipes",
+      "icon": "table"
+    }
+  ],
+  "baseDocument": {
+    "version": "schemaxis.aseprite/1",
+    "nodes": [
+      {
+        "id": "canvas",
+        "filter": "sprite",
+        "options": {
+          "width": 32,
+          "height": 32,
+          "layer": "base"
+        }
+      }
+    ],
+    "output": "canvas"
+  },
+  "templates": [
+    {
+      "id": "button-face-template",
+      "title": "Button face with highlight",
+      "description": "Draw a filled button and a contrasting top highlight.",
+      "file": "studio/templates/button-face-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Operation prefix",
+          "type": "id",
+          "required": true,
+          "default": "sprite"
+        },
+        "colour": {
+          "label": "Button RGBA",
+          "type": "json",
+          "required": true,
+          "default": [
+            30,
+            120,
+            220,
+            255
+          ]
+        }
+      }
+    },
+    {
+      "id": "two-frame-blink-template",
+      "title": "Two-frame blink animation",
+      "description": "Create a second frame and tag a visible two-frame blink.",
+      "file": "studio/templates/two-frame-blink-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Operation prefix",
+          "type": "id",
+          "required": true,
+          "default": "sprite"
+        },
+        "colour": {
+          "label": "Drawing RGBA",
+          "type": "json",
+          "required": true,
+          "default": [
+            250,
+            160,
+            30,
+            255
+          ]
+        },
+        "duration": {
+          "label": "Second frame duration (ms)",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 180
+        }
+      }
+    },
+    {
+      "id": "layered-badge-template",
+      "title": "Layered badge icon",
+      "description": "Keep the badge background and foreground on separate layers.",
+      "file": "studio/templates/layered-badge-template.json",
+      "fields": {
+        "prefix": {
+          "label": "Operation prefix",
+          "type": "id",
+          "required": true,
+          "default": "sprite"
+        },
+        "colour": {
+          "label": "Badge RGBA",
+          "type": "json",
+          "required": true,
+          "default": [
+            250,
+            160,
+            30,
+            255
+          ]
+        }
+      }
+    }
+  ],
+  "snippets": [
+    {
+      "id": "configure-canvas",
+      "title": "Sprite",
+      "category": "canvas",
+      "description": "Configure the root canvas; keep existing drawing coordinates inside the chosen dimensions.",
+      "fields": {
+        "width": {
+          "label": "Width",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 256,
+          "default": 32
+        },
+        "height": {
+          "label": "Height",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 256,
+          "default": 32
+        },
+        "durationMS": {
+          "label": "Duration ms",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 100
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options",
+          "merge": {
+            "width": {
+              "$fill": "width"
+            },
+            "height": {
+              "$fill": "height"
+            },
+            "durationMS": {
+              "$fill": "durationMS"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "add-layer",
+      "title": "Layer",
+      "category": "layers",
+      "description": "Append a uniquely named layer to the current sprite chain.",
+      "fields": {
+        "id": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "newLayer"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "name": {
+          "label": "Name",
+          "type": "string",
+          "required": true,
+          "default": "detail"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "layer",
+              "options": {
+                "name": {
+                  "$fill": "name"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-frame",
+      "title": "Frame",
+      "category": "layers",
+      "description": "Append a new empty animation frame with an explicit duration.",
+      "fields": {
+        "id": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "newFrame"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "durationMS": {
+          "label": "Duration ms",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 150
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "frame",
+              "options": {
+                "durationMS": {
+                  "$fill": "durationMS"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-palette",
+      "title": "Palette",
+      "category": "canvas",
+      "description": "Set an ordered palette of opaque RGBA entries and optional transparent black.",
+      "fields": {
+        "id": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "newPalette"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "colours": {
+          "label": "Colours",
+          "type": "json",
+          "required": true,
+          "default": [
+            [
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              20,
+              40,
+              80,
+              255
+            ],
+            [
+              250,
+              160,
+              30,
+              255
+            ],
+            [
+              255,
+              255,
+              255,
+              255
+            ]
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "palette",
+              "options": {
+                "colours": {
+                  "$fill": "colours"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-pixel",
+      "title": "Pixel",
+      "category": "drawing",
+      "description": "Draw one opaque or transparent pixel on an existing layer and frame.",
+      "fields": {
+        "id": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "newPixel"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "layer": {
+          "label": "Layer",
+          "type": "string",
+          "required": true,
+          "default": "base"
+        },
+        "frame": {
+          "label": "Frame",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 32,
+          "default": 1
+        },
+        "x": {
+          "label": "X",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 255,
+          "default": 8
+        },
+        "y": {
+          "label": "Y",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 255,
+          "default": 8
+        },
+        "colour": {
+          "label": "Colour (RGBA, 0\u2013255)",
+          "type": "json",
+          "required": true,
+          "default": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "pixel",
+              "options": {
+                "layer": {
+                  "$fill": "layer"
+                },
+                "frame": {
+                  "$fill": "frame"
+                },
+                "x": {
+                  "$fill": "x"
+                },
+                "y": {
+                  "$fill": "y"
+                },
+                "colour": {
+                  "$fill": "colour"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-rect",
+      "title": "Rect",
+      "category": "drawing",
+      "description": "Draw a filled rectangle entirely inside the current canvas.",
+      "fields": {
+        "id": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "newRect"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "layer": {
+          "label": "Layer",
+          "type": "string",
+          "required": true,
+          "default": "base"
+        },
+        "frame": {
+          "label": "Frame",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 32,
+          "default": 1
+        },
+        "x": {
+          "label": "X",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 255,
+          "default": 4
+        },
+        "y": {
+          "label": "Y",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 255,
+          "default": 4
+        },
+        "width": {
+          "label": "Width",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 256,
+          "default": 24
+        },
+        "height": {
+          "label": "Height",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 256,
+          "default": 12
+        },
+        "colour": {
+          "label": "Colour (RGBA, 0\u2013255)",
+          "type": "json",
+          "required": true,
+          "default": [
+            30,
+            120,
+            220,
+            255
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "rect",
+              "options": {
+                "layer": {
+                  "$fill": "layer"
+                },
+                "frame": {
+                  "$fill": "frame"
+                },
+                "x": {
+                  "$fill": "x"
+                },
+                "y": {
+                  "$fill": "y"
+                },
+                "width": {
+                  "$fill": "width"
+                },
+                "height": {
+                  "$fill": "height"
+                },
+                "colour": {
+                  "$fill": "colour"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-circle",
+      "title": "Circle",
+      "category": "drawing",
+      "description": "Draw a filled circle entirely inside the current canvas.",
+      "fields": {
+        "id": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "newCircle"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "layer": {
+          "label": "Layer",
+          "type": "string",
+          "required": true,
+          "default": "base"
+        },
+        "frame": {
+          "label": "Frame",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 32,
+          "default": 1
+        },
+        "x": {
+          "label": "X",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 255,
+          "default": 16
+        },
+        "y": {
+          "label": "Y",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 255,
+          "default": 16
+        },
+        "radius": {
+          "label": "Radius",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 127,
+          "default": 6
+        },
+        "colour": {
+          "label": "Colour (RGBA, 0\u2013255)",
+          "type": "json",
+          "required": true,
+          "default": [
+            250,
+            160,
+            30,
+            255
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "circle",
+              "options": {
+                "layer": {
+                  "$fill": "layer"
+                },
+                "frame": {
+                  "$fill": "frame"
+                },
+                "x": {
+                  "$fill": "x"
+                },
+                "y": {
+                  "$fill": "y"
+                },
+                "radius": {
+                  "$fill": "radius"
+                },
+                "colour": {
+                  "$fill": "colour"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "add-tag",
+      "title": "Tag",
+      "category": "animation",
+      "description": "Name an existing inclusive frame range and choose its playback direction.",
+      "fields": {
+        "id": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "newTag"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "name": {
+          "label": "Name",
+          "type": "string",
+          "required": true,
+          "default": "idle"
+        },
+        "fromFrame": {
+          "label": "From frame",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 32,
+          "default": 1
+        },
+        "toFrame": {
+          "label": "To frame",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 32,
+          "default": 1
+        },
+        "direction": {
+          "label": "Direction",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "forward",
+            "reverse",
+            "pingPong",
+            "pingPongReverse"
+          ],
+          "default": "forward"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "tag",
+              "options": {
+                "name": {
+                  "$fill": "name"
+                },
+                "fromFrame": {
+                  "$fill": "fromFrame"
+                },
+                "toFrame": {
+                  "$fill": "toFrame"
+                },
+                "direction": {
+                  "$fill": "direction"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "button-face",
+      "title": "Button face with highlight",
+      "category": "recipes",
+      "description": "Draw a filled button and a contrasting top highlight.",
+      "fields": {
+        "prefix": {
+          "label": "Operation prefix",
+          "type": "id",
+          "required": true,
+          "default": "sprite"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "colour": {
+          "label": "Button RGBA",
+          "type": "json",
+          "required": true,
+          "default": [
+            30,
+            120,
+            220,
+            255
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}1",
+              "filter": "rect",
+              "options": {
+                "layer": "base",
+                "x": 3,
+                "y": 8,
+                "width": 26,
+                "height": 16,
+                "colour": {
+                  "$fill": "colour"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "${prefix}2",
+              "filter": "rect",
+              "options": {
+                "layer": "base",
+                "x": 4,
+                "y": 9,
+                "width": 24,
+                "height": 2,
+                "colour": [
+                  255,
+                  255,
+                  255,
+                  255
+                ]
+              },
+              "inputs": {
+                "sprite": "${prefix}1"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}2"
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Start from a 32\u00d732 or larger canvas with a base layer; animation recipe expects one existing frame."
+    },
+    {
+      "id": "checker-tile",
+      "title": "Two-colour checker tile",
+      "category": "recipes",
+      "description": "Compose four quadrants into a repeatable checker tile.",
+      "fields": {
+        "prefix": {
+          "label": "Operation prefix",
+          "type": "id",
+          "required": true,
+          "default": "sprite"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "dark": {
+          "label": "Dark RGBA",
+          "type": "json",
+          "required": true,
+          "default": [
+            30,
+            40,
+            60,
+            255
+          ]
+        },
+        "light": {
+          "label": "Light RGBA",
+          "type": "json",
+          "required": true,
+          "default": [
+            220,
+            230,
+            245,
+            255
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}1",
+              "filter": "rect",
+              "options": {
+                "layer": "base",
+                "x": 0,
+                "y": 0,
+                "width": 16,
+                "height": 16,
+                "colour": {
+                  "$fill": "dark"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "${prefix}2",
+              "filter": "rect",
+              "options": {
+                "layer": "base",
+                "x": 16,
+                "y": 0,
+                "width": 16,
+                "height": 16,
+                "colour": {
+                  "$fill": "light"
+                }
+              },
+              "inputs": {
+                "sprite": "${prefix}1"
+              }
+            },
+            {
+              "id": "${prefix}3",
+              "filter": "rect",
+              "options": {
+                "layer": "base",
+                "x": 16,
+                "y": 16,
+                "width": 16,
+                "height": 16,
+                "colour": {
+                  "$fill": "dark"
+                }
+              },
+              "inputs": {
+                "sprite": "${prefix}2"
+              }
+            },
+            {
+              "id": "${prefix}4",
+              "filter": "rect",
+              "options": {
+                "layer": "base",
+                "x": 0,
+                "y": 16,
+                "width": 16,
+                "height": 16,
+                "colour": {
+                  "$fill": "light"
+                }
+              },
+              "inputs": {
+                "sprite": "${prefix}3"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}4"
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Start from a 32\u00d732 or larger canvas with a base layer; animation recipe expects one existing frame."
+    },
+    {
+      "id": "orb-highlight",
+      "title": "Orb with highlight",
+      "category": "recipes",
+      "description": "Draw a circular icon with a smaller highlight.",
+      "fields": {
+        "prefix": {
+          "label": "Operation prefix",
+          "type": "id",
+          "required": true,
+          "default": "sprite"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "colour": {
+          "label": "Orb RGBA",
+          "type": "json",
+          "required": true,
+          "default": [
+            250,
+            160,
+            30,
+            255
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}1",
+              "filter": "circle",
+              "options": {
+                "layer": "base",
+                "x": 16,
+                "y": 16,
+                "radius": 10,
+                "colour": {
+                  "$fill": "colour"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "${prefix}2",
+              "filter": "circle",
+              "options": {
+                "layer": "base",
+                "x": 12,
+                "y": 12,
+                "radius": 2,
+                "colour": [
+                  255,
+                  255,
+                  255,
+                  255
+                ]
+              },
+              "inputs": {
+                "sprite": "${prefix}1"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}2"
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Start from a 32\u00d732 or larger canvas with a base layer; animation recipe expects one existing frame."
+    },
+    {
+      "id": "two-frame-blink",
+      "title": "Two-frame blink animation",
+      "category": "animation",
+      "description": "Create a second frame and tag a visible two-frame blink.",
+      "fields": {
+        "prefix": {
+          "label": "Operation prefix",
+          "type": "id",
+          "required": true,
+          "default": "sprite"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "colour": {
+          "label": "Drawing RGBA",
+          "type": "json",
+          "required": true,
+          "default": [
+            250,
+            160,
+            30,
+            255
+          ]
+        },
+        "duration": {
+          "label": "Second frame duration (ms)",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 180
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}1",
+              "filter": "circle",
+              "options": {
+                "layer": "base",
+                "x": 16,
+                "y": 16,
+                "radius": 8,
+                "colour": {
+                  "$fill": "colour"
+                }
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "${prefix}2",
+              "filter": "frame",
+              "options": {
+                "durationMS": {
+                  "$fill": "duration"
+                }
+              },
+              "inputs": {
+                "sprite": "${prefix}1"
+              }
+            },
+            {
+              "id": "${prefix}3",
+              "filter": "rect",
+              "options": {
+                "layer": "base",
+                "frame": 2,
+                "x": 8,
+                "y": 15,
+                "width": 16,
+                "height": 2,
+                "colour": {
+                  "$fill": "colour"
+                }
+              },
+              "inputs": {
+                "sprite": "${prefix}2"
+              }
+            },
+            {
+              "id": "${prefix}4",
+              "filter": "tag",
+              "options": {
+                "name": "blink",
+                "fromFrame": 1,
+                "toFrame": 2,
+                "direction": "pingPong"
+              },
+              "inputs": {
+                "sprite": "${prefix}3"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}4"
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Start from a 32\u00d732 or larger canvas with a base layer; animation recipe expects one existing frame."
+    },
+    {
+      "id": "layered-badge",
+      "title": "Layered badge icon",
+      "category": "recipes",
+      "description": "Keep the badge background and foreground on separate layers.",
+      "fields": {
+        "prefix": {
+          "label": "Operation prefix",
+          "type": "id",
+          "required": true,
+          "default": "sprite"
+        },
+        "source": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "colour": {
+          "label": "Badge RGBA",
+          "type": "json",
+          "required": true,
+          "default": [
+            250,
+            160,
+            30,
+            255
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "${prefix}1",
+              "filter": "rect",
+              "options": {
+                "layer": "base",
+                "x": 2,
+                "y": 2,
+                "width": 28,
+                "height": 28,
+                "colour": [
+                  20,
+                  40,
+                  80,
+                  255
+                ]
+              },
+              "inputs": {
+                "sprite": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "${prefix}2",
+              "filter": "layer",
+              "options": {
+                "name": "badgeDetail"
+              },
+              "inputs": {
+                "sprite": "${prefix}1"
+              }
+            },
+            {
+              "id": "${prefix}3",
+              "filter": "circle",
+              "options": {
+                "layer": "badgeDetail",
+                "x": 16,
+                "y": 16,
+                "radius": 8,
+                "colour": {
+                  "$fill": "colour"
+                }
+              },
+              "inputs": {
+                "sprite": "${prefix}2"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "${prefix}3"
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Start from a 32\u00d732 or larger canvas with a base layer; animation recipe expects one existing frame."
+    }
+  ],
+  "viewers": [
+    "image",
+    "table",
+    "text"
+  ]
+}

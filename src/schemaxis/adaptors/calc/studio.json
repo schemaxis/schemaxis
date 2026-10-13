@@ -1,0 +1,511 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.calc/1",
+    "nodes": [
+      {
+        "id": "data",
+        "filter": "fromRows",
+        "options": {
+          "columns": [
+            "x",
+            "y"
+          ],
+          "rows": [
+            [
+              0,
+              2
+            ],
+            [
+              1,
+              4
+            ],
+            [
+              2,
+              6
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "categories": [
+    {
+      "id": "tables",
+      "title": "Numeric tables",
+      "icon": "layers"
+    },
+    {
+      "id": "sources",
+      "title": "CSV sources",
+      "icon": "layers"
+    },
+    {
+      "id": "studies",
+      "title": "Study tables",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "sample-table",
+      "title": "Numeric sample table",
+      "description": "Replace the workbook input with a two-column numeric table.",
+      "inserts": [
+        {
+          "at": "/nodes",
+          "values": [
+            [
+              {
+                "id": {
+                  "$fill": "name"
+                },
+                "filter": "fromRows",
+                "options": {
+                  "columns": [
+                    "Time",
+                    "Force"
+                  ],
+                  "rows": [
+                    [
+                      0,
+                      2
+                    ],
+                    [
+                      1,
+                      5
+                    ],
+                    [
+                      2,
+                      8
+                    ]
+                  ]
+                }
+              }
+            ]
+          ]
+        }
+      ],
+      "category": "tables",
+      "baseDocument": {
+        "version": "schemaxis.calc/1",
+        "nodes": [
+          {
+            "id": "measurements",
+            "filter": "fromRows",
+            "options": {
+              "columns": [
+                "Time",
+                "Displacement",
+                "Force"
+              ],
+              "rows": [
+                [
+                  0,
+                  0,
+                  2
+                ],
+                [
+                  1,
+                  1.5,
+                  5
+                ],
+                [
+                  2,
+                  4,
+                  8
+                ],
+                [
+                  3,
+                  7.5,
+                  11
+                ],
+                [
+                  4,
+                  12,
+                  14
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      "fields": {
+        "name": {
+          "label": "name",
+          "type": "id",
+          "default": "measurements",
+          "required": true
+        }
+      }
+    },
+    {
+      "id": "csv-workbook",
+      "title": "Workbook from CSV",
+      "category": "sources",
+      "icon": "layers",
+      "description": "Replace the numeric input with a captured CSV source.",
+      "fields": {
+        "file": {
+          "label": "Numeric CSV",
+          "type": "path",
+          "required": true,
+          "default": "/data/results.csv",
+          "extensions": [
+            "csv"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.calc/1",
+              "nodes": [
+                {
+                  "id": "data",
+                  "filter": "readCSV",
+                  "options": {
+                    "file": {
+                      "$fill": "file"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Requires a numeric CSV with a header and at least two rows at run time."
+    },
+    {
+      "id": "append-row",
+      "title": "Append one measurement",
+      "category": "tables",
+      "icon": "layers",
+      "description": "Add a numeric row matching the existing two column headings.",
+      "fields": {
+        "append-row": {
+          "label": "Append one measurement",
+          "type": "json",
+          "required": true,
+          "default": [
+            3,
+            8
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options/rows/-",
+          "values": [
+            {
+              "$fill": "append-row"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mechanical-table",
+      "title": "Time, displacement and force",
+      "category": "studies",
+      "icon": "layers",
+      "description": "Replace columns and rows together so the numeric table stays rectangular.",
+      "fields": {
+        "mechanical-table": {
+          "label": "Time, displacement and force",
+          "type": "json",
+          "required": true,
+          "default": {
+            "columns": [
+              "time",
+              "displacement",
+              "force"
+            ],
+            "rows": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                1,
+                1.5,
+                5
+              ],
+              [
+                2,
+                4,
+                8
+              ],
+              [
+                3,
+                7.5,
+                11
+              ]
+            ]
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options",
+          "values": [
+            {
+              "$fill": "mechanical-table"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "residual-history",
+      "title": "Residual convergence history",
+      "category": "studies",
+      "icon": "layers",
+      "description": "Replace columns and rows together so the numeric table stays rectangular.",
+      "fields": {
+        "residual-history": {
+          "label": "Residual convergence history",
+          "type": "json",
+          "required": true,
+          "default": {
+            "columns": [
+              "iteration",
+              "continuity",
+              "velocity"
+            ],
+            "rows": [
+              [
+                0,
+                1,
+                0.8
+              ],
+              [
+                1,
+                0.2,
+                0.1
+              ],
+              [
+                2,
+                0.04,
+                0.02
+              ],
+              [
+                3,
+                0.008,
+                0.004
+              ]
+            ]
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options",
+          "values": [
+            {
+              "$fill": "residual-history"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mesh-convergence",
+      "title": "Mesh convergence measurements",
+      "category": "studies",
+      "icon": "layers",
+      "description": "Replace columns and rows together so the numeric table stays rectangular.",
+      "fields": {
+        "mesh-convergence": {
+          "label": "Mesh convergence measurements",
+          "type": "json",
+          "required": true,
+          "default": {
+            "columns": [
+              "elements",
+              "response",
+              "relative_error"
+            ],
+            "rows": [
+              [
+                1000,
+                1.2,
+                0.2
+              ],
+              [
+                4000,
+                1.08,
+                0.08
+              ],
+              [
+                16000,
+                1.02,
+                0.02
+              ]
+            ]
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options",
+          "values": [
+            {
+              "$fill": "mesh-convergence"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rename-columns",
+      "title": "Column labels with units",
+      "category": "tables",
+      "icon": "layers",
+      "description": "Rename the two table headers while preserving numeric values.",
+      "fields": {
+        "rename-columns": {
+          "label": "Column labels with units",
+          "type": "json",
+          "required": true,
+          "default": [
+            "time_s",
+            "response_N"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options/columns",
+          "values": [
+            {
+              "$fill": "rename-columns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shared-study-value",
+      "title": "Shared parameter in a result table",
+      "category": "studies",
+      "icon": "layers",
+      "description": "Keep a numeric study value in settings and reference it from a table cell for later template exposure.",
+      "fields": {
+        "gain": {
+          "label": "Shared numeric value",
+          "type": "number",
+          "required": true,
+          "default": 2
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.calc/1",
+              "nodes": [
+                {
+                  "id": "data",
+                  "filter": "fromRows",
+                  "options": {
+                    "columns": [
+                      "x",
+                      "y"
+                    ],
+                    "rows": [
+                      [
+                        0,
+                        {
+                          "$document": "/settings/gain"
+                        }
+                      ],
+                      [
+                        1,
+                        4
+                      ],
+                      [
+                        2,
+                        6
+                      ]
+                    ]
+                  }
+                }
+              ],
+              "settings": {
+                "gain": {
+                  "$fill": "gain"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    }
+  ],
+  "templates": [
+    {
+      "id": "measurements",
+      "title": "Measurement workbook",
+      "file": "templates/measurements.json",
+      "description": "Five numeric measurements with verified workbook outputs.",
+      "fields": {}
+    },
+    {
+      "id": "csv-summary",
+      "title": "CSV summary workbook",
+      "description": "Publish verified XLSX, ODS and numeric CSV outputs with automatic summary statistics.",
+      "file": "studio/templates/csv-summary.json",
+      "fields": {
+        "data": {
+          "label": "Table input",
+          "type": "path",
+          "required": true,
+          "default": "/data/results.csv"
+        }
+      },
+      "requires": "Requires a numeric CSV with a header and at least two rows."
+    },
+    {
+      "id": "mechanical-summary",
+      "title": "Mechanical test summary",
+      "description": "Publish verified XLSX, ODS and numeric CSV outputs with automatic summary statistics.",
+      "file": "studio/templates/mechanical-summary.json",
+      "fields": {
+        "data": {
+          "label": "Table input",
+          "type": "json",
+          "required": true,
+          "default": [
+            [
+              0,
+              0,
+              2
+            ],
+            [
+              1,
+              1.5,
+              5
+            ],
+            [
+              2,
+              4,
+              8
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "viewers": [
+    "table",
+    "text"
+  ]
+}

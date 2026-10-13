@@ -1,0 +1,125 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {
+          "$fill": "file"
+        },
+        "caseType": "Reconstructed Case",
+        "cellArrays": [
+          "U",
+          "p"
+        ]
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "merge",
+      "inputs": {
+        "input": "case"
+      }
+    },
+    {
+      "id": "flow",
+      "filter": "cellToPoint",
+      "options": {
+        "passCellData": true
+      },
+      "inputs": {
+        "input": "mesh"
+      }
+    },
+    {
+      "id": "seeds",
+      "filter": "line",
+      "options": {
+        "start": {
+          "$fill": "start"
+        },
+        "end": {
+          "$fill": "end"
+        },
+        "resolution": 30
+      }
+    },
+    {
+      "id": "streamlines",
+      "filter": "streamTracer",
+      "options": {
+        "vectors": [
+          "POINTS",
+          "U"
+        ],
+        "maximumLength": {
+          "$fill": "length"
+        },
+        "direction": "BOTH"
+      },
+      "inputs": {
+        "seed": "seeds",
+        "input": "flow"
+      }
+    },
+    {
+      "id": "tubes",
+      "filter": "tube",
+      "options": {
+        "radius": {
+          "$fill": "radius"
+        },
+        "sides": 12
+      },
+      "inputs": {
+        "input": "streamlines"
+      }
+    },
+    {
+      "id": "context",
+      "filter": "outline",
+      "inputs": {
+        "input": "flow"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "wake",
+      "visible": {
+        "tubes": {
+          "field": [
+            "POINTS",
+            "U"
+          ]
+        },
+        "context": {
+          "colour": "black"
+        }
+      },
+      "geometry": [
+        "tubes",
+        "context"
+      ],
+      "images": [
+        {
+          "id": "overview",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -1,
+                0.6
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "wave",
+      "filter": "pvWavelet",
+      "options": {
+        "WholeExtent": [
+          -2,
+          2,
+          -2,
+          2,
+          -2,
+          2
+        ]
+      }
+    },
+    {
+      "id": "opacity",
+      "filter": "pvResourcePiecewiseFunction",
+      "options": {
+        "Points": [
+          0,
+          1,
+          0.5,
+          0,
+          300,
+          1,
+          0.5,
+          0
+        ]
+      }
+    },
+    {
+      "id": "colours",
+      "filter": "pvResourcePVLookupTable",
+      "inputs": {
+        "ScalarOpacityFunction": "opacity",
+        "TransferFunction2D": "transfer2d"
+      },
+      "options": {
+        "RGBPoints": {
+          "$axis": "palette"
+        },
+        "ColorSpace": "RGB"
+      }
+    },
+    {
+      "id": "coloured",
+      "filter": "pvColorByArray",
+      "inputs": {
+        "Input": "wave",
+        "LookupTable": "colours"
+      },
+      "options": {
+        "ColorBy": [
+          "POINTS",
+          "RTData"
+        ],
+        "OutputFormat": "RGBA"
+      }
+    },
+    {
+      "id": "colouredRgb",
+      "filter": "pvColorByArray",
+      "inputs": {
+        "Input": "wave",
+        "LookupTable": "colours"
+      },
+      "options": {
+        "ColorBy": [
+          "POINTS",
+          "RTData"
+        ],
+        "OutputFormat": "RGB"
+      }
+    },
+    {
+      "id": "transfer2d",
+      "filter": "pvResourceTransferFunction2D",
+      "options": {
+        "Range": [
+          0,
+          300,
+          0,
+          1
+        ],
+        "OutputDimensions": [
+          16,
+          16
+        ]
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "resources",
+      "geometry": [
+        "coloured",
+        "colouredRgb"
+      ]
+    }
+  ],
+  "axes": [
+    {
+      "name": "palette",
+      "values": [
+        [
+          0,
+          0,
+          0,
+          1,
+          300,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0,
+          300,
+          0,
+          0,
+          1
+        ]
+      ]
+    }
+  ]
+}

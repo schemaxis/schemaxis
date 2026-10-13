@@ -1,0 +1,90 @@
+{
+  "id": "gmsh",
+  "version": "schemaxis.gmsh/1",
+  "adaptor": "schemaxis.adaptors.gmsh.adaptor",
+  "runtimeFamily": "4.15.x",
+  "executables": [],
+  "execution": "Isolated Gmsh Python: one box or STEP solid to verified linear tetrahedra, named volume/boundary MSH and VTU",
+  "keywords": [
+    "meshing",
+    "tetrahedra",
+    "STEP",
+    "CAD",
+    "physical groups",
+    "VTU",
+    "mesh quality",
+    "refinement",
+    "boundary sizing"
+  ],
+  "capabilities": "schemaxis.adaptors.gmsh.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.gmsh/1",
+    "units": "mm",
+    "nodes": [
+      {
+        "id": "solid",
+        "filter": "box",
+        "options": {
+          "size": [
+            10,
+            10,
+            10
+          ]
+        }
+      },
+      {
+        "id": "mesh",
+        "filter": "tetrahedral",
+        "inputs": {
+          "input": "solid"
+        },
+        "options": {
+          "size": 3,
+          "volumeName": "domain",
+          "boundaryName": "boundary",
+          "volumeTolerance": 1e-06
+        }
+      }
+    ],
+    "output": "mesh"
+  },
+  "consoleOutput": true,
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--gmsh",
+      "dest": "gmsh",
+      "help": "Absolute Python interpreter configured with Gmsh 4.15.x"
+    }
+  ],
+  "routes": {
+    "schemaxis.gmsh/1": {
+      "module": "schemaxis.adaptors.gmsh.adaptor",
+      "schema": "schemaxis.adaptors.gmsh.adaptor:schema",
+      "graphEditing": true,
+      "workflow": true,
+      "scheduled": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "gmsh",
+      "acceptedArtifacts": [
+        "cad"
+      ],
+      "hooks": {
+        "reusableInputs": "schemaxis.adaptors.gmsh.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.gmsh.adaptor:resources"
+      }
+    }
+  }
+}

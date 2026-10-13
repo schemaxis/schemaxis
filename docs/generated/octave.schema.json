@@ -1,0 +1,543 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.octave/1"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "samples"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -1e+100,
+                      "maximum": 1e+100
+                    },
+                    "minItems": 2,
+                    "maxItems": 10000
+                  },
+                  "y": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -1e+100,
+                      "maximum": 1e+100
+                    },
+                    "minItems": 2,
+                    "maxItems": 10000
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "x",
+                  "y"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "readCSV"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  "xColumn": {
+                    "type": "string",
+                    "minLength": 1,
+                    "default": "x"
+                  },
+                  "yColumn": {
+                    "type": "string",
+                    "minLength": 1,
+                    "default": "y"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "file"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "sequence"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "number",
+                    "minimum": -1e+100,
+                    "maximum": 1e+100,
+                    "default": 0
+                  },
+                  "stop": {
+                    "type": "number",
+                    "minimum": -1e+100,
+                    "maximum": 1e+100,
+                    "default": 1
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "maximum": 10000,
+                    "default": 101
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "wave"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "number",
+                    "minimum": -1e+100,
+                    "maximum": 1e+100,
+                    "default": 0
+                  },
+                  "step": {
+                    "type": "number",
+                    "minimum": 1e-12,
+                    "maximum": 1000000000000.0,
+                    "default": 0.01
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "maximum": 10000,
+                    "default": 101
+                  },
+                  "shape": {
+                    "enum": [
+                      "sine",
+                      "cosine"
+                    ],
+                    "default": "sine"
+                  },
+                  "amplitude": {
+                    "type": "number",
+                    "minimum": -1e+100,
+                    "maximum": 1e+100,
+                    "default": 1
+                  },
+                  "frequency": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1000000000000.0,
+                    "default": 1
+                  },
+                  "phase": {
+                    "type": "number",
+                    "minimum": -100000,
+                    "maximum": 100000,
+                    "default": 0
+                  },
+                  "offset": {
+                    "type": "number",
+                    "minimum": -1e+100,
+                    "maximum": 1e+100,
+                    "default": 0
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "scale"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "factor": {
+                    "type": "number",
+                    "minimum": -1000000.0,
+                    "maximum": 1000000.0,
+                    "default": 1
+                  },
+                  "offset": {
+                    "type": "number",
+                    "minimum": -1e+100,
+                    "maximum": 1e+100,
+                    "default": 0
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "resample"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "maximum": 10000,
+                    "default": 101
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "movingMean"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "window": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1001,
+                    "default": 5
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "derivative"
+              },
+              "options": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "integral"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "initial": {
+                    "type": "number",
+                    "minimum": -1e+100,
+                    "maximum": 1e+100,
+                    "default": 0
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "linearFit"
+              },
+              "options": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "fft"
+              },
+              "options": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          }
+        ]
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "nodes",
+    "outputs"
+  ]
+}

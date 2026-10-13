@@ -1,0 +1,1012 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.qgis/1",
+    "nodes": [
+      {
+        "id": "source",
+        "filter": "readVector",
+        "options": {
+          "file": "/data/sites.geojson"
+        }
+      },
+      {
+        "id": "metric",
+        "filter": "reproject",
+        "options": {
+          "crs": "EPSG:3857"
+        },
+        "inputs": {
+          "input": "source"
+        }
+      }
+    ],
+    "output": "metric",
+    "preview": true
+  },
+  "categories": [
+    {
+      "id": "layers",
+      "title": "Vector layers",
+      "icon": "layers"
+    },
+    {
+      "id": "geometry",
+      "title": "Buffer, clip & centroid",
+      "icon": "layers"
+    },
+    {
+      "id": "recipes",
+      "title": "Site analysis",
+      "icon": "layers"
+    },
+    {
+      "id": "maps",
+      "title": "Map publication",
+      "icon": "layers"
+    },
+    {
+      "id": "studies",
+      "title": "Distance studies",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "add-readvector",
+      "title": "Read a vector layer",
+      "category": "layers",
+      "icon": "layers",
+      "description": "Read one bounded 2D GeoJSON or GeoPackage vector layer with its declared CRS.",
+      "fields": {
+        "name": {
+          "label": "Output layer ID",
+          "type": "id",
+          "required": true,
+          "default": "readvector"
+        },
+        "file": {
+          "label": "Vector file",
+          "type": "path",
+          "required": true,
+          "default": "/data/sites.geojson",
+          "extensions": [
+            "geojson",
+            "gpkg"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "readVector",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "requires": "Requires the source vector file when running. Buffer distances need a projected CRS in metres.",
+      "complexity": "composite"
+    },
+    {
+      "id": "add-reproject",
+      "title": "Reproject a layer",
+      "category": "layers",
+      "icon": "layers",
+      "description": "Transform vector coordinates to an explicit EPSG CRS.",
+      "fields": {
+        "name": {
+          "label": "Output layer ID",
+          "type": "id",
+          "required": true,
+          "default": "reproject"
+        },
+        "source": {
+          "label": "Input layer",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source"
+        },
+        "crs": {
+          "label": "Analysis CRS",
+          "type": "string",
+          "required": true,
+          "description": "Choose an appropriate local projected CRS for the study area. Buffer distances use its coordinate units; EPSG:3857 is not a universal ground-distance choice."
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "reproject",
+              "options": {
+                "crs": {
+                  "$fill": "crs"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "requires": "Requires the source vector file when running. Buffer distances need a projected CRS in metres.",
+      "complexity": "composite",
+      "testValues": {
+        "crs": "EPSG:32614"
+      }
+    },
+    {
+      "id": "add-centroid",
+      "title": "Feature centroids",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Reduce each projected polygon or multipolygon to its planar area-weighted centre of mass, retaining attributes and CRS.",
+      "fields": {
+        "name": {
+          "label": "Output layer ID",
+          "type": "id",
+          "required": true,
+          "default": "centroid"
+        },
+        "source": {
+          "label": "Input layer",
+          "type": "nodeRef",
+          "required": true,
+          "default": "metric"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "centroid",
+              "options": {},
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "requires": "Requires the source vector file when running. Buffer distances need a projected CRS in metres.",
+      "complexity": "composite"
+    },
+    {
+      "id": "add-buffer",
+      "title": "Metric buffer zones",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Buffer vector geometry by a distance in metres; a projected metre CRS is required.",
+      "fields": {
+        "name": {
+          "label": "Output layer ID",
+          "type": "id",
+          "required": true,
+          "default": "buffer"
+        },
+        "source": {
+          "label": "Input layer",
+          "type": "nodeRef",
+          "required": true,
+          "default": "metric"
+        },
+        "radius": {
+          "label": "Distance in metres",
+          "type": "number",
+          "required": true,
+          "default": 100,
+          "minimum": 0.001,
+          "maximum": 100000
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "buffer",
+              "options": {
+                "distance": {
+                  "$fill": "radius"
+                },
+                "segments": 16
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "requires": "Requires the source vector file when running. Buffer distances need a projected CRS in metres.",
+      "complexity": "composite"
+    },
+    {
+      "id": "add-clip",
+      "title": "Clip to a study rectangle",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Intersect features with an axis-aligned rectangle in the current layer CRS.",
+      "fields": {
+        "name": {
+          "label": "Output layer ID",
+          "type": "id",
+          "required": true,
+          "default": "clip"
+        },
+        "source": {
+          "label": "Input layer",
+          "type": "nodeRef",
+          "required": true,
+          "default": "metric"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "clip",
+              "options": {
+                "bounds": [
+                  0,
+                  0,
+                  1000,
+                  1000
+                ]
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "requires": "Requires the source vector file when running. Buffer distances need a projected CRS in metres.",
+      "complexity": "composite"
+    },
+    {
+      "id": "projected-buffer",
+      "title": "Project and buffer a geographic layer",
+      "category": "recipes",
+      "icon": "layers",
+      "description": "Insert a complete ordered vector analysis and select the last layer.",
+      "fields": {
+        "source": {
+          "label": "Source layer",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source"
+        },
+        "crs": {
+          "label": "Analysis CRS",
+          "type": "string",
+          "required": true,
+          "description": "Choose an appropriate local projected CRS for the study area. Buffer distances use its coordinate units; EPSG:3857 is not a universal ground-distance choice."
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "projected",
+              "filter": "reproject",
+              "options": {
+                "crs": {
+                  "$fill": "crs"
+                }
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "zones",
+              "filter": "buffer",
+              "options": {
+                "distance": 100
+              },
+              "inputs": {
+                "input": "projected"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "zones"
+          ]
+        }
+      ],
+      "requires": "Requires a source vector file. Project to a suitable local metre-based CRS for distance analysis.",
+      "complexity": "composite",
+      "testValues": {
+        "crs": "EPSG:32614"
+      }
+    },
+    {
+      "id": "centroid-buffer",
+      "title": "Service zones around feature centroids",
+      "category": "recipes",
+      "icon": "layers",
+      "description": "Insert a complete ordered vector analysis and select the last layer.",
+      "fields": {
+        "source": {
+          "label": "Source layer",
+          "type": "nodeRef",
+          "required": true,
+          "default": "metric"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "centres",
+              "filter": "centroid",
+              "options": {},
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "zones",
+              "filter": "buffer",
+              "options": {
+                "distance": 50
+              },
+              "inputs": {
+                "input": "centres"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "zones"
+          ]
+        }
+      ],
+      "requires": "Requires a source vector file. Project to a suitable local metre-based CRS for distance analysis.",
+      "complexity": "composite"
+    },
+    {
+      "id": "clip-centroids",
+      "title": "Centroids inside a study rectangle",
+      "category": "recipes",
+      "icon": "layers",
+      "description": "Insert a complete ordered vector analysis and select the last layer.",
+      "fields": {
+        "source": {
+          "label": "Source layer",
+          "type": "nodeRef",
+          "required": true,
+          "default": "metric"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "cropped",
+              "filter": "clip",
+              "options": {
+                "bounds": [
+                  0,
+                  0,
+                  1000,
+                  1000
+                ]
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "centres",
+              "filter": "centroid",
+              "options": {},
+              "inputs": {
+                "input": "cropped"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "centres"
+          ]
+        }
+      ],
+      "requires": "Requires a source vector file. Project to a suitable local metre-based CRS for distance analysis.",
+      "complexity": "composite"
+    },
+    {
+      "id": "buffer-clip",
+      "title": "Trim buffer zones to the study area",
+      "category": "recipes",
+      "icon": "layers",
+      "description": "Insert a complete ordered vector analysis and select the last layer.",
+      "fields": {
+        "source": {
+          "label": "Source layer",
+          "type": "nodeRef",
+          "required": true,
+          "default": "metric"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "zones",
+              "filter": "buffer",
+              "options": {
+                "distance": 100
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "cropped",
+              "filter": "clip",
+              "options": {
+                "bounds": [
+                  0,
+                  0,
+                  1000,
+                  1000
+                ]
+              },
+              "inputs": {
+                "input": "zones"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "cropped"
+          ]
+        }
+      ],
+      "requires": "Requires a source vector file. Project to a suitable local metre-based CRS for distance analysis.",
+      "complexity": "composite"
+    },
+    {
+      "id": "read-project-centroid",
+      "title": "Import, project and locate centres",
+      "category": "recipes",
+      "icon": "layers",
+      "description": "Insert a complete ordered vector analysis and select the last layer.",
+      "fields": {
+        "file": {
+          "label": "Input vector",
+          "type": "path",
+          "required": true,
+          "default": "/data/parcels.geojson",
+          "extensions": [
+            "geojson",
+            "gpkg"
+          ]
+        },
+        "crs": {
+          "label": "Analysis CRS",
+          "type": "string",
+          "required": true,
+          "description": "Choose an appropriate local projected CRS for the study area. Buffer distances use its coordinate units; EPSG:3857 is not a universal ground-distance choice."
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "parcels",
+              "filter": "readVector",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                }
+              }
+            },
+            {
+              "id": "projected",
+              "filter": "reproject",
+              "options": {
+                "crs": {
+                  "$fill": "crs"
+                }
+              },
+              "inputs": {
+                "input": "parcels"
+              }
+            },
+            {
+              "id": "centres",
+              "filter": "centroid",
+              "options": {},
+              "inputs": {
+                "input": "projected"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            "centres"
+          ]
+        }
+      ],
+      "requires": "Requires a source vector file. Project to a suitable local metre-based CRS for distance analysis.",
+      "complexity": "composite",
+      "testValues": {
+        "crs": "EPSG:32614"
+      }
+    },
+    {
+      "id": "preview-map",
+      "title": "Map preview publication",
+      "category": "maps",
+      "icon": "layers",
+      "description": "Choose whether to publish a presentation PNG alongside the GeoPackage.",
+      "fields": {
+        "preview-map": {
+          "label": "Map preview publication",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        }
+      },
+      "inserts": [
+        {
+          "at": "/preview",
+          "values": [
+            {
+              "$fill": "preview-map"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "select-output",
+      "title": "Published vector layer",
+      "category": "maps",
+      "icon": "layers",
+      "description": "Select one existing layer for GeoPackage and project publication.",
+      "fields": {
+        "select-output": {
+          "label": "Published vector layer",
+          "type": "nodeRef",
+          "required": true,
+          "default": "metric"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "select-output"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shared-radius",
+      "title": "Shared buffer distance",
+      "category": "studies",
+      "icon": "layers",
+      "description": "Keep the buffer radius in settings so a workflow can expose it as a parameter.",
+      "fields": {
+        "radius": {
+          "label": "Buffer radius in metres",
+          "type": "number",
+          "required": true,
+          "default": 100,
+          "minimum": 0.001
+        },
+        "crs": {
+          "label": "Analysis CRS",
+          "type": "string",
+          "required": true,
+          "description": "Choose an appropriate local projected CRS for the study area. Buffer distances use its coordinate units; EPSG:3857 is not a universal ground-distance choice."
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.qgis/1",
+              "nodes": [
+                {
+                  "id": "source",
+                  "filter": "readVector",
+                  "options": {
+                    "file": "/data/sites.geojson"
+                  }
+                },
+                {
+                  "id": "metric",
+                  "filter": "reproject",
+                  "options": {
+                    "crs": {
+                      "$fill": "crs"
+                    }
+                  },
+                  "inputs": {
+                    "input": "source"
+                  }
+                },
+                {
+                  "id": "zones",
+                  "filter": "buffer",
+                  "options": {
+                    "distance": {
+                      "$document": "/settings/radius"
+                    }
+                  },
+                  "inputs": {
+                    "input": "metric"
+                  }
+                }
+              ],
+              "output": "zones",
+              "preview": true,
+              "settings": {
+                "radius": {
+                  "$fill": "radius"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Requires the input vector and a suitable projected CRS at run time.",
+      "testValues": {
+        "crs": "EPSG:32614"
+      }
+    },
+    {
+      "id": "buffer-study",
+      "title": "Compare service radii",
+      "category": "studies",
+      "icon": "layers",
+      "description": "Create separate vector publications for a bounded set of buffer distances.",
+      "fields": {
+        "radii": {
+          "label": "Distances in metres",
+          "type": "json",
+          "required": true,
+          "default": [
+            50,
+            100,
+            200
+          ]
+        },
+        "crs": {
+          "label": "Analysis CRS",
+          "type": "string",
+          "required": true,
+          "description": "Choose an appropriate local projected CRS for the study area. Buffer distances use its coordinate units; EPSG:3857 is not a universal ground-distance choice."
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.qgis/1",
+              "nodes": [
+                {
+                  "id": "source",
+                  "filter": "readVector",
+                  "options": {
+                    "file": "/data/sites.geojson"
+                  }
+                },
+                {
+                  "id": "metric",
+                  "filter": "reproject",
+                  "options": {
+                    "crs": {
+                      "$fill": "crs"
+                    }
+                  },
+                  "inputs": {
+                    "input": "source"
+                  }
+                },
+                {
+                  "id": "zones",
+                  "filter": "buffer",
+                  "options": {
+                    "distance": {
+                      "$document": "/settings/radius"
+                    }
+                  },
+                  "inputs": {
+                    "input": "metric"
+                  }
+                }
+              ],
+              "output": "zones",
+              "preview": true,
+              "settings": {
+                "radius": {
+                  "$analytic": {
+                    "type": "values",
+                    "values": {
+                      "$fill": "radii"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Requires the input vector and a suitable projected CRS at run time.",
+      "testValues": {
+        "crs": "EPSG:32614"
+      }
+    },
+    {
+      "id": "clip-bounds-value",
+      "title": "Study rectangle value",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Fill a clipping bounds value in xmin, ymin, xmax, ymax order; this is a four-value rectangle.",
+      "fields": {
+        "clip-bounds-value": {
+          "label": "Study rectangle value",
+          "type": "json",
+          "required": true,
+          "default": [
+            0,
+            0,
+            1000,
+            1000
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "$fill": "clip-bounds-value"
+            }
+          ]
+        }
+      ],
+      "testCursor": "/nodes/2/options/bounds",
+      "baseDocument": {
+        "version": "schemaxis.qgis/1",
+        "nodes": [
+          {
+            "id": "source",
+            "filter": "readVector",
+            "options": {
+              "file": "/data/sites.geojson"
+            }
+          },
+          {
+            "id": "metric",
+            "filter": "reproject",
+            "options": {
+              "crs": "EPSG:3857"
+            },
+            "inputs": {
+              "input": "source"
+            }
+          },
+          {
+            "id": "crop",
+            "filter": "clip",
+            "options": {
+              "bounds": [
+                0,
+                0,
+                1000,
+                1000
+              ]
+            },
+            "inputs": {
+              "input": "metric"
+            }
+          }
+        ],
+        "output": "crop",
+        "preview": true
+      }
+    }
+  ],
+  "templates": [
+    {
+      "id": "vector-map",
+      "title": "Vector layer map",
+      "description": "Import a vector file and publish a selected layer with a map preview.",
+      "file": "studio/templates/vector-map.json",
+      "fields": {
+        "file": {
+          "label": "Vector file",
+          "type": "path",
+          "required": true,
+          "default": "/data/sites.geojson",
+          "extensions": [
+            "geojson",
+            "gpkg"
+          ]
+        },
+        "crs": {
+          "label": "Analysis CRS",
+          "type": "string",
+          "required": true,
+          "description": "Choose an appropriate local projected CRS for the study area. Buffer distances use its coordinate units; EPSG:3857 is not a universal ground-distance choice."
+        }
+      },
+      "requires": "Requires a GeoJSON or GeoPackage at run time; distance operations require a projected metre-based CRS.",
+      "testValues": {
+        "crs": "EPSG:32614"
+      }
+    },
+    {
+      "id": "service-zones",
+      "title": "Projected service zones",
+      "description": "Reproject the input into your chosen analysis CRS and buffer it by the shared radius.",
+      "file": "studio/templates/service-zones.json",
+      "fields": {
+        "file": {
+          "label": "Vector file",
+          "type": "path",
+          "required": true,
+          "default": "/data/sites.geojson",
+          "extensions": [
+            "geojson",
+            "gpkg"
+          ]
+        },
+        "crs": {
+          "label": "Analysis CRS",
+          "type": "string",
+          "required": true,
+          "description": "Choose an appropriate local projected CRS for the study area. Buffer distances use its coordinate units; EPSG:3857 is not a universal ground-distance choice."
+        }
+      },
+      "requires": "Requires a GeoJSON or GeoPackage at run time; distance operations require a projected metre-based CRS.",
+      "testValues": {
+        "crs": "EPSG:32614"
+      }
+    },
+    {
+      "id": "parcel-centres",
+      "title": "Parcel centres",
+      "description": "Reproject parcel geometry into your chosen analysis CRS and publish feature centroids; centroids may lie outside concave polygons.",
+      "file": "studio/templates/parcel-centres.json",
+      "fields": {
+        "file": {
+          "label": "Vector file",
+          "type": "path",
+          "required": true,
+          "default": "/data/sites.geojson",
+          "extensions": [
+            "geojson",
+            "gpkg"
+          ]
+        },
+        "crs": {
+          "label": "Analysis CRS",
+          "type": "string",
+          "required": true,
+          "description": "Choose an appropriate local projected CRS for the study area. Buffer distances use its coordinate units; EPSG:3857 is not a universal ground-distance choice."
+        }
+      },
+      "requires": "Requires a GeoJSON or GeoPackage at run time; distance operations require a projected metre-based CRS.",
+      "testValues": {
+        "crs": "EPSG:32614"
+      }
+    }
+  ],
+  "viewers": [
+    "image",
+    "table",
+    "text"
+  ]
+}

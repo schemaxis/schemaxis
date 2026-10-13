@@ -1,0 +1,60 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "chemistry",
+      "document": {
+        "version": "schemaxis.cantera/1",
+        "nodes": [
+          {
+            "id": "gas",
+            "filter": "gas",
+            "options": {
+              "pressure": 101325,
+              "basis": "mole",
+              "composition": [
+                {
+                  "species": "AR",
+                  "amount": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "table",
+            "filter": "thermoSweep",
+            "inputs": {
+              "input": "gas"
+            },
+            "options": {
+              "temperatures": [
+                300,
+                600,
+                900
+              ]
+            }
+          }
+        ],
+        "output": "table"
+      }
+    },
+    {
+      "id": "workbook",
+      "document": {
+        "version": "schemaxis.calc/1",
+        "nodes": [
+          {
+            "id": "states",
+            "filter": "readCSV",
+            "options": {
+              "file": {
+                "$artifact": "chemistry",
+                "index": 0
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "version": "schemaxis.blender/1",
+  "nodes": [
+    {
+      "id": "paint",
+      "filter": "material"
+    },
+    {
+      "id": "${prefix}Grid",
+      "filter": "grid",
+      "options": {
+        "width": 4,
+        "height": 2,
+        "xSegments": 24,
+        "ySegments": 12
+      },
+      "inputs": {
+        "material": "paint"
+      }
+    },
+    {
+      "id": "${prefix}Bend",
+      "filter": "bend",
+      "options": {
+        "angle": {
+          "$fill": "angle"
+        },
+        "axis": "X"
+      },
+      "inputs": {
+        "input": "${prefix}Grid"
+      }
+    },
+    {
+      "id": "${prefix}Final",
+      "filter": "solidify",
+      "options": {
+        "thickness": 0.05
+      },
+      "inputs": {
+        "input": "${prefix}Bend"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "main",
+      "visible": [
+        "${prefix}Final"
+      ],
+      "images": [
+        {
+          "id": "view",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -2,
+                1
+              ]
+            }
+          ]
+        }
+      ],
+      "render": {
+        "device": "CPU",
+        "samples": 16,
+        "threads": 1
+      }
+    }
+  ]
+}

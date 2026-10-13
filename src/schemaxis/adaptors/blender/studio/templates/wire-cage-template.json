@@ -1,0 +1,62 @@
+{
+  "version": "schemaxis.blender/1",
+  "nodes": [
+    {
+      "id": "paint",
+      "filter": "material"
+    },
+    {
+      "id": "${prefix}Sphere",
+      "filter": "icoSphere",
+      "options": {
+        "subdivisions": 2
+      },
+      "inputs": {
+        "material": "paint"
+      }
+    },
+    {
+      "id": "${prefix}Final",
+      "filter": "wireframe",
+      "options": {
+        "thickness": {
+          "$fill": "thickness"
+        }
+      },
+      "inputs": {
+        "input": "${prefix}Sphere"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "main",
+      "visible": [
+        "${prefix}Final"
+      ],
+      "images": [
+        {
+          "id": "view",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -2,
+                1
+              ]
+            }
+          ]
+        }
+      ],
+      "render": {
+        "device": "CPU",
+        "samples": 16,
+        "threads": 1
+      }
+    }
+  ]
+}

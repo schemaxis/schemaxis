@@ -1,0 +1,311 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.calc/1": {
+      "guide": "docs/calc.md",
+      "context": {
+        "purpose": "Turn bounded numeric tables into editable, recalculated ODS and XLSX workbooks with checked summary formulas and a CSV round trip. Optional named cell bounds and weighted reconciliation enforce declared numeric performance in both native formats.",
+        "assumptions": "Exactly one table, 2 to 10000 finite numeric rows, 1 to 64 named columns. CSV paths are absolute. Native LibreOffice runs headlessly with an isolated user profile.",
+        "constraints": "No arbitrary spreadsheet formulas, strings, styles or general workbook editing. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit.",
+        "inspection": "Inspect data.csv through table/series views and reopen the native workbooks. Independent host checks validate numeric cells, formulas and recalculated caches in both formats.",
+        "recovery": "INVALID_TABLE requires rectangular finite data with valid column names. INTERPRETER_NOT_FOUND requires a configured soffice. Preserve conversion logs and retry a corrected input in a fresh run. REQUIREMENTS_UNMET retains numeric assessments and workbooks; REQUIREMENT_SELECTION_FAILED identifies missing/text cells. Inspect observed margins and retry corrected input in a fresh attempt."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/calc-admission.json"
+        },
+        {
+          "id": "invalid-input",
+          "document": {
+            "version": "schemaxis.calc/1",
+            "nodes": [
+              {
+                "id": "data",
+                "filter": "fromRows",
+                "options": {
+                  "columns": [
+                    "x",
+                    "y"
+                  ],
+                  "rows": [
+                    [
+                      0,
+                      2
+                    ],
+                    [
+                      1
+                    ],
+                    [
+                      2,
+                      6
+                    ]
+                  ]
+                }
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "INVALID_TABLE",
+          "schemaValid": true
+        },
+        {
+          "id": "balance",
+          "reference": "examples/schemaxis/calc-balance.json"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_numeric_analysis.py",
+        "tests/unit/test_adaptor_migration.py",
+        "tests/unit/test_calc_requirements.py"
+      ],
+      "acceptance": [
+        "tools/qualify_adaptor_migration.py",
+        "tools/qualify_agent_service.py",
+        "tools/qualify_calc_requirements.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses.",
+          "references": [
+            "docs/numerical-analysis.md",
+            "tests/unit/test_numeric_analysis.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://help.libreoffice.org/latest/en-US/text/scalc/main0000.html"
+        ],
+        "lifecycle": {
+          "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
+          "cancellation": "Shared owned-process cancellation retains partial evidence. Pre-launch cancellation is tested separately from shared in-flight cleanup.",
+          "logs": "Fresh run directory retains authored input, effective plan, native submissions/stdout/stderr, publications and verification evidence.",
+          "verification": "Independently parse ODS/XLSX data, formulas and cached summaries and compare the CSV round trip and publication hashes. Recompute each declared requirement from both native formats; reject altered, linked, malformed or oversized assessment evidence."
+        },
+        "data": [
+          {
+            "id": "input-0",
+            "direction": "input",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "rows": "rectangular",
+              "units": null
+            },
+            "losses": [
+              "Formatting, arbitrary formulas and nonnumeric workbook semantics are outside the supported conversion."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-0",
+            "direction": "output",
+            "kind": "spreadsheet",
+            "format": "ODS/XLSX",
+            "traits": {
+              "sheets": [
+                "Data",
+                "Summary"
+              ],
+              "formulas": "fixed summary set"
+            },
+            "losses": [
+              "Formatting, arbitrary formulas and nonnumeric workbook semantics are outside the supported conversion."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-1",
+            "direction": "output",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "values": "finite numeric"
+            },
+            "losses": [
+              "Formatting, arbitrary formulas and nonnumeric workbook semantics are outside the supported conversion."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "Inspect data.csv through table/series views and reopen the native workbooks. Independent host checks validate numeric cells, formulas and recalculated caches in both formats.",
+            "limits": "No arbitrary spreadsheet formulas, strings, styles or general workbook editing. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit."
+          },
+          {
+            "panel": "series",
+            "scope": "Inspect data.csv through table/series views and reopen the native workbooks. Independent host checks validate numeric cells, formulas and recalculated caches in both formats.",
+            "limits": "No arbitrary spreadsheet formulas, strings, styles or general workbook editing. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect data.csv through table/series views and reopen the native workbooks. Independent host checks validate numeric cells, formulas and recalculated caches in both formats.",
+            "limits": "No arbitrary spreadsheet formulas, strings, styles or general workbook editing. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "baseline",
+          "reuse": "Edit the example with source or JSON pointer patches; inspect declared units and losses, replan the new revision, and verify a fresh run against independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This route does not implement native-inspection; use its documented batch/source workflow."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This route does not implement mpi; use its documented batch/source workflow."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Registered input fingerprint hook may decline reuse for unsupported input shapes; never assume hashes for unknown companions."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This route does not implement time-batches; use its documented batch/source workflow."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON draft, revision checking, recovery and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Atomic JSON pointer edits through the shared draft model."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This route does not implement live-editing; use its documented batch/source workflow."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This route does not implement native-save; use its documented batch/source workflow."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Only explicit declared readers/writers or table/vector transformations, with the data losses listed here; no automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Independently parse ODS/XLSX data, formulas and cached summaries and compare the CSV round trip and publication hashes. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "data.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    0,
+                    2
+                  ],
+                  [
+                    1,
+                    4
+                  ],
+                  [
+                    2,
+                    6
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/rows",
+                "value": [
+                  [
+                    0,
+                    3
+                  ],
+                  [
+                    1,
+                    6
+                  ],
+                  [
+                    2,
+                    9
+                  ]
+                ]
+              }
+            ],
+            "scope": "Independently parse ODS/XLSX data, formulas and cached summaries and compare the CSV round trip and publication hashes. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "data.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    0,
+                    3
+                  ],
+                  [
+                    1,
+                    6
+                  ],
+                  [
+                    2,
+                    9
+                  ]
+                ]
+              }
+            ]
+          },
+          {
+            "id": "balance",
+            "example": "balance",
+            "edits": [],
+            "scope": "Literal income/expense sums of 150 in both native formats, balance zero within 1e-9 and income cap 160. Independent native acceptance also checks caches directly.",
+            "checks": [
+              {
+                "file": "requirements.json",
+                "format": "json",
+                "pointer": "/formats/xlsx/checks/1/value",
+                "expected": 0
+              },
+              {
+                "file": "requirements.json",
+                "format": "json",
+                "pointer": "/formats/ods/checks/0/value",
+                "expected": 150
+              },
+              {
+                "file": "requirements.json",
+                "format": "json",
+                "pointer": "/passed",
+                "expected": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

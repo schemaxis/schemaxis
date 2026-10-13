@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "evidenceType": "retrospective_observed_test_run_summary",
+  "recordedAt": "2026-09-20T13:47:39-05:00",
+  "executionDate": "2026-09-20",
+  "rerunForThisSummary": false,
+  "status": "passed",
+  "scope": "Blender and ParaView provider workers; not five-provider console/UI integration",
+  "workingDirectory": "<checkout>",
+  "execution": {
+    "order": ["blender", "paraview"],
+    "serial": true,
+    "mpi": false,
+    "blenderImageDevice": "CPU",
+    "blenderImageThreads": 4,
+    "blenderImageSamples": 8,
+    "paraviewConnection": "serial builtin",
+    "noConcurrentGpuJobsLaunchedByTheseRuns": true
+  },
+  "runs": [
+    {
+      "provider": "blender",
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src FUSION_LIVE_BLENDER=<blender>/blender-local python3 -m unittest discover -s tests/unit -p 'test_blender_live.py' -v",
+      "environment": {
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": "src",
+        "FUSION_LIVE_BLENDER": "<blender>/blender-local"
+      },
+      "testFile": "tests/unit/test_blender_live.py",
+      "tests": 12,
+      "nativeTests": 3,
+      "hostTests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsedSecondsReportedByUnittest": 5.118,
+      "exitCode": 0,
+      "observedOutputExcerpt": "Ran 12 tests in 5.118s\n\nOK",
+      "conversationExecutionSessionId": 28941,
+      "nativeAssertions": [
+        "Cube dimension edits retain native PID and object identities; six faces and twelve triangles; size-four X bounds equal [-2, 2].",
+        "Missing STL apply fails, reports rolledBack, and subsequent geometry response equals the previous response exactly.",
+        "PNG decodes at 640x480 with nonuniform pixels.",
+        "Native .blend save and JSON receipt succeed; geometry is unchanged by save; further edits use the same PID.",
+        "After closing the live worker, a fresh Blender process opens the saved .blend with auto-execution disabled and compares evaluated geometry digest against embedded metadata.",
+        "Seven existing mesh-workshop documents execute in one persistent PID: weightedNormals, twist, bend, weld, voxelUnion, shrinkwrap, plyImport. Batch axes are reduced to their final single value.",
+        "Terminating the known Python owner with SIGTERM causes its installed Blender worker to exit; PID birth-time checks guard the assertion and cleanup."
+      ]
+    },
+    {
+      "provider": "paraview",
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src FUSION_LIVE_PARAVIEW=<paraview>/ParaView-5.13.3-MPI-Linux-Python3.10-x86_64 python3 -m unittest discover -s tests/unit -p 'test_paraview_live.py' -v",
+      "environment": {
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": "src",
+        "FUSION_LIVE_PARAVIEW": "<paraview>/ParaView-5.13.3-MPI-Linux-Python3.10-x86_64"
+      },
+      "resolvedExecutable": "<paraview>/ParaView-5.13.3-MPI-Linux-Python3.10-x86_64/bin/pvpython",
+      "testFile": "tests/unit/test_paraview_live.py",
+      "tests": 4,
+      "nativeTests": 3,
+      "hostTests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsedSecondsReportedByUnittest": 14.469,
+      "exitCode": 0,
+      "observedOutputExcerpt": "Ran 4 tests in 14.469s\n\nOK",
+      "conversationExecutionSessionId": 95347,
+      "nativeAssertions": [
+        "Sphere radius edits retain native PID and proxy identities; tessellation coordinates scale by two.",
+        "Invalid radius leaves geometry unchanged; missing-field native calculator failure reports rolledBack and restores the previous geometry response exactly.",
+        "PNG decodes at 640x480 with nonuniform pixels and camera readback checks.",
+        "Native .pvsm save succeeds; geometry is unchanged by save; further edits use the same PID.",
+        "After closing the live worker, a fresh pvpython process loads the saved .pvsm, updates the source, and compares evaluated geometry digest against its receipt.",
+        "Composite output contains two uniquely identified leaves with valid local triangle indices; line output exposes edges.",
+        "PLY-backed .pvsm receipt lists the absolute source path, datasetsCopied=false and portable=false.",
+        "Terminating the known Python owner with SIGTERM causes its installed ParaView worker to exit; PID birth-time checks guard the assertion and cleanup."
+      ]
+    }
+  ],
+  "hostAssertions": [
+    "Host imports do not load bpy or paraview.simple.",
+    "Compatible graph edits reuse handles; failed native mutation rebuilds previous state; failed restoration marks state uncertain and blocks reads/edits.",
+    "Unsupported commands, batch states, nonfinite JSON, incorrect save extensions and receipt overwrites are rejected.",
+    "Startup exit and timeout reap the owned process; dispatch allocation cancellation interrupts a pending wait and reaps a sleeping Python subprocess within three seconds.",
+    "Owner liveness rejects zombie processes and recycled PIDs."
+  ],
+  "artifactRetention": {
+    "summaryPath": "verification/2026-09-20-live-workers.json",
+    "rawNativeArtifactsRetained": false,
+    "rawNativeLogsRetained": false,
+    "reason": "Native tests use TemporaryDirectory; screenshots, native scenes, receipts, worker runtime snapshots and logs were cleaned on exit. Original absolute temporary paths were not retained.",
+    "temporaryArtifactBasenames": ["session/native.log", "session/owner.json", "session/runtime.zip", "preview.png", "scene.blend", "scene.blend.receipt.json", "scene.pvsm", "scene.pvsm.receipt.json", "external.pvsm", "external.pvsm.receipt.json"],
+    "testOutputProvenance": "Final successful tool outputs in this task, execution session IDs recorded above; excerpts transcribed into this summary, not recreated by a rerun.",
+    "durableIntegrationEvidence": "To be produced separately by tools/qualify_console_integration.py; this summary does not claim that integration run passed."
+  },
+  "limitations": [
+    "Serial installed-runtime qualification only; no MPI, remote ParaView, concurrent GPU, or exhaustive declaration coverage.",
+    "Blender save itself verifies native library parse and object/material membership. ParaView save itself verifies state XML and proxy membership. Neither save command independently replays geometry on every call.",
+    "Independent-process reopen tests cover a Blender cube and a ParaView sphere. They reuse the same trusted tessellation/digest helper, not an independent geometry implementation, and do not establish arbitrary-scene or external-dataset replay fidelity.",
+    "ParaView .pvsm references external datasets; no datasets are copied. Receipt dependency lists cover declared file/files options, not exhaustive case-directory or transitive sidecar closure. The PLY-backed save was checked for dependency metadata, not independently reopened in this suite.",
+    "Cancellation timing was tested with a sleeping host Python subprocess. Native owner-death tests terminated idle owners after status, not workers blocked in long native calls; watchdog forced-exit behavior during blocked native calls was not separately qualified.",
+    "Images were checked by decoding, dimensions, pixel variation and applicable camera readback; no visual-quality or engineering-accuracy review is claimed.",
+    "Face identifiers are revision-scoped. Live mode requires one scene and one resolved geometry state; authored batch publications are not executed.",
+    "No retained raw artifacts can be independently re-inspected from these runs; rerun the exact commands or use the separate durable console integration qualification."
+  ],
+  "sourceSnapshot": {
+    "scope": "Current owned files hashed when this summary was written; not a contemporaneous run-time or complete dependency/executable fingerprint.",
+    "sha256": {
+      "src/fusion/adaptors/blender/live.py": "745077b89aa2915866d17c09e696c7091266dd484a4221eda6b3c95216115c5f",
+      "src/fusion/adaptors/blender/live_native.py": "ff35bb406acbcaedc14f980151282776c67ad2e08495afe38df80aa91a52930d",
+      "src/fusion/adaptors/blender/live_runtime.py": "39f8287786dbb7efc6b25db23f141f2b715d9f4447fc8078598159e0cd9bcc47",
+      "src/fusion/adaptors/blender/live_transport.py": "d4a430d0e8fd48c859bd7e29d248e19113135524171b9e5e99cf903c743b1d19",
+      "src/fusion/adaptors/paraview/live.py": "ba14c4bfd96539abb80312de947ea1dda9573ddccd391fb50f4403cb6826f5ab",
+      "src/fusion/adaptors/paraview/live_native.py": "3283cbd8c317978c664f51c5f4f22ef70261dbf4771e35c61b1d471e5cdf0c1b",
+      "tests/unit/test_blender_live.py": "30646bda940875c841073ecaf253e6f84aa142bcd7a4b081a8556b242e4fa6b4",
+      "tests/unit/test_paraview_live.py": "6e99b0de7f89550bf77cd2361d57317b3613be81e9b2e20079393fd06275b1d9"
+    }
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {
+          "$fill": "file"
+        },
+        "caseType": "Reconstructed Case",
+        "cellArrays": [
+          "U",
+          "p"
+        ]
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "merge",
+      "inputs": {
+        "input": "case"
+      }
+    },
+    {
+      "id": "flow",
+      "filter": "cellToPoint",
+      "options": {
+        "passCellData": true
+      },
+      "inputs": {
+        "input": "mesh"
+      }
+    },
+    {
+      "id": "derivatives",
+      "filter": "gradient",
+      "options": {
+        "field": [
+          "POINTS",
+          "U"
+        ],
+        "gradient": false,
+        "qCriterion": true,
+        "vorticity": true
+      },
+      "inputs": {
+        "input": "flow"
+      }
+    },
+    {
+      "id": "vortices",
+      "filter": "contour",
+      "options": {
+        "field": [
+          "POINTS",
+          "Q-criterion"
+        ],
+        "values": [
+          {
+            "$fill": "level"
+          }
+        ]
+      },
+      "inputs": {
+        "input": "derivatives"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "vortices",
+      "visible": {
+        "vortices": {
+          "field": [
+            "POINTS",
+            "Vorticity"
+          ],
+          "range": [
+            0,
+            50
+          ]
+        }
+      },
+      "geometry": [
+        "vortices"
+      ],
+      "images": [
+        {
+          "id": "orbit",
+          "size": [
+            800,
+            600
+          ],
+          "cameras": {
+            "$analytic": {
+              "type": "orbit",
+              "start": 0,
+              "end": 330,
+              "count": {
+                "$fill": "views"
+              },
+              "elevation": 25
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

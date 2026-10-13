@@ -1,0 +1,823 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.ngspice/1",
+    "operation": "dcSweep",
+    "circuit": {
+      "source": "in",
+      "resistors": [
+        {
+          "name": "r1",
+          "a": "in",
+          "b": "out",
+          "resistance": 1000
+        },
+        {
+          "name": "r2",
+          "a": "out",
+          "b": "0",
+          "resistance": 2000
+        }
+      ],
+      "capacitors": [],
+      "probes": [
+        "out"
+      ]
+    },
+    "start": 0,
+    "stop": 5,
+    "points": 6
+  },
+  "categories": [
+    {
+      "id": "networks",
+      "title": "Resistor networks",
+      "icon": "layers"
+    },
+    {
+      "id": "ac",
+      "title": "AC response",
+      "icon": "layers"
+    },
+    {
+      "id": "transient",
+      "title": "RC transient",
+      "icon": "layers"
+    },
+    {
+      "id": "controls",
+      "title": "Sweep controls",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "divider",
+      "title": "Resistor divider",
+      "category": "networks",
+      "icon": "layers",
+      "description": "Replace the circuit with this bounded, declared network and its analysis.",
+      "fields": {
+        "value": {
+          "label": "Resistance of r1 (ohms)",
+          "type": "number",
+          "required": true,
+          "default": 1000,
+          "minimum": 0.001,
+          "maximum": 1000000000
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ngspice/1",
+              "operation": "dcSweep",
+              "circuit": {
+                "source": "in",
+                "resistors": [
+                  {
+                    "name": "r1",
+                    "a": "in",
+                    "b": "out",
+                    "resistance": {
+                      "$fill": "value"
+                    }
+                  },
+                  {
+                    "name": "r2",
+                    "a": "out",
+                    "b": "0",
+                    "resistance": 2000
+                  }
+                ],
+                "capacitors": [],
+                "probes": [
+                  "out"
+                ]
+              },
+              "start": 0,
+              "stop": 5,
+              "points": 6
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "bridge",
+      "title": "Resistive bridge",
+      "category": "networks",
+      "icon": "layers",
+      "description": "Replace the circuit with this bounded, declared network and its analysis.",
+      "fields": {
+        "value": {
+          "label": "Component or drive value",
+          "type": "number",
+          "required": true,
+          "default": 1000,
+          "minimum": 1e-12
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ngspice/1",
+              "operation": "dcSweep",
+              "circuit": {
+                "source": "in",
+                "resistors": [
+                  {
+                    "name": "r0",
+                    "a": "in",
+                    "b": "left",
+                    "resistance": 1000
+                  },
+                  {
+                    "name": "r1",
+                    "a": "left",
+                    "b": "0",
+                    "resistance": 1000
+                  },
+                  {
+                    "name": "r2",
+                    "a": "in",
+                    "b": "right",
+                    "resistance": 1000
+                  },
+                  {
+                    "name": "r3",
+                    "a": "right",
+                    "b": "0",
+                    "resistance": 1000
+                  },
+                  {
+                    "name": "r4",
+                    "a": "left",
+                    "b": "right",
+                    "resistance": {
+                      "$fill": "value"
+                    }
+                  }
+                ],
+                "capacitors": [],
+                "probes": [
+                  "left",
+                  "right"
+                ]
+              },
+              "start": 0,
+              "stop": 5,
+              "points": 6
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "rc-response",
+      "title": "RC frequency response",
+      "category": "ac",
+      "icon": "layers",
+      "description": "Replace the circuit with this bounded, declared network and its analysis.",
+      "fields": {
+        "value": {
+          "label": "Component or drive value",
+          "type": "number",
+          "required": true,
+          "default": 1e-06,
+          "minimum": 1e-12
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ngspice/1",
+              "operation": "acSweep",
+              "circuit": {
+                "source": "in",
+                "resistors": [
+                  {
+                    "name": "r1",
+                    "a": "in",
+                    "b": "out",
+                    "resistance": 1000
+                  }
+                ],
+                "capacitors": [
+                  {
+                    "name": "c1",
+                    "a": "out",
+                    "b": "0",
+                    "capacitance": {
+                      "$fill": "value"
+                    }
+                  }
+                ],
+                "probes": [
+                  "out"
+                ]
+              },
+              "start": 159.15494309189532,
+              "stop": 318.30988618379064,
+              "points": 3,
+              "amplitude": 1
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "rc-ladder",
+      "title": "Two-stage RC ladder",
+      "category": "ac",
+      "icon": "layers",
+      "description": "Replace the circuit with this bounded, declared network and its analysis.",
+      "fields": {
+        "value": {
+          "label": "Component or drive value",
+          "type": "number",
+          "required": true,
+          "default": 1e-06,
+          "minimum": 1e-12
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ngspice/1",
+              "operation": "acSweep",
+              "circuit": {
+                "source": "in",
+                "resistors": [
+                  {
+                    "name": "r1",
+                    "a": "in",
+                    "b": "mid",
+                    "resistance": 1000
+                  },
+                  {
+                    "name": "r2",
+                    "a": "mid",
+                    "b": "out",
+                    "resistance": 1000
+                  }
+                ],
+                "capacitors": [
+                  {
+                    "name": "c1",
+                    "a": "mid",
+                    "b": "0",
+                    "capacitance": 1e-06
+                  },
+                  {
+                    "name": "c2",
+                    "a": "out",
+                    "b": "0",
+                    "capacitance": {
+                      "$fill": "value"
+                    }
+                  }
+                ],
+                "probes": [
+                  "mid",
+                  "out"
+                ]
+              },
+              "start": 159.15494309189532,
+              "stop": 318.30988618379064,
+              "points": 3,
+              "amplitude": 1
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "rl-response",
+      "title": "RL frequency response",
+      "category": "ac",
+      "icon": "layers",
+      "description": "Replace the circuit with this bounded, declared network and its analysis.",
+      "fields": {
+        "value": {
+          "label": "Component or drive value",
+          "type": "number",
+          "required": true,
+          "default": 1,
+          "minimum": 1e-12
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ngspice/1",
+              "operation": "acSweep",
+              "circuit": {
+                "source": "in",
+                "resistors": [
+                  {
+                    "name": "load",
+                    "a": "out",
+                    "b": "0",
+                    "resistance": 1000
+                  }
+                ],
+                "inductors": [
+                  {
+                    "name": "coil",
+                    "a": "in",
+                    "b": "out",
+                    "inductance": {
+                      "$fill": "value"
+                    }
+                  }
+                ],
+                "capacitors": [],
+                "probes": [
+                  "out"
+                ]
+              },
+              "start": 159.15494309189532,
+              "stop": 318.30988618379064,
+              "points": 5,
+              "amplitude": 1
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "rlc-series",
+      "title": "Series RLC resonance",
+      "category": "ac",
+      "icon": "layers",
+      "description": "Replace the circuit with this bounded, declared network and its analysis.",
+      "fields": {
+        "value": {
+          "label": "Component or drive value",
+          "type": "number",
+          "required": true,
+          "default": 1,
+          "minimum": 1e-12
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ngspice/1",
+              "operation": "acSweep",
+              "circuit": {
+                "source": "in",
+                "resistors": [
+                  {
+                    "name": "load",
+                    "a": "in",
+                    "b": "mid",
+                    "resistance": 1000
+                  }
+                ],
+                "inductors": [
+                  {
+                    "name": "coil",
+                    "a": "mid",
+                    "b": "out",
+                    "inductance": {
+                      "$fill": "value"
+                    }
+                  }
+                ],
+                "capacitors": [
+                  {
+                    "name": "cap",
+                    "a": "out",
+                    "b": "0",
+                    "capacitance": 1e-06
+                  }
+                ],
+                "probes": [
+                  "out"
+                ]
+              },
+              "start": 159.15494309189532,
+              "stop": 318.30988618379064,
+              "points": 5,
+              "amplitude": 1
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "rlc-parallel",
+      "title": "Parallel RLC response",
+      "category": "ac",
+      "icon": "layers",
+      "description": "Replace the circuit with this bounded, declared network and its analysis.",
+      "fields": {
+        "value": {
+          "label": "Component or drive value",
+          "type": "number",
+          "required": true,
+          "default": 1e-06,
+          "minimum": 1e-12
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ngspice/1",
+              "operation": "acSweep",
+              "circuit": {
+                "source": "in",
+                "resistors": [
+                  {
+                    "name": "load",
+                    "a": "in",
+                    "b": "out",
+                    "resistance": 1000
+                  }
+                ],
+                "inductors": [
+                  {
+                    "name": "coil",
+                    "a": "out",
+                    "b": "0",
+                    "inductance": 1
+                  }
+                ],
+                "capacitors": [
+                  {
+                    "name": "cap",
+                    "a": "out",
+                    "b": "0",
+                    "capacitance": {
+                      "$fill": "value"
+                    }
+                  }
+                ],
+                "probes": [
+                  "out"
+                ]
+              },
+              "start": 79.57747154594766,
+              "stop": 238.732414637843,
+              "points": 5,
+              "amplitude": 1
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "rc-step",
+      "title": "First-order RC step",
+      "category": "transient",
+      "icon": "layers",
+      "description": "Replace the circuit with this bounded, declared network and its analysis.",
+      "fields": {
+        "value": {
+          "label": "Component or drive value",
+          "type": "number",
+          "required": true,
+          "default": 5,
+          "minimum": 1e-12
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ngspice/1",
+              "operation": "rcStep",
+              "circuit": {
+                "source": "in",
+                "resistors": [
+                  {
+                    "name": "r1",
+                    "a": "in",
+                    "b": "out",
+                    "resistance": 1000
+                  }
+                ],
+                "capacitors": [
+                  {
+                    "name": "c1",
+                    "a": "out",
+                    "b": "0",
+                    "capacitance": 1e-06
+                  }
+                ],
+                "probes": [
+                  "out"
+                ]
+              },
+              "stop": 0.005,
+              "points": 6,
+              "amplitude": {
+                "$fill": "value"
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "dc-range",
+      "title": "DC sweep interval",
+      "category": "controls",
+      "icon": "layers",
+      "description": "Set the driven source interval and bounded output sample count.",
+      "fields": {
+        "start": {
+          "label": "Start voltage",
+          "type": "number",
+          "required": true,
+          "default": 0,
+          "minimum": -1000,
+          "maximum": 1000
+        },
+        "stop": {
+          "label": "Stop voltage",
+          "type": "number",
+          "required": true,
+          "default": 5,
+          "minimum": -1000,
+          "maximum": 1000
+        },
+        "points": {
+          "label": "Sample count",
+          "type": "integer",
+          "required": true,
+          "default": 101,
+          "minimum": 2,
+          "maximum": 512
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "merge": {
+            "start": {
+              "$fill": "start"
+            },
+            "stop": {
+              "$fill": "stop"
+            },
+            "points": {
+              "$fill": "points"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "ac-range",
+      "title": "AC frequency interval",
+      "category": "controls",
+      "icon": "layers",
+      "description": "Set a positive linear-frequency range and AC drive amplitude.",
+      "fields": {
+        "start": {
+          "label": "Start frequency (Hz)",
+          "type": "number",
+          "required": true,
+          "default": 1,
+          "minimum": 0.001
+        },
+        "stop": {
+          "label": "Stop frequency (Hz)",
+          "type": "number",
+          "required": true,
+          "default": 10000,
+          "minimum": 0.001
+        },
+        "amplitude": {
+          "label": "AC voltage",
+          "type": "number",
+          "required": true,
+          "default": 1,
+          "minimum": 0.001
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "merge": {
+            "start": {
+              "$fill": "start"
+            },
+            "stop": {
+              "$fill": "stop"
+            },
+            "amplitude": {
+              "$fill": "amplitude"
+            }
+          }
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.ngspice/1",
+        "operation": "acSweep",
+        "circuit": {
+          "source": "in",
+          "resistors": [
+            {
+              "name": "r1",
+              "a": "in",
+              "b": "out",
+              "resistance": 1000
+            }
+          ],
+          "capacitors": [
+            {
+              "name": "c1",
+              "a": "out",
+              "b": "0",
+              "capacitance": 1e-06
+            }
+          ],
+          "probes": [
+            "out"
+          ]
+        },
+        "start": 159.15494309189532,
+        "stop": 318.30988618379064,
+        "points": 3,
+        "amplitude": 1
+      }
+    },
+    {
+      "id": "probe-nodes",
+      "title": "Output voltage probes",
+      "category": "controls",
+      "icon": "layers",
+      "description": "Select existing non-ground circuit nodes for result columns.",
+      "fields": {
+        "probe-nodes": {
+          "label": "Output voltage probes",
+          "type": "json",
+          "required": true,
+          "default": [
+            "in",
+            "out"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/circuit/probes",
+          "values": [
+            {
+              "$fill": "probe-nodes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rc-duration",
+      "title": "RC observation duration",
+      "category": "transient",
+      "icon": "layers",
+      "description": "Set the bounded end time for the analytic first-order RC response.",
+      "fields": {
+        "rc-duration": {
+          "label": "RC observation duration",
+          "type": "number",
+          "required": true,
+          "default": 0.01,
+          "minimum": 1e-09,
+          "maximum": 1000000.0
+        }
+      },
+      "inserts": [
+        {
+          "at": "/stop",
+          "values": [
+            {
+              "$fill": "rc-duration"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.ngspice/1",
+        "operation": "rcStep",
+        "circuit": {
+          "source": "in",
+          "resistors": [
+            {
+              "name": "r1",
+              "a": "in",
+              "b": "out",
+              "resistance": 1000
+            }
+          ],
+          "capacitors": [
+            {
+              "name": "c1",
+              "a": "out",
+              "b": "0",
+              "capacitance": 1e-06
+            }
+          ],
+          "probes": [
+            "out"
+          ]
+        },
+        "stop": 0.005,
+        "points": 6,
+        "amplitude": 5
+      }
+    }
+  ],
+  "templates": [
+    {
+      "id": "divider-workbook",
+      "title": "DC divider study",
+      "description": "Sweep a DC voltage source across a 1 k\u03a9 / 2 k\u03a9 resistor divider and publish the output voltage table.",
+      "file": "studio/templates/divider-workbook.json",
+      "fields": {
+        "value": {
+          "label": "Stop voltage",
+          "type": "number",
+          "required": true,
+          "default": 5,
+          "minimum": 1e-12
+        }
+      }
+    },
+    {
+      "id": "ac-filter",
+      "title": "RC filter response",
+      "description": "Compute the small-signal AC response of a 1 k\u03a9 RC low-pass filter for a selected capacitance.",
+      "file": "studio/templates/ac-filter.json",
+      "fields": {
+        "value": {
+          "label": "Capacitance (F)",
+          "type": "number",
+          "required": true,
+          "default": 1e-06,
+          "minimum": 1e-12
+        }
+      }
+    },
+    {
+      "id": "step-response",
+      "title": "RC step response",
+      "description": "Compute the supported first-order response of a 1 k\u03a9 / 1 \u00b5F RC circuit over 5 ms at the selected step amplitude.",
+      "file": "studio/templates/step-response.json",
+      "fields": {
+        "value": {
+          "label": "Step voltage",
+          "type": "number",
+          "required": true,
+          "default": 5,
+          "minimum": 1e-12
+        }
+      }
+    },
+    {
+      "id": "resonator",
+      "title": "RLC resonator",
+      "description": "Compute the AC output of the declared series RLC network for a selected inductance. Adjust the frequency range to cover the resonance of interest.",
+      "file": "studio/templates/resonator.json",
+      "fields": {
+        "value": {
+          "label": "Inductance (H)",
+          "type": "number",
+          "required": true,
+          "default": 1,
+          "minimum": 1e-12
+        }
+      }
+    }
+  ],
+  "viewers": [
+    "table",
+    "text"
+  ]
+}

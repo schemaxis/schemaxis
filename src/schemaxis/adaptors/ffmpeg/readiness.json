@@ -1,0 +1,335 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.ffmpeg/1": {
+      "guide": "docs/media-workflows.md#ffmpeg-publication",
+      "context": {
+        "purpose": "Publish bounded PNG frame sequences or declared Aseprite sprite sheets as verified H.264 or FFV1 videos. The editable starting example is plan-only until its absolute PNG path is replaced. An optional deliverable policy expresses dimensions, frame count, duration, file size and decoded pixel-error requirements.",
+        "assumptions": "Exactly one node; explicit input order and constant frame rate. A matching ffprobe executable is required beside FFmpeg. The adaptor uses their public command-line interfaces.",
+        "constraints": "No audio, arbitrary filter graph or colour-management guarantee. PNG subset and byte/frame limits apply; alpha composites onto black. H.264 needs even dimensions and is lossy. Sheet durations must be representable at the chosen frame rate.",
+        "inspection": "Inspect video and retained native decode/probe evidence. Verify dimensions, frame count, rate and duration, and every decoded frame. FFV1 must match RGB bytes; H.264 mean RGB error is bounded at 16/255 per frame. These are bounded fidelity checks, not perceptual certification. Deliverable acceptance is independently reconstructed from authored requirements and actual retained native observations.",
+        "recovery": "INVALID_RESOURCE requires absolute PNG/metadata paths. Missing inputs need actual files, not placeholder paths. Correct dimensions or frame timing for native rejection; use FFV1 if H.264 exceeds the fidelity bound. Replan and rerun with retained failure logs. DELIVERABLE_NOT_MET retains a correct video with observed requirements and corrective next actions; revise sources, fps or codec before a fresh run."
+      },
+      "examples": [
+        {
+          "id": "ordered-frames",
+          "document": {
+            "version": "schemaxis.ffmpeg/1",
+            "nodes": [
+              {
+                "id": "video",
+                "filter": "encodeFrames",
+                "options": {
+                  "files": [
+                    "/replace-with-your-input/frame.png"
+                  ],
+                  "codec": "ffv1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "relative-frame-path",
+          "document": {
+            "version": "schemaxis.ffmpeg/1",
+            "nodes": [
+              {
+                "id": "video",
+                "filter": "encodeFrames",
+                "options": {
+                  "files": [
+                    "relative.png"
+                  ],
+                  "codec": "ffv1"
+                }
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "INVALID_RESOURCE"
+        },
+        {
+          "id": "media-deliverable",
+          "reference": "examples/schemaxis/ffmpeg-deliverable.json"
+        },
+        {
+          "id": "invalid-duration-policy",
+          "document": {
+            "version": "schemaxis.ffmpeg/1",
+            "nodes": [
+              {
+                "id": "video",
+                "filter": "encodeFrames",
+                "options": {
+                  "files": [
+                    "/replace-with-your-input/frame.png"
+                  ],
+                  "codec": "ffv1"
+                }
+              }
+            ],
+            "deliverable": {
+              "durationToleranceSeconds": 0.001
+            }
+          },
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_media_geospatial.py"
+      ],
+      "acceptance": [
+        "tools/qualify_media_geospatial.py",
+        "tools/qualify_ffmpeg_deliverable.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Consumes image, spriteSheet and spriteMetadata artifacts. Explicit frame order, fixed rate, alpha-on-black and codec-dependent losses; no automatic format conversion.",
+          "references": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "tests/unit/test_media_geospatial.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://ffmpeg.org/ffmpeg.html",
+          "https://ffmpeg.org/ffprobe.html"
+        ],
+        "lifecycle": {
+          "timeout": "Native encoding and decoding use a shared elapsed-time budget.",
+          "cancellation": "Owned native subprocess trees use shared cancellation and retain partial evidence.",
+          "logs": "Retain stage stdout/stderr, commands, probe output, decoded RGB and submissions.",
+          "verification": "Recheck full decoded RGB against retained inputs, dimensions, count, duration, hashes and declared codec-dependent error limits. Authored deliverable acceptance is reconstructed from native duration, dimensions/count, actual compressed byte size and per-frame mean RGB errors; unmet results cannot be published as successes. New native decode/probe launchers bind the encoded input digest to each owned stage; launcher source, bindings and decoded/probe output digests are replayed offline. Historical direct commands remain explicitly unbound. Source capture and scheduler fingerprints reject non-regular inputs before opening and recheck descriptors, with bounded byte reads."
+        },
+        "data": [
+          {
+            "id": "frames",
+            "direction": "input",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "colour": "8-bit RGB/RGBA",
+              "order": "explicit",
+              "units": "pixels"
+            },
+            "losses": [
+              "Alpha composites on black."
+            ],
+            "scope": "Equal dimensions and bounded non-interlaced PNG subset."
+          },
+          {
+            "id": "sheet",
+            "direction": "input",
+            "kind": "spriteSheet",
+            "format": "PNG",
+            "traits": {
+              "colour": "8-bit RGB/RGBA",
+              "order": "metadata rectangles"
+            },
+            "losses": [
+              "Alpha composites on black."
+            ],
+            "scope": "Sheet needs matching metadata."
+          },
+          {
+            "id": "metadata",
+            "direction": "input",
+            "kind": "spriteMetadata",
+            "format": "schemaxis.aseprite.sheet/1",
+            "traits": {
+              "order": "authored",
+              "timeUnits": "milliseconds"
+            },
+            "losses": [
+              "Frame duration must be representable at the chosen constant fps."
+            ],
+            "scope": "Explicit rectangles and durations."
+          },
+          {
+            "id": "video",
+            "direction": "output",
+            "kind": "video",
+            "format": "MP4/H.264 or Matroska/FFV1",
+            "traits": {
+              "frameRate": "constant",
+              "audio": false,
+              "colour": "RGB decode"
+            },
+            "losses": [
+              "H.264 is lossy; FFV1 is byte-exact after alpha compositing."
+            ],
+            "scope": "No colour-management guarantee."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect retained probe and verification JSON.",
+            "limits": "Video playback is external; the shared console does not advertise a video player."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "ordered-frames",
+          "reuse": "Bind ordered PNG files, choose the declared codec and change fps with a JSON pointer edit. Plan the new revision and verify a fresh run; the acceptance cases supply portable repository fixture bindings."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact receipts, scheduler provenance and explicit handoffs; verify each consumer format."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Inspect retained publications and receipts; no native node inspection hook is advertised."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Only serial execution is qualified; do not request multiple ranks."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The registered hook hashes external inputs for scheduler reuse."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No finite native time-list batching support in this route."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit ordinary JSON through the shared draft source; planning checks the current revision."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Use atomic JSON pointer patches through the shared draft model; node commands apply only to node-shaped routes."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Use bounded batch execution; no persistent native editing session is promised."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Inspect and reuse declared publications; no console native-save extension is advertised for this route."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Explicit PNG or sprite-sheet to video encoding; FFV1 preserves RGB after alpha-on-black compositing, H.264 is lossy. No automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "frames-baseline",
+            "example": "ordered-frames",
+            "edits": [],
+            "scope": "One known PNG encoded as FFV1 at 25 fps; independently decoded RGB must be byte-exact after alpha compositing. Does not qualify H.264 or sprite timing.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 1
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/fps",
+                "expected": 25
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/meanErrors",
+                "expected": [
+                  0.0
+                ]
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/files/0": "examples/schemaxis/catalogue-texture.png"
+            }
+          },
+          {
+            "id": "frames-variant",
+            "example": "ordered-frames",
+            "edits": [
+              {
+                "op": "add",
+                "path": "/nodes/0/options/fps",
+                "value": 12
+              }
+            ],
+            "scope": "One known PNG encoded as FFV1 at 12 fps; independently decoded RGB must be byte-exact after alpha compositing. Does not qualify H.264 or sprite timing.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 1
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/fps",
+                "expected": 12
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/meanErrors",
+                "expected": [
+                  0.0
+                ]
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/files/0": "examples/schemaxis/catalogue-texture.png"
+            }
+          },
+          {
+            "id": "deliverable-baseline",
+            "example": "media-deliverable",
+            "edits": [],
+            "scope": "Known 2x2 RGBA PNG encoded as one FFV1 frame at 25 fps: declared dimensions/frame count, 0.04s native duration within 0.001s, file size below 100000 bytes, and exact decoded composited RGB. No perceptual or general encoding qualification.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/deliverable/accepted",
+                "expected": true
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/deliverable/observed/maximumMeanRGBError",
+                "expected": 0.0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/deliverable/observed/frames",
+                "expected": 1
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/files/0": "examples/schemaxis/catalogue-texture.png"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

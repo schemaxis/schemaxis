@@ -1,0 +1,1214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.ngspice/1"
+    },
+    "operation": {
+      "anyOf": [
+        {
+          "const": "dcSweep"
+        },
+        {
+          "const": "acSweep"
+        },
+        {
+          "const": "rcStep"
+        }
+      ]
+    },
+    "circuit": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "default": "in"
+            },
+            "resistors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "resistance": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 1000000000.0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "resistance"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 64
+            },
+            "capacitors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "capacitance": {
+                    "type": "number",
+                    "minimum": 1e-12,
+                    "maximum": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "capacitance"
+                ]
+              },
+              "maxItems": 64,
+              "default": []
+            },
+            "probes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "default": [
+                "out"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "resistors"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "default": "in"
+            },
+            "resistors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "resistance": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 1000000000.0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "resistance"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 64
+            },
+            "capacitors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "capacitance": {
+                    "type": "number",
+                    "minimum": 1e-12,
+                    "maximum": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "capacitance"
+                ]
+              },
+              "maxItems": 64,
+              "default": []
+            },
+            "probes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "minItems": 1,
+              "maxItems": 15,
+              "uniqueItems": true,
+              "default": [
+                "out"
+              ]
+            },
+            "inductors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "inductance": {
+                    "type": "number",
+                    "minimum": 1e-09,
+                    "maximum": 1000.0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "inductance"
+                ]
+              },
+              "maxItems": 64,
+              "default": []
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "resistors"
+          ]
+        }
+      ]
+    },
+    "start": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": -1000,
+          "maximum": 1000,
+          "default": 0
+        },
+        {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 1000000000.0,
+          "default": 1
+        }
+      ]
+    },
+    "stop": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": -1000,
+          "maximum": 1000,
+          "default": 5
+        },
+        {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 1000000000.0,
+          "default": 10000
+        },
+        {
+          "type": "number",
+          "minimum": 1e-09,
+          "maximum": 1000000.0,
+          "default": 0.005
+        }
+      ]
+    },
+    "points": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 512,
+          "default": 101
+        },
+        {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 512,
+          "default": 101
+        }
+      ]
+    },
+    "requirements": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "probe": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "quantity": {
+                "enum": [
+                  "voltage_V"
+                ]
+              },
+              "axis": {
+                "const": "sourceVoltage_V"
+              },
+              "window": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1000000000000.0,
+                  "maximum": 1000000000000.0
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "minimum": {
+                "type": "number",
+                "minimum": -1000000000000.0,
+                "maximum": 1000000000000.0
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": -1000000000000.0,
+                "maximum": 1000000000000.0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "probe",
+              "quantity",
+              "axis",
+              "window"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "minimum"
+                ]
+              },
+              {
+                "required": [
+                  "maximum"
+                ]
+              }
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "probe": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "quantity": {
+                "enum": [
+                  "magnitude_V",
+                  "gainMagnitude"
+                ]
+              },
+              "axis": {
+                "const": "frequency_Hz"
+              },
+              "window": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1000000000000.0,
+                  "maximum": 1000000000000.0
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "minimum": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "probe",
+              "quantity",
+              "axis",
+              "window"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "minimum"
+                ]
+              },
+              {
+                "required": [
+                  "maximum"
+                ]
+              }
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "probe": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "quantity": {
+                "enum": [
+                  "voltage_V"
+                ]
+              },
+              "axis": {
+                "const": "time_s"
+              },
+              "window": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1000000000000.0,
+                  "maximum": 1000000000000.0
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "minimum": {
+                "type": "number",
+                "minimum": -1000000000000.0,
+                "maximum": 1000000000000.0
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": -1000000000000.0,
+                "maximum": 1000000000000.0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "probe",
+              "quantity",
+              "axis",
+              "window"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "minimum"
+                ]
+              },
+              {
+                "required": [
+                  "maximum"
+                ]
+              }
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      ]
+    },
+    "amplitude": {
+      "type": "number",
+      "minimum": -1000,
+      "maximum": 1000,
+      "default": 1
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "circuit"
+  ],
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.ngspice/1"
+        },
+        "operation": {
+          "const": "dcSweep"
+        },
+        "circuit": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "default": "in"
+            },
+            "resistors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "resistance": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 1000000000.0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "resistance"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 64
+            },
+            "capacitors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "capacitance": {
+                    "type": "number",
+                    "minimum": 1e-12,
+                    "maximum": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "capacitance"
+                ]
+              },
+              "maxItems": 64,
+              "default": []
+            },
+            "probes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "default": [
+                "out"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "resistors"
+          ]
+        },
+        "start": {
+          "type": "number",
+          "minimum": -1000,
+          "maximum": 1000,
+          "default": 0
+        },
+        "stop": {
+          "type": "number",
+          "minimum": -1000,
+          "maximum": 1000,
+          "default": 5
+        },
+        "points": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 512,
+          "default": 101
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "probe": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "quantity": {
+                "enum": [
+                  "voltage_V"
+                ]
+              },
+              "axis": {
+                "const": "sourceVoltage_V"
+              },
+              "window": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1000000000000.0,
+                  "maximum": 1000000000000.0
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "minimum": {
+                "type": "number",
+                "minimum": -1000000000000.0,
+                "maximum": 1000000000000.0
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": -1000000000000.0,
+                "maximum": 1000000000000.0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "probe",
+              "quantity",
+              "axis",
+              "window"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "minimum"
+                ]
+              },
+              {
+                "required": [
+                  "maximum"
+                ]
+              }
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "circuit"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.ngspice/1"
+        },
+        "operation": {
+          "const": "acSweep"
+        },
+        "circuit": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "default": "in"
+            },
+            "resistors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "resistance": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 1000000000.0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "resistance"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 64
+            },
+            "capacitors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "capacitance": {
+                    "type": "number",
+                    "minimum": 1e-12,
+                    "maximum": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "capacitance"
+                ]
+              },
+              "maxItems": 64,
+              "default": []
+            },
+            "probes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "minItems": 1,
+              "maxItems": 15,
+              "uniqueItems": true,
+              "default": [
+                "out"
+              ]
+            },
+            "inductors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "inductance": {
+                    "type": "number",
+                    "minimum": 1e-09,
+                    "maximum": 1000.0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "inductance"
+                ]
+              },
+              "maxItems": 64,
+              "default": []
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "resistors"
+          ]
+        },
+        "start": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 1000000000.0,
+          "default": 1
+        },
+        "stop": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 1000000000.0,
+          "default": 10000
+        },
+        "points": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 512,
+          "default": 101
+        },
+        "amplitude": {
+          "type": "number",
+          "minimum": -1000,
+          "maximum": 1000,
+          "default": 1
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "probe": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "quantity": {
+                "enum": [
+                  "magnitude_V",
+                  "gainMagnitude"
+                ]
+              },
+              "axis": {
+                "const": "frequency_Hz"
+              },
+              "window": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1000000000000.0,
+                  "maximum": 1000000000000.0
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "minimum": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "probe",
+              "quantity",
+              "axis",
+              "window"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "minimum"
+                ]
+              },
+              {
+                "required": [
+                  "maximum"
+                ]
+              }
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "circuit"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.ngspice/1"
+        },
+        "operation": {
+          "const": "rcStep"
+        },
+        "circuit": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "default": "in"
+            },
+            "resistors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "resistance": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 1000000000.0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "resistance"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 64
+            },
+            "capacitors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "a": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "b": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "capacitance": {
+                    "type": "number",
+                    "minimum": 1e-12,
+                    "maximum": 1
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "a",
+                  "b",
+                  "capacitance"
+                ]
+              },
+              "maxItems": 64,
+              "default": []
+            },
+            "probes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "default": [
+                "out"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "resistors"
+          ]
+        },
+        "stop": {
+          "type": "number",
+          "minimum": 1e-09,
+          "maximum": 1000000.0,
+          "default": 0.005
+        },
+        "points": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 512,
+          "default": 101
+        },
+        "amplitude": {
+          "type": "number",
+          "minimum": -1000,
+          "maximum": 1000,
+          "default": 1
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "probe": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "quantity": {
+                "enum": [
+                  "voltage_V"
+                ]
+              },
+              "axis": {
+                "const": "time_s"
+              },
+              "window": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1000000000000.0,
+                  "maximum": 1000000000000.0
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "minimum": {
+                "type": "number",
+                "minimum": -1000000000000.0,
+                "maximum": 1000000000000.0
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": -1000000000000.0,
+                "maximum": 1000000000000.0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "probe",
+              "quantity",
+              "axis",
+              "window"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "minimum"
+                ]
+              },
+              {
+                "required": [
+                  "maximum"
+                ]
+              }
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "circuit"
+      ]
+    }
+  ]
+}

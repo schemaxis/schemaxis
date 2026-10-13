@@ -1,0 +1,132 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.shotcut/1",
+    "nodes": [
+      {
+        "id": "edit",
+        "filter": "editTimeline",
+        "options": {
+          "assets": [
+            {
+              "name": "colours",
+              "file": "/replace-with-your-input/colours.mkv"
+            }
+          ],
+          "clips": [
+            {
+              "asset": "colours",
+              "startFrame": 3,
+              "frameCount": 3
+            },
+            {
+              "asset": "colours",
+              "startFrame": 0,
+              "frameCount": 2
+            }
+          ],
+          "fps": 25,
+          "width": 32,
+          "height": 24,
+          "threads": 1
+        }
+      }
+    ]
+  },
+  "categories": [
+    {
+      "id": "timeline",
+      "title": "Video timeline",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "edit-timeline",
+      "title": "Trim and arrange clips",
+      "category": "timeline",
+      "icon": "layers",
+      "description": "Trim, reorder and repeat explicit video source ranges as an editable Shotcut timeline and a verified silent FFV1 video.",
+      "fields": {
+        "assets": {
+          "label": "Named local videos",
+          "type": "json",
+          "required": true,
+          "default": [
+            {
+              "name": "colours",
+              "file": "/replace-with-your-input/colours.mkv"
+            }
+          ]
+        },
+        "clips": {
+          "label": "Ordered source ranges",
+          "type": "json",
+          "required": true,
+          "default": [
+            {
+              "asset": "colours",
+              "startFrame": 3,
+              "frameCount": 3
+            },
+            {
+              "asset": "colours",
+              "startFrame": 0,
+              "frameCount": 2
+            }
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.shotcut/1",
+              "nodes": [
+                {
+                  "id": "edit",
+                  "filter": "editTimeline",
+                  "options": {
+                    "assets": {
+                      "$fill": "assets"
+                    },
+                    "clips": {
+                      "$fill": "clips"
+                    },
+                    "fps": 25,
+                    "width": 32,
+                    "height": 24,
+                    "threads": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Silent local videos at matching fps/dimensions."
+    }
+  ],
+  "templates": [
+    {
+      "id": "trim-reorder",
+      "title": "Trim and reorder a video",
+      "description": "Select the final three source frames followed by the first two.",
+      "file": "studio/templates/trim-reorder.json",
+      "fields": {
+        "file": {
+          "label": "Source video",
+          "type": "path",
+          "required": true,
+          "default": "/replace-with-your-input/colours.mkv"
+        }
+      },
+      "requires": "The acceptance profile is 32x24 at 25 fps; change profile for your matching source."
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

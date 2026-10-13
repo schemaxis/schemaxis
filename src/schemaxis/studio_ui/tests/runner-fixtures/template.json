@@ -1,0 +1,49 @@
+{
+  "version": "schemaxis.workflow-template/1",
+  "id": "studio.sequence",
+  "revision": 1,
+  "title": "Sequence and scale study",
+  "workflow": "workflow.json",
+  "parameters": {
+    "stop": {
+      "label": "Upper bound", "kind": "number", "default": 4,
+      "help": "Generate equally spaced samples between zero and this value.",
+      "constraints": {"minimum": 1, "maximum": 20},
+      "target": {"scope": "workflow", "pointer": "/settings/stop"}
+    },
+    "count": {
+      "label": "Sample count", "kind": "integer", "default": 5,
+      "help": "More samples give a denser result table.",
+      "constraints": {"minimum": 2, "maximum": 100},
+      "target": {"scope": "workflow", "pointer": "/settings/count"}
+    },
+    "factor": {
+      "label": "Scale factor", "kind": "number", "default": 2,
+      "constraints": {"minimum": 0.1, "maximum": 10},
+      "target": {"scope": "workflow", "pointer": "/settings/factor"}
+    },
+    "label": {
+      "label": "Study label", "kind": "string", "default": "Baseline",
+      "constraints": {"minLength": 1, "maxLength": 60},
+      "target": {"scope": "workflow", "pointer": "/settings/label"}
+    },
+    "quality": {
+      "label": "Quality preset", "kind": "enum", "default": "standard",
+      "constraints": {"enum": ["standard", "fine"]},
+      "target": {"scope": "workflow", "pointer": "/settings/quality"}
+    },
+    "enabled": {
+      "label": "Record study flag", "kind": "boolean", "default": true,
+      "target": {"scope": "workflow", "pointer": "/settings/enabled"}
+    },
+    "direction": {
+      "label": "Reference direction", "kind": "vector", "default": [1, 0, 0],
+      "constraints": {"length": 3, "minimum": -1, "maximum": 1},
+      "target": {"scope": "workflow", "pointer": "/settings/direction"}
+    }
+  },
+  "outputs": {
+    "samples": {"operation": "samples", "artifact": 0, "kind": "table"},
+    "scaled": {"operation": "scaled", "artifact": 0, "kind": "table"}
+  }
+}

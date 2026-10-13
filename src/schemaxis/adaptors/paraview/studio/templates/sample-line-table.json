@@ -1,0 +1,60 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "source",
+      "filter": "wavelet"
+    },
+    {
+      "id": "profile",
+      "filter": "probeLine",
+      "options": {
+        "start": {
+          "$fill": "start"
+        },
+        "end": {
+          "$fill": "end"
+        },
+        "resolution": {
+          "$fill": "samples"
+        }
+      },
+      "inputs": {
+        "input": "source"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "profile",
+      "visible": {
+        "profile": {
+          "field": [
+            "POINTS",
+            "RTData"
+          ],
+          "range": [
+            0,
+            300
+          ]
+        }
+      },
+      "geometry": [
+        "profile"
+      ],
+      "exports": [
+        {
+          "id": "table",
+          "node": "profile",
+          "writer": "pvWriteCSVWriter",
+          "comparison": "table",
+          "acceptLosses": [
+            "topology",
+            "coordinates",
+            "structure"
+          ]
+        }
+      ]
+    }
+  ]
+}

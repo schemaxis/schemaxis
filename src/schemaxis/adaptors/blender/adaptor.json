@@ -1,0 +1,123 @@
+{
+  "version": "schemaxis.blender/1",
+  "declarations": "schemaxis.adaptors.blender.adaptor:DECLARATIONS",
+  "runtimeFamily": "5.2.2",
+  "executables": [
+    "blender"
+  ],
+  "execution": "background Blender; prepare-only scenes and saved-scene render groups",
+  "keywords": [
+    "meshes",
+    "materials",
+    "modifiers",
+    "rendering",
+    "glTF"
+  ],
+  "id": "blender",
+  "adaptor": "schemaxis.adaptors.blender.adaptor",
+  "executionCapabilities": {
+    "modes": [
+      "background"
+    ],
+    "nativeThreads": true,
+    "gpu": [
+      "CPU",
+      "CUDA",
+      "OPTIX"
+    ]
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": true,
+    "visualReferences": true,
+    "geometryReferences": true,
+    "imagePixelReferences": true,
+    "imageReferenceRequirement": "a current native PNG preview; no inferred object identity",
+    "nativeEditReverseSync": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.blender/1",
+    "nodes": [],
+    "scenes": []
+  },
+  "nativeExtension": ".blend",
+  "consoleHooks": {
+    "validate": "schemaxis.adaptors.blender.console:validate",
+    "add": "schemaxis.adaptors.blender.console:add",
+    "show": "schemaxis.adaptors.blender.console:show"
+  },
+  "liveSaveName": "scene.blend",
+  "cliOptions": [
+    {
+      "flag": "--blender",
+      "dest": "blender",
+      "help": "Explicit blender executable"
+    }
+  ],
+  "routes": {
+    "schemaxis.blender/1": {
+      "module": "schemaxis.adaptors.blender.adaptor",
+      "workflow": true,
+      "scheduled": true,
+      "compose": true,
+      "graph": true,
+      "timeBatches": true,
+      "schemaName": "blender",
+      "acceptedArtifacts": [
+        "geometry",
+        "gltf",
+        "table"
+      ],
+      "planIndex": 2,
+      "schema": "schemaxis.adaptors.blender.schema:document_schema",
+      "hooks": {
+        "resources": "schemaxis.adaptors.blender.integration:resources",
+        "provisionalResources": "schemaxis.adaptors.blender.integration:provisionalResources",
+        "reusableInputs": "schemaxis.adaptors.blender.integration:reusableInputs",
+        "validateHandoff": "schemaxis.adaptors.blender.integration:validateHandoff",
+        "query": "schemaxis.adaptors.blender.integration:query",
+        "inspectionSetup": "schemaxis.adaptors.blender.integration:inspectionSetup",
+        "nativeInspection": "schemaxis.adaptors.blender.integration:nativeInspection"
+      },
+      "schemaOrder": 1
+    },
+    "schemaxis.blender.render/1": {
+      "module": "schemaxis.adaptors.blender.render_job",
+      "workflow": true,
+      "scheduled": true,
+      "compose": true,
+      "schemaName": "saved-scene-render",
+      "referenceName": "blender-render",
+      "expand": "identity",
+      "acceptedArtifacts": [
+        "scene"
+      ],
+      "graphEditing": false,
+      "hooks": {
+        "resources": "schemaxis.adaptors.blender.integration:resources",
+        "provisionalResources": "schemaxis.adaptors.blender.integration:provisionalResources",
+        "reusableInputs": "schemaxis.adaptors.blender.integration:reusableInputs",
+        "validateHandoff": "schemaxis.adaptors.blender.integration:validateHandoff",
+        "query": "schemaxis.adaptors.blender.integration:query"
+      },
+      "schema": "schemaxis.adaptors.blender.schema:saved_scene_schema",
+      "schemaOrder": 4
+    }
+  },
+  "sections": {
+    "render": "schemaxis.adaptors.blender.schema:render_schema",
+    "saved-scene-render": "schemaxis.adaptors.blender.schema:saved_scene_schema"
+  },
+  "referenceSettings": {
+    "Blender render": "schemaxis.adaptors.blender.settings:RENDER_OPTIONS"
+  },
+  "liveArguments": [
+    "--background",
+    "--factory-startup",
+    "--python"
+  ],
+  "liveExecutable": null,
+  "liveGraph": "schemaxis.adaptors.blender.integration:liveGraph",
+  "capabilities": "schemaxis.adaptors.blender.capabilities:catalogue"
+}

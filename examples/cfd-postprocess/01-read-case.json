@@ -1,0 +1,84 @@
+{
+  "version": "schemaxis/1",
+  "settings": {
+    "case": "/absolute/path/to/completed-case/case.foam",
+    "caseType": "Reconstructed Case",
+    "times": [
+      1.0
+    ],
+    "velocity": "U",
+    "pressure": "p"
+  },
+  "times": {
+    "$document": "/settings/times"
+  },
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {
+          "$document": "/settings/case"
+        },
+        "caseType": {
+          "$document": "/settings/caseType"
+        },
+        "regions": [
+          "internalMesh"
+        ],
+        "cellArrays": [
+          {
+            "$document": "/settings/velocity"
+          },
+          {
+            "$document": "/settings/pressure"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "merge",
+      "inputs": {
+        "input": "case"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "check",
+      "visible": {
+        "mesh": {
+          "field": [
+            "CELLS",
+            {
+              "$document": "/settings/velocity"
+            }
+          ],
+          "component": -1,
+          "legend": true,
+          "legendTitle": "Velocity magnitude (check units)"
+        }
+      },
+      "images": [
+        {
+          "id": "overview",
+          "size": [
+            960,
+            540
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -2,
+                1
+              ],
+              "up": "z+"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

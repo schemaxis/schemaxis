@@ -1,0 +1,54 @@
+{
+  "version": "schemaxis/1",
+  "times": [
+    1
+  ],
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": "/replace/case.foam",
+        "caseType": "Reconstructed Case",
+        "regions": [
+          "internalMesh"
+        ],
+        "cellArrays": [
+          "U",
+          "p"
+        ],
+        "skipZero": false
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "merge",
+      "inputs": {
+        "input": "case"
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "slice",
+      "inputs": {
+        "input": "mesh"
+      },
+      "options": {
+        "origin": [
+          0.5,
+          0,
+          0
+        ],
+        "normal": "x+"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "slices",
+      "geometry": [
+        "cut"
+      ]
+    }
+  ]
+}

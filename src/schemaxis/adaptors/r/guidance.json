@@ -1,0 +1,329 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "linearRegression": {
+      "status": "reviewed",
+      "explanation": "Fits an ordinary least-squares linear model (response = intercept + sum of coefficient x predictor) to 1 to 8 numeric predictors with R's stats::lm, then reopens the saved model in a fresh R process and checks every coefficient, prediction and residual against an independent calculation. It publishes coefficients.csv, training.csv, heldout.csv (when held-out rows are given) and regression-summary.json. Choose it for calibration curves or simple explanatory fits whose error limits you can state in advance.",
+      "pitfalls": [
+        "There must be more training rows than coefficients, and the predictors must not be (nearly) linearly dependent; otherwise RANK_DEFICIENT_DATA or ILL_CONDITIONED_DATA.",
+        "Only additive numeric terms: no categorical variables, interactions, polynomials or custom formulas.",
+        "No confidence intervals, hypothesis tests or causal claims; held-out errors describe only the rows you supplied.",
+        "A correct fit that misses a declared requirement fails with FIT_REQUIREMENT_NOT_MET and is not passed to later workflow steps."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/r-regression.json",
+          "purpose": "Known intercept10 and slope2 with independently orthogonal finite residuals and held-out observations."
+        },
+        {
+          "reference": "examples/schemaxis/r-regression-variant.json",
+          "purpose": "Change the known slope to3 while retaining the same training/held-out error budget."
+        }
+      ],
+      "sources": [
+        "schemaxis.adaptors.r.capabilities:catalogue",
+        "src/schemaxis/adaptors/r/adaptor.py:24-94",
+        "docs/r.md"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.r/1": {
+      "fields": {
+        "": {
+          "status": "reference",
+          "explanation": "Fit an explicit small numeric additive least-squares model, reopen it natively, and decide whether finite fit/prediction requirements are met. No causal or future-generalisation claim.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis document; it must be \"schemaxis.r/1\". It is not the R release.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ],
+          "examples": [
+            "schemaxis.r/1"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reference",
+          "explanation": "linearRegression fits numeric additive ordinary least squares and publishes independently checked coefficients and predictions.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/predictors": {
+          "status": "reviewed",
+          "explanation": "The 1 to 8 explanatory variables, in the order their values appear in every training and held-out row. Each gets one coefficient in the fitted model.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ],
+          "examples": [
+            [
+              {
+                "name": "temperature",
+                "unit": "degC"
+              }
+            ]
+          ]
+        },
+        "/properties/predictors/items": {
+          "status": "reviewed",
+          "explanation": "One predictor: a lowercase name and a unit label. Its position in the list is the column position of its values in each row.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ],
+          "examples": [
+            {
+              "name": "temperature",
+              "unit": "degC"
+            }
+          ]
+        },
+        "/properties/predictors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Distinct lowercase predictor/response identifier; intercept is reserved. Native formulas use fixed x1…xN/y symbols, so this label never becomes executable R syntax.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/predictors/items/properties/unit": {
+          "status": "reference",
+          "explanation": "Plain unit label, such as V or degC, retained for scientific interpretation. No conversion, dimensional-consistency proof or physical calibration is performed.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/response": {
+          "status": "reference",
+          "explanation": "Observed dependent numeric quantity with a distinct lowercase name and plain unit label. It is the final cell of every training/held-out row.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/response/properties/name": {
+          "status": "reference",
+          "explanation": "Distinct lowercase predictor/response identifier; intercept is reserved. Native formulas use fixed x1…xN/y symbols, so this label never becomes executable R syntax.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/response/properties/unit": {
+          "status": "reference",
+          "explanation": "Plain unit label, such as V or degC, retained for scientific interpretation. No conversion, dimensional-consistency proof or physical calibration is performed.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/training": {
+          "status": "reviewed",
+          "explanation": "The 4 to 512 observations used to fit the model; each row lists the predictor values in declared order and then the observed response. The rows must contain more observations than coefficients and enough independent variation in the predictors; a numerical conditioning limit (1e6 after scaling) rejects nearly dependent predictors.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ],
+          "pitfalls": [
+            "Repeating the same predictor values or using predictors that are multiples of each other cannot be fixed by adding more rows; change the design."
+          ],
+          "examples": [
+            [
+              [
+                0,
+                10.1
+              ],
+              [
+                1,
+                11.9
+              ],
+              [
+                2,
+                14.0
+              ],
+              [
+                3,
+                16.1
+              ]
+            ]
+          ]
+        },
+        "/properties/training/items": {
+          "status": "reference",
+          "explanation": "One finite observed row: predictor values in descriptor order, followed by the response value. Width must equal predictor count plus one.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/training/items/items": {
+          "status": "reference",
+          "explanation": "Finite numeric cell within ±1e9, in the corresponding authored predictor or response units. No missing values or strings.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/heldout": {
+          "status": "reference",
+          "explanation": "Optional one to 512 separate observed rows in the same predictor/response order. These finite rows assess declared prediction errors, not future generalisation; no automatic split.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/heldout/items": {
+          "status": "reference",
+          "explanation": "One finite observed row: predictor values in descriptor order, followed by the response value. Width must equal predictor count plus one.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/heldout/items/items": {
+          "status": "reference",
+          "explanation": "Finite numeric cell within ±1e9, in the corresponding authored predictor or response units. No missing values or strings.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/intercept": {
+          "status": "reference",
+          "explanation": "Include a constant coefficient, default true. Disable only when a zero response at zero predictors is a justified model constraint; training rows must exceed coefficient count.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements": {
+          "status": "reference",
+          "explanation": "Optional one to 32 named finite fit requirements. Native computation verification comes first; unmet requirements block success and downstream reuse.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items": {
+          "status": "reference",
+          "explanation": "One named finite requirement; choose an aggregate error maximum or a signed prediction bound at one declared sample.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0": {
+          "status": "reference",
+          "explanation": "Aggregate RMSE or maximum absolute error over the selected scope, with a nonnegative inclusive maximum in response units.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase requirement identifier, up to 64 characters, used in the explained acceptance report.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/scope": {
+          "status": "reference",
+          "explanation": "Choose training or heldout. Held-out requirements require separately authored held-out observed rows; scopes are never silently substituted.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/metric": {
+          "status": "reviewed",
+          "explanation": "rmse: root-mean-square residual over all rows in scope. maxAbsoluteError: the largest absolute residual (observed minus predicted) in scope. Both are in response units and need only a nonnegative maximum.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ],
+          "examples": [
+            "rmse"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable error, 0 to 1e18, in response units; equality passes. The reported margin is maximum minus the measured error, so a negative margin means the requirement is unmet.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ],
+          "examples": [
+            0.2
+          ]
+        },
+        "/properties/requirements/items/oneOf/1": {
+          "status": "reference",
+          "explanation": "Signed native prediction at a required zero-based sample index, with inclusive minimum, maximum or both in response units.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase requirement identifier, up to 64 characters, used in the explained acceptance report.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/scope": {
+          "status": "reference",
+          "explanation": "Choose training or heldout. Held-out requirements require separately authored held-out observed rows; scopes are never silently substituted.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/metric": {
+          "status": "reviewed",
+          "explanation": "prediction: bound the model's predicted response for one row of the chosen scope, selected by sampleIndex, rather than an aggregate error.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ],
+          "examples": [
+            "prediction"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/sampleIndex": {
+          "status": "reference",
+          "explanation": "Zero-based index in the selected declared scope for prediction bounds. It must be present and within the selected row list.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/minimum": {
+          "status": "reference",
+          "explanation": "Inclusive lower prediction bound in response units. Signed margin is actual prediction minus minimum; a negative margin is unmet.",
+          "sources": [
+            "docs/r.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Inclusive upper bound on the predicted response at the selected row, in response units; it may be negative. The margin is maximum minus prediction. Give minimum as well to require a range.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ],
+          "examples": [
+            16.5
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Lower-bound form: minimum is given, so the prediction must be at least that value; maximum may also be given.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Upper-bound form: maximum is given, so the prediction must not exceed that value; minimum may also be given.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ]
+        }
+      }
+    }
+  }
+}

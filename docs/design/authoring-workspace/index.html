@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Schemaxis · Authoring workspace design</title>
+  <link rel="stylesheet" href="workspace.css">
+  <script defer src="catalogue.js"></script>
+  <script defer src="workspace.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="#" aria-label="Schemaxis workspace"><span class="brand-icon">S<span>×</span></span>schemaxis<span class="edition">WORKSPACE</span></a>
+    <div class="header-context">Pipe study <span>/</span> Local project</div>
+    <div class="header-actions"><span class="prototype-badge">INTERACTIVE DESIGN</span><button id="setup-open" class="quiet">Set up workspace</button><button id="help-open" class="square" aria-label="Open design guide">?</button></div>
+  </header>
+  <div class="prototype-note">Design preview <span>·</span> Local editing works. Geometry is illustrative; native execution and AI are not connected.</div>
+  <main class="workspace">
+    <aside class="navigator">
+      <div class="nav-section-label">AUTHOR WITH</div>
+      <button id="adaptor-open" class="adaptor-switch"><span class="app-monogram">F</span><span><strong>FreeCAD</strong><small>Parametric CAD</small></span><span class="chevron">⌄</span></button>
+      <div class="nav-heading"><span>DOCUMENT</span><button id="reset" class="text-button" title="Restore the original elbow example">Reset demo</button></div>
+      <button class="file-item active" id="document-select"><span class="file-symbol">{ }</span> <span>pipe.input.json<small>90° elbow · millimetres</small></span></button>
+      <div class="nav-heading"><span>FEATURES</span><span id="node-count">5</span></div>
+      <nav id="feature-tree" aria-label="Document features"></nav>
+      <button id="add-operation" class="add-operation">＋ Add operation</button>
+      <div class="nav-heading"><span>NAMED SELECTIONS</span><span id="selection-count">0</span></div>
+      <div id="selection-list"><p class="empty-note">Pick an end in the model to give it a reusable name.</p></div>
+      <div class="nav-bottom"><span class="tiny-dot"></span><div><strong>FreeCAD runtime</strong><small>Not connected in this design</small></div></div>
+    </aside>
+    <section class="document-area" aria-label="Document authoring">
+      <div class="document-toolbar"><div class="document-title"><span class="file-symbol">{ }</span><strong id="document-filename">pipe.input.json</strong><span id="dirty" class="dirty" title="Changes since the initial example" hidden>●</span></div><div class="toolbar-actions"><button id="undo" class="quiet" disabled>↶ Undo</button><button id="export" class="quiet">Export file</button><button id="preview" class="primary">Preview design <span>↗</span></button></div></div>
+      <div class="mode-toolbar"><div class="segmented" aria-label="Workspace view"><button data-view="split" class="selected" aria-pressed="true">Split</button><button data-view="source" aria-pressed="false">Source</button><button data-view="model" aria-pressed="false">Model</button></div><span id="revision-label" class="muted">Draft revision 1</span><span class="spacer"></span><button id="dimensions-select" class="text-button">Edit dimensions</button></div>
+      <div class="work-surfaces" data-view="split">
+        <section class="model-pane" aria-label="Illustrative model preview">
+          <div class="surface-heading"><span><span class="tiny-dot teal"></span> MODEL STUDY</span><span id="preview-state">Illustration · revision 1</span></div>
+          <div class="canvas-container"><canvas id="model" aria-label="Illustrative hollow elbow. Drag to rotate. Use Pick inlet or Pick outlet below for keyboard-accessible selection."></canvas><div class="model-caption"><strong>90° pipe elbow</strong><span id="model-dimensions">R60 · Ø36 / Ø28 mm</span></div><div class="view-tools"><button id="fit">Fit</button><button id="section" aria-pressed="false">Section</button></div><div class="axis-legend"><span>X</span><span>Y</span><span>Z</span></div><div class="model-watermark">ILLUSTRATIVE GEOMETRY</div></div>
+          <div class="model-footer"><span>Drag to orbit · scroll to zoom</span><div><button id="pick-inlet">Pick inlet</button><button id="pick-outlet">Pick outlet</button></div></div>
+        </section>
+        <section class="source-pane" aria-label="Source editor">
+          <div class="source-heading"><div class="source-tabs"><button data-format="json" class="selected" aria-pressed="true">JSON</button><button data-format="yaml" aria-pressed="false">YAML</button></div><span id="source-mode">Editable source</span><button id="format-source" class="text-button">Format</button></div>
+          <div class="editor"><pre id="line-numbers" aria-hidden="true"></pre><textarea id="source" aria-label="Authored source" spellcheck="false" wrap="off"></textarea></div>
+          <div id="diagnostic" class="diagnostic" role="status"><span class="status-mark">✓</span><span id="diagnostic-text">Draft checks passed · native planning not connected</span></div>
+        </section>
+      </div>
+      <section class="command-drawer"><button id="command-toggle" aria-expanded="false"><span>›_ &nbsp; Command console</span><span id="command-hint">Same document, explicit operations &nbsp; ⌃</span></button><div id="command-body" hidden><div id="command-result" role="status">Prototype commands: help, set NODE OPTION JSON, set document dimensions JSON, undo, preview.</div><form id="command-form"><span>›</span><input id="command" aria-label="Console command" placeholder='set document dimensions {"bendRadius":80,"outerRadius":18,"innerRadius":14,"bendAngle":90,"meshDeflection":0.05}' autocomplete="off"><button type="submit">Run in draft</button></form></div></section>
+    </section>
+    <aside class="inspector" aria-label="Properties and assistance">
+      <div class="inspector-tabs"><button data-panel="properties" class="selected" aria-pressed="true">Properties</button><button data-panel="assistant" aria-pressed="false"><span class="ai-symbol">✧</span> Assistant</button></div>
+      <div id="properties-panel" class="inspector-content"></div>
+      <div id="assistant-panel" class="inspector-content" hidden>
+        <div class="eyebrow">DOCUMENT ASSISTANT</div><h1>Work on the same model.</h1><p class="description">Ask for an explanation or a proposed edit, with the current document and your selections as context.</p>
+        <div class="context-card"><span class="tiny-dot teal"></span> pipe.input.json <span id="ai-revision">revision 1</span></div>
+        <div id="ai-selection" class="context-card" hidden></div>
+        <label class="field-label" for="ai-request">Example request</label><textarea id="ai-request" readonly rows="4">Increase the bend radius to 80 mm. Keep the wall thickness and angle unchanged.</textarea>
+        <button id="ai-propose" class="primary full">Show example suggestion</button><p class="micro-copy">Scripted interaction · no AI connection or data transfer.</p>
+        <div id="ai-proposal" hidden><div class="proposal-heading"><span class="ai-symbol">✧</span><strong>One parameter change</strong></div><p class="description">Both revolved profiles already refer to the shared bend radius. Their expressions stay intact.</p><div class="diff"><span>dimensions.bendRadius</span><del id="ai-before">− 60</del><ins>+ 80</ins></div><p id="proposal-status" class="micro-copy">Review before applying. Native verification is still required.</p><button id="ai-apply" class="primary full">Apply to draft</button></div>
+        <div class="assistant-boundary"><strong>You stay in control</strong><p>Proposals change the authored document. Running native applications is a separate action with visible results.</p></div>
+      </div>
+      <div class="inspector-footer"><button id="guide-open" class="text-button">Read the design decisions <span>↗</span></button></div>
+    </aside>
+  </main>
+  <footer class="statusbar"><span><span class="tiny-dot teal"></span> Design sandbox <span class="divider">|</span> <span id="status-provider">FreeCAD · schemaxis.freecad/1</span></span><span id="status-message" role="status">Edits stay in this tab. Export to keep a copy.</span></footer>
+  <dialog id="catalogue-dialog"><div class="dialog-header"><div><div class="eyebrow">CAPABILITY CATALOGUE</div><h2>What would you like to make?</h2></div><button class="square" data-close aria-label="Close catalogue">×</button></div><p class="description">Browse installed Schemaxis adaptors by application or functionality. Native applications are configured separately.</p><input id="catalogue-search" class="search" aria-label="Search applications or functionality" placeholder="Search CAD, meshes, data analysis, maps…"><div id="adaptor-cards" class="adaptor-grid"></div><div class="dialog-note">This design’s editable example uses FreeCAD. Other cards show real registry metadata; switching documents is a later implementation step.</div></dialog>
+  <dialog id="operations-dialog"><div class="dialog-header"><div><div class="eyebrow">FREECAD OPERATIONS</div><h2>Add a feature</h2></div><button class="square" data-close aria-label="Close operations">×</button></div><input id="operation-search" class="search" aria-label="Search operations" placeholder="Search extrude, circle, fillet…"><div class="operation-layout"><div id="operation-list"></div><div id="operation-detail"></div></div></dialog>
+  <dialog id="setup-dialog"><div class="dialog-header"><div><div class="eyebrow">WORKSPACE SETUP · DESIGN PREVIEW</div><h2>A workspace for your work.</h2></div><button class="square" data-close aria-label="Close setup">×</button></div><div class="setup-steps"><span data-step-label="0" class="active">1 · Your work</span><span data-step-label="1">2 · Applications</span><span data-step-label="2">3 · Assistant</span></div><div id="setup-content"></div><div class="setup-navigation"><button id="setup-back">Back</button><span id="setup-progress">Step 1 of 3</span><button id="setup-next" class="primary">Continue</button></div></dialog>
+  <dialog id="guide-dialog"><div class="dialog-header"><div><div class="eyebrow">DESIGN GUIDE</div><h2>One document. Several ways to work.</h2></div><button class="square" data-close aria-label="Close guide">×</button></div><div class="guide-grid"><article><span>01</span><h3>Edit a dimension</h3><p>Change the bend radius in Properties. The JSON updates while its parameter references remain intact. Undo reverses the change.</p></article><article><span>02</span><h3>Pick an end</h3><p>Use Pick inlet, name the selection, then add an extension. This example creates existing profile / cut / fuse operations; general face extrusion still needs native support.</p></article><article><span>03</span><h3>Try the source</h3><p>JSON is editable. Invalid text remains in the editor and blocks operations. YAML shows an export preview; YAML parsing and comment-preserving edits are not implemented here.</p></article><article><span>04</span><h3>Review an AI edit</h3><p>The Assistant demonstrates a fixed suggestion and a real draft update. It sends nothing to an AI service.</p></article></div><p class="dialog-note">All geometry is a procedural illustration, not native evidence. Draft checks are a small local subset, not Schemaxis planning. Reloading resets this prototype; exported files persist.</p><a class="text-link" href="architecture.md">Architecture and implementation acceptance criteria ↗</a></dialog>
+  <div id="toast" role="status" hidden></div>
+</body>
+</html>

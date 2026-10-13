@@ -1,0 +1,94 @@
+{
+  "version": "schemaxis.blender/1",
+  "nodes": [
+    {
+      "id": "paint",
+      "filter": "material",
+      "options": {
+        "roughness": {
+          "$analytic": {
+            "type": "values",
+            "sync": "size",
+            "values": [
+              0.2,
+              0.8
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "sphere",
+      "filter": "uvSphere",
+      "inputs": {
+        "material": "paint"
+      },
+      "options": {
+        "radius": {
+          "$analytic": {
+            "type": "values",
+            "sync": "size",
+            "values": [
+              1,
+              2
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "transformed",
+      "filter": "transform",
+      "inputs": {
+        "input": "sphere"
+      },
+      "options": {
+        "translation": [
+          3,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          90
+        ],
+        "scale": [
+          2,
+          1,
+          1
+        ]
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "sweep",
+      "visible": [
+        "transformed"
+      ],
+      "render": {
+        "device": "OPTIX",
+        "samples": 4
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": [
+            240,
+            180
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -2,
+                1
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

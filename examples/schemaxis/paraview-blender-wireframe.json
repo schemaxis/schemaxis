@@ -1,0 +1,119 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "surface",
+      "document": {
+        "version": "schemaxis/1",
+        "nodes": [
+          {
+            "id": "ball",
+            "filter": "sphere",
+            "options": {
+              "radius": 2
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "shape",
+            "visible": {
+              "ball": {
+                "colour": "steelblue"
+              }
+            },
+            "gltf": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "presentation",
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "imported",
+            "filter": "readGltf",
+            "options": {
+              "file": {
+                "$artifact": "surface",
+                "index": 0
+              }
+            }
+          },
+          {
+            "id": "paint",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.05,
+                0.45,
+                0.7,
+                1
+              ],
+              "metallic": 0.5,
+              "roughness": 0.25
+            }
+          },
+          {
+            "id": "styled",
+            "filter": "assignMaterial",
+            "inputs": {
+              "input": "imported",
+              "material": "paint"
+            }
+          },
+          {
+            "id": "cage",
+            "filter": "wireframe",
+            "inputs": {
+              "input": "styled"
+            },
+            "options": {
+              "thickness": {
+                "$analytic": {
+                  "type": "values",
+                  "values": [
+                    0.025,
+                    0.07
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "show",
+            "visible": [
+              "cage"
+            ],
+            "images": [
+              {
+                "id": "orbit",
+                "size": [
+                  320,
+                  240
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1
+                    ]
+                  }
+                ]
+              }
+            ],
+            "render": {
+              "samples": 8,
+              "threads": 4
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

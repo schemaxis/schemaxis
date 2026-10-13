@@ -1,0 +1,847 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "blockDiagram": {
+      "status": "reviewed",
+      "explanation": "Draws a small technical block diagram from boxes you place yourself (x, y, width, height in millimetres) and left-to-right arrows between them. Inkscape writes an editable diagram.svg, exports diagram.png and the measured geometry is saved as diagram-measurements.json; the run succeeds only if the real text and shapes fit as declared. Choose it when you need control over positions; use flowDiagram to have positions derived from step dependencies.",
+      "sources": [
+        "docs/inkscape.md",
+        "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+      ],
+      "pitfalls": [
+        "Every arrow must run left to right with at least max(clearance, 3) mm between the boxes, and must not pass through another box.",
+        "Text that fits on paper may still overflow in the installed font (LABEL_OVERFLOW); enlarge the box, shorten the label or reduce fontSize.",
+        "The PNG is flattened; keep diagram.svg for editing. No custom SVG, styles or scripts can be supplied."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/inkscape-diagram.json",
+          "purpose": "Two named blocks and an independently measured connecting arrow."
+        }
+      ]
+    },
+    "flowDiagram": {
+      "status": "reviewed",
+      "explanation": "Draws a dependency flow chart from named steps and directed links without any coordinates: each step is placed one column to the right of its latest predecessor, and steps in the same column are stacked in alphabetical order of their IDs. Outputs are the same as blockDiagram (editable SVG, PNG and measured JSON, including the derived layout). Choose it for process or pipeline charts; use blockDiagram when you need manual placement.",
+      "sources": [
+        "docs/inkscape.md",
+        "src/schemaxis/adaptors/inkscape/adaptor.py:24-130",
+        "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+      ],
+      "pitfalls": [
+        "Circular dependencies fail with FLOW_CYCLE; a connector that would cross another card fails with FLOW_ROUTING_COLLISION, typically for links that skip columns.",
+        "Renaming a step can move it to another row, because rows follow alphabetical ID order; reordering the arrays does not.",
+        "The page must be large enough for all columns and the tallest column plus margins (FLOW_PAGE_OVERFLOW reports the required size); text is never shrunk automatically."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/inkscape-flow.json",
+          "purpose": "Branch and merge four named cards without manual coordinates."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.inkscape/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A small technical diagram in millimetres: page size, labelled boxes and arrows, drawn either from explicit box positions (blockDiagram) or from step dependencies (flowDiagram). Acceptance depends on the geometry and text sizes that Inkscape actually measures, not only on the declared numbers.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ]
+        },
+        "/properties/version": {
+          "status": "reference",
+          "explanation": "Document contract schemaxis.inkscape/1; identifies the route, independently of native application version.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reference",
+          "explanation": "Select blockDiagram for explicit coordinates or flowDiagram for named dependencies with deterministic longest-path DAG ranks and lexical lanes. Both require native geometric/text acceptance.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/operation/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "blockDiagram: you place every box with x, y, width and height. Choose it for diagrams whose layout you want to control.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "examples": [
+            "blockDiagram"
+          ]
+        },
+        "/properties/operation/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "flowDiagram: you declare only steps and dependencies and the layout is derived. Choose it for process or pipeline charts.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            "flowDiagram"
+          ]
+        },
+        "/properties/width": {
+          "status": "reviewed",
+          "explanation": "Page width in millimetres, 20 to 500. All boxes, including their 0.4 mm outline, must lie at least margin from the page edges. The exported PNG is width x dpi / 25.4 pixels wide (at most 4096).",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            120
+          ]
+        },
+        "/properties/height": {
+          "status": "reviewed",
+          "explanation": "Page height in millimetres, 20 to 500. All boxes, including their 0.4 mm outline, must lie at least margin from the page edges. The exported PNG is height x dpi / 25.4 pixels high (at most 4096).",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            60
+          ]
+        },
+        "/properties/margin": {
+          "status": "reference",
+          "explanation": "Minimum mm clearance from page edges to stroked rectangles; default 5 mm.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/clearance": {
+          "status": "reference",
+          "explanation": "Minimum Euclidean mm separation between rectangle strokes, default 5 mm; left-to-right connectors also require at least 3 mm for arrows.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/padding": {
+          "status": "reference",
+          "explanation": "Minimum mm inset for all actual native label glyph bounds; default 2 mm. Native font-dependent overflow is a distinct execution fault.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/fontSize": {
+          "status": "reference",
+          "explanation": "Sans-serif text font size in mm; default 3 mm. Lower this or enlarge the box if native queried text bounds overflow.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/dpi": {
+          "status": "reference",
+          "explanation": "Native PNG export pixels per inch, 72–192, default 96; page pixels are nearest-integer mm*dpi/25.4 with a 4096 limit per axis.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/boxes": {
+          "status": "reviewed",
+          "explanation": "The labelled boxes, 1 to 32. For blockDiagram each box also gives x, y, width and height in millimetres; for flowDiagram only id, label and colour are given and geometry is derived.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ]
+        },
+        "/properties/boxes/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "The 1 to 32 boxes of an explicit diagram, each with id, label, x, y, width and height in millimetres and an optional colour. Every outline must stay margin away from the page edges and clearance away from the other boxes.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "examples": [
+            [
+              {
+                "id": "sensor",
+                "label": "Sensor",
+                "x": 10,
+                "y": 20,
+                "width": 30,
+                "height": 14
+              }
+            ]
+          ]
+        },
+        "/properties/boxes/anyOf/0/items": {
+          "status": "reference",
+          "explanation": "One to 32 labelled editable rectangles; explicit geometry is in mm and must preserve page margins and minimum stroked clearance.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/boxes/anyOf/0/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique name of this box, also used by links as source or target: a letter followed by up to 31 letters, digits or underscores. Box and link IDs share one namespace, so they must all differ.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "examples": [
+            "sensor"
+          ]
+        },
+        "/properties/boxes/anyOf/0/items/properties/label": {
+          "status": "reference",
+          "explanation": "Single-line plain text, at most 80 characters; XML escaped and measured in native sans-serif. Actual glyph bounds must fit box padding.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/boxes/anyOf/0/items/properties/x": {
+          "status": "reference",
+          "explanation": "Box left edge in mm from page left; its 0.4 mm stroke must fit inside the declared page margin.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/boxes/anyOf/0/items/properties/y": {
+          "status": "reference",
+          "explanation": "Box top edge in mm from page top; its 0.4 mm stroke must fit inside the declared page margin.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/boxes/anyOf/0/items/properties/width": {
+          "status": "reviewed",
+          "explanation": "Box width in millimetres, at least 5 and greater than twice padding. The label, measured in the installed font, must fit inside the box minus padding on each side.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            30
+          ]
+        },
+        "/properties/boxes/anyOf/0/items/properties/height": {
+          "status": "reviewed",
+          "explanation": "Box height in millimetres, at least 5 and greater than twice padding. Connectors attach at mid-height on the left and right edges.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            14
+          ]
+        },
+        "/properties/boxes/anyOf/0/items/properties/colour": {
+          "status": "reference",
+          "explanation": "Box interior colour: blue, green or amber; fixed light palette on opaque white page. Default blue.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/boxes/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "The 1 to 32 steps of a flow diagram, each with only id, label and optional colour. Position and size come from the dependency layout and boxWidth/boxHeight; x, y, width and height are not accepted here.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            [
+              {
+                "id": "prepare",
+                "label": "Prepare"
+              },
+              {
+                "id": "solve",
+                "label": "Solve"
+              }
+            ]
+          ]
+        },
+        "/properties/boxes/anyOf/1/items": {
+          "status": "reviewed",
+          "explanation": "One flow step: a unique id, a single-line label and an optional fill colour. Its card size is the shared boxWidth x boxHeight and its position is derived from the links.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            {
+              "id": "prepare",
+              "label": "Prepare data"
+            }
+          ]
+        },
+        "/properties/boxes/anyOf/1/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique name of this step, used by links as source or target: a letter followed by up to 31 letters, digits or underscores. Steps in the same column are stacked in alphabetical order of these IDs, so renaming a step can move it. Box and link IDs must all differ.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            "prepare"
+          ]
+        },
+        "/properties/boxes/anyOf/1/items/properties/label": {
+          "status": "reference",
+          "explanation": "Single-line plain text, at most 80 characters; XML escaped and measured in native sans-serif. Actual glyph bounds must fit box padding.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/boxes/anyOf/1/items/properties/colour": {
+          "status": "reference",
+          "explanation": "Box interior colour: blue, green or amber; fixed light palette on opaque white page. Default blue.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/links": {
+          "status": "reviewed",
+          "explanation": "Up to 48 arrows between declared boxes. In blockDiagram the source box must be to the left of its target; in flowDiagram links are dependencies that decide the column layout and must not form a cycle.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "defaultMeaning": "Schemaxis default: []."
+        },
+        "/properties/links/items": {
+          "status": "reviewed",
+          "explanation": "One arrow: a unique id plus the IDs of its source and target boxes, which must differ.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            {
+              "id": "feed",
+              "source": "sensor",
+              "target": "logger"
+            }
+          ]
+        },
+        "/properties/links/items/properties/id": {
+          "status": "reference",
+          "explanation": "Unique simple name for a box or link; starts with a letter and contains at most 32 letters, numbers or underscores.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/links/items/properties/source": {
+          "status": "reference",
+          "explanation": "Name of the connector source box. Connector starts at its right stroked edge.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/links/items/properties/target": {
+          "status": "reviewed",
+          "explanation": "ID of the box the arrow points to; the arrow reaches its left edge. In blockDiagram you must place it to the right of source; in flowDiagram the layout does this for you.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            "logger"
+          ]
+        },
+        "/properties/boxWidth": {
+          "status": "reference",
+          "explanation": "Uniform flow card width in mm, default 26. Together with DAG rank count and rankGap determines required page width; actual native glyph bounds must fit padding.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/boxHeight": {
+          "status": "reference",
+          "explanation": "Uniform flow card height in mm, default 14. Together with largest rank lane count and laneGap determines required page height; native label bounds must fit padding.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/rankGap": {
+          "status": "reference",
+          "explanation": "Horizontal mm clearance between stroked flow-card columns, default 15. Must reach clearance and at least 3 mm for arrows.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/properties/laneGap": {
+          "status": "reviewed",
+          "explanation": "Vertical gap in millimetres between the outlines of cards stacked in the same column (flowDiagram only), 1 to 100; it must be at least clearance. Cards in a column are ordered alphabetically by ID.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "units": "Millimetres",
+          "defaultMeaning": "Schemaxis default: 8.",
+          "examples": [
+            8
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Explicit diagram (operation blockDiagram): you give every box's position and size and the arrows must run left to right. Choose this when the layout matters; Schemaxis only checks margins, clearances and text fit.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ]
+        },
+        "/oneOf/0/properties/version": {
+          "status": "reference",
+          "explanation": "Document contract schemaxis.inkscape/1; identifies the route, independently of native application version.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reference",
+          "explanation": "Select blockDiagram for explicit coordinates or flowDiagram for named dependencies with deterministic longest-path DAG ranks and lexical lanes.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/width": {
+          "status": "reviewed",
+          "explanation": "Page width in millimetres, 20 to 500. All boxes, including their 0.4 mm outline, must lie at least margin from the page edges. The exported PNG is width x dpi / 25.4 pixels wide (at most 4096).",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            120
+          ]
+        },
+        "/oneOf/0/properties/height": {
+          "status": "reviewed",
+          "explanation": "Page height in millimetres, 20 to 500. All boxes, including their 0.4 mm outline, must lie at least margin from the page edges. The exported PNG is height x dpi / 25.4 pixels high (at most 4096).",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            60
+          ]
+        },
+        "/oneOf/0/properties/margin": {
+          "status": "reference",
+          "explanation": "Minimum mm clearance from page edges to stroked rectangles; default 5 mm.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/clearance": {
+          "status": "reference",
+          "explanation": "Minimum Euclidean mm separation between rectangle strokes, default 5 mm; left-to-right connectors also require at least 3 mm for arrows.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/padding": {
+          "status": "reference",
+          "explanation": "Minimum mm inset for all actual native label glyph bounds; default 2 mm. Native font-dependent overflow is a distinct execution fault.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/fontSize": {
+          "status": "reference",
+          "explanation": "Sans-serif text font size in mm; default 3 mm. Lower this or enlarge the box if native queried text bounds overflow.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/dpi": {
+          "status": "reference",
+          "explanation": "Native PNG export pixels per inch, 72–192, default 96; page pixels are nearest-integer mm*dpi/25.4 with a 4096 limit per axis.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/boxes": {
+          "status": "reviewed",
+          "explanation": "The 1 to 32 boxes of an explicit diagram, each with id, label, x, y, width and height in millimetres and an optional colour. Every outline must stay margin away from the page edges and clearance away from the other boxes.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "examples": [
+            [
+              {
+                "id": "sensor",
+                "label": "Sensor",
+                "x": 10,
+                "y": 20,
+                "width": 30,
+                "height": 14
+              }
+            ]
+          ]
+        },
+        "/oneOf/0/properties/boxes/items": {
+          "status": "reference",
+          "explanation": "One to 32 labelled editable rectangles; explicit geometry is in mm and must preserve page margins and minimum stroked clearance.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/boxes/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique name of this box, also used by links as source or target: a letter followed by up to 31 letters, digits or underscores. Box and link IDs share one namespace, so they must all differ.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "examples": [
+            "sensor"
+          ]
+        },
+        "/oneOf/0/properties/boxes/items/properties/label": {
+          "status": "reference",
+          "explanation": "Single-line plain text, at most 80 characters; XML escaped and measured in native sans-serif. Actual glyph bounds must fit box padding.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/boxes/items/properties/x": {
+          "status": "reference",
+          "explanation": "Box left edge in mm from page left; its 0.4 mm stroke must fit inside the declared page margin.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/boxes/items/properties/y": {
+          "status": "reference",
+          "explanation": "Box top edge in mm from page top; its 0.4 mm stroke must fit inside the declared page margin.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/boxes/items/properties/width": {
+          "status": "reviewed",
+          "explanation": "Box width in millimetres, at least 5 and greater than twice padding. The label, measured in the installed font, must fit inside the box minus padding on each side.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            30
+          ]
+        },
+        "/oneOf/0/properties/boxes/items/properties/height": {
+          "status": "reviewed",
+          "explanation": "Box height in millimetres, at least 5 and greater than twice padding. Connectors attach at mid-height on the left and right edges.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            14
+          ]
+        },
+        "/oneOf/0/properties/boxes/items/properties/colour": {
+          "status": "reference",
+          "explanation": "Box interior colour: blue, green or amber; fixed light palette on opaque white page. Default blue.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/links": {
+          "status": "reviewed",
+          "explanation": "Up to 48 arrows between distinct declared boxes. Each source box must lie to the left of its target with at least max(clearance, 3) mm between them, and the arrow path must not cross any other box; links may cross each other.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "defaultMeaning": "Schemaxis default: [] (boxes only)."
+        },
+        "/oneOf/0/properties/links/items": {
+          "status": "reviewed",
+          "explanation": "One arrow from the right edge of the source box to the left edge of the target box, with one vertical segment at the horizontal midpoint between them.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "examples": [
+            {
+              "id": "feed",
+              "source": "sensor",
+              "target": "logger"
+            }
+          ]
+        },
+        "/oneOf/0/properties/links/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique name of this link: a letter followed by up to 31 letters, digits or underscores, different from every box ID and other link ID. It names the connector in the SVG and in measurements.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            "feed"
+          ]
+        },
+        "/oneOf/0/properties/links/items/properties/source": {
+          "status": "reference",
+          "explanation": "Name of the connector source box. Connector starts at its right stroked edge.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/0/properties/links/items/properties/target": {
+          "status": "reference",
+          "explanation": "Name of the connector target box, to the right of its source. Arrow reaches its left stroked edge.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Dependency flow diagram (operation flowDiagram): you give steps and links only, and Schemaxis derives columns and rows, using boxWidth, boxHeight, rankGap and laneGap. Choose this for process charts where placement can be automatic.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ]
+        },
+        "/oneOf/1/properties/version": {
+          "status": "reference",
+          "explanation": "Document contract schemaxis.inkscape/1; identifies the route, independently of native application version.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reference",
+          "explanation": "Select blockDiagram for explicit coordinates or flowDiagram for named dependencies with deterministic longest-path DAG ranks and lexical lanes.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/width": {
+          "status": "reviewed",
+          "explanation": "Page width in millimetres, 20 to 500. All boxes, including their 0.4 mm outline, must lie at least margin from the page edges. The exported PNG is width x dpi / 25.4 pixels wide (at most 4096).",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            120
+          ]
+        },
+        "/oneOf/1/properties/height": {
+          "status": "reviewed",
+          "explanation": "Page height in millimetres, 20 to 500. All boxes, including their 0.4 mm outline, must lie at least margin from the page edges. The exported PNG is height x dpi / 25.4 pixels high (at most 4096).",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130"
+          ],
+          "units": "Millimetres",
+          "examples": [
+            60
+          ]
+        },
+        "/oneOf/1/properties/margin": {
+          "status": "reference",
+          "explanation": "Minimum mm clearance from page edges to stroked rectangles; default 5 mm.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/clearance": {
+          "status": "reference",
+          "explanation": "Minimum Euclidean mm separation between rectangle strokes, default 5 mm; left-to-right connectors also require at least 3 mm for arrows.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/padding": {
+          "status": "reference",
+          "explanation": "Minimum mm inset for all actual native label glyph bounds; default 2 mm. Native font-dependent overflow is a distinct execution fault.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/fontSize": {
+          "status": "reference",
+          "explanation": "Sans-serif text font size in mm; default 3 mm. Lower this or enlarge the box if native queried text bounds overflow.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/dpi": {
+          "status": "reference",
+          "explanation": "Native PNG export pixels per inch, 72–192, default 96; page pixels are nearest-integer mm*dpi/25.4 with a 4096 limit per axis.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/boxes": {
+          "status": "reviewed",
+          "explanation": "The 1 to 32 steps of a flow diagram, each with only id, label and optional colour. Position and size come from the dependency layout and boxWidth/boxHeight; x, y, width and height are not accepted here.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            [
+              {
+                "id": "prepare",
+                "label": "Prepare"
+              },
+              {
+                "id": "solve",
+                "label": "Solve"
+              }
+            ]
+          ]
+        },
+        "/oneOf/1/properties/boxes/items": {
+          "status": "reviewed",
+          "explanation": "One flow step: a unique id, a single-line label and an optional fill colour. Its card size is the shared boxWidth x boxHeight and its position is derived from the links.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            {
+              "id": "prepare",
+              "label": "Prepare data"
+            }
+          ]
+        },
+        "/oneOf/1/properties/boxes/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique name of this step, used by links as source or target: a letter followed by up to 31 letters, digits or underscores. Steps in the same column are stacked in alphabetical order of these IDs, so renaming a step can move it. Box and link IDs must all differ.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            "prepare"
+          ]
+        },
+        "/oneOf/1/properties/boxes/items/properties/label": {
+          "status": "reference",
+          "explanation": "Single-line plain text, at most 80 characters; XML escaped and measured in native sans-serif. Actual glyph bounds must fit box padding.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/boxes/items/properties/colour": {
+          "status": "reference",
+          "explanation": "Box interior colour: blue, green or amber; fixed light palette on opaque white page. Default blue.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/links": {
+          "status": "reviewed",
+          "explanation": "Up to 48 directed dependencies between declared steps. They must not form a cycle, and the same source-target pair may appear only once. Steps without links are placed in the first column.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "defaultMeaning": "Schemaxis default: [] (all steps in one column)."
+        },
+        "/oneOf/1/properties/links/items": {
+          "status": "reviewed",
+          "explanation": "One dependency: target comes after source, so target is placed in a column to the right of source. The arrow is drawn automatically.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            {
+              "id": "step1",
+              "source": "prepare",
+              "target": "solve"
+            }
+          ]
+        },
+        "/oneOf/1/properties/links/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique name of this link: a letter followed by up to 31 letters, digits or underscores, different from every box ID and other link ID. It names the connector in the SVG and in measurements.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/adaptor.py:24-130",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            "feed"
+          ]
+        },
+        "/oneOf/1/properties/links/items/properties/source": {
+          "status": "reference",
+          "explanation": "Name of the connector source box. Connector starts at its right stroked edge.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/links/items/properties/target": {
+          "status": "reviewed",
+          "explanation": "ID of the step that depends on source. It is placed at least one column to the right of source; the arrow reaches its left edge.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "examples": [
+            "solve"
+          ]
+        },
+        "/oneOf/1/properties/boxWidth": {
+          "status": "reference",
+          "explanation": "Uniform flow card width in mm, default 26. Together with DAG rank count and rankGap determines required page width; actual native glyph bounds must fit padding.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/boxHeight": {
+          "status": "reference",
+          "explanation": "Uniform flow card height in mm, default 14. Together with largest rank lane count and laneGap determines required page height; native label bounds must fit padding.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/rankGap": {
+          "status": "reference",
+          "explanation": "Horizontal mm clearance between stroked flow-card columns, default 15. Must reach clearance and at least 3 mm for arrows.",
+          "sources": [
+            "docs/inkscape.md"
+          ]
+        },
+        "/oneOf/1/properties/laneGap": {
+          "status": "reviewed",
+          "explanation": "Vertical gap in millimetres between the outlines of cards stacked in the same column, 1 to 100; it must be at least clearance. Larger gaps need a taller page.",
+          "sources": [
+            "docs/inkscape.md",
+            "src/schemaxis/adaptors/inkscape/layout.py:6-75"
+          ],
+          "units": "Millimetres",
+          "defaultMeaning": "Schemaxis default: 8.",
+          "examples": [
+            8
+          ]
+        }
+      }
+    }
+  }
+}

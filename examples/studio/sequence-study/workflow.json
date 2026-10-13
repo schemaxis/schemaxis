@@ -1,0 +1,70 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "samples",
+      "document": {
+        "version": "schemaxis.octave/1",
+        "nodes": [
+          {
+            "id": "data",
+            "filter": "sequence",
+            "options": {
+              "start": 0,
+              "stop": {
+                "$document": "/settings/stop",
+                "scope": "workflow"
+              },
+              "count": {
+                "$document": "/settings/count",
+                "scope": "workflow"
+              }
+            }
+          }
+        ],
+        "outputs": [
+          "data"
+        ]
+      }
+    },
+    {
+      "id": "scaled",
+      "document": {
+        "version": "schemaxis.octave/1",
+        "nodes": [
+          {
+            "id": "data",
+            "filter": "readCSV",
+            "options": {
+              "file": {
+                "$artifact": "samples",
+                "index": 0
+              }
+            }
+          },
+          {
+            "id": "result",
+            "filter": "scale",
+            "inputs": {
+              "input": "data"
+            },
+            "options": {
+              "factor": {
+                "$document": "/settings/factor",
+                "scope": "workflow"
+              }
+            }
+          }
+        ],
+        "outputs": [
+          "result"
+        ]
+      }
+    }
+  ],
+  "settings": {
+    "stop": 4,
+    "count": 5,
+    "factor": 2
+  }
+}

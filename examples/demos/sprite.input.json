@@ -1,0 +1,273 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "sprite",
+      "document": {
+        "version": "schemaxis.aseprite/1",
+        "nodes": [
+          {
+            "id": "canvas",
+            "filter": "sprite",
+            "options": {
+              "width": 16,
+              "height": 16,
+              "durationMS": 120
+            }
+          },
+          {
+            "id": "colours",
+            "filter": "palette",
+            "inputs": {
+              "sprite": "canvas"
+            },
+            "options": {
+              "colours": [
+                [
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  20,
+                  40,
+                  80,
+                  255
+                ],
+                [
+                  250,
+                  150,
+                  30,
+                  255
+                ],
+                [
+                  255,
+                  255,
+                  255,
+                  255
+                ]
+              ]
+            }
+          },
+          {
+            "id": "background",
+            "filter": "rect",
+            "inputs": {
+              "sprite": "colours"
+            },
+            "options": {
+              "layer": "base",
+              "x": 0,
+              "y": 0,
+              "width": 16,
+              "height": 16,
+              "colour": [
+                20,
+                40,
+                80,
+                255
+              ]
+            }
+          },
+          {
+            "id": "foreground",
+            "filter": "layer",
+            "inputs": {
+              "sprite": "background"
+            },
+            "options": {
+              "name": "orb"
+            }
+          },
+          {
+            "id": "orb1",
+            "filter": "circle",
+            "inputs": {
+              "sprite": "foreground"
+            },
+            "options": {
+              "layer": "orb",
+              "x": 5,
+              "y": 8,
+              "radius": 3,
+              "colour": [
+                250,
+                150,
+                30,
+                255
+              ]
+            }
+          },
+          {
+            "id": "highlight",
+            "filter": "pixel",
+            "inputs": {
+              "sprite": "orb1"
+            },
+            "options": {
+              "layer": "orb",
+              "x": 4,
+              "y": 7,
+              "colour": [
+                255,
+                255,
+                255,
+                255
+              ]
+            }
+          },
+          {
+            "id": "second",
+            "filter": "frame",
+            "inputs": {
+              "sprite": "highlight"
+            },
+            "options": {
+              "durationMS": 200
+            }
+          },
+          {
+            "id": "background2",
+            "filter": "rect",
+            "inputs": {
+              "sprite": "second"
+            },
+            "options": {
+              "layer": "base",
+              "frame": 2,
+              "x": 0,
+              "y": 0,
+              "width": 16,
+              "height": 16,
+              "colour": [
+                20,
+                40,
+                80,
+                255
+              ]
+            }
+          },
+          {
+            "id": "orb2",
+            "filter": "circle",
+            "inputs": {
+              "sprite": "background2"
+            },
+            "options": {
+              "layer": "orb",
+              "frame": 2,
+              "x": 10,
+              "y": 8,
+              "radius": 3,
+              "colour": [
+                250,
+                150,
+                30,
+                255
+              ]
+            }
+          },
+          {
+            "id": "bounce",
+            "filter": "tag",
+            "inputs": {
+              "sprite": "orb2"
+            },
+            "options": {
+              "name": "bounce",
+              "fromFrame": 1,
+              "toFrame": 2,
+              "direction": "pingPong"
+            }
+          }
+        ],
+        "output": "bounce"
+      }
+    },
+    {
+      "id": "scene",
+      "document": {
+        "version": "schemaxis.godot/1",
+        "nodes": [
+          {
+            "id": "sprite",
+            "filter": "sprite3D",
+            "options": {
+              "file": {
+                "$artifact": "sprite",
+                "index": 2
+              },
+              "pixelSize": 0.05
+            }
+          },
+          {
+            "id": "camera",
+            "filter": "camera",
+            "options": {
+              "position": [
+                0,
+                0,
+                3
+              ],
+              "target": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        ],
+        "preview": true
+      }
+    },
+    {
+      "id": "video",
+      "document": {
+        "version": "schemaxis.ffmpeg/1",
+        "nodes": [
+          {
+            "id": "video",
+            "filter": "encodeSheet",
+            "options": {
+              "file": {
+                "$artifact": "sprite",
+                "index": 2
+              },
+              "metadata": {
+                "$artifact": "sprite",
+                "index": 3
+              },
+              "fps": 25,
+              "codec": "ffv1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "videoMp4",
+      "document": {
+        "version": "schemaxis.ffmpeg/1",
+        "nodes": [
+          {
+            "id": "video",
+            "filter": "encodeSheet",
+            "options": {
+              "file": {
+                "$artifact": "sprite",
+                "index": 2
+              },
+              "metadata": {
+                "$artifact": "sprite",
+                "index": 3
+              },
+              "fps": 25,
+              "codec": "h264"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

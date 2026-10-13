@@ -1,0 +1,700 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.aseprite/1"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "sprite"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "width": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 256
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 256
+                  },
+                  "layer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "default": "base"
+                  },
+                  "durationMS": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "default": 100
+                  },
+                  "colours": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "const": [
+                            0,
+                            0,
+                            0,
+                            0
+                          ]
+                        },
+                        {
+                          "type": "array",
+                          "minItems": 4,
+                          "maxItems": 4,
+                          "prefixItems": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            {
+                              "const": 255
+                            }
+                          ],
+                          "items": false
+                        }
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 256,
+                    "default": [
+                      [
+                        0,
+                        0,
+                        0,
+                        0
+                      ],
+                      [
+                        255,
+                        255,
+                        255,
+                        255
+                      ]
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "width",
+                  "height"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "layer"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "sprite": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "sprite"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "frame"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "durationMS": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "default": 100
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "sprite": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "sprite"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "palette"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "colours": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "const": [
+                            0,
+                            0,
+                            0,
+                            0
+                          ]
+                        },
+                        {
+                          "type": "array",
+                          "minItems": 4,
+                          "maxItems": 4,
+                          "prefixItems": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 255
+                            },
+                            {
+                              "const": 255
+                            }
+                          ],
+                          "items": false
+                        }
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 256
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "colours"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "sprite": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "sprite"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "pixel"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "layer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "frame": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 32,
+                    "default": 1
+                  },
+                  "x": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "colour": {
+                    "anyOf": [
+                      {
+                        "const": [
+                          0,
+                          0,
+                          0,
+                          0
+                        ]
+                      },
+                      {
+                        "type": "array",
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "prefixItems": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "const": 255
+                          }
+                        ],
+                        "items": false
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "layer",
+                  "x",
+                  "y",
+                  "colour"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "sprite": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "sprite"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "rect"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "layer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "frame": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 32,
+                    "default": 1
+                  },
+                  "x": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "colour": {
+                    "anyOf": [
+                      {
+                        "const": [
+                          0,
+                          0,
+                          0,
+                          0
+                        ]
+                      },
+                      {
+                        "type": "array",
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "prefixItems": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "const": 255
+                          }
+                        ],
+                        "items": false
+                      }
+                    ]
+                  },
+                  "width": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 256
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 256
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "layer",
+                  "x",
+                  "y",
+                  "colour",
+                  "width",
+                  "height"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "sprite": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "sprite"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "circle"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "layer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "frame": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 32,
+                    "default": 1
+                  },
+                  "x": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "y": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "colour": {
+                    "anyOf": [
+                      {
+                        "const": [
+                          0,
+                          0,
+                          0,
+                          0
+                        ]
+                      },
+                      {
+                        "type": "array",
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "prefixItems": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          },
+                          {
+                            "const": 255
+                          }
+                        ],
+                        "items": false
+                      }
+                    ]
+                  },
+                  "radius": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 127
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "layer",
+                  "x",
+                  "y",
+                  "colour",
+                  "radius"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "sprite": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "sprite"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "tag"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "fromFrame": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 32
+                  },
+                  "toFrame": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 32
+                  },
+                  "direction": {
+                    "enum": [
+                      "forward",
+                      "reverse",
+                      "pingPong",
+                      "pingPongReverse"
+                    ],
+                    "default": "forward"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "fromFrame",
+                  "toFrame"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "sprite": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "sprite"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          }
+        ]
+      }
+    },
+    "output": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "nodes",
+    "output"
+  ]
+}

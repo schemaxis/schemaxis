@@ -1,0 +1,54 @@
+{
+  "version": "schemaxis.qgis/1",
+  "dimensions": {
+    "bufferDistance": 60,
+    "studyBounds": [
+      499850,
+      5529850,
+      500350,
+      5530250
+    ]
+  },
+  "settings": {
+    "source": "/absolute/path/to/schemaxis/examples/demos/sites.geojson",
+    "crs": "EPSG:32614"
+  },
+  "nodes": [
+    {
+      "id": "sites",
+      "filter": "readVector",
+      "options": {
+        "file": {
+          "$document": "/settings/source"
+        }
+      }
+    },
+    {
+      "id": "zones",
+      "filter": "buffer",
+      "options": {
+        "distance": {
+          "$document": "/dimensions/bufferDistance"
+        },
+        "segments": 32
+      },
+      "inputs": {
+        "input": "sites"
+      }
+    },
+    {
+      "id": "study",
+      "filter": "clip",
+      "options": {
+        "bounds": {
+          "$document": "/dimensions/studyBounds"
+        }
+      },
+      "inputs": {
+        "input": "zones"
+      }
+    }
+  ],
+  "output": "study",
+  "preview": true
+}

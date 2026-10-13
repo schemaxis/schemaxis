@@ -1,0 +1,108 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "beam",
+      "document": {
+        "version": "schemaxis.calculix/1",
+        "operation": "cantileverBeam",
+        "beam": {
+          "length_m": 0.4,
+          "width_m": 0.02,
+          "height_m": 0.02
+        },
+        "material": {
+          "youngsModulus_Pa": 210000000000.0,
+          "poissonRatio": 0.3
+        },
+        "load": {
+          "tipForceZ_N": -100
+        },
+        "mesh": {
+          "lengthCells": 12,
+          "sectionCells": 2
+        },
+        "requirements": [
+          {
+            "name": "tip_serviceability",
+            "quantity": "absTipAreaMeanUz_m",
+            "maximum": 0.0008
+          },
+          {
+            "name": "interior_samples",
+            "quantity": "maxInteriorSampleNormalStress_Pa",
+            "maximum": 20000000.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "workbook",
+      "document": {
+        "version": "schemaxis.calc/1",
+        "nodes": [
+          {
+            "id": "stress",
+            "filter": "readCSV",
+            "options": {
+              "file": {
+                "$artifact": "beam",
+                "index": 1
+              }
+            }
+          }
+        ],
+        "requirements": [
+          {
+            "name": "interior_sample_count",
+            "type": "cellBounds",
+            "cell": {
+              "sheet": "Summary",
+              "cell": "B7"
+            },
+            "minimum": 1280,
+            "maximum": 1280
+          },
+          {
+            "name": "compression_sample",
+            "type": "cellBounds",
+            "cell": {
+              "sheet": "Summary",
+              "cell": "E7"
+            },
+            "minimum": -20000000.0,
+            "maximum": -10000000.0
+          },
+          {
+            "name": "tension_sample",
+            "type": "cellBounds",
+            "cell": {
+              "sheet": "Summary",
+              "cell": "F7"
+            },
+            "minimum": 10000000.0,
+            "maximum": 20000000.0
+          },
+          {
+            "name": "symmetric_extrema",
+            "type": "reconcile",
+            "terms": [
+              {
+                "sheet": "Summary",
+                "cell": "E7",
+                "coefficient": 1
+              },
+              {
+                "sheet": "Summary",
+                "cell": "F7",
+                "coefficient": 1
+              }
+            ],
+            "target": 0,
+            "absoluteTolerance": 10
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,394 @@
+{
+  "version": "schemaxis/1",
+  "maxStates": 100,
+  "maxPublications": 250,
+  "dimensions": {
+    "model": {
+      "min": [
+        -1,
+        -0.5,
+        0.1
+      ],
+      "max": [
+        1,
+        0.5,
+        1.1
+      ]
+    },
+    "sliceBounds": {
+      "min": [
+        -2,
+        -1,
+        0.2
+      ],
+      "max": [
+        3,
+        1,
+        0.8
+      ]
+    },
+    "detail": {
+      "min": [
+        -0.5,
+        -0.4,
+        0.2
+      ],
+      "max": [
+        1.5,
+        0.4,
+        0.8
+      ]
+    },
+    "sampleLine": {
+      "start": [
+        -1,
+        -0.5,
+        0.5
+      ],
+      "end": [
+        2,
+        -0.5,
+        0.5
+      ]
+    },
+    "sliceSpacing": 0.2
+  },
+  "settings": {
+    "case": "/absolute/path/to/completed-case/case.foam",
+    "caseType": "Reconstructed Case",
+    "times": [
+      1.0
+    ],
+    "velocity": "U",
+    "pressure": "p",
+    "sliceCount": 3,
+    "orbitCount": 4,
+    "imageSize": [
+      960,
+      540
+    ],
+    "aspect": [
+      16,
+      9
+    ],
+    "pressureRange": [
+      -100,
+      100
+    ],
+    "speedRange": [
+      0,
+      30
+    ],
+    "isoPressure": 0,
+    "seeds": {
+      "start": [
+        -1,
+        -0.5,
+        0.3
+      ],
+      "end": [
+        -1,
+        0.5,
+        0.3
+      ],
+      "resolution": 12,
+      "maximumLength": 6,
+      "tubeRadius": 0.02
+    }
+  },
+  "views": {
+    "overview": {
+      "$value": "boundsExtend",
+      "args": {
+        "bounds": {
+          "$document": "/dimensions/model"
+        },
+        "before": [
+          0.5,
+          1,
+          0
+        ],
+        "after": [
+          1.5,
+          1,
+          0.5
+        ]
+      }
+    },
+    "detail": {
+      "$document": "/dimensions/detail"
+    }
+  },
+  "times": {
+    "$document": "/settings/times"
+  },
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {
+          "$document": "/settings/case"
+        },
+        "caseType": {
+          "$document": "/settings/caseType"
+        },
+        "regions": [
+          "internalMesh"
+        ],
+        "cellArrays": [
+          {
+            "$document": "/settings/velocity"
+          },
+          {
+            "$document": "/settings/pressure"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "merge",
+      "inputs": {
+        "input": "case"
+      }
+    },
+    {
+      "id": "domainOutline",
+      "filter": "outline",
+      "inputs": {
+        "input": "mesh"
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "slice",
+      "inputs": {
+        "input": "mesh"
+      },
+      "options": {
+        "origin": {
+          "$analytic": {
+            "type": "values",
+            "values": {
+              "$value": "slicePositions",
+              "args": {
+                "bounds": {
+                  "$document": "/dimensions/sliceBounds"
+                },
+                "axis": "z",
+                "count": {
+                  "$document": "/settings/sliceCount"
+                }
+              }
+            }
+          }
+        },
+        "normal": "z+"
+      }
+    },
+    {
+      "id": "points",
+      "filter": "cellToPoint",
+      "inputs": {
+        "input": "mesh"
+      }
+    },
+    {
+      "id": "pressureIso",
+      "filter": "contour",
+      "inputs": {
+        "input": "points"
+      },
+      "options": {
+        "field": [
+          "POINTS",
+          {
+            "$document": "/settings/pressure"
+          }
+        ],
+        "values": [
+          {
+            "$document": "/settings/isoPressure"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sample",
+      "filter": "probeLine",
+      "inputs": {
+        "input": "points"
+      },
+      "options": {
+        "start": {
+          "$document": "/dimensions/sampleLine/start"
+        },
+        "end": {
+          "$document": "/dimensions/sampleLine/end"
+        },
+        "resolution": 50
+      }
+    },
+    {
+      "id": "totals",
+      "filter": "integrate",
+      "inputs": {
+        "input": "mesh"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "slices",
+      "geometry": [
+        "cut"
+      ],
+      "visible": {
+        "cut": {
+          "field": [
+            "CELLS",
+            {
+              "$document": "/settings/pressure"
+            }
+          ],
+          "range": {
+            "$document": "/settings/pressureRange"
+          },
+          "preset": "Cool to Warm",
+          "legend": true,
+          "legendTitle": "Pressure field (check units)"
+        },
+        "domainOutline": {
+          "colour": "grey",
+          "opacity": 0.3
+        }
+      },
+      "appearances": [
+        {},
+        {
+          "cut": {
+            "field": [
+              "CELLS",
+              {
+                "$document": "/settings/velocity"
+              }
+            ],
+            "component": -1,
+            "range": {
+              "$document": "/settings/speedRange"
+            },
+            "preset": "Viridis (matplotlib)",
+            "legendTitle": "Velocity magnitude (check units)"
+          }
+        }
+      ],
+      "images": [
+        {
+          "id": "overview",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/overview"
+                },
+                "direction": "z+",
+                "up": "y+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "detail",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": [
+            {
+              "$value": "fitCamera",
+              "args": {
+                "bounds": {
+                  "$document": "/views/detail"
+                },
+                "direction": "z+",
+                "up": "y+",
+                "aspect": {
+                  "$document": "/settings/aspect"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "iso",
+      "geometry": [
+        "pressureIso"
+      ],
+      "visible": {
+        "pressureIso": {
+          "field": [
+            "POINTS",
+            {
+              "$document": "/settings/velocity"
+            }
+          ],
+          "component": -1,
+          "range": {
+            "$document": "/settings/speedRange"
+          },
+          "preset": "Viridis (matplotlib)",
+          "legend": true
+        }
+      },
+      "images": [
+        {
+          "id": "orbit",
+          "size": {
+            "$document": "/settings/imageSize"
+          },
+          "cameras": {
+            "$value": "orbitCameras",
+            "args": {
+              "bounds": {
+                "$document": "/views/overview"
+              },
+              "count": {
+                "$document": "/settings/orbitCount"
+              },
+              "aspect": {
+                "$document": "/settings/aspect"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "lineSample",
+      "measurements": [
+        {
+          "node": "sample",
+          "association": "POINTS"
+        }
+      ]
+    },
+    {
+      "id": "domainTotals",
+      "measurements": [
+        {
+          "node": "totals",
+          "association": "CELLS"
+        }
+      ]
+    }
+  ]
+}

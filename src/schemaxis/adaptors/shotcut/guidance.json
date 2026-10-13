@@ -1,0 +1,234 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "editTimeline": {
+      "status": "reviewed",
+      "explanation": "Cuts, reorders and repeats frame ranges from local video files into one Shotcut (MLT) timeline. It publishes a lossless FFV1 video.mkv, the editable project.mlt (which needs its captured media files beside it) and project-bundle.zip containing both. Every rendered frame is compared with the selected source frames, and the project is reloaded and re-rendered to confirm it reproduces the same video. Choose it for frame-exact edits of existing videos; use FFmpeg encodeFrames to make a video from still images.",
+      "sources": [
+        "schemaxis.adaptors.shotcut.capabilities:catalogue",
+        "src/schemaxis/adaptors/shotcut/adaptor.py:26-80",
+        "docs/shotcut.md"
+      ],
+      "pitfalls": [
+        "Sources must be silent, progressive, square-pixel videos at exactly the timeline fps, width and height; there is no resizing or rate conversion.",
+        "startFrame is zero-based and frameCount is a number of frames, not seconds.",
+        "Audio, gaps, transitions, filters and multiple tracks are not supported.",
+        "Keep project.mlt together with its asset-XX.media files, or use project-bundle.zip, when moving the project."
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.shotcut/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "One silent Shotcut edit: named source videos, the ordered frame ranges to take from them and the timeline frame rate and size, which every source must already match. Limits: 16 assets, 128 clips and 600 timeline frames.",
+          "sources": [
+            "docs/shotcut.md",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis document; it must be \"schemaxis.shotcut/1\". It is not the Shotcut release.",
+          "sources": [
+            "docs/shotcut.md",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80"
+          ],
+          "examples": [
+            "schemaxis.shotcut/1"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reviewed",
+          "explanation": "Exactly one editTimeline node; describe separate edits in separate documents or workflow steps.",
+          "sources": [
+            "docs/shotcut.md",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reviewed",
+          "explanation": "The single editTimeline node. It publishes the verified video.mkv, the editable project.mlt and project-bundle.zip containing the project and its captured media.",
+          "sources": [
+            "docs/shotcut.md",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80"
+          ]
+        },
+        "/properties/nodes/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Name of this timeline, used in logs and when other workflow steps refer to its outputs. Start with a letter; then use letters, digits, underscores or hyphens.",
+          "sources": [
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80",
+            "src/schemaxis/schema.py:12"
+          ],
+          "examples": [
+            "edit"
+          ]
+        },
+        "/properties/nodes/items/properties/filter": {
+          "status": "reference",
+          "explanation": "Trim and arrange named video ranges.",
+          "sources": [
+            "schemaxis.adaptors.shotcut.adaptor:schema"
+          ]
+        },
+        "/properties/nodes/items/properties/options": {
+          "status": "reference",
+          "explanation": "Choose source assets, ordered source ranges and the native timeline frame-rate/dimension/thread budget.",
+          "sources": [
+            "docs/shotcut.md"
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/assets": {
+          "status": "reviewed",
+          "explanation": "Source videos available to the clips, 1 to 16 entries, each with a unique name and an absolute path. Every declared asset must be used by at least one clip.",
+          "sources": [
+            "docs/shotcut.md",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80"
+          ],
+          "pitfalls": [
+            "An asset that no clip uses fails planning with INVALID_ASSET; remove it."
+          ],
+          "examples": [
+            [
+              {
+                "name": "colours",
+                "file": "/data/video/colours.mkv"
+              }
+            ]
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/assets/items": {
+          "status": "reference",
+          "explanation": "Each asset binds one unique name to an absolute local video; every declared asset must appear in the timeline.",
+          "sources": [
+            "docs/shotcut.md"
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/assets/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Unique name that clips use to refer to this video: a letter followed by up to 63 letters, digits, underscores or hyphens.",
+          "sources": [
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80"
+          ],
+          "examples": [
+            "colours"
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/assets/items/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path of a local video with exactly one video stream and no audio or subtitle streams, progressive square pixels and a constant frame rate equal to fps, at the timeline width and height. The file is copied into the run (192 MiB total for all sources) and probed before rendering.",
+          "sources": [
+            "docs/shotcut.md",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80"
+          ],
+          "pitfalls": [
+            "Videos with an audio track, rotation metadata, interlacing or a different size or rate are rejected; prepare a matching silent source first."
+          ],
+          "examples": [
+            "/data/video/colours.mkv"
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/clips": {
+          "status": "reviewed",
+          "explanation": "Timeline order: 1 to 128 clips placed back-to-back from frame 0 with no gaps. The total of all frameCount values is the timeline length and must not exceed 600 frames.",
+          "sources": [
+            "docs/shotcut.md",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80"
+          ],
+          "examples": [
+            [
+              {
+                "asset": "colours",
+                "startFrame": 3,
+                "frameCount": 3
+              },
+              {
+                "asset": "colours",
+                "startFrame": 0,
+                "frameCount": 2
+              }
+            ]
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/clips/items": {
+          "status": "reference",
+          "explanation": "One contiguous source range contributes frameCount frames at the next timeline position; repetitions and reordered ranges are explicit.",
+          "sources": [
+            "docs/shotcut.md"
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/clips/items/properties/asset": {
+          "status": "reference",
+          "explanation": "Name of a declared video asset. Repeating an asset repeats selected source frames.",
+          "sources": [
+            "schemaxis.adaptors.shotcut.adaptor:schema"
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/clips/items/properties/startFrame": {
+          "status": "reviewed",
+          "explanation": "Zero-based index of the first source frame to use, 0 to 599. Frames are counted at the declared fps; there is no seconds-to-frames rounding.",
+          "sources": [
+            "docs/shotcut.md",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:217-227"
+          ],
+          "units": "Frames",
+          "defaultMeaning": "Schemaxis default: 0.",
+          "pitfalls": [
+            "startFrame + frameCount must not exceed 600 nor the actual number of frames in the source; otherwise INVALID_RANGE."
+          ],
+          "examples": [
+            3
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/clips/items/properties/frameCount": {
+          "status": "reviewed",
+          "explanation": "Number of consecutive source frames to take, 1 to 600; the range ends before startFrame + frameCount.",
+          "sources": [
+            "docs/shotcut.md",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80"
+          ],
+          "units": "Frames",
+          "examples": [
+            3
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/fps": {
+          "status": "reference",
+          "explanation": "Integer frames per second; every source must have this constant rate. Default 25.",
+          "sources": [
+            "schemaxis.adaptors.shotcut.adaptor:schema"
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/width": {
+          "status": "reference",
+          "explanation": "Timeline and source width in pixels; no resizing. Default 1280.",
+          "sources": [
+            "schemaxis.adaptors.shotcut.adaptor:schema"
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/height": {
+          "status": "reference",
+          "explanation": "Timeline and source height in pixels; no resizing. Default 720.",
+          "sources": [
+            "schemaxis.adaptors.shotcut.adaptor:schema"
+          ]
+        },
+        "/properties/nodes/items/properties/options/properties/threads": {
+          "status": "reviewed",
+          "explanation": "Native decoding and rendering threads, 1 to 16. A workflow thread allocation, if given, must equal this value.",
+          "sources": [
+            "src/schemaxis/adaptors/shotcut/adaptor.py:26-80",
+            "src/schemaxis/adaptors/shotcut/adaptor.py:147-160"
+          ],
+          "defaultMeaning": "Schemaxis default: 1.",
+          "examples": [
+            1
+          ]
+        }
+      }
+    }
+  }
+}

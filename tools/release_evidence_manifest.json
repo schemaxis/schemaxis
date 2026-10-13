@@ -1,0 +1,217 @@
+{
+  "version": "schemaxis.release-evidence-manifest/1",
+  "demoDirectory": "examples/demos",
+  "timeout": 600,
+  "showcaseBudgetBytes": 25000000,
+  "workflows": [
+    {
+      "id": "cfd-coupe",
+      "title": "ParaView → Blender → FFmpeg post-processing of an OpenFOAM coupe case",
+      "description": "Real decomposed OpenFOAM coupe case at its latest time: ParaView slices, iso-surface orbit and streamline sweep, plus a ParaView glTF handoff rendered as a Blender orbit and encoded by FFmpeg.",
+      "apps": ["paraview", "blender", "ffmpeg"],
+      "requiresCase": true,
+      "privateInputs": ["coupe case (not distributed)"],
+      "parts": [
+        {
+          "id": "presentation",
+          "input": {"demo": "cfd-render"},
+          "adjustments": {
+            "reason": "ParaView's iso-surface contains one duplicate triangle. Blender's validated STL re-import drops it, so the adaptor's exact STL round-trip check rejects the published mesh (VERIFICATION_FAILED). A 1 µm Blender weld before shading removes the duplicate without loosening verification.",
+            "operations": [
+              {"op": "test", "path": "/operations/1/document/nodes/3/id", "value": "smooth"},
+              {"op": "test", "path": "/operations/1/document/nodes/3/inputs/input", "value": "engineeringAxes"},
+              {"op": "add", "path": "/operations/1/document/nodes/3", "value": {"id": "welded", "filter": "weld", "options": {"distance": 1e-06}, "inputs": {"input": "engineeringAxes"}}},
+              {"op": "replace", "path": "/operations/1/document/nodes/4/inputs/input", "value": "welded"}
+            ]
+          }
+        },
+        {"id": "slices", "input": {"demo": "vehicle", "wrapOperation": "vehicle"}}
+      ],
+      "variant": {
+        "description": "Pressure iso-surface level −250 → −200 (stored kinematic p units) in both parts",
+        "changes": [
+          {"part": "presentation", "pointer": "/operations/0/document/settings/contour/value", "from": -250, "to": -200},
+          {"part": "slices", "pointer": "/operations/0/document/settings/contour/value", "from": -250, "to": -200}
+        ]
+      },
+      "checks": "coupe",
+      "showcase": [
+        {"part": "presentation", "operation": "movie", "file": "*.mp4", "prefix": "coupe-orbit", "caption": "Blender orbit of the ParaView pressure iso-surface and vehicle surface, encoded by FFmpeg"},
+        {"part": "presentation", "operation": "render", "file": "*.png", "pick": [0, 6, 12, 18], "prefix": "coupe-orbit", "caption": "Blender orbit frames"},
+        {"part": "presentation", "phase": "variant", "operation": "render", "file": "*.png", "pick": [3], "prefix": "coupe-variant-orbit", "caption": "Variant: iso-surface at −200 instead of −250"},
+        {"part": "slices", "operation": "vehicle", "file": "000004-slicesY-appearance-0-view-0.png", "prefix": "coupe", "caption": "ParaView centre y-slice coloured by stored pressure p"},
+        {"part": "slices", "operation": "vehicle", "file": "000004-slicesY-appearance-1-view-0.png", "prefix": "coupe", "caption": "ParaView centre y-slice coloured by velocity magnitude"},
+        {"part": "slices", "operation": "vehicle", "file": "*streamlineSweep*.png", "pick": [1], "prefix": "coupe", "caption": "ParaView streamline tubes from one seed height"}
+      ]
+    },
+    {
+      "id": "cad-mesh-inspect",
+      "title": "FreeCAD → Gmsh → ParaView mesh volume against the analytic box volume",
+      "apps": ["freecad", "gmsh", "paraview"],
+      "parts": [{"id": "main", "input": {"example": "examples/schemaxis/freecad-gmsh-faces-paraview.json"}}],
+      "variant": {
+        "description": "Box height 5 mm → 7 mm",
+        "changes": [{"part": "main", "pointer": "/operations/0/document/nodes/0/options/height", "from": 5, "to": 7}]
+      },
+      "checks": "boxMesh",
+      "qualify": {"tool": "tools/qualify_gmsh.py", "arguments": ["--output-directory", "{output}", "--config", "{config}"]},
+      "knownIssues": [
+        {"id": "whole-workflow-query", "command": ["query"], "expectedFaultCode": "INVALID_RESOURCE",
+         "description": "Host inspection of the whole CAD → Gmsh workflow substitutes an extensionless placeholder for the not-yet-produced STEP, which Gmsh's STEP validation rejects. Execution is unaffected (docs/benchmarks.md, Known Schemaxis planning limitation)."}
+      ],
+      "showcase": [
+        {"operation": "cad", "file": "*.step", "prefix": "box", "caption": "FreeCAD STEP"},
+        {"operation": "cad", "file": "*.FCStd", "prefix": "box", "caption": "Editable FreeCAD model"},
+        {"operation": "mesh", "file": "*.msh", "prefix": "box", "caption": "Gmsh mesh with named volume and end-face groups"}
+      ]
+    },
+    {
+      "id": "cad-render-movie",
+      "title": "FreeCAD → Blender → FFmpeg pipe bend, solid volume against Pappus' theorem",
+      "apps": ["freecad", "blender", "ffmpeg"],
+      "parts": [{"id": "main", "input": {"demo": "pipe"}}],
+      "variant": {
+        "description": "Pipe bend radius 60 mm → 80 mm",
+        "changes": [{"part": "main", "pointer": "/operations/0/document/dimensions/bendRadius", "from": 60, "to": 80}]
+      },
+      "checks": "pipe",
+      "showcase": [
+        {"operation": "movie", "file": "*.mp4", "prefix": "pipe-orbit", "caption": "Blender orbit encoded by FFmpeg"},
+        {"operation": "render", "file": "*.png", "pick": [0, 9], "prefix": "pipe-orbit", "caption": "Blender orbit frames"},
+        {"phase": "variant", "operation": "render", "file": "*.png", "pick": [0], "prefix": "pipe-variant", "caption": "Variant: 80 mm bend radius"},
+        {"operation": "cad", "file": "*.FCStd", "prefix": "pipe", "caption": "Editable FreeCAD model"},
+        {"operation": "cad", "file": "*.step", "prefix": "pipe", "caption": "STEP"}
+      ]
+    },
+    {
+      "id": "beam-workbook",
+      "title": "CalculiX → Calc cantilever, tip deflection against Euler–Bernoulli",
+      "apps": ["calculix", "calc"],
+      "parts": [{"id": "main", "input": {"example": "examples/schemaxis/calculix-to-calc.json"}}],
+      "variant": {
+        "description": "Tip load −100 N → −80 N",
+        "changes": [{"part": "main", "pointer": "/operations/0/document/load/tipForceZ_N", "from": -100, "to": -80}]
+      },
+      "checks": "beam",
+      "qualify": {"tool": "tools/qualify_beam_workbook.py", "arguments": ["--config", "{config}", "--output-directory", "{output}"],
+                  "extract": ["/checks/nativeValues/areaMeanTipUz_m", "/checks/nativeValues/theoryTip_m", "/checks/reusedJobs"]},
+      "showcase": [
+        {"operation": "workbook", "file": "analysis.ods", "prefix": "beam", "caption": "Editable ODS workbook"},
+        {"operation": "workbook", "file": "analysis.xlsx", "prefix": "beam", "caption": "XLSX workbook"},
+        {"operation": "beam", "file": "beam.inp", "prefix": "beam", "caption": "CalculiX input deck"}
+      ]
+    },
+    {
+      "id": "rlc-workbook",
+      "title": "ngspice → Calc series RLC AC sweep against the closed-form transfer function",
+      "apps": ["ngspice", "calc"],
+      "parts": [{"id": "main", "input": {"example": "examples/schemaxis/ngspice-rlc-to-calc.json"}}],
+      "variant": {
+        "description": "Inductance 1 H → 0.5 H",
+        "changes": [{"part": "main", "pointer": "/operations/0/document/circuit/inductors/0/inductance", "from": 1, "to": 0.5}]
+      },
+      "checks": "rlc",
+      "qualify": {"tool": "tools/qualify_ngspice.py", "arguments": ["--output-directory", "{output}", "--config", "{config}"]},
+      "showcase": [
+        {"operation": "workbook", "file": "analysis.ods", "prefix": "rlc", "caption": "Editable ODS workbook"},
+        {"operation": "workbook", "file": "analysis.xlsx", "prefix": "rlc", "caption": "XLSX workbook"},
+        {"operation": "circuit", "file": "circuit.cir", "prefix": "rlc", "caption": "ngspice netlist"}
+      ]
+    },
+    {
+      "id": "diagram-video",
+      "title": "Inkscape → FFmpeg → Shotcut diagram animation and edited timeline",
+      "apps": ["inkscape", "ffmpeg", "shotcut"],
+      "parts": [{"id": "main", "input": {"example": "examples/schemaxis/diagram-to-edited-video.json"}}],
+      "variant": {
+        "description": "Baseline diagram label “Verify” → “Check”",
+        "changes": [{"part": "main", "pointer": "/operations/0/document/boxes/1/label", "from": "Verify", "to": "Check"}]
+      },
+      "checks": "diagram",
+      "qualify": {"tool": "tools/qualify_diagram_video.py", "arguments": ["--config", "{config}", "--output-directory", "{output}"]},
+      "showcase": [
+        {"operation": "baseline", "file": "diagram.png", "prefix": "diagram-baseline", "caption": "Inkscape PNG export"},
+        {"operation": "variant", "file": "diagram.png", "prefix": "diagram-variant", "caption": "Inkscape PNG export (colour variant)"},
+        {"operation": "baseline", "file": "diagram.svg", "prefix": "diagram-baseline", "caption": "Editable SVG"},
+        {"operation": "edit", "file": "video.mkv", "prefix": "diagram-edit", "derive": "web-mp4", "crf": 18, "caption": "Shotcut/MLT edited timeline (5 frames at 12 fps)", "reason": "native output is lossless FFV1 in Matroska, which browsers do not play"},
+        {"operation": "edit", "file": "project-bundle.zip", "prefix": "diagram-edit", "caption": "Relocatable MLT project bundle"}
+      ]
+    },
+    {
+      "id": "regression-workbook",
+      "title": "R → Calc linear regression, RMSE and held-out error against an independent QR solve",
+      "apps": ["r", "calc"],
+      "parts": [{"id": "main", "input": {"example": "examples/schemaxis/r-to-calc.json"}}],
+      "variant": {
+        "description": "Second held-out reading 15.8 V → 15.9 V",
+        "changes": [{"part": "main", "pointer": "/operations/0/document/heldout/1/1", "from": 15.8, "to": 15.9}]
+      },
+      "checks": "regression",
+      "qualify": {"tool": "tools/qualify_r.py", "arguments": ["--executable", "{app:r}", "--calc", "{app:calc}", "--output-directory", "{output}"]},
+      "showcase": [
+        {"operation": "workbook", "file": "analysis.ods", "prefix": "regression", "caption": "Editable ODS workbook"},
+        {"operation": "workbook", "file": "analysis.xlsx", "prefix": "regression", "caption": "XLSX workbook"}
+      ]
+    },
+    {
+      "id": "sprite-godot",
+      "title": "Aseprite → Godot and FFmpeg sprite branches",
+      "apps": ["aseprite", "godot", "ffmpeg"],
+      "display": true,
+      "parts": [{"id": "main", "input": {"demo": "sprite"}}],
+      "variant": {
+        "description": "Second-frame orb radius 3 px → 4 px",
+        "changes": [{"part": "main", "pointer": "/operations/0/document/nodes/8/options/radius", "from": 3, "to": 4}]
+      },
+      "checks": "media",
+      "qualify": {"tool": "tools/qualify_media_geospatial.py", "display": true,
+                  "arguments": ["--directory", "{output}", "--aseprite", "{app:aseprite}", "--godot", "{app:godot}", "--blender", "{app:blender}", "--ffmpeg", "{app:ffmpeg}", "--qgis", "{app:qgis}"]},
+      "showcase": [
+        {"operation": "sprite", "file": "sheet.png", "prefix": "sprite", "caption": "Aseprite sprite sheet (16 × 16 frames)"},
+        {"operation": "sprite", "file": "*.aseprite", "prefix": "sprite", "caption": "Editable Aseprite file"},
+        {"operation": "scene", "file": "preview.png", "prefix": "sprite-godot", "caption": "Godot software-rendered preview (Xvfb)"},
+        {"operation": "videoMp4", "file": "*.mp4", "prefix": "sprite", "caption": "FFmpeg H.264 sprite animation (16 × 16 px)"}
+      ]
+    },
+    {
+      "id": "site-godot",
+      "title": "QGIS → Godot buffered site map panel",
+      "apps": ["qgis", "godot"],
+      "display": true,
+      "parts": [{"id": "main", "input": {"demo": "site"}}],
+      "variant": {
+        "description": "Buffer distance 60 m → 80 m",
+        "changes": [{"part": "main", "pointer": "/operations/0/document/dimensions/bufferDistance", "from": 60, "to": 80}]
+      },
+      "checks": "site",
+      "notes": ["The site coordinates are synthetic (examples/demos/sites.geojson)."],
+      "showcase": [
+        {"operation": "map", "file": "preview.png", "prefix": "site-qgis", "caption": "QGIS map preview"},
+        {"operation": "scene", "file": "preview.png", "prefix": "site-godot", "caption": "Godot panel preview (Xvfb)"},
+        {"operation": "map", "file": "*.gpkg", "prefix": "site", "caption": "GeoPackage of clipped buffers"}
+      ]
+    },
+    {
+      "id": "cantera-workbook",
+      "title": "Cantera → Calc argon property sweep against monatomic ideal-gas relations",
+      "apps": ["cantera", "calc"],
+      "parts": [{"id": "main", "input": {"example": "examples/schemaxis/cantera-to-calc.json"}}],
+      "variant": {
+        "description": "Last sweep temperature 900 K → 1200 K",
+        "changes": [{"part": "main", "pointer": "/operations/0/document/nodes/1/options/temperatures/2", "from": 900, "to": 1200}]
+      },
+      "checks": "cantera",
+      "qualify": {"tool": "tools/qualify_cantera.py", "arguments": ["--output-directory", "{output}", "--config", "{config}"]},
+      "showcase": [
+        {"operation": "workbook", "file": "analysis.ods", "prefix": "cantera", "caption": "Editable ODS workbook"}
+      ]
+    },
+    {
+      "id": "reproducibility",
+      "kind": "benchmark",
+      "title": "Deterministic reference proof: case rounds and falsification challenges",
+      "apps": ["ngspice", "freecad", "gmsh", "paraview", "calc"],
+      "timeout": 7200
+    }
+  ]
+}

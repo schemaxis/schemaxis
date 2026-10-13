@@ -1,0 +1,879 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.octave/1",
+    "nodes": [
+      {
+        "id": "source",
+        "filter": "samples",
+        "options": {
+          "x": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "y": [
+            0,
+            2,
+            4,
+            6,
+            8
+          ]
+        }
+      }
+    ],
+    "outputs": [
+      "source"
+    ]
+  },
+  "categories": [
+    {
+      "id": "sources",
+      "title": "Sequences & samples",
+      "icon": "layers"
+    },
+    {
+      "id": "signal",
+      "title": "Signal processing",
+      "icon": "layers"
+    },
+    {
+      "id": "analysis",
+      "title": "Analysis",
+      "icon": "layers"
+    },
+    {
+      "id": "recipes",
+      "title": "Numerical recipes",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "add-sequence",
+      "title": "Coordinate sequence",
+      "category": "sources",
+      "icon": "layers",
+      "description": "Generate evenly spaced inclusive coordinates with y equal to x.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "sequence"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "sequence",
+              "options": {
+                "start": 0,
+                "stop": 10,
+                "count": 101
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-wave",
+      "title": "Periodic signal",
+      "category": "sources",
+      "icon": "layers",
+      "description": "Generate a sampled sine or cosine signal.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "wave"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "wave",
+              "options": {
+                "shape": "sine",
+                "frequency": 2,
+                "amplitude": 1,
+                "step": 0.01,
+                "count": 128
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-samples",
+      "title": "Paired numeric samples",
+      "category": "sources",
+      "icon": "layers",
+      "description": "Supply finite paired x/y observations without reading a file.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "samples"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "samples",
+              "options": {
+                "x": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "y": [
+                  0,
+                  1,
+                  4,
+                  9
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-readcsv",
+      "title": "Read paired CSV columns",
+      "category": "sources",
+      "icon": "layers",
+      "description": "Read named numeric x/y columns from an existing CSV table.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "readcsv"
+        },
+        "file": {
+          "label": "CSV file",
+          "type": "path",
+          "required": true,
+          "default": "/data/samples.csv",
+          "extensions": [
+            "csv"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "readCSV",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                },
+                "xColumn": "x",
+                "yColumn": "y"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "requires": "Requires a CSV with numeric x and y columns at run time.",
+      "complexity": "composite"
+    },
+    {
+      "id": "add-scale",
+      "title": "Calibrate gain and offset",
+      "category": "analysis",
+      "icon": "layers",
+      "description": "Apply factor times y plus offset while preserving x.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "scale"
+        },
+        "source": {
+          "label": "Input table",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source",
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "scale",
+              "options": {
+                "factor": 2,
+                "offset": 1
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-resample",
+      "title": "Uniformly resample a table",
+      "category": "signal",
+      "icon": "layers",
+      "description": "Linearly interpolate onto a uniform grid between existing endpoints.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "resample"
+        },
+        "source": {
+          "label": "Input table",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source",
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "resample",
+              "options": {
+                "count": 51
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-movingmean",
+      "title": "Moving-window mean",
+      "category": "signal",
+      "icon": "layers",
+      "description": "Smooth y with an odd centred moving window.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "movingmean"
+        },
+        "source": {
+          "label": "Input table",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source",
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "movingMean",
+              "options": {
+                "window": 3
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-derivative",
+      "title": "Differentiate a table",
+      "category": "analysis",
+      "icon": "layers",
+      "description": "Estimate dy/dx using secants, including nonuniform x.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "derivative"
+        },
+        "source": {
+          "label": "Input table",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source",
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "derivative",
+              "options": {},
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-integral",
+      "title": "Cumulative integral",
+      "category": "analysis",
+      "icon": "layers",
+      "description": "Accumulate the trapezoidal integral of y over x.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "integral"
+        },
+        "source": {
+          "label": "Input table",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source",
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "integral",
+              "options": {
+                "initial": 0
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-linearfit",
+      "title": "Least-squares straight line",
+      "category": "analysis",
+      "icon": "layers",
+      "description": "Fit a least-squares straight line and publish fitted y values.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "linearfit"
+        },
+        "source": {
+          "label": "Input table",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source",
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "linearFit",
+              "options": {},
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "add-fft",
+      "title": "Frequency spectrum",
+      "category": "signal",
+      "icon": "layers",
+      "description": "Find a one-sided amplitude spectrum of uniformly sampled real data.",
+      "fields": {
+        "name": {
+          "label": "Result ID",
+          "type": "id",
+          "required": true,
+          "default": "fft"
+        },
+        "source": {
+          "label": "Input table",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source",
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "name"
+              },
+              "filter": "fft",
+              "options": {},
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            {
+              "$fill": "name"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "smoothed-gradient",
+      "title": "Smooth then differentiate",
+      "category": "recipes",
+      "icon": "layers",
+      "description": "Insert an ordered two-stage analysis and publish the final table.",
+      "fields": {
+        "source": {
+          "label": "Input samples",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "smooth",
+              "filter": "movingMean",
+              "options": {
+                "window": 3
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "gradient",
+              "filter": "derivative",
+              "options": {},
+              "inputs": {
+                "input": "smooth"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            "gradient"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "calibrated-integral",
+      "title": "Calibrate then integrate",
+      "category": "recipes",
+      "icon": "layers",
+      "description": "Insert an ordered two-stage analysis and publish the final table.",
+      "fields": {
+        "source": {
+          "label": "Input samples",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "calibrated",
+              "filter": "scale",
+              "options": {
+                "factor": 2,
+                "offset": -1
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "area",
+              "filter": "integral",
+              "options": {
+                "initial": 0
+              },
+              "inputs": {
+                "input": "calibrated"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            "area"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "uniform-spectrum",
+      "title": "Resample then analyse spectrum",
+      "category": "recipes",
+      "icon": "layers",
+      "description": "Insert an ordered two-stage analysis and publish the final table.",
+      "fields": {
+        "source": {
+          "label": "Input samples",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "uniform",
+              "filter": "resample",
+              "options": {
+                "count": 128
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "spectrum",
+              "filter": "fft",
+              "options": {},
+              "inputs": {
+                "input": "uniform"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            "spectrum"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "calibration-fit",
+      "title": "Fit a calibration curve",
+      "category": "recipes",
+      "icon": "layers",
+      "description": "Insert an ordered two-stage analysis and publish the final table.",
+      "fields": {
+        "source": {
+          "label": "Input samples",
+          "type": "nodeRef",
+          "required": true,
+          "default": "source"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": "calibration",
+              "filter": "scale",
+              "options": {
+                "factor": 1,
+                "offset": 0
+              },
+              "inputs": {
+                "input": {
+                  "$fill": "source"
+                }
+              }
+            },
+            {
+              "id": "fit",
+              "filter": "linearFit",
+              "options": {},
+              "inputs": {
+                "input": "calibration"
+              }
+            }
+          ]
+        },
+        {
+          "at": "/outputs/-",
+          "values": [
+            "fit"
+          ]
+        }
+      ],
+      "complexity": "composite"
+    }
+  ],
+  "templates": [
+    {
+      "id": "signal-analysis",
+      "title": "Signal and spectrum",
+      "description": "Generate a sampled periodic signal and publish its moving mean, spectrum, cumulative integral and derivative.",
+      "file": "studio/templates/signal-analysis.json",
+      "fields": {
+        "value": {
+          "label": "Signal and spectrum input",
+          "type": "number",
+          "required": true,
+          "default": 8
+        }
+      }
+    },
+    {
+      "id": "calibration",
+      "title": "Calibration and fit",
+      "description": "Fit a straight line to five paired measurements, then differentiate and integrate the fitted curve.",
+      "file": "studio/templates/calibration.json",
+      "fields": {
+        "value": {
+          "label": "Calibration and fit input",
+          "type": "json",
+          "required": true,
+          "default": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      }
+    },
+    {
+      "id": "table-analysis",
+      "title": "Paired sample analysis",
+      "description": "Publish five supplied Y values paired with X coordinates 0\u20134; array lengths must match.",
+      "file": "studio/templates/table-analysis.json",
+      "fields": {
+        "value": {
+          "label": "Paired sample analysis input",
+          "type": "json",
+          "required": true,
+          "default": [
+            0,
+            2,
+            4,
+            6,
+            8
+          ]
+        }
+      }
+    }
+  ],
+  "viewers": [
+    "table",
+    "text"
+  ]
+}

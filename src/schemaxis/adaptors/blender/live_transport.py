@@ -1,0 +1,4 @@
+"""Compatibility alias for shared live_transport."""
+import importlib
+import sys
+sys.modules[__name__] = importlib.import_module('schemaxis.live_transport')

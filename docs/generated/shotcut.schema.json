@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.shotcut/1",
+      "description": "Shotcut timeline document contract."
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "description": "One declared timeline publication.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+            "description": "Publication identity within the workflow."
+          },
+          "filter": {
+            "const": "editTimeline",
+            "description": "Trim and arrange named video ranges."
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "assets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "description": "Unique asset identifier used by clips; letters, digits, underscores or hyphens."
+                    },
+                    "file": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 4096,
+                      "description": "Absolute local video file path; execution copies and probes the bytes."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "file"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 16,
+                "description": "Named local video files retained beside the editable project; use absolute paths."
+              },
+              "clips": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "asset": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "description": "Name of a declared video asset. Repeating an asset repeats selected source frames."
+                    },
+                    "startFrame": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 599,
+                      "default": 0,
+                      "description": "Zero-based source frame index. Default 0; no seconds-to-frames rounding."
+                    },
+                    "frameCount": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 600,
+                      "description": "Number of consecutive source frames. End is startFrame + frameCount, exclusive."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "asset",
+                    "frameCount"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 128,
+                "description": "Timeline order. Each clip selects a contiguous source range at the declared frame rate."
+              },
+              "fps": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 120,
+                "default": 25,
+                "description": "Integer frames per second; every source must have this constant rate. Default 25."
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 4096,
+                "default": 1280,
+                "description": "Timeline and source width in pixels; no resizing. Default 1280."
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 4096,
+                "default": 720,
+                "description": "Timeline and source height in pixels; no resizing. Default 720."
+              },
+              "threads": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16,
+                "default": 1,
+                "description": "Native decoding/rendering thread allocation; 1 to 16, default 1."
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "assets",
+              "clips"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "filter",
+          "options"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "nodes"
+  ]
+}

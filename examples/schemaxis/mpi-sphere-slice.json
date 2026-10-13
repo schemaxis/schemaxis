@@ -1,0 +1,87 @@
+{
+  "version": "schemaxis.workflow/1",
+  "execution": {
+    "maxWorkers": 2,
+    "cpus": 4,
+    "memoryMB": 4096,
+    "gpus": 0
+  },
+  "operations": [
+    {
+      "id": "independent",
+      "execution": {
+        "threads": 1,
+        "memoryMB": 1024,
+        "ranks": 2,
+        "mpiexec": "/absolute/path/to/matching/mpi/bin/mpiexec"
+      },
+      "document": {
+        "version": "schemaxis/1",
+        "nodes": [
+          {
+            "id": "sphere",
+            "filter": "sphere",
+            "options": {
+              "radius": 3
+            }
+          },
+          {
+            "id": "cut",
+            "filter": "slice",
+            "inputs": {
+              "input": "sphere"
+            },
+            "options": {
+              "normal": "z+"
+            }
+          },
+          {
+            "id": "total",
+            "filter": "integrate",
+            "inputs": {
+              "input": "sphere"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "surface",
+            "geometry": [
+              "sphere",
+              "cut"
+            ],
+            "measurements": [
+              {
+                "node": "total",
+                "association": "CELLS"
+              }
+            ],
+            "visible": {
+              "sphere": {
+                "colour": "steelblue"
+              }
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  160,
+                  120
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

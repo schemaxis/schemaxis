@@ -1,0 +1,68 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "sphere",
+      "filter": "pvSphere"
+    },
+    {
+      "id": "cached",
+      "filter": "pvForceStaticMesh",
+      "inputs": {
+        "Input": "sphere"
+      }
+    },
+    {
+      "id": "volume",
+      "filter": "pvDelaunay3D",
+      "inputs": {
+        "Input": "sphere"
+      }
+    },
+    {
+      "id": "cells",
+      "filter": "pvConvertToCellGrid",
+      "inputs": {
+        "Input": "volume"
+      }
+    },
+    {
+      "id": "height",
+      "filter": "pvCellGridElevation",
+      "inputs": {
+        "Input": "cells"
+      },
+      "options": {
+        "AttributeName": "height"
+      }
+    },
+    {
+      "id": "points",
+      "filter": "pvPointSource",
+      "options": {
+        "NumberOfPoints": 5,
+        "Radius": 0.1
+      }
+    },
+    {
+      "id": "sampled",
+      "filter": "pvCellGridProbe",
+      "inputs": {
+        "Input": "points",
+        "Source": "height"
+      },
+      "options": {
+        "CellGridAttribute": "height"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "properties",
+      "geometry": [
+        "cached",
+        "sampled"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,434 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {
+          "$fill": "file"
+        },
+        "caseType": "Reconstructed Case",
+        "cellArrays": [
+          "U",
+          "p"
+        ]
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "merge",
+      "inputs": {
+        "input": "case"
+      }
+    },
+    {
+      "id": "flow",
+      "filter": "cellToPoint",
+      "options": {
+        "passCellData": true
+      },
+      "inputs": {
+        "input": "mesh"
+      }
+    },
+    {
+      "id": "speed",
+      "filter": "calculator",
+      "options": {
+        "expression": "mag(U)",
+        "result": "speed"
+      },
+      "inputs": {
+        "input": "flow"
+      }
+    },
+    {
+      "id": "cutX",
+      "filter": "slice",
+      "options": {
+        "normal": "x+",
+        "origin": [
+          {
+            "$calc": "add",
+            "args": [
+              {
+                "$observe": "speed",
+                "path": [
+                  "bounds",
+                  0
+                ]
+              },
+              {
+                "$calc": "multiply",
+                "args": [
+                  {
+                    "$axis": "fraction"
+                  },
+                  {
+                    "$calc": "subtract",
+                    "args": [
+                      {
+                        "$observe": "speed",
+                        "path": [
+                          "bounds",
+                          1
+                        ]
+                      },
+                      {
+                        "$observe": "speed",
+                        "path": [
+                          "bounds",
+                          0
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      2
+                    ]
+                  },
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      3
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      4
+                    ]
+                  },
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      5
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          }
+        ]
+      },
+      "inputs": {
+        "input": "speed"
+      }
+    },
+    {
+      "id": "cutY",
+      "filter": "slice",
+      "options": {
+        "normal": "y+",
+        "origin": [
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      0
+                    ]
+                  },
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      1
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "$calc": "add",
+            "args": [
+              {
+                "$observe": "speed",
+                "path": [
+                  "bounds",
+                  2
+                ]
+              },
+              {
+                "$calc": "multiply",
+                "args": [
+                  {
+                    "$axis": "fraction"
+                  },
+                  {
+                    "$calc": "subtract",
+                    "args": [
+                      {
+                        "$observe": "speed",
+                        "path": [
+                          "bounds",
+                          3
+                        ]
+                      },
+                      {
+                        "$observe": "speed",
+                        "path": [
+                          "bounds",
+                          2
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      4
+                    ]
+                  },
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      5
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          }
+        ]
+      },
+      "inputs": {
+        "input": "speed"
+      }
+    },
+    {
+      "id": "cutZ",
+      "filter": "slice",
+      "options": {
+        "normal": "z+",
+        "origin": [
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      0
+                    ]
+                  },
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      1
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "$calc": "divide",
+            "args": [
+              {
+                "$calc": "add",
+                "args": [
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      2
+                    ]
+                  },
+                  {
+                    "$observe": "speed",
+                    "path": [
+                      "bounds",
+                      3
+                    ]
+                  }
+                ]
+              },
+              2
+            ]
+          },
+          {
+            "$calc": "add",
+            "args": [
+              {
+                "$observe": "speed",
+                "path": [
+                  "bounds",
+                  4
+                ]
+              },
+              {
+                "$calc": "multiply",
+                "args": [
+                  {
+                    "$axis": "fraction"
+                  },
+                  {
+                    "$calc": "subtract",
+                    "args": [
+                      {
+                        "$observe": "speed",
+                        "path": [
+                          "bounds",
+                          5
+                        ]
+                      },
+                      {
+                        "$observe": "speed",
+                        "path": [
+                          "bounds",
+                          4
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "inputs": {
+        "input": "speed"
+      }
+    },
+    {
+      "id": "context",
+      "filter": "surface",
+      "inputs": {
+        "input": "flow"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "flowOverview",
+      "visible": {
+        "cutX": {
+          "field": [
+            "POINTS",
+            "speed"
+          ],
+          "range": [
+            0,
+            50
+          ]
+        },
+        "cutY": {
+          "field": [
+            "POINTS",
+            "speed"
+          ],
+          "range": [
+            0,
+            50
+          ]
+        },
+        "cutZ": {
+          "field": [
+            "POINTS",
+            "speed"
+          ],
+          "range": [
+            0,
+            50
+          ]
+        },
+        "context": {
+          "colour": "slategrey",
+          "opacity": 0.12
+        }
+      },
+      "geometry": [
+        "cutX",
+        "cutY",
+        "cutZ",
+        "context"
+      ],
+      "images": [
+        {
+          "id": "overview",
+          "size": [
+            640,
+            480
+          ],
+          "cameras": [
+            {
+              "direction": [
+                1,
+                -1,
+                0.6
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "axes": [
+    {
+      "name": "fraction",
+      "series": {
+        "start": 0.1,
+        "end": 0.9,
+        "count": {
+          "$fill": "count"
+        }
+      }
+    }
+  ]
+}

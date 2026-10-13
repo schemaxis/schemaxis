@@ -1,0 +1,220 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.premiere/1": {
+      "guide": "docs/premiere.md",
+      "context": {
+        "purpose": "Check the structure and source identities of an already open saved Premiere sequence through documented read-only UXP APIs. Experimental integration; native qualification is pending.",
+        "assumptions": "Windows/macOS host, Premiere 26.5+, UDT 2.2+, supplied panel loaded in developer mode, exact native project/source paths and an idle active sequence. Local private bridge folder.",
+        "constraints": "One unmuted contiguous video track, 1..128 clips, at most 600 timeline frames, integer 24/25/30/50/60 fps, zero sequence start, empty audio tracks, no captions/transitions/disabled/adjustment/reversed/offline/nested/merged/multicam/proxy clips. Effects and source/rendered bytes are not checked.",
+        "inspection": "Compare exact native ticks, ordered source identities, project/sequence GUIDs, dimensions and runtime identity. Two complete matching observations detect observed concurrent edits without claiming atomicity.",
+        "recovery": "NATIVE_ENVIRONMENT_UNAVAILABLE on Linux is expected. BRIDGE_NOT_CONFIGURED requires --premiere-bridge. RUNNER_TIMED_OUT needs a fresh attempt and explicit panel folder selection. CONTRACT_MISMATCH needs matching native sequence structure. No native action is performed to repair the project."
+      },
+      "examples": [
+        {
+          "id": "sequence",
+          "reference": "examples/schemaxis/premiere-sequence.json"
+        },
+        {
+          "id": "invalid-rate",
+          "reference": "examples/schemaxis/premiere-invalid-rate.json",
+          "expect": "invalid",
+          "fault": "INVALID_RATE",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_premiere.py"
+      ],
+      "acceptance": [
+        "tools/qualify_premiere.py"
+      ],
+      "development": {
+        "api": [
+          "https://developer.adobe.com/premiere-pro/uxp/resources/fundamentals/apis/",
+          "https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/sequence",
+          "https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/videocliptrackitem",
+          "https://developer.adobe.com/premiere-pro/uxp/resources/recipes/host-info/"
+        ],
+        "lifecycle": {
+          "timeout": "A shared elapsed deadline bounds human panel selection, observation arrival and final host verification; panel checks expiry before publishing.",
+          "cancellation": "Shared cancellation ends the bounded wait; no native application process is started or killed. Expired jobs cannot publish accepted results.",
+          "logs": "Retain authored/plan/request/response/observation, per-attempt nonce and bridge-job path, structured failed result and final verification. No fictitious native process log.",
+          "verification": "Closed bounded native observation checks exact ticks and source identities against an independent authored plan; request hash/nonce prevent stale attempts. Two complete matching observations, native runtime/project identities and retained byte hashes. Source contents, effects and export are unverified; local wholesale evidence fabrication is outside the trust model."
+        },
+        "data": [
+          {
+            "id": "contract",
+            "direction": "input",
+            "kind": "sequenceContract",
+            "format": "Schemaxis JSON",
+            "traits": {
+              "timeUnits": "sequence frames",
+              "mutation": false
+            },
+            "losses": [
+              "Absolute paths identify sources; host does not read their bytes."
+            ],
+            "scope": "Declared saved project identity, active sequence name/profile and ordered source frame ranges."
+          },
+          {
+            "id": "observation",
+            "direction": "output",
+            "kind": "sequenceObservation",
+            "format": "Premiere UXP JSON",
+            "traits": {
+              "timeUnits": "exact decimal tick strings",
+              "readOnly": true,
+              "rendered": false
+            },
+            "losses": [
+              "Experimental integration: no installed Premiere native acceptance has been recorded",
+              "Read-only sequence structure and source identities; source bytes, effects, colour, audio and rendered pixels are not verified",
+              "Two matching observations detect observed edits but are not an atomic transaction or cryptographic proof of application execution",
+              "No project creation, save, rendering, export, workflow scheduling or automatic reuse"
+            ],
+            "scope": "Native structure and identities only; no saved project artifact or rendered video."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Read observation JSON and exact sequence/clip tick strings.",
+            "limits": "No native Premiere workspace inspector, pixel proof or project mutation."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "sequence",
+          "reuse": "Edit expected project path, sequence name, profile or source ranges through JSON pointers. Run in a fresh attempt and select its job folder in the native panel. Automatic reuse is not advertised."
+        },
+        "features": {
+          "workflow": {
+            "status": "unsupported",
+            "scope": "No workflow contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No native-inspection contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Host-side expression/document composition and finite analytic planning; native observation still requires one fresh human-selected UXP job per visit and is unqualified."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "No mpi contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook."
+          },
+          "reusable-inputs": {
+            "status": "unsupported",
+            "scope": "No reusable-inputs contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No time-batches contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit the declared JSON contract and replan; observation requires a fresh UXP job."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Edit the declared JSON contract and replan; observation requires a fresh UXP job."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No live-editing contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "No native-save contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No conversion contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook."
+          }
+        },
+        "cases": [
+          {
+            "id": "trim-reorder",
+            "example": "sequence",
+            "edits": [],
+            "scope": "Unexecuted native recipe: manually prepare an independently reviewed six-colour source and the declared 32x24/25 fps sequence in installed Premiere. Read-only structural observation, no pixel/export qualification.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 5
+              },
+              {
+                "file": "observation.json",
+                "format": "json",
+                "pointer": "/clips/0/inTicks",
+                "expected": "30481920000"
+              },
+              {
+                "file": "observation.json",
+                "format": "json",
+                "pointer": "/sequence/name",
+                "expected": "Schemaxis Colours"
+              }
+            ]
+          },
+          {
+            "id": "repeat-range",
+            "example": "sequence",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/clips",
+                "value": [
+                  {
+                    "sourcePath": "/replace-with-your-media/colours.mp4",
+                    "startFrame": 1,
+                    "frameCount": 2
+                  },
+                  {
+                    "sourcePath": "/replace-with-your-media/colours.mp4",
+                    "startFrame": 1,
+                    "frameCount": 2
+                  }
+                ]
+              }
+            ],
+            "scope": "Unexecuted native recipe: manually prepare an independently reviewed six-colour source and the declared 32x24/25 fps sequence in installed Premiere. Read-only structural observation, no pixel/export qualification.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 4
+              },
+              {
+                "file": "observation.json",
+                "format": "json",
+                "pointer": "/clips/0/inTicks",
+                "expected": "10160640000"
+              },
+              {
+                "file": "observation.json",
+                "format": "json",
+                "pointer": "/sequence/name",
+                "expected": "Schemaxis Colours"
+              }
+            ]
+          }
+        ]
+      },
+      "profiles": {
+        "composition": {
+          "scope": "Host-side expression/document composition and finite analytic planning; native observation still requires one fresh human-selected UXP job per visit and is unqualified.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "docs/premiere.md"
+          ]
+        }
+      }
+    }
+  }
+}

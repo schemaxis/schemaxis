@@ -1,0 +1,359 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "fromRows": {
+      "status": "reviewed",
+      "explanation": "Builds one LibreOffice Calc workbook from a numeric table typed directly into the document: a Data sheet with your column labels and rows, and a Summary sheet with count, sum, mean, minimum, maximum and sample standard deviation per column. It publishes analysis.xlsx, analysis.ods (reopened by a second Calc process) and data.csv, each checked against independent arithmetic. Choose it for small reproducible tables (2 to 10,000 rows, 1 to 64 columns); use readCSV when the table already exists as a file or comes from another workflow step.",
+      "sources": [
+        "src/schemaxis/adaptors/calc/capabilities.json",
+        "src/schemaxis/adaptors/calc/adaptor.py:23-44",
+        "docs/calc.md"
+      ],
+      "pitfalls": [
+        "Every cell must be a finite number within ±1e100; text, booleans, blanks and formulas are rejected (INVALID_TABLE).",
+        "Column labels are only labels: a label such as \"Force (N)\" does not convert units or affect any calculation.",
+        "Workbook formatting, custom formulas, macros and charts are not produced; only the fixed Data and Summary sheets exist."
+      ]
+    },
+    "readCSV": {
+      "status": "reviewed",
+      "explanation": "Builds the same Data/Summary workbook as fromRows, but reads the table from an existing comma-separated file: the first line holds column labels and every later line holds numbers. The file bytes are copied into the run so later verification does not depend on the original file. Choose it for measured data already on disk or for a numeric table produced by another workflow step (for example an R or ngspice results table).",
+      "sources": [
+        "src/schemaxis/adaptors/calc/capabilities.json",
+        "src/schemaxis/adaptors/calc/adaptor.py:23-44",
+        "src/schemaxis/tabular.py:19-49",
+        "docs/calc.md"
+      ],
+      "pitfalls": [
+        "The path must be absolute; relative paths are rejected during planning.",
+        "The CSV must be UTF-8, comma-delimited, at most 8 MiB, with at least two data rows and no empty, text, NaN or infinite cells.",
+        "Rows must all have the same number of values as the header; there is no padding or column type guessing."
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.calc/1": {
+      "fields": {
+        "": {
+          "status": "reference",
+          "explanation": "Create one numeric table, calculate fixed Data/Summary sheets in native Calc and independently verify XLSX, reopened ODS and CSV. Optional named requirements control acceptance.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis Calc document. It must be \"schemaxis.calc/1\"; it is not the LibreOffice version, and any installed LibreOffice that reports itself correctly can run it.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/adaptor.py:32"
+          ],
+          "examples": [
+            "schemaxis.calc/1"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reference",
+          "explanation": "Declare exactly one source table per workbook. Use separate workflow operations for separate workbooks.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reference",
+          "explanation": "The single source node chooses a literal table or numeric CSV and names it for planning and inspection.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0": {
+          "status": "reference",
+          "explanation": "Build the workbook from explicit named columns and rectangular numeric rows. This is useful for small reproducible model tables or ledger fixtures.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/id": {
+          "status": "reference",
+          "explanation": "Name this table source with an ASCII letter followed by letters, digits or underscores, at most 64 characters.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/filter": {
+          "status": "reviewed",
+          "explanation": "fromRows: the table is written directly in this document as columns and rows. Switch to readCSV to load the same kind of table from a CSV file instead.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/adaptor.py:23-44"
+          ],
+          "examples": [
+            "fromRows"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options": {
+          "status": "reviewed",
+          "explanation": "The literal table: columns gives the labels and rows gives the numeric records, in the order they appear on the Data sheet. Both are required; there are no other settings.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/adaptor.py:23-44",
+            "src/schemaxis/tabular.py:19-49"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/columns": {
+          "status": "reference",
+          "explanation": "Give 1 to 64 unique literal column labels in data order. Labels are at most 128 characters and can describe units; they do not cause unit conversion.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/columns/items": {
+          "status": "reference",
+          "explanation": "One unique literal text label, at most 128 characters, without control characters. Labels beginning with = remain text; unit interpretation is authored.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/rows": {
+          "status": "reference",
+          "explanation": "Provide 2 to 10,000 numeric records, each matching the column count. Row order is preserved in Data and the CSV round trip.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/rows/items": {
+          "status": "reference",
+          "explanation": "One ordered numeric row with exactly one value for each column label. No automatic padding or column conversion occurs.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/rows/items/items": {
+          "status": "reference",
+          "explanation": "One finite numeric measurement within ±1e100. Booleans, text, missing values and authored formulas are rejected.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Build the workbook from a numeric CSV file, including a verified numeric table handed over from another workflow step. Choose this instead of fromRows when the data already exists as a file. The file bytes and their SHA-256 fingerprint are captured, so a reused run is only accepted while the file is unchanged.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/adaptor.py:23-44 reusableInputs"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/id": {
+          "status": "reference",
+          "explanation": "Name this table source with an ASCII letter followed by letters, digits or underscores, at most 64 characters.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/filter": {
+          "status": "reviewed",
+          "explanation": "readCSV: the table is read from a numeric CSV file named in options.file. Switch to fromRows to type a small table directly into the document.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/adaptor.py:23-44"
+          ],
+          "examples": [
+            "readCSV"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options": {
+          "status": "reviewed",
+          "explanation": "The CSV source. Only file is needed: the header line becomes the column labels and each later line becomes one Data row.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/adaptor.py:23-44",
+            "src/schemaxis/tabular.py:19-49"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path of a UTF-8, comma-separated file whose first line holds 1 to 64 distinct column labels and whose remaining 2 to 10,000 lines hold one finite number per column. The file must be a regular file of at most 8 MiB; it is copied into the run directory and read as plain text, never opened as a workbook.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/adaptor.py:23-44",
+            "src/schemaxis/tabular.py:19-49"
+          ],
+          "pitfalls": [
+            "Relative paths fail planning; give the full path, for example /data/run1/measurements.csv.",
+            "Semicolon-separated or locale-formatted numbers (such as 1,5) are not parsed; export with commas between fields and dots as decimal separators.",
+            "Empty cells, NaN, inf or any text below the header fail with INVALID_TABLE."
+          ],
+          "examples": [
+            "/data/run1/measurements.csv"
+          ]
+        },
+        "/properties/requirements": {
+          "status": "reviewed",
+          "explanation": "Optional list of up to 64 named numeric checks on cells of the calculated workbook. Each check is applied to the values Calc actually wrote in both analysis.xlsx and the reopened analysis.ods, and every check must pass in both for the run to succeed. Omit it to accept any correctly calculated workbook.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/requirements.py:7-51"
+          ],
+          "defaultMeaning": "Omitted: no acceptance checks beyond the built-in verification of data and summary values."
+        },
+        "/properties/requirements/items": {
+          "status": "reference",
+          "explanation": "One uniquely named fixed-cell numeric requirement. Native cell verification precedes acceptance; unmet checks retain diagnostic workbooks and block publication.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0": {
+          "status": "reference",
+          "explanation": "An inclusive numeric cell bound. Supply minimum, maximum or both and inspect the signed distance to the closest bound in each native format.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/name": {
+          "status": "reference",
+          "explanation": "Name this requirement uniquely so failed assessments can identify the intended contract. Use an ASCII letter followed by letters, digits, underscores or hyphens, at most 64 characters.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/type": {
+          "status": "reviewed",
+          "explanation": "cellBounds: check that one Data or Summary cell lies between an inclusive minimum and/or maximum. Use reconcile instead when several cells must add up (with coefficients) to a target.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/requirements.py:7-51"
+          ],
+          "examples": [
+            "cellBounds"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/cell": {
+          "status": "reference",
+          "explanation": "Select one Data or Summary cell for the bound. Header labels are text and cannot satisfy a numeric requirement.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/cell/properties/sheet": {
+          "status": "reference",
+          "explanation": "Select Data for original records or Summary for fixed count/sum/mean/min/max/sample-standard-deviation results. Data numeric rows start at 2; Summary rows follow the authored column order starting at 2.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/cell/properties/cell": {
+          "status": "reference",
+          "explanation": "Select a canonical uppercase A1 address without ranges or $ markers. Data spans up to BL10001; Summary up to G65. Missing cells and text labels fail separately from numeric limits.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/minimum": {
+          "status": "reference",
+          "explanation": "Declare an inclusive minimum for the selected native value, finite within ±1e100 and expressed in that cell’s units. At least one bound is required; minimum cannot exceed maximum.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/properties/maximum": {
+          "status": "reference",
+          "explanation": "Declare an inclusive maximum for the selected native value, finite within ±1e100 and expressed in that cell’s units. At least one bound is required; minimum cannot exceed maximum.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1": {
+          "status": "reference",
+          "explanation": "An explicit weighted reconciliation over distinct native numeric cells. Inspect value, target, absolute tolerance and signed margin separately for both formats.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/name": {
+          "status": "reference",
+          "explanation": "Name this requirement uniquely so failed assessments can identify the intended contract. Use an ASCII letter followed by letters, digits, underscores or hyphens, at most 64 characters.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/type": {
+          "status": "reviewed",
+          "explanation": "reconcile: check that a weighted sum of 2 to 16 cells equals a target within an absolute tolerance, for example income minus costs equals zero. Use cellBounds instead to limit a single cell.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/requirements.py:7-51"
+          ],
+          "examples": [
+            "reconcile"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/terms": {
+          "status": "reference",
+          "explanation": "Select 2 to 16 distinct numeric cells and explicit nonzero coefficients. The author must ensure compatible units; the host sums the observed native values independently.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/terms/items": {
+          "status": "reference",
+          "explanation": "One explicit numeric cell and coefficient in the weighted reconciliation. Each cell appears at most once; header text is never converted to a number.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/terms/items/properties/sheet": {
+          "status": "reference",
+          "explanation": "Select Data for original records or Summary for fixed count/sum/mean/min/max/sample-standard-deviation results. Data numeric rows start at 2; Summary rows follow the authored column order starting at 2.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/terms/items/properties/cell": {
+          "status": "reference",
+          "explanation": "Select a canonical uppercase A1 address without ranges or $ markers. Data spans up to BL10001; Summary up to G65. Missing cells and text labels fail separately from numeric limits.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/terms/items/properties/coefficient": {
+          "status": "reference",
+          "explanation": "Multiply this selected native value by a finite nonzero coefficient within ±1e6. Declare signs and any unit conversion explicitly; duplicate cell terms are rejected.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/target": {
+          "status": "reference",
+          "explanation": "Declare the weighted-sum target in the reconciled units, finite within ±1e100. The default is zero, suitable for a declared balance residual.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/1/properties/absoluteTolerance": {
+          "status": "reference",
+          "explanation": "Declare the maximum absolute weighted-sum difference from target, between zero and 1e100 in the reconciled units. Zero requires exact equality; choose a tolerance meaningful for native floating-point values.",
+          "sources": [
+            "docs/calc.md"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Lower-bound form: minimum is given, so the cell must be at least that value. A maximum may also be given to form a closed range.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/requirements.py:7-51"
+          ]
+        },
+        "/properties/requirements/items/oneOf/0/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Upper-bound form: maximum is given, so the cell must not exceed that value. A minimum may also be given to form a closed range.",
+          "sources": [
+            "docs/calc.md",
+            "src/schemaxis/adaptors/calc/requirements.py:7-51"
+          ]
+        }
+      }
+    }
+  }
+}

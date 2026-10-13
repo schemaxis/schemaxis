@@ -1,0 +1,43 @@
+{
+  "version": "schemaxis.qgis/1",
+  "nodes": [
+    {
+      "id": "source",
+      "filter": "readVector",
+      "options": {
+        "file": {
+          "$fill": "file"
+        }
+      }
+    },
+    {
+      "id": "metric",
+      "filter": "reproject",
+      "options": {
+        "crs": {
+          "$fill": "crs"
+        }
+      },
+      "inputs": {
+        "input": "source"
+      }
+    },
+    {
+      "id": "zones",
+      "filter": "buffer",
+      "options": {
+        "distance": {
+          "$document": "/settings/radius"
+        }
+      },
+      "inputs": {
+        "input": "metric"
+      }
+    }
+  ],
+  "output": "zones",
+  "preview": true,
+  "settings": {
+    "radius": 100
+  }
+}

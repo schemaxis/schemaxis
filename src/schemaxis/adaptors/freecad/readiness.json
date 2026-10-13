@@ -1,0 +1,625 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.freecad/1": {
+      "guide": "docs/cad-and-mesh-workflows.md",
+      "context": {
+        "purpose": "Construct one bounded solid from declared primitives, profiles and solid operations; publish an editable FCStd model with STEP and tessellated STL. Finishing can express geometric edge intent with exact match cardinality, re-evaluated on each design variant. Optional named geometric measurements publish verified values for downstream adaptors. A bounded designStudy can adjust one length to reach a named geometric target with explicit units and response direction.",
+        "assumptions": "Lengths are millimetres. FreeCAD public document and shape APIs execute in an isolated process; literal options and earlier-node references define the supported subset.",
+        "constraints": "The output must be one valid positive-volume solid. Profiles cannot be final outputs. Host-valid booleans can still fail native geometry checks; STL tessellation loses exact surface representation. Design studies are batch-only, change one resolved scalar option, and test a sampled response assumption; they do not solve general CAD constraints.",
+        "inspection": "Inspect native shape validity, solid count, volume and bounds; verify reopens publications and checks geometry. The embedded box has analytic volume 1000 cubic millimetres. A preview alone does not establish geometry correctness. Native topology inspection supports analytic visit selection. Geometric selection evidence retains source edges, matches and actual native assignments before and after reopening. measurements.json provides selected node quantities with explicit units; value references select artifact 3 and /measurements/ID/value. Live geometry exposes the same requested measurements for its revision. Design studies retain study-summary.json and study.html with every candidate, target band and stop decision.",
+        "recovery": "Correct unknown node references and dimensional constraints before running. If booleans fail native checks, inspect operand placement/intersection and simplify the model. Replan and rerun in a fresh directory; preserve failed evidence. EMPTY_SELECTION, AMBIGUOUS_SELECTION and SELECTION_COUNT_MISMATCH require inspecting the effective source geometry and correcting predicates or intentional match counts; no nearest-edge substitution is performed. STUDY_REQUIREMENTS_NOT_MET retains an unmet design report; inspect the bracket, sampled response, native validity and finite limits before changing the goal."
+      },
+      "examples": [
+        {
+          "id": "analytic-box",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "units": "mm",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "box",
+                "options": {
+                  "length": 20,
+                  "width": 10,
+                  "height": 5
+                }
+              }
+            ],
+            "output": "body"
+          }
+        },
+        {
+          "id": "missing-output",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "units": "mm",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "box",
+                "options": {
+                  "length": 20,
+                  "width": 10,
+                  "height": 5
+                }
+              }
+            ],
+            "output": "missing"
+          },
+          "expect": "invalid",
+          "fault": "INVALID_SELECTION"
+        },
+        {
+          "id": "semantic-fillet",
+          "reference": "examples/schemaxis/freecad-semantic-fillet.json"
+        },
+        {
+          "id": "measurements",
+          "reference": "examples/schemaxis/freecad-measurements.json"
+        },
+        {
+          "id": "design-target",
+          "reference": "examples/schemaxis/freecad-design-target.json"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_schemaxis_freecad.py",
+        "tests/unit/test_freecad_selections.py",
+        "tests/unit/test_freecad_measurements.py",
+        "tests/unit/test_freecad_design_study.py"
+      ],
+      "acceptance": [
+        "examples/schemaxis/check_freecad_gallery.py",
+        "tools/qualify_capability_discovery.py",
+        "tools/qualify_freecad_selections.py",
+        "tools/qualify_freecad_measurements.py",
+        "tools/qualify_freecad_design_studies.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "CAD artifact handoffs retain millimetres; FCStd and STEP preserve solid geometry, while STL is tessellated and needs tolerance checks.",
+          "references": [
+            "docs/cad-and-mesh-workflows.md"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        },
+        "native-inspection": {
+          "scope": "Bounded native shape inspection through the registered inspect hook; does not qualify all shapes or live reverse synchronisation.",
+          "references": [
+            "src/schemaxis/adaptors/freecad/integration.py:inspect",
+            "docs/cad-and-mesh-workflows.md"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://freecad.github.io/SourceDoc/"
+        ],
+        "lifecycle": {
+          "timeout": "One CAD execution budget supplies the remaining timeout to build/reopen and is checked before publication; feedback studies also bound the total candidate history and verification.",
+          "cancellation": "Shared process-tree cancellation for owned native stages; retain incomplete result and logs.",
+          "logs": "Retain build/reopen submission receipts and runner stdout/stderr/metrics in the run directory.",
+          "verification": "Use distinct build and reopening processes, compare authored definition and native geometry, then recheck publication hashes. Independent analytic expectations are additional to the native verifier. Geometric edge predicates and declared cardinalities are replayed against retained source inventories; selected indices must match native finishing assignments after reopening. Design studies replay every proposal and target decision over independently reverified native candidates; unmet histories cannot publish a chosen design."
+        },
+        "data": [
+          {
+            "id": "editable-cad",
+            "direction": "output",
+            "kind": "cadScene",
+            "format": "FreeCAD FCStd",
+            "traits": {
+              "units": "mm",
+              "frame": "authored Cartesian",
+              "topology": "one positive-volume solid"
+            },
+            "losses": [],
+            "scope": "Preserve the editable native document within the supported declared feature subset."
+          },
+          {
+            "id": "step-input",
+            "direction": "input",
+            "kind": "cad",
+            "format": "STEP",
+            "traits": {
+              "units": "mm",
+              "frame": "authored Cartesian",
+              "topology": "one solid"
+            },
+            "losses": [
+              "Imported shape does not recover an authored feature history."
+            ],
+            "scope": "A captured STEP file is read by the declared reader."
+          },
+          {
+            "id": "step-output",
+            "direction": "output",
+            "kind": "cad",
+            "format": "STEP",
+            "traits": {
+              "units": "mm",
+              "frame": "authored Cartesian",
+              "topology": "one solid"
+            },
+            "losses": [
+              "Feature history is not retained."
+            ],
+            "scope": "Native geometry checked after reopening."
+          },
+          {
+            "id": "mesh-output",
+            "direction": "output",
+            "kind": "geometry",
+            "format": "STL",
+            "traits": {
+              "units": "mm",
+              "frame": "authored Cartesian",
+              "topology": "watertight triangles"
+            },
+            "losses": [
+              "Tessellation approximates curved surfaces; STL has no embedded units."
+            ],
+            "scope": "Volume tolerance 0.5 percent; bounds use the declared chordal deflection."
+          },
+          {
+            "id": "measurements",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "units": "per measurement",
+              "namedValues": true
+            },
+            "losses": [
+              "Geometric measures do not infer materials, mass, clearance or manufacturing validity."
+            ],
+            "scope": "Optional fourth publication after STEP, STL and FCStd. Up to 32 named measurements from declared solid nodes; selected-edge inventories bounded to 20000 combined edges."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "source",
+            "scope": "Inspect the exact authored dimensions, parts and output selection.",
+            "limits": "Source edits require the current draft revision."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect JSON verification records for geometry, component and solver values.",
+            "limits": "Bounded text snapshots are evidence; native validity comes from independent verification."
+          },
+          {
+            "panel": "geometry",
+            "scope": "Use registered native shape inspection and tessellated previews.",
+            "limits": "Preview geometry is approximate; inspect volume/validity and reopened exports for acceptance."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "analytic-box",
+          "reuse": "Change the declared dimensions or numeric options using JSON pointer edits; plan the new revision, use a fresh run directory and compare independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact receipts, scheduler provenance and explicit handoffs; verify each consumer format."
+          },
+          "native-inspection": {
+            "status": "supported",
+            "scope": "Use the registered native inspection hook and bounded geometry evidence."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Only serial execution is qualified; do not request multiple ranks."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The registered hook hashes external inputs for scheduler reuse."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No finite native time-list batching support in this route."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit ordinary JSON through the shared draft source; planning checks the current revision."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Use atomic JSON pointer patches through the shared draft model; node commands apply only to node-shaped routes."
+          },
+          "live-editing": {
+            "status": "supported",
+            "scope": "The adaptor advertises live geometry; qualification is separate from this batch acceptance."
+          },
+          "native-save": {
+            "status": "supported",
+            "scope": "The adaptor exposes a native save extension; reopen verification is required."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "box-baseline",
+            "example": "analytic-box",
+            "edits": [],
+            "scope": "Analytic box and height variant with native reopening and STEP/STL publication; no universal boolean/topology qualification.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 1000,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/solids",
+                "expected": 1
+              }
+            ]
+          },
+          {
+            "id": "box-variant",
+            "example": "analytic-box",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/height",
+                "value": 7.5
+              }
+            ],
+            "scope": "Analytic box and height variant with native reopening and STEP/STL publication; no universal boolean/topology qualification.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 1500,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/solids",
+                "expected": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "schemaxis.freecad.assembly/1": {
+      "guide": "docs/freecad-assemblies.md",
+      "context": {
+        "purpose": "Create an editable native fixed assembly with reused primitive parts, component links and declared joints; use the assembly document instead of a node graph.",
+        "assumptions": "Millimetre geometry, one grounded component, box/cylinder parts and a bounded fixed-joint tree. Native FreeCAD assembly APIs and solver compute placements.",
+        "constraints": "Only fixed top/bottom-face joints are supported. No revolute motion, persistent assembly process or node inspection. Common analytic studies and scheduled workflow resume are supported. Timeout applies to each native stage separately.",
+        "inspection": "Inspect saved assembly components, joints and independent reopened placement/geometry evidence. Verify the retained run and compare the solved assembly with the declared fixed-joint constraints; a rendered view alone is insufficient.",
+        "recovery": "INVALID_GROUND requires an existing component ID. Repair joint endpoints or connectivity for structural errors. Preserve solver logs on native failures, simplify constraints and run into a fresh directory."
+      },
+      "examples": [
+        {
+          "id": "fixed-assembly",
+          "reference": "examples/schemaxis/freecad-assembly.json"
+        },
+        {
+          "id": "missing-ground",
+          "document": {
+            "version": "schemaxis.freecad.assembly/1",
+            "units": "mm",
+            "dimensions": {
+              "plateThickness": 5,
+              "postHeight": 20
+            },
+            "parts": [
+              {
+                "id": "plate",
+                "type": "box",
+                "options": {
+                  "length": 40,
+                  "width": 30,
+                  "height": {
+                    "$document": "/dimensions/plateThickness"
+                  }
+                }
+              },
+              {
+                "id": "post",
+                "type": "cylinder",
+                "options": {
+                  "radius": 4,
+                  "height": {
+                    "$document": "/dimensions/postHeight"
+                  }
+                }
+              }
+            ],
+            "components": [
+              {
+                "id": "base",
+                "part": "plate",
+                "position": [
+                  10,
+                  20,
+                  0
+                ],
+                "rotation": 30
+              },
+              {
+                "id": "postLeft",
+                "part": "post",
+                "position": [
+                  80,
+                  60,
+                  30
+                ]
+              },
+              {
+                "id": "postRight",
+                "part": "post",
+                "position": [
+                  -40,
+                  0,
+                  40
+                ]
+              },
+              {
+                "id": "lid",
+                "part": "plate",
+                "position": [
+                  20,
+                  50,
+                  80
+                ]
+              }
+            ],
+            "grounded": "missing",
+            "joints": [
+              {
+                "id": "leftMount",
+                "type": "fixed",
+                "parent": {
+                  "component": "base",
+                  "face": "top"
+                },
+                "child": {
+                  "component": "postLeft",
+                  "face": "bottom"
+                },
+                "offset": [
+                  -10,
+                  0,
+                  0
+                ]
+              },
+              {
+                "id": "rightMount",
+                "type": "fixed",
+                "parent": {
+                  "component": "base",
+                  "face": "top"
+                },
+                "child": {
+                  "component": "postRight",
+                  "face": "bottom"
+                },
+                "offset": [
+                  10,
+                  0,
+                  0
+                ]
+              },
+              {
+                "id": "lidMount",
+                "type": "fixed",
+                "parent": {
+                  "component": "postLeft",
+                  "face": "top"
+                },
+                "child": {
+                  "component": "lid",
+                  "face": "bottom"
+                },
+                "offset": [
+                  10,
+                  0,
+                  0
+                ]
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "INVALID_GROUND"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_freecad_assembly.py"
+      ],
+      "acceptance": [
+        "tools/qualify_freecad_assembly.py"
+      ],
+      "profiles": {
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        },
+        "workflow": {
+          "scope": "Participates in scheduled workflows with common expressions, analytic inputs and verified value outputs. Only explicitly accepted artifact kinds may cross file handoffs; native qualification remains separately scoped.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://freecad.github.io/SourceDoc/"
+        ],
+        "lifecycle": {
+          "timeout": "Timeout is per native stage, not a total multi-stage wall-clock bound.",
+          "cancellation": "Shared process-tree cancellation for owned native stages; retain incomplete result and logs.",
+          "logs": "Retain build/reopen submission receipts and runner stdout/stderr/metrics in the run directory.",
+          "verification": "Use distinct build and reopening processes, compare authored definition and native geometry, then recheck publication hashes. Independent analytic expectations are additional to the native verifier."
+        },
+        "data": [
+          {
+            "id": "editable-cad",
+            "direction": "output",
+            "kind": "cadScene",
+            "format": "FreeCAD FCStd",
+            "traits": {
+              "units": "mm",
+              "frame": "authored Cartesian",
+              "topology": "fixed assembly"
+            },
+            "losses": [],
+            "scope": "Preserve the editable native document within the supported declared feature subset."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "source",
+            "scope": "Inspect the exact authored dimensions, parts and output selection.",
+            "limits": "Source edits require the current draft revision."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect JSON verification records for geometry, component and solver values.",
+            "limits": "Bounded text snapshots are evidence; native validity comes from independent verification."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "fixed-assembly",
+          "reuse": "Change the declared dimensions or numeric options using JSON pointer edits; plan the new revision, use a fresh run directory and compare independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Participates in scheduled workflows with common expressions, analytic inputs and verified value outputs. Only explicitly accepted artifact kinds may cross file handoffs; native qualification remains separately scoped."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Inspect retained publications and receipts; no native node inspection hook is advertised."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Only serial execution is qualified; do not request multiple ranks."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The bounded assembly contract has no external inputs; unchanged verified authored assemblies can be reused by the scheduler."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No finite native time-list batching support in this route."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit ordinary JSON through the shared draft source; planning checks the current revision."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Use atomic JSON pointer patches through the shared draft model; node commands apply only to node-shaped routes."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Use bounded batch execution; no persistent native editing session is promised."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Inspect and reuse declared publications; no console native-save extension is advertised for this route."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "fixed-assembly-baseline",
+            "example": "fixed-assembly",
+            "edits": [],
+            "scope": "Fixed-joint primitive assembly and explicit part-thickness variant; no moving joints.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/jointCount",
+                "expected": 3
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/groundCount",
+                "expected": 1
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/parts/0/options/height",
+                "expected": 5
+              }
+            ]
+          },
+          {
+            "id": "fixed-assembly-variant",
+            "example": "fixed-assembly",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/dimensions/plateThickness",
+                "value": 7
+              }
+            ],
+            "scope": "Fixed-joint primitive assembly and explicit part-thickness variant; no moving joints.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/jointCount",
+                "expected": 3
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/groundCount",
+                "expected": 1
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/parts/0/options/height",
+                "expected": 7
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

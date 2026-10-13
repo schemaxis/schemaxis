@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.r/1"
+    },
+    "operation": {
+      "const": "linearRegression"
+    },
+    "predictors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[a-z][a-z0-9_]{0,31}$"
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "unit"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "response": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9_]{0,31}$"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "unit"
+      ]
+    },
+    "training": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number",
+          "minimum": -1000000000.0,
+          "maximum": 1000000000.0
+        },
+        "minItems": 2,
+        "maxItems": 9
+      },
+      "minItems": 4,
+      "maxItems": 512
+    },
+    "heldout": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number",
+          "minimum": -1000000000.0,
+          "maximum": 1000000000.0
+        },
+        "minItems": 2,
+        "maxItems": 9
+      },
+      "minItems": 1,
+      "maxItems": 512
+    },
+    "intercept": {
+      "type": "boolean",
+      "default": true
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "scope": {
+                "enum": [
+                  "training",
+                  "heldout"
+                ]
+              },
+              "metric": {
+                "enum": [
+                  "rmse",
+                  "maxAbsoluteError"
+                ]
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1e+18
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "scope",
+              "metric",
+              "maximum"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "scope": {
+                "enum": [
+                  "training",
+                  "heldout"
+                ]
+              },
+              "metric": {
+                "const": "prediction"
+              },
+              "sampleIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 511
+              },
+              "minimum": {
+                "type": "number",
+                "minimum": -1e+18,
+                "maximum": 1e+18
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": -1e+18,
+                "maximum": 1e+18
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "scope",
+              "metric",
+              "sampleIndex"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "minimum"
+                ]
+              },
+              {
+                "required": [
+                  "maximum"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 32
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "predictors",
+    "response",
+    "training"
+  ]
+}

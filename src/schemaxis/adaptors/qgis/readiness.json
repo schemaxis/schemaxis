@@ -1,0 +1,345 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.qgis/1": {
+      "guide": "docs/qgis.md",
+      "context": {
+        "purpose": "Run bounded 2D vector import, explicit CRS reprojection, metric buffering and rectangular clipping; publish an editable GeoPackage/project. Compute projected polygon centroids with retained attributes.",
+        "assumptions": "Configured Python with QGIS 3.x; one input layer with a known CRS. Buffering requires projected metre coordinates; geographic degrees are not metres.",
+        "constraints": "At most 10000 features and one million vertices; 2D subset only. GeoPackage feature IDs are regenerated. PNG preview is not a georeferenced raster. No automatic conversion from unrelated geometry kinds. Centroids require projected polygons and may lie outside their source geometry.",
+        "inspection": "Inspect feature counts, CRS, bounds, attributes and reopened geometry. The shared console can inspect retained text/image evidence; it does not offer a GIS map editor.",
+        "recovery": "INVALID_ARGUMENT requires a valid EPSG identifier and positive clip extent. Close/checkpoint GeoPackage sidecars before reading. Configure native QGIS and preserve build/reopen logs on failure."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/qgis-admission.json"
+        },
+        {
+          "id": "invalid-input",
+          "document": {
+            "version": "schemaxis.qgis/1",
+            "nodes": [
+              {
+                "id": "sites",
+                "filter": "readVector",
+                "options": {
+                  "file": "/replace-with-your-input/sites.geojson"
+                }
+              },
+              {
+                "id": "metric",
+                "filter": "reproject",
+                "inputs": {
+                  "input": "sites"
+                },
+                "options": {
+                  "crs": "EPSG:ABC"
+                }
+              }
+            ],
+            "output": "metric",
+            "preview": false
+          },
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": true
+        },
+        {
+          "id": "centroids",
+          "reference": "examples/schemaxis/qgis-centroids.json"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_media_geospatial.py",
+        "tests/unit/test_adaptor_migration.py"
+      ],
+      "acceptance": [
+        "tools/qualify_adaptor_migration.py",
+        "tools/qualify_media_geospatial.py",
+        "tools/qualify_qgis_centroids.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses.",
+          "references": [
+            "docs/qgis.md",
+            "tests/unit/test_media_geospatial.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://qgis.org/pyqgis/"
+        ],
+        "lifecycle": {
+          "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
+          "cancellation": "Shared owned-process cancellation retains partial evidence. Pre-launch cancellation is tested separately from shared in-flight cleanup.",
+          "logs": "Fresh run directory retains authored input, effective plan, native submissions/stdout/stderr, publications and verification evidence.",
+          "verification": "Verify built versus fresh-process reopened geometry/attributes and project, input/publication hashes and explicit independent case expectations for count and CRS."
+        },
+        "data": [
+          {
+            "id": "input-0",
+            "direction": "input",
+            "kind": "geospatialVector",
+            "format": "GeoJSON/GeoPackage",
+            "traits": {
+              "dimensions": 2,
+              "CRS": "required"
+            },
+            "losses": [
+              "Feature IDs are regenerated; one output layer; only 2D geometry."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-0",
+            "direction": "output",
+            "kind": "geospatialVector",
+            "format": "GeoPackage",
+            "traits": {
+              "dimensions": 2,
+              "CRS": "explicit EPSG"
+            },
+            "losses": [
+              "Feature IDs are regenerated; one output layer; only 2D geometry.",
+              "Centroid reduces each polygon to a point and loses its boundary and area."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "image",
+            "scope": "Inspect feature counts, CRS, bounds, attributes and reopened geometry. The shared console can inspect retained text/image evidence; it does not offer a GIS map editor.",
+            "limits": "At most 10000 features and one million vertices; 2D subset only. GeoPackage feature IDs are regenerated. PNG preview is not a georeferenced raster. No automatic conversion from unrelated geometry kinds."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect feature counts, CRS, bounds, attributes and reopened geometry. The shared console can inspect retained text/image evidence; it does not offer a GIS map editor.",
+            "limits": "At most 10000 features and one million vertices; 2D subset only. GeoPackage feature IDs are regenerated. PNG preview is not a georeferenced raster. No automatic conversion from unrelated geometry kinds."
+          }
+        ],
+        "authoring": {
+          "model": "nodes",
+          "example": "baseline",
+          "reuse": "Edit the example with source or JSON pointer patches; inspect declared units and losses, replan the new revision, and verify a fresh run against independent expectations."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This route does not implement native-inspection; use its documented batch/source workflow."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This route does not implement mpi; use its documented batch/source workflow."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Registered input fingerprint hook may decline reuse for unsupported input shapes; never assume hashes for unknown companions."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This route does not implement time-batches; use its documented batch/source workflow."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON draft, revision checking, recovery and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Atomic JSON pointer edits through the shared draft model."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This route does not implement live-editing; use its documented batch/source workflow."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This route does not implement native-save; use its documented batch/source workflow."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Only explicit declared readers/writers or table/vector transformations, with the data losses listed here; no automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Verify built versus fresh-process reopened geometry/attributes and project, input/publication hashes and explicit independent case expectations for count and CRS. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/count",
+                "expected": 2
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/crs",
+                "expected": "EPSG:3857"
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/qgis-sites.geojson"
+            }
+          },
+          {
+            "id": "variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "add",
+                "path": "/nodes/-",
+                "value": {
+                  "id": "west",
+                  "filter": "clip",
+                  "inputs": {
+                    "input": "metric"
+                  },
+                  "options": {
+                    "bounds": [
+                      -1,
+                      -1,
+                      1,
+                      1
+                    ]
+                  }
+                }
+              },
+              {
+                "op": "replace",
+                "path": "/output",
+                "value": "west"
+              }
+            ],
+            "scope": "Verify built versus fresh-process reopened geometry/attributes and project, input/publication hashes and explicit independent case expectations for count and CRS. Only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/count",
+                "expected": 1
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/crs",
+                "expected": "EPSG:3857"
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/qgis-sites.geojson"
+            }
+          },
+          {
+            "id": "centroid",
+            "example": "centroids",
+            "edits": [],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/qgis-parcel.geojson"
+            },
+            "scope": "A rectangle centroid is the midpoint of its x/y bounds. Verify exact WKB point coordinates, retained attributes and projected CRS after native save/reopen.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/features/0/geometry",
+                "expected": "010100000000000000000014400000000000002440"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/features/0/attributes",
+                "expected": {
+                  "name": "parcel"
+                }
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/crs",
+                "expected": "EPSG:3857"
+              }
+            ]
+          },
+          {
+            "id": "clipped-centroid",
+            "example": "centroids",
+            "edits": [
+              {
+                "op": "add",
+                "path": "/nodes/1",
+                "value": {
+                  "id": "west",
+                  "filter": "clip",
+                  "inputs": {
+                    "input": "parcel"
+                  },
+                  "options": {
+                    "bounds": [
+                      0,
+                      0,
+                      5,
+                      20
+                    ]
+                  }
+                }
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/2/inputs/input",
+                "value": "west"
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/qgis-parcel.geojson"
+            },
+            "scope": "A rectangle centroid is the midpoint of its x/y bounds. Verify exact WKB point coordinates, retained attributes and projected CRS after native save/reopen.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/features/0/geometry",
+                "expected": "010100000000000000000004400000000000002440"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/features/0/attributes",
+                "expected": {
+                  "name": "parcel"
+                }
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/crs",
+                "expected": "EPSG:3857"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

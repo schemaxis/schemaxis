@@ -1,0 +1,308 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "encodeFrames": {
+      "status": "reviewed",
+      "explanation": "Encodes an explicit list of PNG images into one silent, constant-frame-rate video (video.mp4 for H.264 or video.mkv for FFV1); each list entry becomes exactly one frame lasting 1/fps seconds. A fresh FFmpeg decode is compared pixel-by-pixel with the source images. Choose it for rendered image sequences (for example ParaView, Blender or Inkscape frames); use encodeSheet for an Aseprite sprite sheet with per-frame durations.",
+      "sources": [
+        "src/schemaxis/adaptors/ffmpeg/capabilities.py",
+        "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75",
+        "src/schemaxis/adaptors/ffmpeg/adaptor.py:196-249",
+        "docs/media-workflows.md#ffmpeg-publication"
+      ],
+      "pitfalls": [
+        "Files are not sorted; list them in playback order. Repeating a path repeats that frame.",
+        "All frames must be 8-bit RGB or RGBA, non-interlaced PNGs of identical size; palette, greyscale and 16-bit PNGs are rejected.",
+        "H.264 needs even width and height; use FFV1 or re-render at an even size.",
+        "Transparent areas are composited onto black, and no audio track is written."
+      ]
+    },
+    "encodeSheet": {
+      "status": "reviewed",
+      "explanation": "Cuts frame rectangles out of one sprite-sheet PNG, using a schemaxis.aseprite.sheet/1 JSON file for their positions and millisecond durations, and encodes them in metadata order into one silent constant-frame-rate video. Each rectangle is repeated for durationMS x fps / 1000 video frames. Choose it for Aseprite animation output; use encodeFrames for separate image files.",
+      "sources": [
+        "src/schemaxis/adaptors/ffmpeg/capabilities.py",
+        "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75",
+        "src/schemaxis/adaptors/ffmpeg/adaptor.py:196-249",
+        "docs/media-workflows.md#ffmpeg-publication"
+      ],
+      "pitfalls": [
+        "Every frame duration must be a whole number of video frames: at 25 fps durations must be multiples of 40 ms, otherwise UNSUPPORTED_TIMING.",
+        "Metadata order is playback order; tags in the metadata do not select or reorder frames.",
+        "All rectangles must have the same size, and the sheet's pixel size must match the metadata width and height."
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.ffmpeg/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "One FFmpeg video publication: a single node that encodes PNG frames or a sprite sheet into a silent video at a constant frame rate, plus optional deliverable requirements. Limits: 600 frames, 4096 pixels per side and 192 MiB of decoded pixels.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis document; it must be \"schemaxis.ffmpeg/1\". It is not the FFmpeg release.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ],
+          "examples": [
+            "schemaxis.ffmpeg/1"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reference",
+          "explanation": "Declare exactly one video publication node, choosing an ordered PNG list or a timed sprite sheet.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reference",
+          "explanation": "The single publication node describes the source images, frame rate, codec and encoder resources.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Encode an ordered list of equally sized PNG frames; each list entry becomes one video frame. Choose this for rendered image sequences, and the sprite-sheet alternative for Aseprite sheets with frame durations.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/id": {
+          "status": "reviewed",
+          "explanation": "Name of this video publication, used in logs and when other workflow steps refer to its result. Start with a letter; then use letters, digits, underscores or hyphens.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75",
+            "src/schemaxis/schema.py:12"
+          ],
+          "examples": [
+            "video"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/filter": {
+          "status": "reviewed",
+          "explanation": "encodeFrames: encode a list of separate PNG files, one video frame per entry. Switch to encodeSheet for a sprite sheet with frame durations.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ],
+          "examples": [
+            "encodeFrames"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options": {
+          "status": "reviewed",
+          "explanation": "Frame list and encoding settings. files (required) sets the content and order; fps, codec and threads keep their defaults (25, h264, 1) when omitted. The codec choice decides whether the video is lossless.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/fps": {
+          "status": "reviewed",
+          "explanation": "Constant video frame rate, an integer from 1 to 120 frames per second. Each listed file is shown for exactly 1/fps seconds, so the video lasts (number of files) / fps seconds.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ],
+          "units": "Frames per second",
+          "defaultMeaning": "Schemaxis default: 25.",
+          "examples": [
+            25
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/codec": {
+          "status": "reference",
+          "explanation": "Choose H.264 MP4 for compact lossy YUV420 video or FFV1 Matroska for byte-exact RGB after alpha compositing. Default H.264 requires even dimensions; every frame must remain within the 16-level mean RGB error bound.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/threads": {
+          "status": "reference",
+          "explanation": "Native encoder/decoder thread count, 1 to 16; default 1. Workflow allocation must match this setting; it does not enable MPI.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/files": {
+          "status": "reviewed",
+          "explanation": "Absolute paths of 1 to 600 PNG images in playback order, or workflow references to image artifacts. Repeating a path repeats that frame; no filename sorting or wildcard expansion is done.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ],
+          "pitfalls": [
+            "Every image must be an 8-bit RGB or RGBA, non-interlaced PNG of the same size (each file at most 32 MiB).",
+            "Relative paths are rejected during planning."
+          ],
+          "examples": [
+            [
+              "/data/frames/frame-0001.png",
+              "/data/frames/frame-0002.png"
+            ]
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/options/properties/files/items": {
+          "status": "reference",
+          "explanation": "An absolute PNG path in playback order. The retained source bytes allow offline verification after the original input disappears.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Encode an animation stored as one sprite-sheet PNG plus its schemaxis.aseprite.sheet/1 metadata: rectangles are extracted in metadata order and each is held for its declared duration. Choose this for Aseprite output; use the frame-list alternative for separate PNG files.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/id": {
+          "status": "reviewed",
+          "explanation": "Name of this video publication, used in logs and when other workflow steps refer to its result. Start with a letter; then use letters, digits, underscores or hyphens.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75",
+            "src/schemaxis/schema.py:12"
+          ],
+          "examples": [
+            "animation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/filter": {
+          "status": "reviewed",
+          "explanation": "encodeSheet: encode rectangles from one sprite-sheet PNG using its timing metadata. Switch to encodeFrames for a list of separate PNG files.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ],
+          "examples": [
+            "encodeSheet"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options": {
+          "status": "reviewed",
+          "explanation": "Sprite-sheet source and encoding settings. file and metadata are required; fps, codec and threads keep their defaults (25, h264, 1) when omitted. fps must divide every frame duration exactly.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/fps": {
+          "status": "reference",
+          "explanation": "Constant video frame rate in frames per second, an integer from 1 to 120; default 25. A sheet duration must be an exact multiple of one video frame period.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/codec": {
+          "status": "reference",
+          "explanation": "Choose H.264 MP4 for compact lossy YUV420 video or FFV1 Matroska for byte-exact RGB after alpha compositing. Default H.264 requires even dimensions; every frame must remain within the 16-level mean RGB error bound.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/threads": {
+          "status": "reference",
+          "explanation": "Native encoder/decoder thread count, 1 to 16; default 1. Workflow allocation must match this setting; it does not enable MPI.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the sprite-sheet PNG (8-bit RGB or RGBA, non-interlaced, at most 32 MiB). Its pixel width and height must equal the width and height recorded in the metadata file.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ],
+          "examples": [
+            "/data/sprites/sheet.png"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/options/properties/metadata": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the schemaxis.aseprite.sheet/1 JSON written by the Aseprite adaptor, listing 1 to 600 frame rectangles (x, y, width, height in pixels) and durations in milliseconds. Frame order is playback order; tags do not select or reorder frames.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication",
+            "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
+          ],
+          "pitfalls": [
+            "Each durationMS x fps must be a multiple of 1000 (for example 40 ms steps at 25 fps); otherwise UNSUPPORTED_TIMING.",
+            "All rectangles must have the same size and lie inside the sheet."
+          ],
+          "examples": [
+            "/data/sprites/sheet.json"
+          ]
+        },
+        "/properties/deliverable": {
+          "status": "reference",
+          "explanation": "Declare at least one media requirement. Verification measures the result and rejects unmet requirements with an explained corrective action; no automatic scaling or encoder search is performed.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/deliverable/properties/width": {
+          "status": "reference",
+          "explanation": "Required output width in pixels, 1 to 4096. Sources must already have this width; this requirement does not resize them.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/deliverable/properties/height": {
+          "status": "reference",
+          "explanation": "Required output height in pixels, 1 to 4096. Sources must already have this height; this requirement does not resize them.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/deliverable/properties/frames": {
+          "status": "reference",
+          "explanation": "Required exact number of encoded frames, 1 to 600. Sprite durations can repeat source rectangles over several video frames.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/deliverable/properties/durationSeconds": {
+          "status": "reference",
+          "explanation": "Target native video duration in seconds, from 1/120 to 600. Compare the observed container duration with this target using the absolute tolerance.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/deliverable/properties/durationToleranceSeconds": {
+          "status": "reference",
+          "explanation": "Absolute allowed duration difference in seconds, 0 to 1; default 0.002. Supply a duration target when specifying a tolerance. Container time precision may prevent a zero-tolerance target.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/deliverable/properties/maxBytes": {
+          "status": "reference",
+          "explanation": "Maximum encoded file size in bytes, 1 to 1073741824. A correct video exceeding the budget is retained with an unmet assessment; choose a different codec or reduce source dimensions/frame count.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/deliverable/properties/maxMeanRGBError": {
+          "status": "reference",
+          "explanation": "Maximum per-frame mean absolute RGB byte error, 0 to 16. Zero requires exact composited RGB; FFV1 always requires exactness independently. This is a pixel-error budget, not perceptual quality certification.",
+          "sources": [
+            "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        }
+      }
+    }
+  }
+}

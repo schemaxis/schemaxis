@@ -1,0 +1,168 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "sequenceContract": {
+      "status": "reviewed",
+      "explanation": "Checks, without changing anything, that the sequence currently open in Adobe Premiere Pro contains exactly the declared clips: same project path, sequence name, frame size, frame rate, source files and in/out frames, in order. A person runs the supplied read-only UXP panel inside Premiere; the result is a JSON sequenceObservation. Choose it to confirm that a hand-edited Premiere timeline still matches an intended cut; it does not edit, render or export.",
+      "sources": [
+        "schemaxis.adaptors.premiere.capabilities:catalogue",
+        "src/schemaxis/adaptors/premiere/adaptor.py:22-71",
+        "docs/premiere.md"
+      ],
+      "pitfalls": [
+        "Experimental: no run against an installed Premiere has been recorded; treat results as unqualified.",
+        "The panel reads the sequence twice and compares the readings, but this is not a locked snapshot; keep Premiere idle during inspection.",
+        "Only structure is checked; source contents, effects, colour, audio and rendered pixels are not.",
+        "Each run needs a person to pick the job folder in the panel; workflow scheduling and automatic reuse are not available."
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.premiere/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A read-only expectation for one Premiere Pro sequence: the open project, sequence name, frame size and rate, and the ordered clips on its single video track. Running it compares these with what Premiere reports; nothing in the project is changed. Native execution has not yet been qualified.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis document; it must be \"schemaxis.premiere/1\". It is independent of the Premiere release (26.5.0 or later is required at run time).",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ],
+          "examples": [
+            "schemaxis.premiere/1"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reference",
+          "explanation": "Observe the active sequence through the supplied read-only UXP panel.",
+          "sources": [
+            "schemaxis.adaptors.premiere.adaptor:schema"
+          ]
+        },
+        "/properties/projectPath": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the saved project that is open in Premiere, exactly as Premiere reports it (a Windows drive path or a macOS path). Schemaxis compares the text only and never reads the project file.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ],
+          "examples": [
+            "C:\\Projects\\colours.prproj"
+          ]
+        },
+        "/properties/sequenceName": {
+          "status": "reference",
+          "explanation": "Exact name of the active sequence to inspect; no sequence is selected or modified.",
+          "sources": [
+            "schemaxis.adaptors.premiere.adaptor:schema"
+          ]
+        },
+        "/properties/fps": {
+          "status": "reviewed",
+          "explanation": "Expected sequence frame rate as an integer: 24, 25, 30, 50 or 60 frames per second. It sets the frame length used to convert startFrame and frameCount into Premiere time ticks.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ],
+          "units": "Frames per second",
+          "defaultMeaning": "Schemaxis default: 25.",
+          "pitfalls": [
+            "Fractional and drop-frame rates such as 23.976 or 29.97 are not supported; the run fails with INVALID_RATE or a mismatch."
+          ],
+          "examples": [
+            25
+          ]
+        },
+        "/properties/width": {
+          "status": "reviewed",
+          "explanation": "Expected sequence frame width in pixels, 2 to 8192, compared with the sequence settings; rendered output is not inspected.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ],
+          "units": "Pixels",
+          "defaultMeaning": "Schemaxis default: 1920.",
+          "examples": [
+            1920
+          ]
+        },
+        "/properties/height": {
+          "status": "reviewed",
+          "explanation": "Expected sequence frame height in pixels, 2 to 8192, compared with the sequence settings; rendered output is not inspected.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ],
+          "units": "Pixels",
+          "defaultMeaning": "Schemaxis default: 1080.",
+          "examples": [
+            1080
+          ]
+        },
+        "/properties/clips": {
+          "status": "reviewed",
+          "explanation": "Ordered list of 1 to 128 clips expected back-to-back from the start of the sequence on its only unmuted video track, with no gaps. The total length of all clips must not exceed 600 frames.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ],
+          "pitfalls": [
+            "The sequence must have exactly one video track, no captions or transitions, and at most 8 empty audio tracks; nested, multicam, proxy, disabled or reversed clips are rejected."
+          ]
+        },
+        "/properties/clips/items": {
+          "status": "reviewed",
+          "explanation": "One expected clip: a source file and a frame range taken from it. Its position on the timeline follows from the lengths of the clips before it.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ],
+          "examples": [
+            {
+              "sourcePath": "C:\\Media\\colours.mp4",
+              "startFrame": 3,
+              "frameCount": 3
+            }
+          ]
+        },
+        "/properties/clips/items/properties/sourcePath": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the clip's media file exactly as Premiere reports it. Only the path text is compared; the media content is not read.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ],
+          "examples": [
+            "C:\\Media\\colours.mp4"
+          ]
+        },
+        "/properties/clips/items/properties/startFrame": {
+          "status": "reference",
+          "explanation": "Zero-based source frame at the sequence timebase; default 0.",
+          "sources": [
+            "schemaxis.adaptors.premiere.adaptor:schema"
+          ]
+        },
+        "/properties/clips/items/properties/frameCount": {
+          "status": "reviewed",
+          "explanation": "Clip length in sequence frames, 1 to 600; the out point is startFrame + frameCount (exclusive). The sum over all clips must not exceed 600.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+          ],
+          "units": "Frames",
+          "examples": [
+            3
+          ]
+        }
+      }
+    }
+  }
+}

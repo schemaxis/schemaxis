@@ -1,0 +1,88 @@
+{
+  "id": "cantera",
+  "version": "schemaxis.cantera/1",
+  "adaptor": "schemaxis.adaptors.cantera.adaptor",
+  "runtimeFamily": "3.2.x",
+  "execution": "Isolated Cantera ideal-gas thermodynamic, TP and HP equilibrium sweeps with independently verified numeric CSV",
+  "executables": [],
+  "keywords": [
+    "chemistry",
+    "thermodynamics",
+    "equilibrium",
+    "hydrogen",
+    "ideal gas",
+    "CSV"
+  ],
+  "capabilities": "schemaxis.adaptors.cantera.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.cantera/1",
+    "nodes": [
+      {
+        "id": "gas",
+        "filter": "gas",
+        "options": {
+          "pressure": 101325,
+          "basis": "mole",
+          "composition": [
+            {
+              "species": "AR",
+              "amount": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": "table",
+        "filter": "thermoSweep",
+        "inputs": {
+          "input": "gas"
+        },
+        "options": {
+          "temperatures": [
+            300,
+            600,
+            900
+          ]
+        }
+      }
+    ],
+    "output": "table"
+  },
+  "routes": {
+    "schemaxis.cantera/1": {
+      "module": "schemaxis.adaptors.cantera.adaptor",
+      "schema": "schemaxis.adaptors.cantera.adaptor:schema",
+      "graphEditing": true,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "cantera",
+      "acceptedArtifacts": [],
+      "scheduled": true,
+      "hooks": {
+        "reusableInputs": "schemaxis.adaptors.cantera.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.cantera.adaptor:resources"
+      }
+    }
+  },
+  "consoleOutput": true,
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--cantera",
+      "dest": "cantera",
+      "help": "Absolute Python interpreter configured with Cantera 3.2.x"
+    }
+  ]
+}

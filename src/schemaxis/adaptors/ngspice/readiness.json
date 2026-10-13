@@ -1,0 +1,1074 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.ngspice/1": {
+      "guide": "docs/ngspice.md",
+      "context": {
+        "purpose": "Simulate declared ideal linear circuits and publish verified numeric tables: DC resistor/capacitor sweeps, AC resistor/capacitor/inductor frequency response and one first-order RC step response. Optional named finite-sample voltage or AC gain acceptance determines whether the verified circuit meets the intended performance.",
+        "assumptions": "Qualified ngspice-47 executable in an isolated process with startup files disabled. SI volts, ohms, farads, henries, Hz and seconds. One ideal voltage source to ground node 0. AC phasors use exp(+j*omega*t).",
+        "constraints": "At most sixteen non-ground nodes, 64 resistors, 64 capacitors, 64 AC-only uncoupled inductors and 512 samples. Every node needs a resistor/inductor path to ground or the driven node. No ideal-inductor loops or inductive shorts across the source. No arbitrary netlists, models, semiconductors, mutual coupling, imported KiCad projects, inductor DC sweeps or general transient networks. rcStep is exactly series R and shunt C, initially uncharged, over 0.01\u201320 RC time constants. AC requires at least three points and at most fifteen selected probes within the shared 64-column table limit. Every requested frequency must have a nonsingular, sufficiently conditioned nodal system. Requirements inspect declared samples only; no continuous operating-envelope or all-component-tolerance guarantee. Phase acceptance is unsupported.",
+        "inspection": "Inspect results.csv for selected voltages and AC real/imaginary/magnitude/phase columns. circuit-summary.json retains topology, units, first/last sample and independent maximum voltage discrepancy. circuit.cir is the generated inspectable netlist. Named requirements retain minimum/maximum native observations, signed bound margins and worst sample coordinates.",
+        "recovery": "FLOATING_CIRCUIT needs a resistor/inductor reference path. INVALID_SWEEP needs stop > start. ILL_CONDITIONED_CIRCUIT needs damping or bounded component ratios. UNSUPPORTED_CIRCUIT requires the first-order RC topology for rcStep or removal of an ideal-inductor/source loop for AC. Configure ngspice-47 for INTERPRETER_NOT_FOUND; retain native logs and correct the input before a fresh attempt. INVALID_REQUIREMENT needs a supported quantity/probe and an ordered sample-containing window. PERFORMANCE_NOT_MET needs review of the worst condition, circuit/excitation or authored bounds, then a fresh attempt; this is distinct from native/physics failure."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/ngspice-minimal.json"
+        },
+        {
+          "id": "ac",
+          "reference": "examples/schemaxis/ngspice-rc-frequency.json"
+        },
+        {
+          "id": "step",
+          "reference": "examples/schemaxis/ngspice-rc-step.json"
+        },
+        {
+          "id": "floating",
+          "document": {
+            "version": "schemaxis.ngspice/1",
+            "operation": "dcSweep",
+            "circuit": {
+              "source": "in",
+              "resistors": [
+                {
+                  "name": "r1",
+                  "a": "in",
+                  "b": "out",
+                  "resistance": 1000
+                },
+                {
+                  "name": "r2",
+                  "a": "out",
+                  "b": "0",
+                  "resistance": 2000
+                },
+                {
+                  "name": "floating",
+                  "a": "island",
+                  "b": "remote",
+                  "resistance": 1000
+                }
+              ],
+              "capacitors": [],
+              "probes": [
+                "out"
+              ]
+            },
+            "start": 0,
+            "stop": 5,
+            "points": 6
+          },
+          "expect": "invalid",
+          "fault": "FLOATING_CIRCUIT",
+          "schemaValid": true
+        },
+        {
+          "id": "bridge",
+          "reference": "examples/schemaxis/ngspice-bridge.json"
+        },
+        {
+          "id": "rc-ladder",
+          "reference": "examples/schemaxis/ngspice-rc-ladder.json"
+        },
+        {
+          "id": "rl-frequency",
+          "reference": "examples/schemaxis/ngspice-rl-frequency.json"
+        },
+        {
+          "id": "rlc-resonance",
+          "reference": "examples/schemaxis/ngspice-rlc-resonance.json"
+        },
+        {
+          "id": "rlc-parallel",
+          "reference": "examples/schemaxis/ngspice-rlc-parallel.json"
+        },
+        {
+          "id": "inductive-source-loop",
+          "document": {
+            "version": "schemaxis.ngspice/1",
+            "operation": "acSweep",
+            "circuit": {
+              "source": "in",
+              "resistors": [
+                {
+                  "name": "load",
+                  "a": "out",
+                  "b": "0",
+                  "resistance": 1000
+                }
+              ],
+              "inductors": [
+                {
+                  "name": "coil",
+                  "a": "in",
+                  "b": "out",
+                  "inductance": 1
+                },
+                {
+                  "name": "short",
+                  "a": "out",
+                  "b": "0",
+                  "inductance": 1
+                }
+              ],
+              "capacitors": [],
+              "probes": [
+                "out"
+              ]
+            },
+            "start": 159.15494309189532,
+            "stop": 318.30988618379064,
+            "points": 5,
+            "amplitude": 1
+          },
+          "expect": "invalid",
+          "fault": "UNSUPPORTED_CIRCUIT",
+          "schemaValid": true
+        },
+        {
+          "id": "undamped-interior-resonance",
+          "document": {
+            "version": "schemaxis.ngspice/1",
+            "operation": "acSweep",
+            "circuit": {
+              "source": "in",
+              "resistors": [
+                {
+                  "name": "load",
+                  "a": "in",
+                  "b": "0",
+                  "resistance": 1000
+                }
+              ],
+              "inductors": [
+                {
+                  "name": "coil",
+                  "a": "out",
+                  "b": "0",
+                  "inductance": 1
+                }
+              ],
+              "capacitors": [
+                {
+                  "name": "cap",
+                  "a": "out",
+                  "b": "0",
+                  "capacitance": 1e-06
+                }
+              ],
+              "probes": [
+                "out"
+              ]
+            },
+            "start": 79.57747154594766,
+            "stop": 238.732414637843,
+            "points": 5,
+            "amplitude": 1
+          },
+          "expect": "invalid",
+          "fault": "ILL_CONDITIONED_CIRCUIT",
+          "schemaValid": true
+        },
+        {
+          "id": "dc-inductors-unsupported",
+          "document": {
+            "version": "schemaxis.ngspice/1",
+            "operation": "dcSweep",
+            "circuit": {
+              "source": "in",
+              "resistors": [
+                {
+                  "name": "r1",
+                  "a": "in",
+                  "b": "out",
+                  "resistance": 1000
+                },
+                {
+                  "name": "r2",
+                  "a": "out",
+                  "b": "0",
+                  "resistance": 2000
+                }
+              ],
+              "capacitors": [],
+              "probes": [
+                "out"
+              ],
+              "inductors": []
+            },
+            "start": 0,
+            "stop": 5,
+            "points": 6
+          },
+          "expect": "invalid",
+          "fault": "UNKNOWN_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "dc-requirements",
+          "reference": "examples/schemaxis/ngspice-dc-requirements.json"
+        },
+        {
+          "id": "ac-requirements",
+          "reference": "examples/schemaxis/ngspice-ac-requirements.json"
+        },
+        {
+          "id": "step-requirements",
+          "reference": "examples/schemaxis/ngspice-step-requirements.json"
+        },
+        {
+          "id": "requirement-empty-window",
+          "document": {
+            "version": "schemaxis.ngspice/1",
+            "operation": "dcSweep",
+            "circuit": {
+              "source": "in",
+              "resistors": [
+                {
+                  "name": "r1",
+                  "a": "in",
+                  "b": "out",
+                  "resistance": 1000
+                },
+                {
+                  "name": "r2",
+                  "a": "out",
+                  "b": "0",
+                  "resistance": 2000
+                }
+              ],
+              "capacitors": [],
+              "probes": [
+                "out"
+              ]
+            },
+            "start": 0,
+            "stop": 5,
+            "points": 6,
+            "requirements": [
+              {
+                "name": "divider_voltage",
+                "probe": "out",
+                "quantity": "voltage_V",
+                "axis": "sourceVoltage_V",
+                "window": [
+                  0.1,
+                  0.2
+                ],
+                "minimum": 0,
+                "maximum": 3.4
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "INVALID_REQUIREMENT",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_ngspice_admission.py",
+        "tests/unit/test_ngspice_performance.py"
+      ],
+      "acceptance": [
+        "tools/qualify_ngspice.py",
+        "tools/qualify_ngspice_performance.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Numeric circuit results into Calc with preserved column names and independent workbook readback; keep summary/netlist for physical meaning.",
+          "references": [
+            "docs/ngspice.md",
+            "tools/qualify_ngspice.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation. Explicit capacitance variants can be evaluated with the same bounds; each visit is independently measured and finite only.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py",
+            "examples/schemaxis/ngspice-capacitance-study.json"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://ngspice.sourceforge.io/ngspice-control-language-tutorial.html",
+          "https://ngspice.sourceforge.io/docs.html",
+          "https://ngspice.sourceforge.io/download.html"
+        ],
+        "lifecycle": {
+          "timeout": "One deadline covers runtime identification, simulation and fresh-process raw-data reopen. Shared kit watchdog independently bounds the entire attempt. A final deadline check also bounds CPU verification before success publication.",
+          "cancellation": "Shared owned-process cancellation and final cancellation check before publication; no resident simulator.",
+          "logs": "Retain authored/effective plans, deterministic netlists, runtime/version logs, simulation and reopen stdout/stderr, ASCII raw data, native/reopened tables, publications and failure results.",
+          "verification": "Independent partial-pivot complex nodal equations check all native node voltages for DC/AC. First-order RC voltage is compared to V*(1-exp(-t/RC)). Exact sample coordinates, publication conversions and a separate ASCII raw parser are checked; a fresh ngspice process reloads the raw data. Digest and authored/plan checks run offline. Inductive AC uses 1/(j*omega*L) stamps, checks every requested frequency before native launch and preserves uncancelled admittance scales to reject undamped resonant cancellation. Closed-form RL and series/parallel RLC transfer functions supply independent fixture expectations. Performance is recomputed from checked native voltages and authored requirements, so refreshing ordinary summary hashes cannot turn an unmet bound into success."
+        },
+        "data": [
+          {
+            "id": "table",
+            "direction": "output",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "units": "SI with voltage/frequency/time columns; phase in degrees",
+              "samples": "2\u2013512"
+            },
+            "losses": [
+              "Selected node voltages only; no device currents or nonlinear model data.",
+              "CSV alone omits circuit topology; retain netlist and summary."
+            ],
+            "scope": "DC or first-order RC voltage tables; AC real/imaginary/magnitude/principal phase at linearly spaced frequencies."
+          },
+          {
+            "id": "netlist",
+            "direction": "output",
+            "kind": "text",
+            "format": "SPICE netlist",
+            "traits": {
+              "runtime": "ngspice-47",
+              "generated": true
+            },
+            "losses": [
+              "No schematic layout, board geometry, vendor libraries or KiCad project authoring."
+            ],
+            "scope": "Deterministically generated resistor/capacitor/AC-inductor circuit plus bounded control commands; never an authored arbitrary script."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "physicalUnits": "V, ohm, F, H, Hz, s"
+            },
+            "losses": [
+              "Ideal linear circuit and explicit sampled component variants only; no continuous or all-tolerance proof and no hardware validation."
+            ],
+            "scope": "Topology, selected outputs, measured discrepancy, RC time constant and explicit assumptions. Optional named sampled requirements, measured extrema, worst coordinates, signed margins and next actions."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "Inspect CSV scales and selected voltage/phasor components.",
+            "limits": "At most 512 numeric samples; no native schematic viewer."
+          },
+          {
+            "panel": "text",
+            "scope": "Review topology/netlist, first/last sample, independent discrepancies and physical assumptions. Review each performance margin and worst sampled condition.",
+            "limits": "Generated netlist and bounded JSON; no arbitrary source execution."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the shared JSON source or property pointers for component values, source node, probes and sweep parameters; plan a fresh revision, execute, inspect and verify. Source/property/terminal patch reuse shares the same durable draft."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Numeric circuit results into Calc with preserved column names and independent workbook readback; keep summary/netlist for physical meaning."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This bounded batch circuit route does not implement native-inspection."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This bounded batch circuit route does not implement mpi."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "All authored circuit inputs are inline; verified completed attempts can be reused."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This bounded batch circuit route does not implement time-batches."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared durable document JSON editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON pointer edits for circuit components and analysis parameters."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This bounded batch circuit route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This bounded batch circuit route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This bounded batch circuit route does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "divider",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Resistive divider: Vout=Vsource*2000/(1000+2000); expected endpoint 10/3 V.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  0,
+                  0
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  5,
+                  3.3333333333333335
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "divider-variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/circuit/resistors/0/resistance",
+                "value": 2000
+              }
+            ],
+            "scope": "Equal resistors give Vout=Vsource/2, independent of the native solver.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  5,
+                  2.5
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rc-cutoff",
+            "example": "ac",
+            "edits": [],
+            "scope": "At omega*RC=1, H=1/(1+j)=(1-j)/2. At twice cutoff H=(1-2j)/5; analytic magnitude and phase.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  159.15494309189532,
+                  0.5,
+                  -0.5,
+                  0.7071067811865476,
+                  -45
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  318.30988618379064,
+                  0.2,
+                  -0.4,
+                  0.4472135954999579,
+                  -63.43494882292201
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rc-capacitance-variant",
+            "example": "ac",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/circuit/capacitors/0/capacitance",
+                "value": 2e-06
+              }
+            ],
+            "scope": "Doubling C doubles omega*RC at fixed frequency: H=1/(1+2j).",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  159.15494309189532,
+                  0.2,
+                  -0.4,
+                  0.4472135954999579,
+                  -63.43494882292201
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rc-step",
+            "example": "step",
+            "edits": [],
+            "scope": "Initially uncharged first-order capacitor: Vout(t)=5*(1-exp(-t/0.001)); five time constants at the endpoint.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/timeConstant_s",
+                "expected": 0.001,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  0,
+                  0
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  0.005,
+                  4.966310265004573
+                ],
+                "absolute": 1e-05,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rc-step-variant",
+            "example": "step",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/circuit/resistors/0/resistance",
+                "value": 2000
+              },
+              {
+                "op": "replace",
+                "path": "/stop",
+                "value": 0.01
+              }
+            ],
+            "scope": "Doubling R doubles RC and duration needed to reach the same five-time-constant endpoint.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/timeConstant_s",
+                "expected": 0.002,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  0.01,
+                  4.966310265004573
+                ],
+                "absolute": 1e-05,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "bridge",
+            "example": "bridge",
+            "edits": [],
+            "scope": "Balanced bridge of equal resistors has Vleft=Vright=Vsource/2 and zero bridge voltage.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  5,
+                  2.5,
+                  2.5
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rc-ladder",
+            "example": "rc-ladder",
+            "edits": [],
+            "scope": "Two equal RC stages have Hout=1/(1+3sRC+(sRC)^2). At omega*RC=1, Vout=-j/3 and Vmid=(1-j)/3.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  159.15494309189532,
+                  0.3333333333333333,
+                  -0.3333333333333333,
+                  0.47140452079103173,
+                  -45,
+                  0,
+                  -0.3333333333333333,
+                  0.3333333333333333,
+                  -90
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "negative-zero-endpoint",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/start",
+                "value": -5
+              },
+              {
+                "op": "replace",
+                "path": "/stop",
+                "value": 0
+              },
+              {
+                "op": "replace",
+                "path": "/points",
+                "value": 101
+              }
+            ],
+            "scope": "The signed divider remains linear from -5 V to zero. Literal endpoints check polarity and zero crossing; sample-coordinate roundoff is scaled to the full interval, while independent voltage tolerances are unchanged.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  -5,
+                  -3.3333333333333335
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  0,
+                  0
+                ],
+                "absolute": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "rl-cutoff",
+            "example": "rl-frequency",
+            "edits": [],
+            "scope": "Series L=1 H, shunt R=1000 ohm: H=1/(1+j*x). At x=1 and 2 the voltages are (1-j)/2 and (1-2j)/5.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  159.15494309189532,
+                  0.5,
+                  -0.5,
+                  0.7071067811865476,
+                  -45.0
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  318.30988618379064,
+                  0.2,
+                  -0.4,
+                  0.447213595499958,
+                  -63.43494882292201
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rl-polarity",
+            "example": "rl-frequency",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/amplitude",
+                "value": -2
+              },
+              {
+                "op": "replace",
+                "path": "/circuit/inductors/0/a",
+                "value": "out"
+              },
+              {
+                "op": "replace",
+                "path": "/circuit/inductors/0/b",
+                "value": "in"
+              }
+            ],
+            "scope": "Reversing an uncoupled coil preserves response; -2 V excitation multiplies the phasors by -2, giving -1+j at cutoff.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  159.15494309189532,
+                  -1.0,
+                  1.0,
+                  1.4142135623730951,
+                  135.0
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  318.30988618379064,
+                  -0.4,
+                  0.8,
+                  0.894427190999916,
+                  116.56505117707799
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rlc-resonance",
+            "example": "rlc-resonance",
+            "edits": [],
+            "scope": "Series R=1000 ohm, L=1 H, C=1 uF with capacitor output: H=1/(1-x^2+j*x), x=omega/1000. At x=1 output=-j; at x=2 output=(-3-2j)/13.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  159.15494309189532,
+                  -0.0,
+                  -1.0,
+                  1.0,
+                  -90.0
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  318.30988618379064,
+                  -0.23076923076923078,
+                  -0.15384615384615385,
+                  0.2773500981126146,
+                  -146.30993247402023
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rlc-inductance-variant",
+            "example": "rlc-resonance",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/circuit/inductors/0/inductance",
+                "value": 2
+              }
+            ],
+            "scope": "Doubling L changes H to 1/(1-2*x^2+j*x): at original resonance (-1-j)/2, and at x=2 (-7-2j)/53.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  159.15494309189532,
+                  -0.5,
+                  -0.5,
+                  0.7071067811865476,
+                  -135.0
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  318.30988618379064,
+                  -0.1320754716981132,
+                  -0.03773584905660377,
+                  0.13736056394868904,
+                  -164.05460409907712
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rlc-split-coil",
+            "example": "rlc-resonance",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/circuit/inductors",
+                "value": [
+                  {
+                    "name": "first",
+                    "a": "mid",
+                    "b": "tap",
+                    "inductance": 0.25
+                  },
+                  {
+                    "name": "second",
+                    "a": "tap",
+                    "b": "out",
+                    "inductance": 0.75
+                  }
+                ]
+              }
+            ],
+            "scope": "Series uncoupled 0.25 H and 0.75 H sum to 1 H. The additional internal node does not change H=1/(1-x^2+j*x).",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  159.15494309189532,
+                  -0.0,
+                  -1.0,
+                  1.0,
+                  -90.0
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  318.30988618379064,
+                  -0.23076923076923078,
+                  -0.15384615384615385,
+                  0.2773500981126146,
+                  -146.30993247402023
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rlc-parallel",
+            "example": "rlc-parallel",
+            "edits": [],
+            "scope": "Resistor-fed parallel LC: H=1/(1+j*(x-1/x)). At x=0.5 output=(4+6j)/13; at x=1.5 output=(36-30j)/61. A unit-gain resonance lies at the interior sample.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow",
+                "expected": [
+                  79.57747154594766,
+                  0.3076923076923077,
+                  0.46153846153846156,
+                  0.5547001962252291,
+                  56.309932474020215
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow",
+                "expected": [
+                  238.732414637843,
+                  0.5901639344262295,
+                  -0.4918032786885246,
+                  0.7682212795973759,
+                  -39.80557109226519
+                ],
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "dc-requirements",
+            "example": "dc-requirements",
+            "edits": [],
+            "scope": "Divider requirement: literal endpoint 10/3 V and all six sampled points satisfy [0,3.4] V.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/performance/requirements/0/maximumObserved/value",
+                "expected": 3.3333333333333335,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/performance/requirements/0/maximumObserved/coordinate",
+                "expected": 5,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "ac-gain-requirements",
+            "example": "ac-requirements",
+            "edits": [],
+            "scope": "RC gain H=1/(1+j*omega*RC) has magnitude sqrt(1/2) at cutoff and sqrt(1/5) at twice cutoff.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/performance/requirements/0/maximumObserved/value",
+                "expected": 0.7071067811865476,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/performance/requirements/0/minimumObserved/value",
+                "expected": 0.4472135954999579,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "ac-gain-requirements-variant",
+            "example": "ac-requirements",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/circuit/capacitors/0/capacitance",
+                "value": 9.8e-07
+              },
+              {
+                "op": "remove",
+                "path": "/requirements/1"
+              }
+            ],
+            "scope": "Explicit C=-2% variant: gain magnitudes are 1/sqrt(1+.98^2) and 1/sqrt(1+1.96^2), within the authored [.44,.72] bound.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/performance/requirements/0/maximumObserved/value",
+                "expected": 0.7142128391425071,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/performance/requirements/0/minimumObserved/value",
+                "expected": 0.454470341687874,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "rc-settling-requirements",
+            "example": "step-requirements",
+            "edits": [],
+            "scope": "From three to five RC time constants the native capacitor voltage is bounded by literal 5*(1-exp(-3)) and 5*(1-exp(-5)).",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/performance/requirements/0/minimumObserved/value",
+                "expected": 4.75106465816068,
+                "absolute": 1e-05,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/performance/requirements/0/maximumObserved/value",
+                "expected": 4.966310265004573,
+                "absolute": 1e-05,
+                "relative": 1e-08
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Primary route: preserved conceptual guidance and examples; curated discovery phrases, Studio Add and contextual Help. Native behaviour is unchanged.",
+        "review": [
+          "verification/2026-10-10-adaptor-completion.md"
+        ],
+        "notApplicable": {}
+      }
+    }
+  }
+}

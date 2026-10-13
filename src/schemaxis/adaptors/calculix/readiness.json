@@ -1,0 +1,413 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.calculix/1": {
+      "guide": "docs/calculix.md",
+      "context": {
+        "purpose": "Assess a bounded isotropic rectangular cantilever from beam/material/load intent with automatic quadratic meshes and native measured serviceability.",
+        "assumptions": "SI m/N/Pa; x-axis beam, centred y/z section, complete fixed x=0 clamp, uniform consistent end shear in z. Small strain/deformation, slenderness 20..40 and no plasticity.",
+        "constraints": "L 0.001..10 m, section 0.00001..1 m, aspect 0.5..2, E 1e6..1e12 Pa, nu 0..0.35, |F| 0.01..1e8 N, theory tip/L <= 0.01, engineering root stress/E <= 0.001. Base 12..24 axial and 2..3 section cells; separate 2x refinements. No generic FEA, imported decks, peak/root/yield stress certification.",
+        "inspection": "Reconstruct every editable deck; parse complete native DAT with exact IDs and Gauss coordinates; independently check actual support force/moment balance, area-mean tip Uz and interior Sxx. Fresh exact-deck reopening and CSV/assessment/hash verification.",
+        "recovery": "Invalid physical geometry fails before launch; numerical acceptance faults retain refinement/theory evidence; unmet named serviceability requirements retain measured margins and block consumers/reuse. Adjust stiffness/section/force or an explicit requirement and run a fresh attempt."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/calculix-beam.json"
+        },
+        {
+          "id": "material",
+          "reference": "examples/schemaxis/calculix-beam-material.json"
+        },
+        {
+          "id": "load",
+          "reference": "examples/schemaxis/calculix-beam-load.json"
+        },
+        {
+          "id": "mesh",
+          "reference": "examples/schemaxis/calculix-beam-mesh.json"
+        },
+        {
+          "id": "unmet",
+          "reference": "examples/schemaxis/calculix-beam-unmet.json"
+        },
+        {
+          "id": "invalid",
+          "reference": "examples/schemaxis/calculix-beam-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_BEAM"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_calculix.py"
+      ],
+      "acceptance": [
+        "tools/qualify_calculix.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Ordered editable deck, numeric interior stress CSV and assessment; verified publication and self-contained input fingerprints permit scheduler reuse.",
+          "references": [
+            "docs/calculix.md",
+            "tests/unit/test_calculix.py",
+            "tools/qualify_calculix.py"
+          ]
+        },
+        "composition": {
+          "scope": "Common expressions and JSON document references resolve before bounded physical planning.",
+          "references": [
+            "docs/calculix.md",
+            "tests/unit/test_calculix.py",
+            "tools/qualify_calculix.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://www.dhondt.de/",
+          "https://www.calculix.de/",
+          "https://www.dhondt.de/ccx_2.23.htm.tar.bz2",
+          "https://www.dhondt.de/ccx_2.23.README.INSTALL"
+        ],
+        "lifecycle": {
+          "timeout": "One finite deadline covers version, four isolated solves and full independent verification.",
+          "cancellation": "Shared process-tree cancellation and postverification cancellation gate; failed results never qualify for reuse.",
+          "logs": "Every native stage retains submission, stdout/stderr and generated deck plus native DAT/FRD/STA.",
+          "verification": "Reconstruct every editable deck; parse complete native DAT with exact IDs and Gauss coordinates; independently check actual support force/moment balance, area-mean tip Uz and interior Sxx. Fresh exact-deck reopening and CSV/assessment/hash verification."
+        },
+        "data": [
+          {
+            "id": "deck",
+            "direction": "output",
+            "kind": "text",
+            "format": "CalculiX inp",
+            "traits": {
+              "units": "SI m N Pa",
+              "editable": true
+            },
+            "losses": [
+              "Only generated bounded beam decks; no general imported-deck compatibility."
+            ],
+            "scope": "Fine quadratic rectangular elastic cantilever; exact retained bytes reopened in fresh solver."
+          },
+          {
+            "id": "stress",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV",
+            "traits": {
+              "units": "m and Pa",
+              "numeric": true
+            },
+            "losses": [
+              "Only interior Gauss points; no surface/root peak or material-failure certification."
+            ],
+            "scope": "Finite11column numeric table with point identities, coordinates and six stress components."
+          },
+          {
+            "id": "assessment",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.calculix.assessment/1",
+            "traits": {
+              "units": "SI"
+            },
+            "losses": [
+              "Static small-deformation idealisation with explicit beam/refinement tolerances."
+            ],
+            "scope": "Measured tip area mean, actual support equilibrium, interior normal stress, signed requirement margins."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "Inspect finite native interior Gauss stress samples.",
+            "limits": "Interior sampled normal stress, not root/surface peak certification."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect editable generated deck and accountable numerical/serviceability assessment.",
+            "limits": "No persistent native editor or arbitrary deck import."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit beam/material/load/mesh or named requirements with JSON pointers; replan domain and run a fresh native visit. Scheduler rechecks exact outputs/evidence before reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Ordered editable deck, numeric interior stress CSV and assessment; verified publication and self-contained input fingerprints permit scheduler reuse."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Common expressions and JSON document references resolve before bounded physical planning."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "No external inputs; exact authored identity and full native verification control whole-job reuse."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared document drafts/revisions and complete validation."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared atomic JSON pointer edits and undo; complete physical replanning."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial native solves only; no MPI claim."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Batch solver readback retained; no native interactive inspection hook."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "One static elastic step; no time-dependent analysis."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Independent solver visits; no persistent native solver or reverse editor sync."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Editable deck is an ordinary publication, not a live console native-save hook."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No arbitrary deck import or file conversion operation."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Independent literal signed Euler-Bernoulli displacement and actual force/moment equilibrium; quadratic mesh counts and accepted named native serviceability limits. Separate refinements and exact saved-deck reopen are additionally verified by the adaptor.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/2",
+                "expected": -0.0007619047619047619,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootReaction_N/2",
+                "expected": 100,
+                "absolute": 0.01,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/1",
+                "expected": -40.0,
+                "absolute": 0.004,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/nodeCount",
+                "expected": 2225,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/elementCount",
+                "expected": 384,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/assessment/accepted",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "material",
+            "example": "material",
+            "edits": [],
+            "scope": "Independent literal signed Euler-Bernoulli displacement and actual force/moment equilibrium; quadratic mesh counts and accepted named native serviceability limits. Separate refinements and exact saved-deck reopen are additionally verified by the adaptor.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/2",
+                "expected": -0.0015238095238095239,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootReaction_N/2",
+                "expected": 100,
+                "absolute": 0.01,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/1",
+                "expected": -40.0,
+                "absolute": 0.004,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/nodeCount",
+                "expected": 2225,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/elementCount",
+                "expected": 384,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/assessment/accepted",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "load",
+            "example": "load",
+            "edits": [],
+            "scope": "Independent literal signed Euler-Bernoulli displacement and actual force/moment equilibrium; quadratic mesh counts and accepted named native serviceability limits. Separate refinements and exact saved-deck reopen are additionally verified by the adaptor.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/2",
+                "expected": 0.00038095238095238096,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootReaction_N/2",
+                "expected": -50,
+                "absolute": 0.005,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/1",
+                "expected": 20.0,
+                "absolute": 0.002,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/nodeCount",
+                "expected": 2225,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/elementCount",
+                "expected": 384,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/assessment/accepted",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "mesh",
+            "example": "mesh",
+            "edits": [],
+            "scope": "Independent literal signed Euler-Bernoulli displacement and actual force/moment equilibrium; quadratic mesh counts and accepted named native serviceability limits. Separate refinements and exact saved-deck reopen are additionally verified by the adaptor.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/2",
+                "expected": -0.0007619047619047619,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootReaction_N/2",
+                "expected": 100,
+                "absolute": 0.01,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/1",
+                "expected": -40.0,
+                "absolute": 0.004,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/nodeCount",
+                "expected": 5957,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/elementCount",
+                "expected": 1152,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/assessment/accepted",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

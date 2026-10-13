@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.calculix/1"
+    },
+    "operation": {
+      "const": "cantileverBeam"
+    },
+    "beam": {
+      "type": "object",
+      "properties": {
+        "length_m": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 10
+        },
+        "width_m": {
+          "type": "number",
+          "minimum": 1e-05,
+          "maximum": 1
+        },
+        "height_m": {
+          "type": "number",
+          "minimum": 1e-05,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "length_m",
+        "width_m",
+        "height_m"
+      ]
+    },
+    "material": {
+      "type": "object",
+      "properties": {
+        "youngsModulus_Pa": {
+          "type": "number",
+          "minimum": 1000000.0,
+          "maximum": 1000000000000.0
+        },
+        "poissonRatio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.35
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "youngsModulus_Pa",
+        "poissonRatio"
+      ]
+    },
+    "load": {
+      "type": "object",
+      "properties": {
+        "tipForceZ_N": {
+          "type": "number",
+          "minimum": -100000000.0,
+          "maximum": 100000000.0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "tipForceZ_N"
+      ]
+    },
+    "mesh": {
+      "type": "object",
+      "properties": {
+        "lengthCells": {
+          "type": "integer",
+          "minimum": 12,
+          "maximum": 24,
+          "default": 12
+        },
+        "sectionCells": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 3,
+          "default": 2
+        }
+      },
+      "additionalProperties": false,
+      "default": {
+        "lengthCells": 12,
+        "sectionCells": 2
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+          },
+          "quantity": {
+            "enum": [
+              "absTipAreaMeanUz_m",
+              "maxInteriorSampleNormalStress_Pa"
+            ]
+          },
+          "maximum": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000000.0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "quantity",
+          "maximum"
+        ]
+      },
+      "maxItems": 16,
+      "default": []
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "beam",
+    "material",
+    "load"
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "cad",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "linearDeflection": 0.03,
+        "nodes": [
+          {
+            "id": "lower",
+            "filter": "circle",
+            "options": {
+              "radius": 12,
+              "origin": [
+                0,
+                0,
+                4
+              ]
+            }
+          },
+          {
+            "id": "upper",
+            "filter": "circle",
+            "options": {
+              "radius": 8,
+              "origin": [
+                0,
+                0,
+                30
+              ]
+            }
+          },
+          {
+            "id": "transition",
+            "filter": "loft",
+            "inputs": {
+              "sections": [
+                "lower",
+                "upper"
+              ]
+            },
+            "options": {
+              "ruled": true
+            }
+          },
+          {
+            "id": "flange",
+            "filter": "cylinder",
+            "options": {
+              "radius": 16,
+              "height": 5
+            }
+          },
+          {
+            "id": "body",
+            "filter": "multiFuse",
+            "inputs": {
+              "shapes": [
+                "transition",
+                "flange"
+              ]
+            }
+          },
+          {
+            "id": "bore",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 40,
+              "origin": [
+                0,
+                0,
+                -2
+              ]
+            }
+          },
+          {
+            "id": "connector",
+            "filter": "cut",
+            "inputs": {
+              "base": "body",
+              "tool": "bore"
+            }
+          }
+        ],
+        "output": "connector"
+      }
+    },
+    {
+      "id": "render",
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "metal",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.65,
+                0.22,
+                0.08,
+                1
+              ],
+              "metallic": 0.65,
+              "roughness": 0.25,
+              "coat": 0.2
+            }
+          },
+          {
+            "id": "mesh",
+            "filter": "readSTL",
+            "options": {
+              "file": {
+                "$artifact": "cad",
+                "index": 1
+              },
+              "scale": 0.001
+            }
+          },
+          {
+            "id": "connector",
+            "filter": "assignMaterial",
+            "inputs": {
+              "input": "mesh",
+              "material": "metal"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "connector",
+            "visible": [
+              "connector"
+            ],
+            "meshes": [
+              "connector"
+            ],
+            "render": {
+              "samples": 64,
+              "denoise": true,
+              "threads": 4
+            },
+            "images": [
+              {
+                "id": "view",
+                "size": [
+                  640,
+                  640
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -2,
+                      1.3
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

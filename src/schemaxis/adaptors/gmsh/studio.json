@@ -1,0 +1,835 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.gmsh/1",
+    "units": "mm",
+    "nodes": [
+      {
+        "id": "solid",
+        "filter": "box",
+        "options": {
+          "size": [
+            10,
+            10,
+            10
+          ]
+        }
+      },
+      {
+        "id": "mesh",
+        "filter": "tetrahedral",
+        "inputs": {
+          "input": "solid"
+        },
+        "options": {
+          "size": 3,
+          "volumeName": "domain",
+          "boundaryName": "boundary",
+          "volumeTolerance": 1e-06
+        }
+      }
+    ],
+    "output": "mesh"
+  },
+  "categories": [
+    {
+      "id": "geometry",
+      "title": "Geometry & import",
+      "icon": "layers"
+    },
+    {
+      "id": "groups",
+      "title": "Physical groups",
+      "icon": "layers"
+    },
+    {
+      "id": "sizing",
+      "title": "Mesh sizing",
+      "icon": "layers"
+    },
+    {
+      "id": "quality",
+      "title": "Quality & refinement",
+      "icon": "layers"
+    },
+    {
+      "id": "studies",
+      "title": "Refinement studies",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "mesh-controls",
+      "title": "Mesh size and groups",
+      "description": "Replace mesh controls with a fine size and named volume/boundary groups.",
+      "inserts": [
+        {
+          "at": "/nodes/1/options",
+          "values": [
+            {
+              "size": 2,
+              "volumeName": {
+                "$fill": "volume"
+              },
+              "boundaryName": {
+                "$fill": "boundary"
+              },
+              "volumeTolerance": 1e-06
+            }
+          ]
+        }
+      ],
+      "category": "sizing",
+      "baseDocument": {
+        "version": "schemaxis.gmsh/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "solid",
+            "filter": "box",
+            "options": {
+              "size": [
+                10,
+                10,
+                10
+              ]
+            }
+          },
+          {
+            "id": "mesh",
+            "filter": "tetrahedral",
+            "inputs": {
+              "input": "solid"
+            },
+            "options": {
+              "size": 3,
+              "volumeName": "domain",
+              "boundaryName": "boundary",
+              "volumeTolerance": 1e-06
+            }
+          }
+        ],
+        "output": "mesh"
+      },
+      "fields": {
+        "volume": {
+          "label": "volume",
+          "type": "string",
+          "default": "domain",
+          "required": true
+        },
+        "boundary": {
+          "label": "boundary",
+          "type": "string",
+          "default": "boundary",
+          "required": true
+        }
+      }
+    },
+    {
+      "id": "box-size",
+      "title": "Box dimensions",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Set the three positive domain dimensions in millimetres.",
+      "fields": {
+        "box-size": {
+          "label": "Box dimensions",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            10,
+            10,
+            10
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options/size",
+          "values": [
+            {
+              "$fill": "box-size"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "box-origin",
+      "title": "Domain origin",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Place the box before defining coordinate-based face groups.",
+      "fields": {
+        "box-origin": {
+          "label": "Domain origin",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options/origin",
+          "values": [
+            {
+              "$fill": "box-origin"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "import-step",
+      "title": "Mesh a STEP solid",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Replace the input with a STEP import and tetrahedral publication.",
+      "fields": {
+        "step": {
+          "label": "STEP solid",
+          "type": "path",
+          "required": true,
+          "default": "/data/part.step",
+          "extensions": [
+            "step",
+            "stp"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "readSTEP",
+                  "options": {
+                    "file": {
+                      "$fill": "step"
+                    }
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 3,
+                    "volumeName": "domain",
+                    "boundaryName": "boundary",
+                    "volumeTolerance": 1e-06
+                  }
+                }
+              ],
+              "output": "mesh"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Requires a valid single-solid STEP file when running; host planning checks the declared path."
+    },
+    {
+      "id": "global-size",
+      "title": "Global element size",
+      "category": "sizing",
+      "icon": "layers",
+      "description": "Set the starting tetrahedral size in millimetres.",
+      "fields": {
+        "global-size": {
+          "label": "Global element size",
+          "type": "number",
+          "required": true,
+          "default": 2,
+          "minimum": 0.001,
+          "maximum": 100000
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/1/options/size",
+          "values": [
+            {
+              "$fill": "global-size"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "inlet-outlet",
+      "title": "Inlet and outlet face groups",
+      "category": "groups",
+      "icon": "layers",
+      "description": "Select opposing x faces on the 10 mm box.",
+      "fields": {
+        "inlet-outlet": {
+          "label": "Inlet and outlet face groups",
+          "type": "json",
+          "required": true,
+          "default": [
+            {
+              "name": "inlet",
+              "axis": "x",
+              "coordinate": 0
+            },
+            {
+              "name": "outlet",
+              "axis": "x",
+              "coordinate": 10
+            }
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/1/options/faceGroups",
+          "values": [
+            {
+              "$fill": "inlet-outlet"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "five-faces",
+      "title": "Five named box faces",
+      "category": "groups",
+      "icon": "layers",
+      "description": "Declare distinct physical groups for five box faces; the sixth (z_max here) stays in the remainder boundary group, which Gmsh requires.",
+      "fields": {
+        "five-faces": {
+          "label": "Five named box faces",
+          "type": "json",
+          "required": true,
+          "default": [
+            {
+              "name": "x_min",
+              "axis": "x",
+              "coordinate": 0
+            },
+            {
+              "name": "x_max",
+              "axis": "x",
+              "coordinate": 10
+            },
+            {
+              "name": "y_min",
+              "axis": "y",
+              "coordinate": 0
+            },
+            {
+              "name": "y_max",
+              "axis": "y",
+              "coordinate": 10
+            },
+            {
+              "name": "z_min",
+              "axis": "z",
+              "coordinate": 0
+            }
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/1/options/faceGroups",
+          "values": [
+            {
+              "$fill": "five-faces"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "near-inlet",
+      "title": "Local inlet refinement",
+      "category": "sizing",
+      "icon": "layers",
+      "description": "Create inlet/outlet groups and concentrate size near the inlet.",
+      "fields": {
+        "size": {
+          "label": "Near-inlet element size",
+          "type": "number",
+          "required": true,
+          "default": 0.5,
+          "minimum": 0.001,
+          "maximum": 3
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/1/options",
+          "merge": {
+            "faceGroups": [
+              {
+                "name": "inlet",
+                "axis": "x",
+                "coordinate": 0
+              },
+              {
+                "name": "outlet",
+                "axis": "x",
+                "coordinate": 10
+              }
+            ],
+            "nearBoundaries": [
+              {
+                "boundary": "inlet",
+                "size": {
+                  "$fill": "size"
+                },
+                "distance": 2
+              }
+            ]
+          }
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "volume-tolerance",
+      "title": "CAD volume verification tolerance",
+      "category": "quality",
+      "icon": "layers",
+      "description": "Set the relative volume agreement required when reopening the native mesh.",
+      "fields": {
+        "volume-tolerance": {
+          "label": "CAD volume verification tolerance",
+          "type": "number",
+          "required": true,
+          "default": 0.001,
+          "minimum": 1e-08,
+          "maximum": 0.02
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/1/options/volumeTolerance",
+          "values": [
+            {
+              "$fill": "volume-tolerance"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quality-loop",
+      "title": "Bounded quality refinement",
+      "category": "quality",
+      "icon": "layers",
+      "description": "Refine until edge length and mean-ratio requirements pass or explicit iteration limits are reached.",
+      "fields": {
+        "quality-loop": {
+          "label": "Bounded quality refinement",
+          "type": "json",
+          "required": true,
+          "default": {
+            "maxIterations": 4,
+            "reductionFactor": 0.7,
+            "minimumSize": 1,
+            "maxTetrahedra": 20000,
+            "requirements": {
+              "maximumEdgeLength": 3,
+              "minimumMeanRatio": 0.1
+            }
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/refinement",
+          "values": [
+            {
+              "$fill": "quality-loop"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tetra-budget",
+      "title": "Refinement resource limits",
+      "category": "quality",
+      "icon": "layers",
+      "description": "Bound adaptive refinement by minimum size, iteration count and tetrahedron budget.",
+      "fields": {
+        "tetra-budget": {
+          "label": "Refinement resource limits",
+          "type": "json",
+          "required": true,
+          "default": {
+            "maxIterations": 3,
+            "minimumSize": 0.5,
+            "maxTetrahedra": 30000,
+            "requirements": {
+              "maximumEdgeLength": 3
+            }
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/refinement",
+          "values": [
+            {
+              "$fill": "tetra-budget"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "boundary-quality",
+      "title": "Verify a locally refined boundary",
+      "category": "quality",
+      "icon": "layers",
+      "description": "Combine named faces, local sizing and a boundary-specific maximum-edge requirement.",
+      "fields": {
+        "edge": {
+          "label": "Boundary maximum edge",
+          "type": "number",
+          "required": true,
+          "default": 0.9,
+          "minimum": 0.001
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "box",
+                  "options": {
+                    "size": [
+                      10,
+                      10,
+                      10
+                    ]
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 3,
+                    "volumeName": "domain",
+                    "boundaryName": "boundary",
+                    "volumeTolerance": 1e-06,
+                    "faceGroups": [
+                      {
+                        "name": "fixed",
+                        "axis": "x",
+                        "coordinate": 0
+                      },
+                      {
+                        "name": "loaded",
+                        "axis": "x",
+                        "coordinate": 10
+                      }
+                    ],
+                    "nearBoundaries": [
+                      {
+                        "boundary": "fixed",
+                        "size": 0.75,
+                        "distance": 2
+                      }
+                    ]
+                  }
+                }
+              ],
+              "output": "mesh",
+              "refinement": {
+                "maxIterations": 4,
+                "minimumSize": 1,
+                "maxTetrahedra": 20000,
+                "requirements": {
+                  "boundaryMaximumEdgeLength": [
+                    {
+                      "boundary": "fixed",
+                      "maximum": {
+                        "$fill": "edge"
+                      }
+                    }
+                  ],
+                  "minimumMeanRatio": 0.1
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "paired-design-study",
+      "title": "Paired extent and mesh-size study",
+      "category": "studies",
+      "icon": "layers",
+      "description": "Synchronise two box extents with two mesh sizes using the documented analytic design axis.",
+      "fields": {
+        "extents": {
+          "label": "Paired extents",
+          "type": "json",
+          "required": true,
+          "default": [
+            10,
+            12
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "box",
+                  "options": {
+                    "size": [
+                      {
+                        "$document": "/dimensions/extent"
+                      },
+                      10,
+                      10
+                    ]
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": {
+                      "$document": "/dimensions/h"
+                    },
+                    "volumeName": "domain",
+                    "boundaryName": "boundary",
+                    "volumeTolerance": 1e-06
+                  }
+                }
+              ],
+              "output": "mesh",
+              "dimensions": {
+                "extent": {
+                  "$analytic": {
+                    "type": "values",
+                    "values": {
+                      "$fill": "extents"
+                    },
+                    "sync": "design"
+                  }
+                },
+                "h": {
+                  "$analytic": {
+                    "type": "values",
+                    "values": [
+                      3,
+                      2
+                    ],
+                    "sync": "design"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "mesh-size-study",
+      "title": "Mesh resolution comparison",
+      "category": "studies",
+      "icon": "layers",
+      "description": "Compare mesh sizes on one unchanged solid with an analytic values study.",
+      "fields": {
+        "sizes": {
+          "label": "Mesh sizes",
+          "type": "json",
+          "required": true,
+          "default": [
+            3,
+            2,
+            1
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "box",
+                  "options": {
+                    "size": [
+                      10,
+                      10,
+                      10
+                    ]
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": {
+                      "$document": "/dimensions/h"
+                    },
+                    "volumeName": "domain",
+                    "boundaryName": "boundary",
+                    "volumeTolerance": 1e-06
+                  }
+                }
+              ],
+              "output": "mesh",
+              "dimensions": {
+                "h": {
+                  "$analytic": {
+                    "type": "values",
+                    "values": {
+                      "$fill": "sizes"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "sizing-envelope",
+      "title": "Boundary size envelope",
+      "category": "sizing",
+      "icon": "layers",
+      "description": "Apply a local size to the complete exterior boundary, with an explicit transition distance.",
+      "fields": {
+        "sizing-envelope": {
+          "label": "Boundary size envelope",
+          "type": "json",
+          "required": true,
+          "default": [
+            {
+              "boundary": "boundary",
+              "size": 1,
+              "distance": 2
+            }
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/1/options/nearBoundaries",
+          "values": [
+            {
+              "$fill": "sizing-envelope"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": "volume-mesh",
+      "title": "Volume mesh",
+      "file": "templates/volume-mesh.json",
+      "description": "A solid box and a named tetrahedral volume mesh.",
+      "fields": {}
+    },
+    {
+      "id": "step-mesh",
+      "title": "STEP volume mesh",
+      "description": "Import a single STEP solid in millimetres, mesh it with tetrahedra, and verify the reopened volume.",
+      "file": "studio/templates/step-mesh.json",
+      "fields": {
+        "step": {
+          "label": "STEP solid",
+          "type": "path",
+          "required": true,
+          "default": "/data/part.step",
+          "extensions": [
+            "step",
+            "stp"
+          ]
+        }
+      },
+      "requires": "Requires a single-solid STEP file at run time."
+    },
+    {
+      "id": "quality-mesh",
+      "title": "Quality-driven refinement",
+      "description": "Mesh a 10 mm box, then refine within iteration and element budgets to meet maximum-edge and mean-ratio targets.",
+      "file": "studio/templates/quality-mesh.json",
+      "fields": {
+        "edge": {
+          "label": "Maximum edge",
+          "type": "number",
+          "required": true,
+          "default": 3,
+          "minimum": 0.001
+        }
+      }
+    },
+    {
+      "id": "boundary-mesh",
+      "title": "Boundary-refined mesh",
+      "description": "Name the opposing X faces of a 10 mm box, refine near the fixed face, and check the boundary edge-length target.",
+      "file": "studio/templates/boundary-mesh.json",
+      "fields": {
+        "size": {
+          "label": "Boundary size",
+          "type": "number",
+          "required": true,
+          "default": 0.75,
+          "minimum": 0.001
+        }
+      }
+    }
+  ],
+  "viewers": [
+    "3d",
+    "table",
+    "text"
+  ]
+}

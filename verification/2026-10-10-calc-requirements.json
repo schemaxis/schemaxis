@@ -1,0 +1,85 @@
+{
+  "version": "schemaxis.calc.requirements-acceptance/1",
+  "date": "2026-10-10",
+  "provider": "calc",
+  "verified": true,
+  "sourceDigest": "sha256:5b8c7952363b88ef77a8354982f504b7e9656023b815a35a5269921205b3ddd4",
+  "runtime": "LibreOffice 26.8.1.1 bf6ef2662401c7d6dce671ab4deb26ee0af3a7c1",
+  "upstream": {
+    "source": "https://download.documentfoundation.org/libreoffice/stable/26.8.1/deb/x86_64/LibreOffice_26.8.1_Linux_x86-64_deb.tar.gz",
+    "officialSHA256": "30903df3b9f61360d9660cd707de48cd2831469114492a5008ed58a0ac77d044",
+    "actualSHA256": "30903df3b9f61360d9660cd707de48cd2831469114492a5008ed58a0ac77d044",
+    "runtime": "LibreOffice 26.8.1.1 bf6ef2662401c7d6dce671ab4deb26ee0af3a7c1"
+  },
+  "scope": "Three fixed-table native checks, both-format literal total readback, formula/assessment tamper rejection, unmet/missing/text conditions and blocked/reused CSV workflow. No general workbook, unit conversion or GUI claims.",
+  "host": {
+    "requirementTests": 8,
+    "numericAnalysisTests": 24,
+    "numericAnalysisSkipped": 2,
+    "nativeCalcRegressionIncluded": true,
+    "conceptGuidance": {
+      "reference": 42,
+      "pending": 0,
+      "stale": 0
+    }
+  },
+  "native": {
+    "commonKit": {
+      "cases": [
+        "baseline",
+        "variant",
+        "balance"
+      ],
+      "lifecycle": [
+        {
+          "check": "native runner timeout",
+          "fault": "RUNNER_TIMED_OUT",
+          "verified": true
+        },
+        {
+          "check": "pre-launch cancellation",
+          "fault": "RUNNER_CANCELLED",
+          "verified": true
+        }
+      ],
+      "receipt": "evidence/adaptor-growth-20261010/calc-requirements-conformance-final/qualification.json"
+    },
+    "independentAcceptance": {
+      "cases": [
+        "balanced",
+        "exact-cell-boundary",
+        "explicit-coefficients"
+      ],
+      "negativeCases": [
+        {
+          "case": "imbalance",
+          "fault": "REQUIREMENTS_UNMET"
+        },
+        {
+          "case": "missing",
+          "fault": "REQUIREMENT_SELECTION_FAILED"
+        },
+        {
+          "case": "nonnumeric",
+          "fault": "REQUIREMENT_SELECTION_FAILED"
+        }
+      ],
+      "workflow": {
+        "verified": true,
+        "reusedJobs": 2,
+        "unmetBlocksConsumerAndReuse": true
+      },
+      "receipt": "evidence/adaptor-growth-20261010/calc-requirements-native-final/acceptance.json"
+    },
+    "compatibility": {
+      "runtime": "LibreOffice 26.8.0.3",
+      "scope": "Single balanced literal-table case with new requirements; not latest release acceptance.",
+      "receipt": "evidence/adaptor-growth-20261010/calc-compatibility-26.8.0.3/compatibility.json"
+    }
+  },
+  "limits": [
+    "Only fixed Data/Summary numeric cells and declared coefficients/tolerances are accepted.",
+    "No unit inference, arbitrary native formulas, general workbook or GUI claims.",
+    "Offline verification checks retained relationship consistency, not wholesale adversarial forgery of every evidence file."
+  ]
+}

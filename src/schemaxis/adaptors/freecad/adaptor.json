@@ -1,0 +1,128 @@
+{
+  "version": "schemaxis.freecad/1",
+  "declarations": "schemaxis.adaptors.freecad.adaptor:DECLARATIONS",
+  "runtimeFamily": "1.1.x",
+  "executables": [
+    "freecadcmd"
+  ],
+  "execution": "isolated CAD processes; verified FCStd, STEP and tessellated STL in mm",
+  "keywords": [
+    "CAD",
+    "parametric solids",
+    "STEP",
+    "boolean",
+    "meshes"
+  ],
+  "id": "freecad",
+  "adaptor": "schemaxis.adaptors.freecad.adaptor",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": true,
+    "visualReferences": true,
+    "geometryReferences": true,
+    "imagePixelReferences": true,
+    "imageReferenceRequirement": "a current native PNG preview; no inferred object identity",
+    "nativeEditReverseSync": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.freecad/1",
+    "nodes": [],
+    "output": null,
+    "units": "mm",
+    "linearDeflection": 0.1
+  },
+  "consoleOutput": true,
+  "defaultConsole": true,
+  "environment": "FREECAD_CMD",
+  "nativeExtension": ".fcstd",
+  "consoleHooks": {
+    "live_location": "schemaxis.adaptors.freecad.console:live_location",
+    "validate": "schemaxis.adaptors.freecad.console:validate",
+    "add": "schemaxis.adaptors.freecad.console:add",
+    "show": "schemaxis.adaptors.freecad.console:show",
+    "live_save": "schemaxis.adaptors.freecad.console:live_save",
+    "model": "schemaxis.adaptors.freecad.console:model",
+    "command": "schemaxis.adaptors.freecad.console:command"
+  },
+  "cliOptions": [
+    {
+      "flag": "--freecad",
+      "dest": "freecad",
+      "help": "Explicit freecad executable"
+    },
+    {
+      "flag": "--freecad-gui",
+      "dest": "freecad_gui",
+      "help": "Optional FreeCAD GUI launcher"
+    }
+  ],
+  "routes": {
+    "schemaxis.freecad/1": {
+      "module": "schemaxis.adaptors.freecad.adaptor",
+      "workflow": true,
+      "scheduled": true,
+      "compose": true,
+      "graph": false,
+      "timeBatches": false,
+      "schemaName": "freecad",
+      "acceptedArtifacts": [
+        "cad"
+      ],
+      "schema": "schemaxis.adaptors.freecad.adaptor:schema",
+      "hooks": {
+        "resources": "schemaxis.adaptors.freecad.integration:resources",
+        "reusableInputs": "schemaxis.adaptors.freecad.integration:reusableInputs",
+        "expandedSchema": "schemaxis.adaptors.freecad.integration:expandedSchema",
+        "inspect": "schemaxis.adaptors.freecad.integration:inspect"
+      },
+      "expand": "composition",
+      "schemaOrder": 2
+    },
+    "schemaxis.freecad.assembly/1": {
+      "module": "schemaxis.adaptors.freecad.assembly",
+      "workflow": true,
+      "scheduled": true,
+      "compose": true,
+      "schemaName": "assembly",
+      "referenceName": "freecad-assembly",
+      "expand": "composition",
+      "acceptedArtifacts": [],
+      "graphEditing": false,
+      "hooks": {
+        "reusableInputs": "schemaxis.adaptors.freecad.assembly:reusableInputs"
+      },
+      "schema": "schemaxis.adaptors.freecad.assembly:schema",
+      "runOptions": {
+        "gui_executable": "freecad_gui"
+      },
+      "queryFlags": {
+        "fixedAssemblies": true
+      },
+      "querySchema": "docs/generated/freecad-assembly.schema.json",
+      "queryReference": "docs/freecad-assemblies.md",
+      "schemaOrder": 3
+    }
+  },
+  "sections": {
+    "assembly": "schemaxis.adaptors.freecad.assembly:schema"
+  },
+  "referenceIntro": [
+    "All routes support shared document/value expressions and finite analytic studies through the framework runtime.",
+    "Lengths use millimetres. All outputs must be one valid positive-volume solid.",
+    "See [CAD and mesh workflows](../cad-and-mesh-workflows.md) for native and tessellated output limits."
+  ],
+  "consoleCommands": [
+    "box ID LENGTH WIDTH HEIGHT",
+    "rectangle ID WIDTH HEIGHT",
+    "circle ID RADIUS",
+    "extrude ID [PROFILE] LENGTH"
+  ],
+  "capabilities": "schemaxis.adaptors.freecad.capabilities:catalogue"
+}

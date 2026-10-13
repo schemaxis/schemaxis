@@ -1,0 +1,157 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "other",
+      "filter": "sphere",
+      "options": {
+        "radius": {
+          "$analytic": {
+            "type": "linear",
+            "start": 2,
+            "end": 4,
+            "count": 8,
+            "sync": "shape"
+          }
+        }
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "slice",
+      "inputs": {
+        "input": {
+          "$create": {
+            "id": "sphere",
+            "filter": "sphere",
+            "options": {
+              "radius": {
+                "$analytic": {
+                  "type": "linear",
+                  "start": 1,
+                  "end": 3,
+                  "count": 8,
+                  "sync": "shape"
+                }
+              },
+              "centre": {
+                "$analytic": {
+                  "type": "linear",
+                  "start": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "end": [
+                    2,
+                    0,
+                    0
+                  ],
+                  "count": 8,
+                  "sync": "shape"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "origin": {
+          "$calc": "add",
+          "args": [
+            {
+              "$call": "boundsCentre",
+              "args": {
+                "bounds": {
+                  "$observe": "sphere",
+                  "path": [
+                    "bounds"
+                  ]
+                }
+              }
+            },
+            {
+              "$analytic": {
+                "type": "linear",
+                "start": [
+                  0,
+                  0,
+                  0
+                ],
+                "end": [
+                  0,
+                  0,
+                  0.5
+                ],
+                "count": 3
+              }
+            }
+          ]
+        },
+        "normal": "z+"
+      }
+    },
+    {
+      "id": "unused",
+      "filter": "sphere",
+      "options": {
+        "radius": {
+          "$analytic": {
+            "type": "linear",
+            "start": 1,
+            "end": 10,
+            "count": 10
+          }
+        }
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "test",
+      "geometry": [
+        "cut"
+      ],
+      "visible": {
+        "cut": {
+          "$document": "/definitions/cutPaint"
+        },
+        "other": {
+          "colour": "orange",
+          "opacity": 0.3
+        }
+      },
+      "images": [
+        {
+          "id": "orbit",
+          "cameras": {
+            "$analytic": {
+              "type": "orbit",
+              "start": 0,
+              "end": 330,
+              "count": 12,
+              "elevation": 25
+            }
+          },
+          "size": [
+            160,
+            120
+          ]
+        }
+      ],
+      "appearances": [
+        {},
+        {
+          "other": {
+            "opacity": 0.6
+          }
+        }
+      ]
+    }
+  ],
+  "definitions": {
+    "cutPaint": {
+      "colour": "xkcd:sky blue"
+    }
+  }
+}

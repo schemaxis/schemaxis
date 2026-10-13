@@ -1,0 +1,2018 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "dcSweep": {
+      "status": "reviewed",
+      "explanation": "Steps one ideal grounded voltage source through evenly spaced DC values and reports the steady node voltages of a resistor network (capacitors act as open circuits). Outputs are results.csv (source voltage, then one column per probe in volts), circuit-summary.json and the generated netlist circuit.cir; every native value is checked against an independent nodal solution. Choose it for dividers, bridges and other resistive networks; use acSweep for frequency response and rcStep for a charging curve.",
+      "sources": [
+        "src/schemaxis/adaptors/ngspice/capabilities.py",
+        "src/schemaxis/adaptors/ngspice/adaptor.py:19-108",
+        "src/schemaxis/adaptors/ngspice/circuit.py:33-60",
+        "docs/ngspice.md"
+      ],
+      "pitfalls": [
+        "start and stop are source volts and stop must exceed start; points includes both endpoints.",
+        "Every node needs a path through resistors to ground or the source; a node reached only through capacitors is rejected as floating.",
+        "Only ideal resistors and capacitors; semiconductors, models, subcircuits and imported netlists are not accepted."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/ngspice-minimal.json",
+          "purpose": "Verify a resistive divider across six source voltages."
+        },
+        {
+          "reference": "examples/schemaxis/ngspice-dc-requirements.json",
+          "purpose": "Apply named finite-sample acceptance and inspect observed worst conditions."
+        }
+      ]
+    },
+    "acSweep": {
+      "status": "reviewed",
+      "explanation": "Computes the small-signal phasor response of a linear RLC network to one grounded sinusoidal source at evenly spaced frequencies. results.csv gives, per probe, real and imaginary parts and magnitude in volts and phase in degrees, alongside circuit-summary.json and circuit.cir; every value is checked against an independent complex nodal solution. Choose it for filter cut-offs, resonance and gain versus frequency; inductors are only allowed in this analysis.",
+      "sources": [
+        "src/schemaxis/adaptors/ngspice/capabilities.py",
+        "src/schemaxis/adaptors/ngspice/adaptor.py:19-108",
+        "src/schemaxis/adaptors/ngspice/circuit.py:33-60",
+        "docs/ngspice.md"
+      ],
+      "pitfalls": [
+        "start and stop are in hertz with linear (not logarithmic) spacing; use enough points to resolve narrow resonances.",
+        "Phase uses the exp(+j*omega*t) convention, so a lagging output has negative phase.",
+        "Loops made only of inductors, an inductor directly across the source, and singular or ill-conditioned networks at any sample frequency are rejected; there is no mutual coupling."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/ngspice-rc-frequency.json",
+          "purpose": "Verify the analytic RC cutoff and phase lag."
+        },
+        {
+          "reference": "examples/schemaxis/ngspice-rl-frequency.json",
+          "purpose": "Verify an RL low-pass at and above cutoff."
+        },
+        {
+          "reference": "examples/schemaxis/ngspice-rlc-resonance.json",
+          "purpose": "Verify capacitor voltage in a damped series RLC circuit at and above resonance."
+        },
+        {
+          "reference": "examples/schemaxis/ngspice-rlc-parallel.json",
+          "purpose": "Verify a resistor-fed parallel LC band-pass across resonance."
+        },
+        {
+          "reference": "examples/schemaxis/ngspice-ac-requirements.json",
+          "purpose": "Apply named finite-sample acceptance and inspect observed worst conditions."
+        }
+      ]
+    },
+    "rcStep": {
+      "status": "reviewed",
+      "explanation": "Simulates an initially uncharged series resistor feeding a grounded capacitor when a constant voltage is switched on at t = 0, and reports the source and capacitor node voltages at evenly spaced times. Native transient values are resampled and checked against V x (1 - exp(-t/RC)). Outputs match the other analyses (results.csv with time in seconds, summary and netlist). Choose it for RC charging and settling-time checks only.",
+      "sources": [
+        "src/schemaxis/adaptors/ngspice/capabilities.py",
+        "src/schemaxis/adaptors/ngspice/adaptor.py:19-108",
+        "src/schemaxis/adaptors/ngspice/circuit.py:33-60",
+        "docs/ngspice.md"
+      ],
+      "pitfalls": [
+        "The circuit must be exactly source - resistor - response node - capacitor - ground; any other topology fails with UNSUPPORTED_CIRCUIT.",
+        "stop (seconds) must lie between 0.01 and 20 time constants R x C; the default 0.005 s suits only RC values near 0.25 to 500 ms.",
+        "The default probe is \"out\"; name the capacitor node \"out\" or list the actual node in probes."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/ngspice-rc-step.json",
+          "purpose": "Verify a 5 V RC charging curve across five time constants."
+        },
+        {
+          "reference": "examples/schemaxis/ngspice-step-requirements.json",
+          "purpose": "Apply named finite-sample acceptance and inspect observed worst conditions."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.ngspice/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "An ideal linear circuit driven by one grounded voltage source, the analysis to run (dcSweep, acSweep or rcStep) and optional voltage or gain requirements checked at the computed samples. The circuit is written inline; no netlist, device model or script can be imported.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis circuit document; it must be \"schemaxis.ngspice/1\". It is not the ngspice release.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "schemaxis.ngspice/1"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reference",
+          "explanation": "Select dcSweep for steady signed voltage, acSweep for phasor response, or rcStep for initially uncharged first-order settling.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/operation/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "dcSweep: steady-state node voltages of a resistor network while the source steps through a voltage range.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "dcSweep"
+          ]
+        },
+        "/properties/operation/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "acSweep: magnitude and phase of node voltages versus frequency for a linear R, L, C network.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "acSweep"
+          ]
+        },
+        "/properties/operation/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "rcStep: charging curve of one series resistor and grounded capacitor after a voltage step at t = 0.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "rcStep"
+          ]
+        },
+        "/properties/circuit": {
+          "status": "reviewed",
+          "explanation": "The circuit, written inline: one ideal voltage source between ground (node \"0\") and the source node, 1 to 64 resistors, up to 64 capacitors, up to 64 uncoupled inductors (acSweep only) and the nodes to publish. At most 16 non-ground nodes; no netlist, device model or subcircuit can be imported.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ]
+        },
+        "/properties/circuit/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Circuit without inductors, used by dcSweep and rcStep (up to 16 probes). Choose acSweep to use the alternative that also accepts inductors.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/source": {
+          "status": "reference",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/resistors": {
+          "status": "reference",
+          "explanation": "Declared ideal resistors with positive resistance in ohms. Each node needs a resistor or AC-inductor reference path to ground or the source.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/resistors/items": {
+          "status": "reference",
+          "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/resistors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/resistors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/resistors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/resistors/items/properties/resistance": {
+          "status": "reference",
+          "explanation": "Positive resistance in ohms, 0.001 to 1e9. Changing resistance changes divider gain or the RC/RL time scale; singular or ill-conditioned networks are rejected.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/capacitors": {
+          "status": "reviewed",
+          "explanation": "Ideal capacitors, up to 64, in farads. They are open circuits in dcSweep; rcStep needs exactly one, from the response node to ground.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: [] (no capacitors)."
+        },
+        "/properties/circuit/anyOf/0/properties/capacitors/items": {
+          "status": "reference",
+          "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/capacitors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/capacitors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/capacitors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/capacitors/items/properties/capacitance": {
+          "status": "reference",
+          "explanation": "Positive capacitance in farads, 1e-12 to 1. For example 1e-6 is one microfarad; changing C shifts cutoff and settling time.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/probes": {
+          "status": "reviewed",
+          "explanation": "Non-ground nodes whose voltages are written to results.csv, 1 to 16, without repeats; each must appear in the circuit. One volt column is published per probe.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: [\"out\"].",
+          "pitfalls": [
+            "The default probe \"out\" must exist in the circuit; rename your output node or list the real node names."
+          ],
+          "examples": [
+            [
+              "out"
+            ]
+          ]
+        },
+        "/properties/circuit/anyOf/0/properties/probes/items": {
+          "status": "reference",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Circuit for acSweep: the same resistors, capacitors and probes plus uncoupled ideal inductors, with at most 15 probes.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/source": {
+          "status": "reference",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/resistors": {
+          "status": "reference",
+          "explanation": "Declared ideal resistors with positive resistance in ohms. Each node needs a resistor or AC-inductor reference path to ground or the source.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/resistors/items": {
+          "status": "reference",
+          "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/resistors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/resistors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/resistors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/resistors/items/properties/resistance": {
+          "status": "reference",
+          "explanation": "Positive resistance in ohms, 0.001 to 1e9. Changing resistance changes divider gain or the RC/RL time scale; singular or ill-conditioned networks are rejected.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/capacitors": {
+          "status": "reviewed",
+          "explanation": "Ideal capacitors, up to 64, in farads, with admittance j x 2 pi f x C at each frequency. They do not count as a connection when checking that every node has a resistor or inductor path to ground or the source.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108",
+            "src/schemaxis/adaptors/ngspice/circuit.py:33-60"
+          ],
+          "defaultMeaning": "Schemaxis default: [] (no capacitors)."
+        },
+        "/properties/circuit/anyOf/1/properties/capacitors/items": {
+          "status": "reference",
+          "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/capacitors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/capacitors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/capacitors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/capacitors/items/properties/capacitance": {
+          "status": "reference",
+          "explanation": "Positive capacitance in farads, 1e-12 to 1. For example 1e-6 is one microfarad; changing C shifts cutoff and settling time.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/probes": {
+          "status": "reviewed",
+          "explanation": "Non-ground nodes whose phasors are written to results.csv, 1 to 15, without repeats; each must appear in the circuit. Each probe adds real, imaginary, magnitude and phase columns.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: [\"out\"].",
+          "pitfalls": [
+            "The default probe \"out\" must exist in the circuit; rename your output node or list the real node names."
+          ],
+          "examples": [
+            [
+              "out"
+            ]
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/probes/items": {
+          "status": "reference",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/inductors": {
+          "status": "reference",
+          "explanation": "AC-only uncoupled ideal inductors in henries, stamped as 1/(j*omega*L). Ideal-inductor loops and an inductive source short are rejected.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/inductors/items": {
+          "status": "reference",
+          "explanation": "One AC-only uncoupled ideal coil with unique name, distinct endpoints and positive inductance in henries.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/inductors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/inductors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/inductors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/inductors/items/properties/inductance": {
+          "status": "reference",
+          "explanation": "Positive uncoupled inductance in henries, 1e-9 to 1e3. Supported only by acSweep, with no mutual coupling or imported models.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/start": {
+          "status": "reference",
+          "explanation": "DC start is signed source volts (default 0); AC start is positive frequency Hz (default 1). stop must exceed start. rcStep always starts at zero seconds.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/start/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "First source voltage of the sweep, -1000 to 1000 V. Values from start to stop are evenly spaced, both included; stop must be greater than start.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Volts",
+          "defaultMeaning": "Schemaxis default: 0.",
+          "examples": [
+            0
+          ]
+        },
+        "/properties/start/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Lowest frequency, 0.001 Hz to 1e9 Hz. Frequencies from start to stop are linearly spaced, both included; stop must be greater than start.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Hertz",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "examples": [
+            10
+          ]
+        },
+        "/properties/stop": {
+          "status": "reference",
+          "explanation": "DC stop is source volts (default 5), AC stop is positive Hz (default 10000), RC stop is seconds (default 0.005). RC duration must be 0.01–20 R*C time constants.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/stop/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Last source voltage of the sweep, -1000 to 1000 V; must be greater than start.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Volts",
+          "defaultMeaning": "Schemaxis default: 5.",
+          "examples": [
+            5
+          ]
+        },
+        "/properties/stop/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Highest frequency, 0.001 Hz to 1e9 Hz; must be greater than start. Spacing is linear, so a wide range with few points samples low frequencies coarsely.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Hertz",
+          "defaultMeaning": "Schemaxis default: 10000.",
+          "examples": [
+            10000
+          ]
+        },
+        "/properties/stop/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "End time of the step response in seconds (the start is always 0). It must lie between 0.01 and 20 time constants R x C; five time constants show about 99.3% of the final voltage.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Seconds",
+          "defaultMeaning": "Schemaxis default: 0.005.",
+          "pitfalls": [
+            "With other R or C values the default 0.005 s may fall outside 0.01 to 20 tau and fail planning; set stop explicitly (for example 5 x R x C)."
+          ],
+          "examples": [
+            0.005
+          ]
+        },
+        "/properties/points": {
+          "status": "reference",
+          "explanation": "Number of evenly spaced samples including endpoints: 2–512 for DC/RC, 3–512 for AC; default 101. Finite samples cannot prove a continuous response envelope.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/points/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Number of evenly spaced samples including both endpoints, 2 to 512. More points resolve the curve better; the requirements only see these samples.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: 101.",
+          "examples": [
+            101
+          ]
+        },
+        "/properties/points/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Number of linearly spaced frequencies including both endpoints, 3 to 512. Narrow resonances need enough points near the peak; requirements only see these samples.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: 101.",
+          "examples": [
+            101
+          ]
+        },
+        "/properties/requirements": {
+          "status": "reference",
+          "explanation": "Optional named acceptance requirements on checked native samples. A physically valid circuit may miss these bounds and fail with PERFORMANCE_NOT_MET; omitted requirements add no performance gate.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Requirements for a DC sweep: limits on a probe's signed voltage (voltage_V) over a window of source voltages (sourceVoltage_V).",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/requirements/anyOf/0/items": {
+          "status": "reviewed",
+          "explanation": "One DC requirement: a name, a published probe, quantity voltage_V, axis sourceVoltage_V, a window of source voltages and at least one bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            {
+              "name": "out_high",
+              "probe": "out",
+              "quantity": "voltage_V",
+              "axis": "sourceVoltage_V",
+              "window": [
+                4,
+                5
+              ],
+              "minimum": 2.5
+            }
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase requirement identifier, up to 64 characters. It names a measured acceptance result and its explained next action.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/properties/probe": {
+          "status": "reference",
+          "explanation": "Select a node already listed in circuit.probes. Requirements use actual independently checked native node voltages.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "voltage_V: the probe's signed node voltage in volts. It is the only quantity available in a DC sweep.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "voltage_V"
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/properties/axis": {
+          "status": "reviewed",
+          "explanation": "Must be sourceVoltage_V: the window is given in source volts.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "sourceVoltage_V"
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/properties/window": {
+          "status": "reviewed",
+          "explanation": "Inclusive [lower, upper] range of the sweep axis, in source volts, over which the bounds are checked. It must lie inside the declared sweep and contain at least one sample; only those samples are tested. Endpoints equal to a sample coordinate are matched despite tiny floating-point rounding, but no tolerance is added to the voltage or gain bounds.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "pitfalls": [
+            "Behaviour between samples is not checked; increase points if a peak or crossing could fall between them."
+          ],
+          "examples": [
+            [
+              4,
+              5
+            ]
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/properties/window/items": {
+          "status": "reference",
+          "explanation": "One finite sample coordinate in the stated axis units; the first is the inclusive lower endpoint, the second the inclusive upper endpoint.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/properties/minimum": {
+          "status": "reference",
+          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/properties/maximum": {
+          "status": "reference",
+          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Lower-bound form: minimum is given, so the smallest sampled value in the window must be at least minimum; maximum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/requirements/anyOf/0/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Upper-bound form: maximum is given, so the largest sampled value in the window must not exceed maximum; minimum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/requirements/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Requirements for an AC sweep: limits on a probe's phasor magnitude in volts (magnitude_V) or gain relative to the source (gainMagnitude) over a frequency window (frequency_Hz).",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items": {
+          "status": "reviewed",
+          "explanation": "One AC requirement: a name, a published probe, quantity magnitude_V or gainMagnitude, axis frequency_Hz, a frequency window and at least one nonnegative bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            {
+              "name": "passband",
+              "probe": "out",
+              "quantity": "gainMagnitude",
+              "axis": "frequency_Hz",
+              "window": [
+                10,
+                100
+              ],
+              "minimum": 0.9
+            }
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase requirement identifier, up to 64 characters. It names a measured acceptance result and its explained next action.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/properties/probe": {
+          "status": "reference",
+          "explanation": "Select a node already listed in circuit.probes. Requirements use actual independently checked native node voltages.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "magnitude_V: magnitude of the probe's phasor in volts. gainMagnitude: that magnitude divided by the absolute source amplitude (V/V, not decibels). Phase limits are not supported.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "gainMagnitude"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/properties/axis": {
+          "status": "reviewed",
+          "explanation": "Must be frequency_Hz: the window is given in hertz.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "frequency_Hz"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/properties/window": {
+          "status": "reviewed",
+          "explanation": "Inclusive [lower, upper] range of the sweep axis, in hertz, over which the bounds are checked. It must lie inside the declared sweep and contain at least one sample; only those samples are tested. Endpoints equal to a sample coordinate are matched despite tiny floating-point rounding, but no tolerance is added to the voltage or gain bounds.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "pitfalls": [
+            "Behaviour between samples is not checked; increase points if a peak or crossing could fall between them."
+          ],
+          "examples": [
+            [
+              10,
+              100
+            ]
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/properties/window/items": {
+          "status": "reference",
+          "explanation": "One finite sample coordinate in the stated axis units; the first is the inclusive lower endpoint, the second the inclusive upper endpoint.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/properties/minimum": {
+          "status": "reference",
+          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/properties/maximum": {
+          "status": "reference",
+          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Lower-bound form: minimum is given, so the smallest sampled value in the window must be at least minimum; maximum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Upper-bound form: maximum is given, so the largest sampled value in the window must not exceed maximum; minimum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/requirements/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "Requirements for an RC step: limits on a probe's voltage (voltage_V) over a time window (time_s).",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/requirements/anyOf/2/items": {
+          "status": "reviewed",
+          "explanation": "One RC requirement: a name, a published probe, quantity voltage_V, axis time_s, a time window and at least one bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            {
+              "name": "settled",
+              "probe": "out",
+              "quantity": "voltage_V",
+              "axis": "time_s",
+              "window": [
+                0.004,
+                0.005
+              ],
+              "minimum": 0.98
+            }
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase requirement identifier, up to 64 characters. It names a measured acceptance result and its explained next action.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/properties/probe": {
+          "status": "reference",
+          "explanation": "Select a node already listed in circuit.probes. Requirements use actual independently checked native node voltages.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "voltage_V: the probe's node voltage in volts at the sampled times. It is the only quantity available for rcStep.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "voltage_V"
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/properties/axis": {
+          "status": "reviewed",
+          "explanation": "Must be time_s: the window is given in seconds from the step.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "time_s"
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/properties/window": {
+          "status": "reviewed",
+          "explanation": "Inclusive [lower, upper] range of the sweep axis, in seconds, over which the bounds are checked. It must lie inside the declared sweep and contain at least one sample; only those samples are tested. Endpoints equal to a sample coordinate are matched despite tiny floating-point rounding, but no tolerance is added to the voltage or gain bounds.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "pitfalls": [
+            "Behaviour between samples is not checked; increase points if a peak or crossing could fall between them."
+          ],
+          "examples": [
+            [
+              0.004,
+              0.005
+            ]
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/properties/window/items": {
+          "status": "reference",
+          "explanation": "One finite sample coordinate in the stated axis units; the first is the inclusive lower endpoint, the second the inclusive upper endpoint.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/properties/minimum": {
+          "status": "reference",
+          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/properties/maximum": {
+          "status": "reference",
+          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Lower-bound form: minimum is given, so the smallest sampled value in the window must be at least minimum; maximum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/requirements/anyOf/2/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Upper-bound form: maximum is given, so the largest sampled value in the window must not exceed maximum; minimum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/amplitude": {
+          "status": "reviewed",
+          "explanation": "Source voltage for acSweep and rcStep, -1000 to 1000 V, and must be nonzero; dcSweep uses start and stop instead. In acSweep it is the phasor amplitude (gainMagnitude divides by its absolute value); in rcStep it is the height of the step.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Volts",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "examples": [
+            1
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reference",
+          "explanation": "DC document: steady resistor-network voltage across a signed source sweep; capacitors are open circuits.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis circuit document; it must be \"schemaxis.ngspice/1\". It is not the ngspice release.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "schemaxis.ngspice/1"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reference",
+          "explanation": "Select dcSweep for steady signed voltage, acSweep for phasor response, or rcStep for initially uncharged first-order settling.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit": {
+          "status": "reviewed",
+          "explanation": "The network for a DC sweep: one ideal source between ground (node \"0\") and the source node, ideal resistors, optional capacitors (open circuits at DC) and the nodes to publish. At most 16 non-ground nodes; no inductors.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/source": {
+          "status": "reference",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/resistors": {
+          "status": "reference",
+          "explanation": "Declared ideal resistors with positive resistance in ohms. Each node needs a resistor or AC-inductor reference path to ground or the source.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/resistors/items": {
+          "status": "reference",
+          "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/resistors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/resistors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/resistors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/resistors/items/properties/resistance": {
+          "status": "reference",
+          "explanation": "Positive resistance in ohms, 0.001 to 1e9. Changing resistance changes divider gain or the RC/RL time scale; singular or ill-conditioned networks are rejected.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/capacitors": {
+          "status": "reviewed",
+          "explanation": "Ideal capacitors, up to 64, in farads. In a DC sweep they carry no current (open circuits), so they do not change the result; every node still needs a resistor path to ground or the source.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108",
+            "src/schemaxis/adaptors/ngspice/circuit.py:33-60"
+          ],
+          "defaultMeaning": "Schemaxis default: [] (no capacitors)."
+        },
+        "/oneOf/0/properties/circuit/properties/capacitors/items": {
+          "status": "reference",
+          "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/capacitors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/capacitors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/capacitors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/capacitors/items/properties/capacitance": {
+          "status": "reference",
+          "explanation": "Positive capacitance in farads, 1e-12 to 1. For example 1e-6 is one microfarad; changing C shifts cutoff and settling time.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/probes": {
+          "status": "reviewed",
+          "explanation": "Non-ground nodes whose voltages are written to results.csv, 1 to 16, without repeats; each must appear in the circuit. One volt column is published per probe.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: [\"out\"].",
+          "pitfalls": [
+            "The default probe \"out\" must exist in the circuit; rename your output node or list the real node names."
+          ],
+          "examples": [
+            [
+              "out"
+            ]
+          ]
+        },
+        "/oneOf/0/properties/circuit/properties/probes/items": {
+          "status": "reference",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/start": {
+          "status": "reviewed",
+          "explanation": "First source voltage of the sweep, -1000 to 1000 V. Values from start to stop are evenly spaced, both included; stop must be greater than start.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Volts",
+          "defaultMeaning": "Schemaxis default: 0.",
+          "examples": [
+            0
+          ]
+        },
+        "/oneOf/0/properties/stop": {
+          "status": "reviewed",
+          "explanation": "Last source voltage of the sweep, -1000 to 1000 V; must be greater than start.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Volts",
+          "defaultMeaning": "Schemaxis default: 5.",
+          "examples": [
+            5
+          ]
+        },
+        "/oneOf/0/properties/points": {
+          "status": "reviewed",
+          "explanation": "Number of evenly spaced samples including both endpoints, 2 to 512. More points resolve the curve better; the requirements only see these samples.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: 101.",
+          "examples": [
+            101
+          ]
+        },
+        "/oneOf/0/properties/requirements": {
+          "status": "reference",
+          "explanation": "Optional named acceptance requirements on checked native samples. A physically valid circuit may miss these bounds and fail with PERFORMANCE_NOT_MET; omitted requirements add no performance gate.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/requirements/items": {
+          "status": "reviewed",
+          "explanation": "One DC requirement: a name, a published probe, quantity voltage_V, axis sourceVoltage_V, a window of source voltages and at least one bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            {
+              "name": "out_high",
+              "probe": "out",
+              "quantity": "voltage_V",
+              "axis": "sourceVoltage_V",
+              "window": [
+                4,
+                5
+              ],
+              "minimum": 2.5
+            }
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase requirement identifier, up to 64 characters. It names a measured acceptance result and its explained next action.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/properties/probe": {
+          "status": "reference",
+          "explanation": "Select a node already listed in circuit.probes. Requirements use actual independently checked native node voltages.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "voltage_V: the probe's signed node voltage in volts. It is the only quantity available in a DC sweep.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "voltage_V"
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/properties/axis": {
+          "status": "reviewed",
+          "explanation": "Must be sourceVoltage_V: the window is given in source volts.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "sourceVoltage_V"
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/properties/window": {
+          "status": "reviewed",
+          "explanation": "Inclusive [lower, upper] range of the sweep axis, in source volts, over which the bounds are checked. It must lie inside the declared sweep and contain at least one sample; only those samples are tested. Endpoints equal to a sample coordinate are matched despite tiny floating-point rounding, but no tolerance is added to the voltage or gain bounds.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "pitfalls": [
+            "Behaviour between samples is not checked; increase points if a peak or crossing could fall between them."
+          ],
+          "examples": [
+            [
+              4,
+              5
+            ]
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/properties/window/items": {
+          "status": "reference",
+          "explanation": "One finite sample coordinate in the stated axis units; the first is the inclusive lower endpoint, the second the inclusive upper endpoint.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/properties/minimum": {
+          "status": "reference",
+          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/properties/maximum": {
+          "status": "reference",
+          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Lower-bound form: minimum is given, so the smallest sampled value in the window must be at least minimum; maximum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/oneOf/0/properties/requirements/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Upper-bound form: maximum is given, so the largest sampled value in the window must not exceed maximum; minimum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reference",
+          "explanation": "AC document: linear RLC phasors at finite linearly spaced frequencies with nonzero source amplitude.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis circuit document; it must be \"schemaxis.ngspice/1\". It is not the ngspice release.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "schemaxis.ngspice/1"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reference",
+          "explanation": "Select dcSweep for steady signed voltage, acSweep for phasor response, or rcStep for initially uncharged first-order settling.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit": {
+          "status": "reviewed",
+          "explanation": "The network for an AC sweep: one ideal source between ground (node \"0\") and the source node, ideal resistors, capacitors and uncoupled inductors, and up to 15 nodes to publish. At most 16 non-ground nodes.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/source": {
+          "status": "reference",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/resistors": {
+          "status": "reference",
+          "explanation": "Declared ideal resistors with positive resistance in ohms. Each node needs a resistor or AC-inductor reference path to ground or the source.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/resistors/items": {
+          "status": "reference",
+          "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/resistors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/resistors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/resistors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/resistors/items/properties/resistance": {
+          "status": "reference",
+          "explanation": "Positive resistance in ohms, 0.001 to 1e9. Changing resistance changes divider gain or the RC/RL time scale; singular or ill-conditioned networks are rejected.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/capacitors": {
+          "status": "reviewed",
+          "explanation": "Ideal capacitors, up to 64, in farads, with admittance j x 2 pi f x C at each frequency. They do not count as a connection when checking that every node has a resistor or inductor path to ground or the source.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108",
+            "src/schemaxis/adaptors/ngspice/circuit.py:33-60"
+          ],
+          "defaultMeaning": "Schemaxis default: [] (no capacitors)."
+        },
+        "/oneOf/1/properties/circuit/properties/capacitors/items": {
+          "status": "reference",
+          "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/capacitors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/capacitors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/capacitors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/capacitors/items/properties/capacitance": {
+          "status": "reference",
+          "explanation": "Positive capacitance in farads, 1e-12 to 1. For example 1e-6 is one microfarad; changing C shifts cutoff and settling time.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/probes": {
+          "status": "reviewed",
+          "explanation": "Non-ground nodes whose phasors are written to results.csv, 1 to 15, without repeats; each must appear in the circuit. Each probe adds real, imaginary, magnitude and phase columns.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: [\"out\"].",
+          "pitfalls": [
+            "The default probe \"out\" must exist in the circuit; rename your output node or list the real node names."
+          ],
+          "examples": [
+            [
+              "out"
+            ]
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/probes/items": {
+          "status": "reference",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/inductors": {
+          "status": "reference",
+          "explanation": "AC-only uncoupled ideal inductors in henries, stamped as 1/(j*omega*L). Ideal-inductor loops and an inductive source short are rejected.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/inductors/items": {
+          "status": "reference",
+          "explanation": "One AC-only uncoupled ideal coil with unique name, distinct endpoints and positive inductance in henries.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/inductors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/inductors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/inductors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/inductors/items/properties/inductance": {
+          "status": "reference",
+          "explanation": "Positive uncoupled inductance in henries, 1e-9 to 1e3. Supported only by acSweep, with no mutual coupling or imported models.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/start": {
+          "status": "reviewed",
+          "explanation": "Lowest frequency, 0.001 Hz to 1e9 Hz. Frequencies from start to stop are linearly spaced, both included; stop must be greater than start.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Hertz",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "examples": [
+            10
+          ]
+        },
+        "/oneOf/1/properties/stop": {
+          "status": "reviewed",
+          "explanation": "Highest frequency, 0.001 Hz to 1e9 Hz; must be greater than start. Spacing is linear, so a wide range with few points samples low frequencies coarsely.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Hertz",
+          "defaultMeaning": "Schemaxis default: 10000.",
+          "examples": [
+            10000
+          ]
+        },
+        "/oneOf/1/properties/points": {
+          "status": "reviewed",
+          "explanation": "Number of linearly spaced frequencies including both endpoints, 3 to 512. Narrow resonances need enough points near the peak; requirements only see these samples.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: 101.",
+          "examples": [
+            101
+          ]
+        },
+        "/oneOf/1/properties/amplitude": {
+          "status": "reviewed",
+          "explanation": "Amplitude of the sinusoidal source phasor, -1000 to 1000 V, nonzero. The circuit is linear, so node magnitudes scale with it; gainMagnitude requirements divide by its absolute value.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Volts",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "examples": [
+            1
+          ]
+        },
+        "/oneOf/1/properties/requirements": {
+          "status": "reference",
+          "explanation": "Optional named acceptance requirements on checked native samples. A physically valid circuit may miss these bounds and fail with PERFORMANCE_NOT_MET; omitted requirements add no performance gate.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items": {
+          "status": "reviewed",
+          "explanation": "One AC requirement: a name, a published probe, quantity magnitude_V or gainMagnitude, axis frequency_Hz, a frequency window and at least one nonnegative bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            {
+              "name": "passband",
+              "probe": "out",
+              "quantity": "gainMagnitude",
+              "axis": "frequency_Hz",
+              "window": [
+                10,
+                100
+              ],
+              "minimum": 0.9
+            }
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase requirement identifier, up to 64 characters. It names a measured acceptance result and its explained next action.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/properties/probe": {
+          "status": "reference",
+          "explanation": "Select a node already listed in circuit.probes. Requirements use actual independently checked native node voltages.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "magnitude_V: magnitude of the probe's phasor in volts. gainMagnitude: that magnitude divided by the absolute source amplitude (V/V, not decibels). Phase limits are not supported.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "gainMagnitude"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/properties/axis": {
+          "status": "reviewed",
+          "explanation": "Must be frequency_Hz: the window is given in hertz.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "frequency_Hz"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/properties/window": {
+          "status": "reviewed",
+          "explanation": "Inclusive [lower, upper] range of the sweep axis, in hertz, over which the bounds are checked. It must lie inside the declared sweep and contain at least one sample; only those samples are tested. Endpoints equal to a sample coordinate are matched despite tiny floating-point rounding, but no tolerance is added to the voltage or gain bounds.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "pitfalls": [
+            "Behaviour between samples is not checked; increase points if a peak or crossing could fall between them."
+          ],
+          "examples": [
+            [
+              10,
+              100
+            ]
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/properties/window/items": {
+          "status": "reference",
+          "explanation": "One finite sample coordinate in the stated axis units; the first is the inclusive lower endpoint, the second the inclusive upper endpoint.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/properties/minimum": {
+          "status": "reference",
+          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/properties/maximum": {
+          "status": "reference",
+          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Lower-bound form: minimum is given, so the smallest sampled value in the window must be at least minimum; maximum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Upper-bound form: maximum is given, so the largest sampled value in the window must not exceed maximum; minimum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/oneOf/2": {
+          "status": "reference",
+          "explanation": "RC document: one initially uncharged series resistor and grounded capacitor, driven at t=0.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis circuit document; it must be \"schemaxis.ngspice/1\". It is not the ngspice release.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "schemaxis.ngspice/1"
+          ]
+        },
+        "/oneOf/2/properties/operation": {
+          "status": "reference",
+          "explanation": "Select dcSweep for steady signed voltage, acSweep for phasor response, or rcStep for initially uncharged first-order settling.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit": {
+          "status": "reviewed",
+          "explanation": "The step-response network: exactly one resistor from the source node to a response node and exactly one capacitor from that response node to ground (\"0\"). No other components are allowed.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            {
+              "source": "in",
+              "resistors": [
+                {
+                  "name": "r1",
+                  "a": "in",
+                  "b": "out",
+                  "resistance": 1000
+                }
+              ],
+              "capacitors": [
+                {
+                  "name": "c1",
+                  "a": "out",
+                  "b": "0",
+                  "capacitance": 1e-06
+                }
+              ],
+              "probes": [
+                "out"
+              ]
+            }
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/source": {
+          "status": "reference",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/resistors": {
+          "status": "reviewed",
+          "explanation": "Exactly one resistor, between the source node and the response node (the capacitor's other terminal).",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            [
+              {
+                "name": "r1",
+                "a": "in",
+                "b": "out",
+                "resistance": 1000
+              }
+            ]
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/resistors/items": {
+          "status": "reference",
+          "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/resistors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/resistors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/resistors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/resistors/items/properties/resistance": {
+          "status": "reference",
+          "explanation": "Positive resistance in ohms, 0.001 to 1e9. Changing resistance changes divider gain or the RC/RL time scale; singular or ill-conditioned networks are rejected.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/capacitors": {
+          "status": "reviewed",
+          "explanation": "Exactly one capacitor, from the response node to ground (\"0\"). Its capacitance times the resistance sets the time constant tau = R x C.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            [
+              {
+                "name": "c1",
+                "a": "out",
+                "b": "0",
+                "capacitance": 1e-06
+              }
+            ]
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/capacitors/items": {
+          "status": "reference",
+          "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/capacitors/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase component identifier within the circuit. It labels the generated inspectable netlist; node 0 cannot be a component name.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/capacitors/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "examples": [
+            "in"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/capacitors/items/properties/b": {
+          "status": "reference",
+          "explanation": "Second component endpoint, distinct from a. Uncoupled ideal R, C and L responses do not depend on endpoint ordering.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/capacitors/items/properties/capacitance": {
+          "status": "reference",
+          "explanation": "Positive capacitance in farads, 1e-12 to 1. For example 1e-6 is one microfarad; changing C shifts cutoff and settling time.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/probes": {
+          "status": "reviewed",
+          "explanation": "Nodes to publish: the source node and/or the response node, without repeats. The capacitor voltage is on the response node.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: [\"out\"].",
+          "pitfalls": [
+            "With the default, the response node must be named \"out\"."
+          ],
+          "examples": [
+            [
+              "out"
+            ]
+          ]
+        },
+        "/oneOf/2/properties/circuit/properties/probes/items": {
+          "status": "reference",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/stop": {
+          "status": "reviewed",
+          "explanation": "End time of the step response in seconds (the start is always 0). It must lie between 0.01 and 20 time constants R x C; five time constants show about 99.3% of the final voltage.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Seconds",
+          "defaultMeaning": "Schemaxis default: 0.005.",
+          "pitfalls": [
+            "With other R or C values the default 0.005 s may fall outside 0.01 to 20 tau and fail planning; set stop explicitly (for example 5 x R x C)."
+          ],
+          "examples": [
+            0.005
+          ]
+        },
+        "/oneOf/2/properties/points": {
+          "status": "reviewed",
+          "explanation": "Number of evenly spaced samples including both endpoints, 2 to 512. More points resolve the curve better; the requirements only see these samples.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "defaultMeaning": "Schemaxis default: 101.",
+          "examples": [
+            101
+          ]
+        },
+        "/oneOf/2/properties/amplitude": {
+          "status": "reviewed",
+          "explanation": "Height of the voltage step applied at t = 0, -1000 to 1000 V, nonzero. The capacitor voltage rises from 0 towards this value.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
+          ],
+          "units": "Volts",
+          "defaultMeaning": "Schemaxis default: 1.",
+          "examples": [
+            5
+          ]
+        },
+        "/oneOf/2/properties/requirements": {
+          "status": "reference",
+          "explanation": "Optional named acceptance requirements on checked native samples. A physically valid circuit may miss these bounds and fail with PERFORMANCE_NOT_MET; omitted requirements add no performance gate.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/requirements/items": {
+          "status": "reviewed",
+          "explanation": "One RC requirement: a name, a published probe, quantity voltage_V, axis time_s, a time window and at least one bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            {
+              "name": "settled",
+              "probe": "out",
+              "quantity": "voltage_V",
+              "axis": "time_s",
+              "window": [
+                0.004,
+                0.005
+              ],
+              "minimum": 0.98
+            }
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/properties/name": {
+          "status": "reference",
+          "explanation": "Unique lowercase requirement identifier, up to 64 characters. It names a measured acceptance result and its explained next action.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/properties/probe": {
+          "status": "reference",
+          "explanation": "Select a node already listed in circuit.probes. Requirements use actual independently checked native node voltages.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "voltage_V: the probe's node voltage in volts at the sampled times. It is the only quantity available for rcStep.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "voltage_V"
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/properties/axis": {
+          "status": "reviewed",
+          "explanation": "Must be time_s: the window is given in seconds from the step.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "examples": [
+            "time_s"
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/properties/window": {
+          "status": "reviewed",
+          "explanation": "Inclusive [lower, upper] range of the sweep axis, in seconds, over which the bounds are checked. It must lie inside the declared sweep and contain at least one sample; only those samples are tested. Endpoints equal to a sample coordinate are matched despite tiny floating-point rounding, but no tolerance is added to the voltage or gain bounds.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ],
+          "pitfalls": [
+            "Behaviour between samples is not checked; increase points if a peak or crossing could fall between them."
+          ],
+          "examples": [
+            [
+              0.004,
+              0.005
+            ]
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/properties/window/items": {
+          "status": "reference",
+          "explanation": "One finite sample coordinate in the stated axis units; the first is the inclusive lower endpoint, the second the inclusive upper endpoint.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/properties/minimum": {
+          "status": "reference",
+          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/properties/maximum": {
+          "status": "reference",
+          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "sources": [
+            "docs/ngspice.md"
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Lower-bound form: minimum is given, so the smallest sampled value in the window must be at least minimum; maximum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/oneOf/2/properties/requirements/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Upper-bound form: maximum is given, so the largest sampled value in the window must not exceed maximum; minimum may also be given.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        }
+      }
+    }
+  }
+}

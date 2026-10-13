@@ -1,0 +1,639 @@
+{
+  "version": "schemaxis.workflow/1",
+  "execution": {
+    "maxWorkers": 2,
+    "cpus": 8,
+    "memoryMB": 8192,
+    "gpus": 0
+  },
+  "operations": [
+    {
+      "id": "bracket",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "linearDeflection": 0.05,
+        "nodes": [
+          {
+            "id": "foot",
+            "filter": "box",
+            "options": {
+              "length": 100,
+              "width": 70,
+              "height": 8,
+              "origin": [
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          {
+            "id": "upright",
+            "filter": "box",
+            "options": {
+              "length": 100,
+              "width": 8,
+              "height": 60,
+              "origin": [
+                0,
+                62,
+                0
+              ]
+            }
+          },
+          {
+            "id": "blank",
+            "filter": "fuse",
+            "inputs": {
+              "base": "foot",
+              "tool": "upright"
+            }
+          },
+          {
+            "id": "drill0",
+            "filter": "cylinder",
+            "options": {
+              "radius": 5,
+              "height": 10,
+              "origin": [
+                25,
+                25,
+                -1
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "id": "cut0",
+            "filter": "cut",
+            "inputs": {
+              "base": "blank",
+              "tool": "drill0"
+            }
+          },
+          {
+            "id": "drill1",
+            "filter": "cylinder",
+            "options": {
+              "radius": 5,
+              "height": 10,
+              "origin": [
+                75,
+                25,
+                -1
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "id": "cut1",
+            "filter": "cut",
+            "inputs": {
+              "base": "cut0",
+              "tool": "drill1"
+            }
+          },
+          {
+            "id": "drill2",
+            "filter": "cylinder",
+            "options": {
+              "radius": 6,
+              "height": 10,
+              "origin": [
+                25,
+                61,
+                35
+              ],
+              "axis": [
+                0,
+                1,
+                0
+              ]
+            }
+          },
+          {
+            "id": "cut2",
+            "filter": "cut",
+            "inputs": {
+              "base": "cut1",
+              "tool": "drill2"
+            }
+          },
+          {
+            "id": "drill3",
+            "filter": "cylinder",
+            "options": {
+              "radius": 6,
+              "height": 10,
+              "origin": [
+                75,
+                61,
+                35
+              ],
+              "axis": [
+                0,
+                1,
+                0
+              ]
+            }
+          },
+          {
+            "id": "cut3",
+            "filter": "cut",
+            "inputs": {
+              "base": "cut2",
+              "tool": "drill3"
+            }
+          }
+        ],
+        "output": "cut3"
+      }
+    },
+    {
+      "id": "bracketMesh",
+      "document": {
+        "version": "schemaxis/1",
+        "nodes": [
+          {
+            "id": "mesh",
+            "filter": "readSTL",
+            "options": {
+              "files": [
+                {
+                  "$artifact": "bracket",
+                  "index": 1
+                }
+              ]
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "cad",
+            "visible": {
+              "mesh": {
+                "colour": [
+                  0.12,
+                  0.4,
+                  0.68
+                ]
+              }
+            },
+            "gltf": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "bracketRender",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "part",
+            "filter": "readGltf",
+            "options": {
+              "file": {
+                "$artifact": "bracketMesh",
+                "index": 0
+              }
+            }
+          },
+          {
+            "id": "engineeringFrame",
+            "filter": "transform",
+            "inputs": {
+              "input": "part"
+            },
+            "options": {
+              "rotation": [
+                -90,
+                0,
+                0
+              ],
+              "scale": [
+                0.001,
+                0.001,
+                0.001
+              ]
+            }
+          },
+          {
+            "id": "finish",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.055,
+                0.24,
+                0.43,
+                1
+              ],
+              "metallic": 0.45,
+              "roughness": 0.28
+            }
+          },
+          {
+            "id": "styled",
+            "filter": "assignMaterial",
+            "inputs": {
+              "input": "engineeringFrame",
+              "material": "finish"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "presentation",
+            "visible": [
+              "styled"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 64,
+              "denoise": true,
+              "worldStrength": 0.5,
+              "lightPosition": [
+                0.15,
+                -0.2,
+                0.3
+              ],
+              "lightEnergy": 20,
+              "lightSize": 0.15
+            },
+            "images": [
+              {
+                "id": "views",
+                "size": [
+                  960,
+                  720
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -1.7,
+                      1.2
+                    ],
+                    "padding": 0.08
+                  },
+                  {
+                    "direction": [
+                      -1,
+                      -1,
+                      1.7
+                    ],
+                    "padding": 0.08
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "flange",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "linearDeflection": 0.05,
+        "nodes": [
+          {
+            "id": "flange",
+            "filter": "cylinder",
+            "options": {
+              "radius": 35,
+              "height": 8,
+              "origin": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "id": "neck",
+            "filter": "cylinder",
+            "options": {
+              "radius": 18,
+              "height": 60,
+              "origin": [
+                0,
+                0,
+                0
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "id": "blank",
+            "filter": "fuse",
+            "inputs": {
+              "base": "flange",
+              "tool": "neck"
+            }
+          },
+          {
+            "id": "bore",
+            "filter": "cylinder",
+            "options": {
+              "radius": 12,
+              "height": 62,
+              "origin": [
+                0,
+                0,
+                -1
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "id": "hollow",
+            "filter": "cut",
+            "inputs": {
+              "base": "blank",
+              "tool": "bore"
+            }
+          },
+          {
+            "id": "bolt0",
+            "filter": "cylinder",
+            "options": {
+              "radius": 3.5,
+              "height": 10,
+              "origin": [
+                27,
+                0,
+                -1
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "id": "cut0",
+            "filter": "cut",
+            "inputs": {
+              "base": "hollow",
+              "tool": "bolt0"
+            }
+          },
+          {
+            "id": "bolt1",
+            "filter": "cylinder",
+            "options": {
+              "radius": 3.5,
+              "height": 10,
+              "origin": [
+                0,
+                27,
+                -1
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "id": "cut1",
+            "filter": "cut",
+            "inputs": {
+              "base": "cut0",
+              "tool": "bolt1"
+            }
+          },
+          {
+            "id": "bolt2",
+            "filter": "cylinder",
+            "options": {
+              "radius": 3.5,
+              "height": 10,
+              "origin": [
+                -27,
+                0,
+                -1
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "id": "cut2",
+            "filter": "cut",
+            "inputs": {
+              "base": "cut1",
+              "tool": "bolt2"
+            }
+          },
+          {
+            "id": "bolt3",
+            "filter": "cylinder",
+            "options": {
+              "radius": 3.5,
+              "height": 10,
+              "origin": [
+                0,
+                -27,
+                -1
+              ],
+              "axis": [
+                0,
+                0,
+                1
+              ]
+            }
+          },
+          {
+            "id": "cut3",
+            "filter": "cut",
+            "inputs": {
+              "base": "cut2",
+              "tool": "bolt3"
+            }
+          }
+        ],
+        "output": "cut3"
+      }
+    },
+    {
+      "id": "flangeMesh",
+      "document": {
+        "version": "schemaxis/1",
+        "nodes": [
+          {
+            "id": "mesh",
+            "filter": "readSTL",
+            "options": {
+              "files": [
+                {
+                  "$artifact": "flange",
+                  "index": 1
+                }
+              ]
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "cad",
+            "visible": {
+              "mesh": {
+                "colour": [
+                  0.8,
+                  0.36,
+                  0.09
+                ]
+              }
+            },
+            "gltf": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "flangeRender",
+      "execution": {
+        "threads": 4,
+        "memoryMB": 2048
+      },
+      "document": {
+        "version": "schemaxis.blender/1",
+        "nodes": [
+          {
+            "id": "part",
+            "filter": "readGltf",
+            "options": {
+              "file": {
+                "$artifact": "flangeMesh",
+                "index": 0
+              }
+            }
+          },
+          {
+            "id": "engineeringFrame",
+            "filter": "transform",
+            "inputs": {
+              "input": "part"
+            },
+            "options": {
+              "rotation": [
+                -90,
+                0,
+                0
+              ],
+              "scale": [
+                0.001,
+                0.001,
+                0.001
+              ]
+            }
+          },
+          {
+            "id": "finish",
+            "filter": "material",
+            "options": {
+              "colour": [
+                0.6,
+                0.22,
+                0.045,
+                1
+              ],
+              "metallic": 0.45,
+              "roughness": 0.28
+            }
+          },
+          {
+            "id": "styled",
+            "filter": "assignMaterial",
+            "inputs": {
+              "input": "engineeringFrame",
+              "material": "finish"
+            }
+          }
+        ],
+        "scenes": [
+          {
+            "id": "presentation",
+            "visible": [
+              "styled"
+            ],
+            "render": {
+              "threads": 4,
+              "samples": 64,
+              "denoise": true,
+              "worldStrength": 0.5,
+              "lightPosition": [
+                0.15,
+                -0.2,
+                0.3
+              ],
+              "lightEnergy": 20,
+              "lightSize": 0.15
+            },
+            "images": [
+              {
+                "id": "views",
+                "size": [
+                  960,
+                  720
+                ],
+                "cameras": [
+                  {
+                    "direction": [
+                      1,
+                      -1.7,
+                      1.2
+                    ],
+                    "padding": 0.08
+                  },
+                  {
+                    "direction": [
+                      -1,
+                      -1,
+                      1.7
+                    ],
+                    "padding": 0.08
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

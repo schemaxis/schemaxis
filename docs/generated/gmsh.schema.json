@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.gmsh/1"
+    },
+    "units": {
+      "const": "mm"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "box"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "origin": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -100000,
+                      "maximum": 100000
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "default": [
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "size": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 0.001,
+                      "maximum": 100000
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "default": [
+                      10,
+                      10,
+                      10
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "readSTEP"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "file"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "tetrahedral"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "size": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 100000,
+                    "default": 3
+                  },
+                  "volumeName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "default": "domain"
+                  },
+                  "boundaryName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "default": "boundary"
+                  },
+                  "faceGroups": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "axis": {
+                          "enum": [
+                            "x",
+                            "y",
+                            "z"
+                          ]
+                        },
+                        "coordinate": {
+                          "type": "number",
+                          "minimum": -100000,
+                          "maximum": 200000
+                        },
+                        "tolerance": {
+                          "type": "number",
+                          "minimum": 1e-06,
+                          "maximum": 0.001,
+                          "default": 1e-06
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name",
+                        "axis",
+                        "coordinate"
+                      ]
+                    },
+                    "maxItems": 12,
+                    "default": []
+                  },
+                  "nearBoundaries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "boundary": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "size": {
+                          "type": "number",
+                          "minimum": 0.001,
+                          "maximum": 100000
+                        },
+                        "distance": {
+                          "type": "number",
+                          "minimum": 0.001,
+                          "maximum": 100000
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "boundary",
+                        "size",
+                        "distance"
+                      ]
+                    },
+                    "maxItems": 13,
+                    "default": []
+                  },
+                  "volumeTolerance": {
+                    "type": "number",
+                    "minimum": 1e-08,
+                    "maximum": 0.02,
+                    "default": 0.01
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
+          }
+        ]
+      }
+    },
+    "output": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    },
+    "refinement": {
+      "type": "object",
+      "properties": {
+        "maxIterations": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 4
+        },
+        "reductionFactor": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.95,
+          "default": 0.7
+        },
+        "minimumSize": {
+          "type": "number",
+          "minimum": 0.001,
+          "maximum": 100000,
+          "default": 0.1
+        },
+        "maxTetrahedra": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200000,
+          "default": 50000
+        },
+        "requirements": {
+          "type": "object",
+          "properties": {
+            "maximumEdgeLength": {
+              "type": "number",
+              "minimum": 0.001,
+              "maximum": 100000
+            },
+            "minimumMeanRatio": {
+              "type": "number",
+              "minimum": 1e-06,
+              "maximum": 1
+            },
+            "maximumVolumeRelativeError": {
+              "type": "number",
+              "minimum": 1e-08,
+              "maximum": 0.02
+            },
+            "boundaryMaximumEdgeLength": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "boundary": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "maximum": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 100000
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "boundary",
+                  "maximum"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 13
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "requirements"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "units",
+    "nodes",
+    "output"
+  ]
+}
