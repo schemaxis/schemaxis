@@ -297,7 +297,7 @@ class StudioServerTests(unittest.TestCase):
         self.app.setup.defaults['freecad'] = sys.executable
         _, record, _ = self.call('/api/documents', {'action': 'new', 'provider': 'freecad'})
         self.app.focus(record['id'])
-        self.assertEqual(self.session.executable, str(Path(sys.executable).resolve()))
+        self.assertEqual(self.session.executable, str(Path(sys.executable).absolute()))
 
     def test_live_preview_validates_before_native_start(self):
         import sys
@@ -309,7 +309,7 @@ class StudioServerTests(unittest.TestCase):
             preview.return_value = {'status': 'succeeded', 'native': True, 'artifacts': []}
             _, started, _ = self.call('/api/preview', {'document': record['id'], 'revision': record['revision']})
             self.app.job_owner.futures[started['job']].result(timeout=5)
-            start.assert_called_once_with(str(Path(sys.executable).resolve()))
+            start.assert_called_once_with(str(Path(sys.executable).absolute()))
             preview.assert_called_once()
         self.app.author({'document': record['id'], 'revision': record['revision'], 'action': 'source', 'source': '{'})
         latest = self.app.document(record['id'])

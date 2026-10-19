@@ -1,0 +1,319 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.sox/1": {
+      "guide": "docs/sox.md",
+      "context": {
+        "purpose": "Assemble excerpts of PCM16 recordings with frame-accurate cuts, gains and nonoverlapping linear fades.",
+        "assumptions": "Absolute canonical PCM16 little-endian WAV files, mono/stereo and identical sample rates/channels; latest stable SoX 14.4.2.",
+        "constraints": "Eight clips, 262144 total output frames, 4MiB total source bytes, 1048576 combined scalar samples. No clipping, resampling, mix, crossfade or authored effects.",
+        "inspection": "Reopen native audio.wav and per-clip WAVs; standard-library wave/struct and analytic frame envelopes independently check every sample. Summary is host inspection.",
+        "recovery": "INVALID_AUDIO_FADE: shorten fades. AUDIO_SOURCE_BOUNDS: choose a trim inside source frames. AUDIO_CLIPPING: lower gain before fades. AUDIO_FORMAT_MISMATCH: supply equal rate/channels. INTERPRETER_NOT_FOUND: configure SoX 14.4.2."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/sox-assembly.json"
+        },
+        {
+          "id": "stereo",
+          "reference": "examples/schemaxis/sox-stereo.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/sox-stereo-variant.json"
+        },
+        {
+          "id": "endpoint",
+          "reference": "examples/schemaxis/sox-endpoint.json"
+        },
+        {
+          "id": "extrema",
+          "reference": "examples/schemaxis/sox-extrema.json"
+        },
+        {
+          "id": "invalid-fade",
+          "reference": "examples/schemaxis/sox-fade-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_AUDIO_FADE",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_sox.py"
+      ],
+      "acceptance": [
+        "tools/qualify_sox.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Isolated audio jobs support source-byte reuse invalidation and verified WAV artifacts.",
+          "references": [
+            "docs/sox.md",
+            "tools/qualify_sox.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references and finite parameter studies resolve before native audio editing.",
+          "references": [
+            "docs/sox.md",
+            "tools/qualify_sox.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://sox.sourceforge.net/sox.html",
+          "https://sourceforge.net/projects/sox/files/sox/14.4.2/"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline includes capture, version, every clip, concatenation and verification; CPU 30s, address space 512MiB, file 8MiB per native process.",
+          "cancellation": "Shared tracked process-group cancellation terminates owned native jobs; cancellation is checked before publication.",
+          "logs": "Authored/effective plans, WAV captures, input hashes, trusted launchers, submissions/stdout/stderr, per-clip WAVs and final audio retained.",
+          "verification": "Strict RIFF and wave/struct reopening, analytic trim/gain/fade samples within 0.5001 PCM16 LSB (one quantisation plus sub-LSB PCM32 effects), exact integer concatenation, exact command/input/evidence/publication binding."
+        },
+        "data": [
+          {
+            "id": "wav",
+            "direction": "input",
+            "kind": "file",
+            "format": "PCM16 WAV",
+            "traits": {
+              "channels": "mono or stereo",
+              "sampleRate": "8000\u2013192000 Hz"
+            },
+            "losses": [
+              "Metadata retention/stripping is outside the verified contract; no resampling, channel conversion or compressed audio."
+            ],
+            "scope": "Captured canonical RIFF PCM16, common rate/channels and bounded bytes/sample counts."
+          },
+          {
+            "id": "audio",
+            "direction": "output",
+            "kind": "file",
+            "format": "PCM16 WAV",
+            "traits": {
+              "samples": "ordered processed sample frames"
+            },
+            "losses": [
+              "Single per-clip quantisation; concatenation exact."
+            ],
+            "scope": "Every native sample independently checked."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect audio-summary.json and retained frame edit decisions.",
+            "limits": "No playback or interactive native session; use external audio tools for listening."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit JSON clips, plan and run; source-byte changes invalidate workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Isolated verified audio jobs and file artifacts."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Common references and finite studies resolve before native editing."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Each captured source byte digest invalidates stale reuse."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer editing of clips, cuts, gains and fades."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "The bounded serial PCM audio edit-decision route does not implement native-inspection."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The bounded serial PCM audio edit-decision route does not implement mpi."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "The bounded serial PCM audio edit-decision route does not implement time-batches."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "The bounded serial PCM audio edit-decision route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The bounded serial PCM audio edit-decision route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "The bounded serial PCM audio edit-decision route does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "mono-sequence",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/clips/0/source": "examples/schemaxis/fixtures/sox/ramp.wav",
+              "/clips/1/source": "examples/schemaxis/fixtures/sox/ramp.wav"
+            },
+            "scope": "Native processed WAV samples independently compared with captured PCM16 values and analytic cut/gain/fade envelope; exact concatenation checked.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 1536,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "stereo-sequence",
+            "example": "stereo",
+            "edits": [],
+            "resources": {
+              "/clips/0/source": "examples/schemaxis/fixtures/sox/stereo.wav",
+              "/clips/1/source": "examples/schemaxis/fixtures/sox/variant.wav"
+            },
+            "scope": "Native processed WAV samples independently compared with captured PCM16 values and analytic cut/gain/fade envelope; exact concatenation checked.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 7000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "stereo-variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/clips/0/source": "examples/schemaxis/fixtures/sox/stereo.wav",
+              "/clips/1/source": "examples/schemaxis/fixtures/sox/variant.wav"
+            },
+            "scope": "Native processed WAV samples independently compared with captured PCM16 values and analytic cut/gain/fade envelope; exact concatenation checked.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 6998,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "fade-endpoints",
+            "example": "endpoint",
+            "edits": [],
+            "resources": {
+              "/clips/0/source": "examples/schemaxis/fixtures/sox/endpoint.wav"
+            },
+            "scope": "Native processed WAV samples independently compared with captured PCM16 values and analytic cut/gain/fade envelope; exact concatenation checked.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 8,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "boundary-extrema",
+            "example": "extrema",
+            "edits": [],
+            "resources": {
+              "/clips/0/source": "examples/schemaxis/fixtures/sox/extrema.wav"
+            },
+            "scope": "4000 stereo frames at 11025 Hz; signed PCM extrema, ramps/impulses and touching 2000-frame fade-in/out independently checked sample by sample.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 4000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial sample-frame trim/gain/linear fade/concatenation route, all fields, independent PCM verification and source-byte reuse.",
+        "review": [
+          "verification/2026-10-17-sox-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The bounded serial PCM audio edit-decision route does not implement native-inspection.",
+          "mpi": "The bounded serial PCM audio edit-decision route does not implement mpi.",
+          "time-batches": "The bounded serial PCM audio edit-decision route does not implement time-batches.",
+          "live-editing": "The bounded serial PCM audio edit-decision route does not implement live-editing.",
+          "native-save": "The bounded serial PCM audio edit-decision route does not implement native-save.",
+          "conversion": "The bounded serial PCM audio edit-decision route does not implement conversion."
+        }
+      }
+    }
+  }
+}

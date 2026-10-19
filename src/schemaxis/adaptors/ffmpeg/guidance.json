@@ -31,6 +31,20 @@
         "Metadata order is playback order; tags in the metadata do not select or reorder frames.",
         "All rectangles must have the same size, and the sheet's pixel size must match the metadata width and height."
       ]
+    },
+    "encodeVideo": {
+      "status": "reviewed",
+      "explanation": "Capture a silent existing video, select a zero-based presentation-frame range (inclusive start, exclusive end), and publish it at the chosen constant output fps. Choose this for clip preparation and retiming; use Shotcut for multi-clip editing. Every source frame is probed/decoded before selection and every output RGB channel is checked. MP4 edit lists use FFmpeg default presentation semantics.",
+      "sources": [
+        "docs/ffmpeg.md",
+        "src/schemaxis/adaptors/ffmpeg/video.py",
+        "https://ffmpeg.org/ffmpeg.html"
+      ],
+      "pitfalls": [
+        "Output fps changes playback speed; it never samples or interpolates frames.",
+        "The entire source must fit the bounds even if the selected range is short.",
+        "Only silent progressive single-stream MP4/H264 yuv420p or MKV/FFV1 bgr0; no rotation or non-square pixels."
+      ]
     }
   },
   "routes": {
@@ -38,7 +52,7 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "One FFmpeg video publication: a single node that encodes PNG frames or a sprite sheet into a silent video at a constant frame rate, plus optional deliverable requirements. Limits: 600 frames, 4096 pixels per side and 192 MiB of decoded pixels.",
+          "explanation": "One silent video publication from ordered PNG frames, a timed sprite sheet or a bounded existing-video presentation-frame range, with optional deliverable requirements. See the individual source contracts; existing video sources are limited to 600 frames,32 MiB input and192 MiB RGB.",
           "sources": [
             "docs/media-workflows.md#ffmpeg-publication",
             "src/schemaxis/adaptors/ffmpeg/adaptor.py:20-75"
@@ -57,14 +71,14 @@
         },
         "/properties/nodes": {
           "status": "reference",
-          "explanation": "Declare exactly one video publication node, choosing an ordered PNG list or a timed sprite sheet.",
+          "explanation": "Declare exactly one publication node: ordered PNG frames, timed sprite sheet or existing-video presentation-frame range.",
           "sources": [
             "docs/media-workflows.md#ffmpeg-publication"
           ]
         },
         "/properties/nodes/items": {
           "status": "reference",
-          "explanation": "The single publication node describes the source images, frame rate, codec and encoder resources.",
+          "explanation": "The single node selects source material and declares output playback rate, codec and encoder resources.",
           "sources": [
             "docs/media-workflows.md#ffmpeg-publication"
           ]
@@ -300,6 +314,90 @@
           "explanation": "Maximum per-frame mean absolute RGB byte error, 0 to 16. Zero requires exact composited RGB; FFV1 always requires exactness independently. This is a pixel-error budget, not perceptual quality certification.",
           "sources": [
             "docs/media-workflows.md#ffmpeg-publication"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Capture and trim an existing supported video. Selected presentation frames retain their order and are played at the chosen output fps; source metadata and all decoded frames are retained for verification.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/id": {
+          "status": "reviewed",
+          "explanation": "Name this clip publication for workflow references and logs; start with a letter, then letters, digits, underscores or hyphens.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/filter": {
+          "status": "reviewed",
+          "explanation": "encodeVideo selects a captured MP4/H264 or MKV/FFV1 source range. Use encodeFrames for separate PNGs and encodeSheet for sprite rectangles.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options": {
+          "status": "reviewed",
+          "explanation": "Choose the source video, exclusive frame range, output playback rate, codec and thread budget. No arbitrary native options are accepted.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Required absolute .mp4 or .mkv source path. The file is copied before native use; editing the external source invalidates scheduler reuse. MP4 must be H264 yuv420p, MKV FFV1 bgr0; exactly one silent progressive video stream. Entire source <=600 frames,32 MiB compressed and192 MiB RGB.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
+          ],
+          "fileExtensions": [
+            ".mp4",
+            ".mkv"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/startFrame": {
+          "status": "reviewed",
+          "explanation": "Zero-based first decoded presentation-frame index, included in the output. Omit for 0, the first presented frame after native MP4 edit-list interpretation. Must be less than endFrame; units are frames, not seconds.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/endFrame": {
+          "status": "reviewed",
+          "explanation": "Required zero-based exclusive end index: startFrame 1/endFrame 4 selects indices 1,2,3. Must exceed startFrame and fit the full source frame count; units are frames, not seconds.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/fps": {
+          "status": "reviewed",
+          "explanation": "Output frames per second (integer 1..120), default 25. Every selected source frame becomes one output frame; lowering fps slows playback. Set source fps to preserve speed; no interpolation or frame dropping.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/codec": {
+          "status": "reviewed",
+          "explanation": "Output codec, default h264: delivery MP4 uses lossy YUV420 and requires even dimensions; ffv1 produces Matroska and preserves decoded source RGB exactly. Earlier H264 source loss cannot be recovered.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/threads": {
+          "status": "reviewed",
+          "explanation": "Native encoder/source decoder thread budget (integer 1..16), default 1. Match scheduler allocation; increasing threads does not change frame selection or timing.",
+          "sources": [
+            "docs/ffmpeg.md",
+            "src/schemaxis/adaptors/ffmpeg/video.py"
           ]
         }
       }

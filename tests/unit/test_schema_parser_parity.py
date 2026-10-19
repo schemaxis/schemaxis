@@ -1,5 +1,6 @@
 """Detect drift between parser-owned envelopes and exported schema keywords."""
 import ast
+from functools import partial
 import inspect
 import textwrap
 import unittest
@@ -22,6 +23,19 @@ def closed_parser_fixture(document):
     _closed(document, ('version', *PARITY_FIELDS), '$')
 
 
+def delegated_parser_fixture(document, *, fields):
+    keys(document, ('version', *fields), '$')
+
+
+PARITY_BRANCHES = {'left': {'leftField': {}}, 'right': {'rightField': {}}}
+
+
+def selected_parser_fixture(document):
+    operation = document.get('operation')
+    fields = PARITY_BRANCHES[operation]
+    keys(document, ('version', 'operation', *fields), '$')
+
+
 def key_contract(function, *, root=True):
     """Read declared envelope keys, without executing the parser or using schema.
 
@@ -30,8 +44,12 @@ def key_contract(function, *, root=True):
     Alternative root envelopes contribute their union to the exported envelope.
     Scheduler sections use the first nonempty check instead of location '$'.
     """
-    function = inspect.unwrap(function)
+    bindings = function.keywords if isinstance(function, partial) else {}
+    function = inspect.unwrap(function.func if isinstance(function, partial) else function)
     tree = ast.parse(textwrap.dedent(inspect.getsource(function)))
+    assignments = {target.id: node.value for node in tree.body[0].body
+                   if isinstance(node, ast.Assign) for target in node.targets
+                   if isinstance(target, ast.Name)}
     calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
              and isinstance(node.func, ast.Name) and node.func.id in ('keys', '_closed')
              and len(node.args) >= 2]
@@ -41,10 +59,26 @@ def key_contract(function, *, root=True):
 
     def declaration(node):
         if isinstance(node, ast.Name):
-            value = function.__globals__[node.id]
+            if node.id in assignments and node.id not in bindings:
+                return declaration(assignments[node.id])
+            value = bindings[node.id] if node.id in bindings else function.__globals__[node.id]
             if type(value) not in (dict, list, tuple, set, frozenset):
                 raise AssertionError('Key declaration must be a plain collection')
             return value
+        if isinstance(node, ast.Subscript):
+            choices = declaration(node.value)
+            if type(choices) is not dict:
+                raise AssertionError('Selected key declarations must use a plain mapping')
+            try:
+                selected = ast.literal_eval(node.slice)
+            except (ValueError, TypeError):
+                # A runtime operation selects one closed declaration. The
+                # exported root envelope must include every declared branch.
+                if any(type(value) not in (dict, list, tuple, set, frozenset)
+                       for value in choices.values()):
+                    raise AssertionError('Every declaration branch must be a plain collection')
+                return set().union(*choices.values())
+            return choices[selected]
         if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
             result = []
             for member in node.elts:
@@ -75,6 +109,9 @@ class ParserSchemaParityTests(unittest.TestCase):
         from schemaxis.adaptors.freecad.assembly import plan as assembly
         from schemaxis.adaptors.godot.adaptor import plan as godot
         from schemaxis.adaptors.aseprite.adaptor import plan as aseprite
+        from schemaxis.adaptors.premiere.adaptor import plan as premiere, LAYOUT_OPTIONS
+        from schemaxis.adaptors.premiere.layout import plan as premiere_layout
+        from schemaxis.adaptors.pyproj.contract import validate as pyproj
         from schemaxis.workflow import validate as workflow
 
         parsers = {
@@ -82,6 +119,9 @@ class ParserSchemaParityTests(unittest.TestCase):
             'schemaxis.blender.render/1': render, 'schemaxis.freecad/1': freecad,
             'schemaxis.freecad.assembly/1': assembly, 'schemaxis.godot/1': godot,
             'schemaxis.aseprite/1': aseprite, 'schemaxis.workflow/1': workflow,
+            'schemaxis.premiere/1': (
+                premiere, partial(premiere_layout, definitions=LAYOUT_OPTIONS)),
+            'schemaxis.pyproj/1': pyproj,
         }
         from schemaxis.adaptors.registry import routes
         from importlib import import_module
@@ -92,7 +132,8 @@ class ParserSchemaParityTests(unittest.TestCase):
             for authored in (False, True):
                 with self.subTest(version=version, authored=authored):
                     schema = export_schema(version=version, authored=authored)
-                    expected = key_contract(parser)
+                    branches = parser if isinstance(parser, tuple) else (parser,)
+                    expected = set.union(*(key_contract(branch) for branch in branches))
                     common = {'dimensions', 'definitions', 'settings', 'axes', 'maxStates'}
                     if authored:
                         expected |= common
@@ -106,6 +147,10 @@ class ParserSchemaParityTests(unittest.TestCase):
         expected = {'version', 'payload'}
         for parser in (guarded_parser_fixture, closed_parser_fixture):
             self.assertEqual(key_contract(parser), expected)
+        self.assertEqual(key_contract(partial(delegated_parser_fixture,
+                                             fields={'tracks': {}})), {'version', 'tracks'})
+        self.assertEqual(key_contract(selected_parser_fixture),
+                         {'version', 'operation', 'leftField', 'rightField'})
         # The reader owns an independent parser-derived set. Either schema
         # drift direction must remain visible, even with descriptive metadata.
         schema = {'properties': {'version': {'const': 'fixture/1', 'description': 'An annotation'}, 'payload': {}}}

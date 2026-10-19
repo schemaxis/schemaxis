@@ -47,11 +47,11 @@ class AsepriteTests(unittest.TestCase):
 
     def test_declarations_schema(self):
         from schemaxis.core.declarations import validate_specifications
-        self.assertEqual(set(DECLARATIONS), {'sprite','layer','frame','palette','pixel','rect','circle','tag'})
+        self.assertEqual(set(DECLARATIONS), {'sprite','layer','frame','palette','pixel','rect','circle','tag','importImage'})
         for decl in DECLARATIONS.values():
             validate_specifications({k:v['value'] for k,v in decl['options'].items()}, '$')
         self.assertEqual(schema()['properties']['version']['const'], 'schemaxis.aseprite/1')
-        self.assertEqual(len(schema()['properties']['nodes']['items']['oneOf']), 8)
+        self.assertEqual(len(schema()['properties']['nodes']['items']['oneOf']), 9)
 
     def test_version_unknown_and_script_rejected(self):
         for field, value in [('version','schemaxis.aseprite/2'), ('script','os.execute("bad")')]:

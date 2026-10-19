@@ -1,0 +1,137 @@
+{
+  "version": "schemaxis.aseprite/1",
+  "nodes": [
+    {
+      "id": "canvas",
+      "filter": "sprite",
+      "options": {
+        "width": 6,
+        "height": 4,
+        "durationMS": 80
+      }
+    },
+    {
+      "id": "background",
+      "filter": "rect",
+      "options": {
+        "layer": "base",
+        "x": 0,
+        "y": 0,
+        "width": 6,
+        "height": 4,
+        "colour": [
+          20,
+          40,
+          80,
+          255
+        ]
+      },
+      "inputs": {
+        "sprite": "canvas"
+      }
+    },
+    {
+      "id": "art",
+      "filter": "layer",
+      "options": {
+        "name": "art"
+      },
+      "inputs": {
+        "sprite": "background"
+      }
+    },
+    {
+      "id": "paint",
+      "filter": "rect",
+      "options": {
+        "layer": "art",
+        "x": 1,
+        "y": 1,
+        "width": 3,
+        "height": 2,
+        "colour": [
+          255,
+          255,
+          255,
+          255
+        ]
+      },
+      "inputs": {
+        "sprite": "art"
+      }
+    },
+    {
+      "id": "import",
+      "filter": "importImage",
+      "options": {
+        "source": "/path/to/badge.png",
+        "width": 3,
+        "height": 2,
+        "layer": "art",
+        "x": 1,
+        "y": 1
+      },
+      "inputs": {
+        "sprite": "paint"
+      }
+    },
+    {
+      "id": "next",
+      "filter": "frame",
+      "options": {
+        "durationMS": 160
+      },
+      "inputs": {
+        "sprite": "import"
+      }
+    },
+    {
+      "id": "moved",
+      "filter": "importImage",
+      "options": {
+        "source": "/path/to/badge.png",
+        "width": 3,
+        "height": 2,
+        "layer": "art",
+        "frame": 2,
+        "x": 2,
+        "y": 0
+      },
+      "inputs": {
+        "sprite": "next"
+      }
+    },
+    {
+      "id": "spark",
+      "filter": "pixel",
+      "options": {
+        "layer": "art",
+        "frame": 2,
+        "x": 5,
+        "y": 3,
+        "colour": [
+          255,
+          255,
+          255,
+          255
+        ]
+      },
+      "inputs": {
+        "sprite": "moved"
+      }
+    },
+    {
+      "id": "loop",
+      "filter": "tag",
+      "options": {
+        "name": "badge",
+        "fromFrame": 1,
+        "toFrame": 2
+      },
+      "inputs": {
+        "sprite": "spark"
+      }
+    }
+  ],
+  "output": "loop"
+}

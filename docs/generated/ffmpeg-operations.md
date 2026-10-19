@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[encodeFrames](#encodeframes), [encodeSheet](#encodesheet)
+[encodeFrames](#encodeframes), [encodeSheet](#encodesheet), [encodeVideo](#encodevideo)
 
 ## encodeFrames
 
@@ -54,3 +54,27 @@ Inputs: none.
 | `threads` | Native encoder/decoder thread count, 1 to 16; default 1. Workflow allocation must match this setting; it does not enable MPI. | `{"type":"integer","minimum":1,"maximum":16}` | `1` |
 | `file` | Absolute path of the sprite-sheet PNG (8-bit RGB or RGBA, non-interlaced, at most 32 MiB). Its pixel width and height must equal the width and height recorded in the metadata file. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
 | `metadata` | Absolute path of the schemaxis.aseprite.sheet/1 JSON written by the Aseprite adaptor, listing 1 to 600 frame rectangles (x, y, width, height in pixels) and durations in milliseconds. Frame order is playback order; tags do not select or reorder frames. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+
+
+## encodeVideo
+
+Capture a silent existing video, select a zero-based presentation-frame range (inclusive start, exclusive end), and publish it at the chosen constant output fps. Choose this for clip preparation and retiming; use Shotcut for multi-clip editing. Every source frame is probed/decoded before selection and every output RGB channel is checked. MP4 edit lists use FFmpeg default presentation semantics.
+
+Common mistakes and assumptions:
+
+- Output fps changes playback speed; it never samples or interpolates frames.
+- The entire source must fit the bounds even if the selected range is short.
+- Only silent progressive single-stream MP4/H264 yuv420p or MKV/FFV1 bgr0; no rotation or non-square pixels.
+
+Native binding: `ffmpeg`. Output kind: `["video"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `fps` | Output frames per second (integer 1..120), default 25. Every selected source frame becomes one output frame; lowering fps slows playback. Set source fps to preserve speed; no interpolation or frame dropping. | `{"type":"integer","minimum":1,"maximum":120}` | `25` |
+| `codec` | Output codec, default h264: delivery MP4 uses lossy YUV420 and requires even dimensions; ffv1 produces Matroska and preserves decoded source RGB exactly. Earlier H264 source loss cannot be recovered. | `{"type":"enum","values":["h264","ffv1"]}` | `"h264"` |
+| `threads` | Native encoder/source decoder thread budget (integer 1..16), default 1. Match scheduler allocation; increasing threads does not change frame selection or timing. | `{"type":"integer","minimum":1,"maximum":16}` | `1` |
+| `file` | Required absolute .mp4 or .mkv source path. The file is copied before native use; editing the external source invalidates scheduler reuse. MP4 must be H264 yuv420p, MKV FFV1 bgr0; exactly one silent progressive video stream. Entire source <=600 frames,32 MiB compressed and192 MiB RGB. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `startFrame` | Zero-based first decoded presentation-frame index, included in the output. Omit for 0, the first presented frame after native MP4 edit-list interpretation. Must be less than endFrame; units are frames, not seconds. | `{"type":"integer","minimum":0,"maximum":599}` | `0` |
+| `endFrame` | Required zero-based exclusive end index: startFrame 1/endFrame 4 selects indices 1,2,3. Must exceed startFrame and fit the full source frame count; units are frames, not seconds. | `{"type":"integer","minimum":1,"maximum":600}` | **required** |

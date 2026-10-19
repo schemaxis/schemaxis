@@ -1,0 +1,274 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.openscad/1": {
+      "guide": "docs/openscad.md",
+      "context": {
+        "purpose": "Construct dimensioned mounting plates and annular spacers as independently checked faceted solids.",
+        "assumptions": "Explicit millimetres, stable OpenSCAD 2021.01, XY contours extruded vertically, no imported code.",
+        "constraints": "0.5\u2013200 mm dimensions, height<=100 mm, translation \u00b1100 mm, <=16 separated interior holes,16\u2013256 segments divisible by4.",
+        "inspection": "Independent binary STL parsing checks cross-sections, boundary facets, normals, manifold topology, bounds and faceted volume; fresh native STL reopen.",
+        "recovery": "INVALID_CAD_CLEARANCE requires interior separated holes or positive wall; INVALID_CAD_RESOLUTION needs multiple of4. Inspect retained logs for native/geometry failure."
+      },
+      "examples": [
+        {
+          "id": "plate",
+          "reference": "examples/schemaxis/openscad-plate.json"
+        },
+        {
+          "id": "plate-variant",
+          "reference": "examples/schemaxis/openscad-plate-variant.json"
+        },
+        {
+          "id": "spacer",
+          "reference": "examples/schemaxis/openscad-spacer.json"
+        },
+        {
+          "id": "invalid-clearance",
+          "reference": "examples/schemaxis/openscad-clearance-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_CAD_CLEARANCE"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_openscad.py",
+        "tests/studio/openscad.browser.test.mjs"
+      ],
+      "acceptance": [
+        "tools/qualify_openscad.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified summary value handoffs, unit-explicit STL publications, reuse and invalidation.",
+          "references": [
+            "docs/openscad.md",
+            "tools/qualify_openscad.py"
+          ]
+        },
+        "composition": {
+          "scope": "Finite dimensions/segment studies resolve before native execution.",
+          "references": [
+            "docs/openscad.md",
+            "tools/qualify_openscad.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://openscad.org/cheatsheet/",
+          "https://openscad.org/documentation.html",
+          "https://github.com/openscad/openscad/releases/tag/openscad-2021.01"
+        ],
+        "lifecycle": {
+          "timeout": "Total wall deadline shared across three native stages;2 GiB address space,4 MiB output and60s CPU per process.",
+          "cancellation": "Shared owned process-tree cancellation and prepublication check.",
+          "logs": "Authored/plan/source/launchers and version/construct/reopen stdout/stderr, submissions and consumed-input bindings.",
+          "verification": "Independent analytic polygon extrusion boundary, normal/topology/bounds/volume checks; native fresh import/reexport; literal known fixtures and refreshed-hash adversaries."
+        },
+        "data": [
+          {
+            "id": "solid",
+            "direction": "output",
+            "kind": "geometry",
+            "format": "binary STL",
+            "traits": {
+              "units": "mm",
+              "surface": "closed oriented connected"
+            },
+            "losses": [
+              "STL contains no unit metadata or analytic curves; explicit consumer mm convention required.",
+              "Circular boundaries are inscribed regular polygons; across-flats bore smaller than nominal."
+            ],
+            "scope": "Bounded dimensioned plate/spacer only; no manufacturing suitability certification."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "units": "mm",
+              "volumeUnits": "mm^3"
+            },
+            "losses": [
+              "Geometry verification only; no strength/material analysis."
+            ],
+            "scope": "Measured/faceted/ideal volume, dimensions,bounds and topology."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Dimensioned volume/bounds/topology summary and native logs.",
+            "limits": "No live native geometry editing; inspect STL separately if desired."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "plate",
+          "reuse": "Edit dimensions,holes,resolution ortranslation; shared plan resolves studies and reuse follows verified inputs."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified summary value handoffs, unit-explicit STL publications, reuse and invalidation."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Finite dimensions/segment studies resolve before native execution."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "No external files; resolved dimensions define input identity."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing and atomic undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Typed dimensions, positions, resolution and unit controls."
+          },
+          "native-save": {
+            "status": "supported",
+            "scope": "Generated inspectable SCAD is published alongside geometry; no arbitrary SCAD import."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No conversion or imported geometry route; native STL reopening is verification only."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Batch geometry summary only; no interactive native handles."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial native process only."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "Static part per state."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No native edit synchronization."
+          }
+        },
+        "cases": [
+          {
+            "id": "plate",
+            "example": "plate",
+            "edits": [],
+            "resources": {},
+            "scope": "Two unequal through-holes at literal XY positions in 40x30x3 mm plate.",
+            "checks": [
+              {
+                "file": "part-summary.json",
+                "format": "json",
+                "pointer": "/eulerCharacteristic",
+                "expected": -2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "part-summary.json",
+                "format": "json",
+                "pointer": "/height",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "part-summary.json",
+                "format": "json",
+                "pointer": "/vertices",
+                "expected": 264,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "plate-variant",
+            "example": "plate-variant",
+            "edits": [],
+            "resources": {},
+            "scope": "Changed height,32 segments and nonzero translation.",
+            "checks": [
+              {
+                "file": "part-summary.json",
+                "format": "json",
+                "pointer": "/eulerCharacteristic",
+                "expected": -2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "part-summary.json",
+                "format": "json",
+                "pointer": "/height",
+                "expected": 5,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "part-summary.json",
+                "format": "json",
+                "pointer": "/vertices",
+                "expected": 136,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "spacer",
+            "example": "spacer",
+            "edits": [],
+            "resources": {},
+            "scope": "20 mm outer / 8 mm bore / 10 mm height annulus.",
+            "checks": [
+              {
+                "file": "part-summary.json",
+                "format": "json",
+                "pointer": "/eulerCharacteristic",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "part-summary.json",
+                "format": "json",
+                "pointer": "/height",
+                "expected": 10,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "part-summary.json",
+                "format": "json",
+                "pointer": "/vertices",
+                "expected": 256,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial dimensioned plate/spacer route, all fields, independent geometry and lifecycle.",
+        "review": [
+          "verification/2026-10-17-openscad-completion.md"
+        ],
+        "notApplicable": {
+          "conversion": "No conversion or imported geometry route; native STL reopening is verification only.",
+          "native-inspection": "Batch geometry summary only; no interactive native handles.",
+          "mpi": "Serial native process only.",
+          "time-batches": "Static part per state.",
+          "live-editing": "No native edit synchronization."
+        }
+      }
+    }
+  }
+}

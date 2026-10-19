@@ -1,0 +1,113 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "summary",
+      "document": {
+        "version": "schemaxis.sqlite/1",
+        "operation": "summarise",
+        "tables": [
+          {
+            "name": "departments",
+            "source": "/replace/with/departments.json",
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "region",
+                "type": "TEXT",
+                "nullable": true
+              }
+            ],
+            "primaryKey": "id"
+          },
+          {
+            "name": "sales",
+            "source": "/replace/with/sales.json",
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "department",
+                "type": "INTEGER",
+                "nullable": true
+              },
+              {
+                "name": "amount",
+                "type": "INTEGER",
+                "nullable": true
+              }
+            ],
+            "primaryKey": "id",
+            "foreignKeys": [
+              {
+                "column": "department",
+                "table": "departments",
+                "target": "id"
+              }
+            ]
+          }
+        ],
+        "from": "sales",
+        "join": {
+          "table": "departments",
+          "local": "department",
+          "remote": "id"
+        },
+        "where": {
+          "column": "sales.id",
+          "minimum": 1
+        },
+        "groupBy": [
+          "departments.region"
+        ],
+        "sum": "sales.amount"
+      }
+    },
+    {
+      "id": "parquet",
+      "document": {
+        "version": "schemaxis.apachearrow/1",
+        "operation": "prepareTable",
+        "source": {
+          "$artifact": "summary",
+          "index": 2
+        },
+        "columns": [
+          {
+            "name": "g0",
+            "type": "utf8",
+            "nullable": true
+          },
+          {
+            "name": "row_count",
+            "type": "int64"
+          },
+          {
+            "name": "total",
+            "type": "int64",
+            "nullable": true
+          }
+        ],
+        "select": [
+          {
+            "column": "g0",
+            "name": "region"
+          },
+          {
+            "column": "row_count",
+            "name": "count"
+          },
+          {
+            "column": "total",
+            "name": "total"
+          }
+        ]
+      }
+    }
+  ]
+}

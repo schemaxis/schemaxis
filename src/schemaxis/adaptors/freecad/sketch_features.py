@@ -11,8 +11,13 @@ from schemaxis.errors import fail
 
 def configure(obj, kind, options):
     if kind == 'circle':
-        obj.addGeometry(Part.Circle(App.Vector(0,0,0),App.Vector(0,0,1),options['radius']),False)
-        obj.addConstraint(Sketcher.Constraint('Coincident',0,3,-1,1))
+        centre=options.get('centre',[0,0])
+        obj.addGeometry(Part.Circle(App.Vector(*centre,0),App.Vector(0,0,1),options['radius']),False)
+        if 'centre' in options:
+            for name,kind,value in [('centreX','DistanceX',centre[0]),('centreY','DistanceY',centre[1])]:
+                obj.renameConstraint(obj.addConstraint(Sketcher.Constraint(kind,0,3,value)),name)
+        else:
+            obj.addConstraint(Sketcher.Constraint('Coincident',0,3,-1,1))
         index = obj.addConstraint(Sketcher.Constraint('Radius',0,options['radius']))
         obj.renameConstraint(index,'radius')
     else:
@@ -41,9 +46,12 @@ def check(obj, kind, options, close, require):
     require(bool(obj.FullyConstrained) and obj.solve()==0,'fullyConstrained')
     constraints={c.Name:c for c in obj.Constraints if c.Name}
     if kind=='circle':
-        require(obj.GeometryCount==1 and obj.ConstraintCount==2,'sketchMembership')
+        require(obj.GeometryCount==1 and obj.ConstraintCount==(3 if 'centre' in options else 2),'sketchMembership')
         require('radius' in constraints and close(constraints['radius'].Value,options['radius']),'radiusConstraint')
-        require(close(obj.Geometry[0].Radius,options['radius']) and close(list(obj.Geometry[0].Center),[0,0,0]),'circle')
+        require(close(obj.Geometry[0].Radius,options['radius']) and close(list(obj.Geometry[0].Center),[*options.get('centre',[0,0]),0]),'circle')
+        if 'centre' in options:
+            for name,value in zip(('centreX','centreY'),options['centre']):
+                require(name in constraints and close(constraints[name].Value,value),name)
     else:
         require(obj.GeometryCount==4 and obj.ConstraintCount==12,'sketchMembership')
         for name in ('width','height'):

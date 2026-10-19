@@ -20,6 +20,8 @@ def extend(declaration, length, vector):
         'radius': positive(5),
         'plane': {'type':'enum','values':['XY','XZ','YZ'],'default':'XY'}, **origin})
     rectangle['kinds'] = circle['kinds'] = ['profile']
+    for profile in (rectangle,circle):profile['inputs']['body']={'required':False,'kind':'body'}
+    circle['options']['centre']={'value':{'type':'array','items':{'type':'number','minimum':-100000,'maximum':100000},'minItems':2,'maxItems':2}}
     result = {
         'sphere': declaration('Part::Sphere', {'radius': positive(10), **origin}),
         'cone': declaration('Part::Cone', {'radius1': positive(10), 'radius2': {'type':'number','minimum':0,'maximum':100000,'default':5}, 'height': positive(20), **axial}),
@@ -40,7 +42,23 @@ def extend(declaration, length, vector):
     result['multiFuse']['inputs']['shapes'].update(multiple=True, minItems=2, maxItems=32)
     for op in ('extrude','revolve'):
         result[op]['inputs']['profile']['kind']='profile'
+    from .part_design import declarations
+    result.update(declarations(declaration,length))
+    from .step_import import declaration as import_declaration
+    result['importSTEP'] = import_declaration(declaration)
     return result
+
+
+def extra_objects(prepared):
+    """Native objects beyond one N<index> per node: the parametric refine of an import."""
+    return {'N'+str(i)+'Refined': 'Part::Refine' for i, node in enumerate(prepared['nodes'])
+            if node['filter'] == 'importSTEP' and node['options']['refine']}
+
+
+def output_names(prepared):
+    """Native object carrying each node's result shape."""
+    return {node['id']: 'N'+str(i)+('Refined' if node['filter'] == 'importSTEP' and node['options']['refine'] else '')
+            for i, node in enumerate(prepared['nodes'])}
 
 
 def validate(operation, options, identity):

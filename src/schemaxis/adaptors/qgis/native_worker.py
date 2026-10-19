@@ -87,7 +87,9 @@ def main(directory, stage):
         check(provider.addFeatures(features)[0],'cannot populate transformed features');output.updateExtents()
         return output
     if stage=='build':
-        layers={}
+        layers={}; node_snapshots={}; attribute_results={}
+        attribute_nodes=[node for node in plan['nodes'] if node['filter'] in ('selectAttributes','summariseAttributes')]
+        if attribute_nodes: import attribute_worker
         for node in plan['nodes']:
             op=node['filter'];options=node['options']
             if op=='readVector':
@@ -95,9 +97,22 @@ def main(directory, stage):
                 details=QgsProviderRegistry.instance().querySublayers(path)
                 check(len(details)==1,'input must contain exactly one vector layer')
                 layer=QgsVectorLayer(path,node['id'],'ogr')
+                if Path(path).suffix.lower()=='.geojson':
+                    source_document=json.loads(Path(path).read_text())
+                    declared=source_document.get('crs')
+                    if declared is None: expected_crs=QgsCoordinateReferenceSystem('EPSG:4326')
+                    else:
+                        check(isinstance(declared,dict) and declared.get('type')=='name', 'GeoJSON CRS must be a named authority')
+                        crs_name=declared.get('properties',{}).get('name')
+                        check(isinstance(crs_name,str), 'GeoJSON CRS must name an authority')
+                        expected_crs=QgsCoordinateReferenceSystem(crs_name)
+                    check(expected_crs.isValid(), 'invalid declared GeoJSON CRS; no fallback permitted')
+                    check(layer.crs().authid()==expected_crs.authid(), 'GeoJSON provider changed the declared CRS')
                 # GeoPackage's storage id is not a semantic field in this contract.
+            elif op in ('selectAttributes','summariseAttributes'):
+                layer, attribute_results[node['id']]=attribute_worker.apply(layers[node['inputs']['input']],node,snapshot,directory,project)
             else:layer=transform_layer(layers[node['inputs']['input']],op,options)
-            snapshot(layer)
+            node_snapshots[node['id']]=snapshot(layer)
             layers[node['id']]=layer
         layer=layers[plan['output']]
         measured=snapshot(layer)
@@ -118,12 +133,17 @@ def main(directory, stage):
             settings=QgsMapSettings();settings.setLayers([reopened]);settings.setDestinationCrs(reopened.crs())
             extent=reopened.extent()
             if extent.width()==0 or extent.height()==0:
-                centre=extent.center();extent=QgsRectangle(centre.x()-1,centre.y()-1,centre.x()+1,centre.y()+1)
+                centre=extent.center()
+                extent=QgsRectangle(centre.x()-1 if extent.width()==0 else extent.xMinimum(),
+                    centre.y()-1 if extent.height()==0 else extent.yMinimum(),
+                    centre.x()+1 if extent.width()==0 else extent.xMaximum(),
+                    centre.y()+1 if extent.height()==0 else extent.yMaximum())
             extent.scale(1.1);settings.setExtent(extent);settings.setOutputSize(QSize(640,480));settings.setBackgroundColor(QColor('white'))
             job=QgsMapRendererSequentialJob(settings);job.start();job.waitForFinished()
             check(not job.errors(),'map rendering reported errors')
             check(job.renderedImage().save(str(directory/'preview.png')),'map image save failed')
         receipt={'snapshot':measured}
+        if attribute_nodes:receipt.update(nodeSnapshots=node_snapshots,attributes=attribute_results)
         if plan['preview']:
             viewport=settings.visibleExtent()
             receipt['previewSpatial']={'state':'known','frame':'CRS','crs':reopened.crs().authid(),
@@ -136,8 +156,21 @@ def main(directory, stage):
     else:
         check(stage=='reopen','unknown native stage')
         check(project.read(str(directory/'project.qgz')),'native project reopen failed')
-        layers=list(project.mapLayers().values());check(len(layers)==1,'project layer membership differs')
-        receipt={'snapshot':snapshot(layers[0]),'projectReopened':True}
+        layers=list(project.mapLayers().values())
+        summaries=[node for node in plan['nodes'] if node['filter']=='summariseAttributes']
+        check(len(layers)==1+len(summaries),'project layer membership differs')
+        vectors=[layer for layer in layers if layer.isSpatial()]
+        check(len(vectors)==1,'project vector membership differs')
+        receipt={'snapshot':snapshot(vectors[0]),'projectReopened':True}
+        if any(node['filter'] in ('selectAttributes','summariseAttributes') for node in plan['nodes']):
+            import attribute_worker
+            tables={}
+            for node in summaries:
+                name='summary-'+node['id']; matching=[layer for layer in layers if layer.name()==name and not layer.isSpatial()]
+                check(len(matching)==1,'project summary table membership differs')
+                table=json.loads((directory/(name+'.json')).read_text())
+                tables[node['id']]=attribute_worker.check_table(matching[0],table)
+            receipt['summaryTables']=tables
     receipt.update(stage=stage,pid=os.getpid(),plan=plan,runtime=Qgis.QGIS_VERSION)
     (directory/('built.json' if stage=='build' else 'reopened.json')).write_text(json.dumps(receipt,indent=2,allow_nan=False))
     # All provider objects must die before exitQgis; process teardown releases them.
@@ -147,5 +180,5 @@ if __name__=='__main__':
     directory=Path(sys.argv[1]);stage=sys.argv[2]
     try:main(directory,stage)
     except Exception as error:
-        (directory/'native-fault.json').write_text(json.dumps({'code':'NATIVE_EXECUTION_FAILED','message':str(error)}))
+        (directory/'native-fault.json').write_text(json.dumps({'code':getattr(error,'code','NATIVE_EXECUTION_FAILED'),'message':str(error),'location':getattr(error,'location','')}))
         raise

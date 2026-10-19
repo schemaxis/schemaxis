@@ -53,6 +53,13 @@ def build(*, check=False):
             continue
         seen.add(path)
         source = path.relative_to(ROOT).as_posix()
+        # Receipts bind the packaged Help source digest. Embedding a receipt here
+        # would make each new qualification invalidate itself on regeneration.
+        # Keep its repository reference; the link pass still checks existence.
+        parts = path.relative_to(ROOT).parts
+        if (len(parts) == 5 and parts[:3] == ('src', 'schemaxis', 'adaptors')
+                and parts[-1] == 'qualification.json'):
+            continue
         if source == 'docs/generated/paraview-operations.md':
             continue
         if path.suffix not in ('.md', '.json', '.py', '.txt'):

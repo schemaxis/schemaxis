@@ -89,6 +89,18 @@
       "type": "boolean",
       "default": true
     },
+    "inference": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 0.999,
+          "default": 0.95
+        }
+      },
+      "additionalProperties": false
+    },
     "requirements": {
       "type": "array",
       "items": {
@@ -168,6 +180,58 @@
               "scope",
               "metric",
               "sampleIndex"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "minimum"
+                ]
+              },
+              {
+                "required": [
+                  "maximum"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "scope": {
+                "const": "training"
+              },
+              "metric": {
+                "const": "coefficientInterval"
+              },
+              "term": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32,
+                "pattern": "^[a-z][a-z0-9_]{0,31}$"
+              },
+              "minimum": {
+                "type": "number",
+                "minimum": -1e+18,
+                "maximum": 1e+18
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": -1e+18,
+                "maximum": 1e+18
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "scope",
+              "metric",
+              "term"
             ],
             "anyOf": [
               {

@@ -1,0 +1,503 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.prusaslicer/1",
+    "operation": "sliceModel",
+    "model": {
+      "file": "/replace-with-your-model/part.stl",
+      "units": "millimetre"
+    },
+    "printer": {
+      "bedSize_mm": [
+        250,
+        210
+      ],
+      "maxPrintHeight_mm": 210,
+      "nozzleDiameter_mm": 0.4,
+      "gcodeFlavour": "marlin2",
+      "maxFeedrate_mm_s": 200,
+      "maxAcceleration_mm_s2": 1500
+    },
+    "material": {
+      "type": "PLA",
+      "filamentDiameter_mm": 1.75,
+      "density_g_cm3": 1.24,
+      "nozzleTemperature_C": 210,
+      "firstLayerNozzleTemperature_C": 215,
+      "bedTemperature_C": 60,
+      "firstLayerBedTemperature_C": 65,
+      "fanSpeed_percent": 100
+    },
+    "print": {
+      "layerHeight_mm": 0.2,
+      "firstLayerHeight_mm": 0.2,
+      "extrusionWidth_mm": 0.45,
+      "perimeters": 2,
+      "topSolidLayers": 4,
+      "bottomSolidLayers": 3,
+      "infillDensity_percent": 20,
+      "infillPattern": "grid",
+      "perimeterSpeed_mm_s": 40,
+      "infillSpeed_mm_s": 60,
+      "firstLayerSpeed_mm_s": 20,
+      "travelSpeed_mm_s": 150
+    }
+  },
+  "requires": "An absolute path to an existing closed STL and a configured PrusaSlicer 2.9.6 console executable. The G-code is never sent to a printer.",
+  "categories": [
+    {
+      "id": "model",
+      "title": "Model and placement",
+      "icon": "layers",
+      "description": "Choose the STL, its units and where it sits on the bed."
+    },
+    {
+      "id": "profile",
+      "title": "Printer, filament and print profile",
+      "icon": "layers",
+      "description": "Explicit generic FFF settings rendered into the native configuration."
+    },
+    {
+      "id": "limits",
+      "title": "Estimate limits",
+      "icon": "layers",
+      "description": "Named upper limits on native print-time or filament estimates."
+    }
+  ],
+  "templates": [
+    {
+      "id": "pla-part",
+      "title": "PLA part, 0.4 mm nozzle",
+      "file": "studio/templates/pla-part.json",
+      "description": "Slice one STL in millimetres with PLA at 0.2 mm layers, two perimeters and 20% grid infill on a 250 x 210 mm generic Marlin 2 bed.",
+      "fields": {
+        "model": {
+          "label": "STL model (absolute path)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "stl"
+          ],
+          "description": "Closed, consistently oriented STL part; the file must exist when the slice runs."
+        }
+      },
+      "testValues": {
+        "model": "/studio-test/part.stl"
+      },
+      "requires": "An absolute path to an existing closed STL and a configured PrusaSlicer 2.9.6 console executable. The G-code is never sent to a printer."
+    },
+    {
+      "id": "petg-solid-part",
+      "title": "Solid PETG part, 0.6 mm nozzle",
+      "file": "studio/templates/petg-solid-part.json",
+      "description": "Slice one STL in millimetres with PETG at 0.3 mm layers and 100% rectilinear infill on a 300 x 300 mm bed, with a 20 g filament limit.",
+      "fields": {
+        "model": {
+          "label": "STL model (absolute path)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "stl"
+          ],
+          "description": "Closed, consistently oriented STL part; the file must exist when the slice runs."
+        }
+      },
+      "testValues": {
+        "model": "/studio-test/part.stl"
+      },
+      "requires": "An absolute path to an existing closed STL and a configured PrusaSlicer 2.9.6 console executable. The G-code is never sent to a printer."
+    },
+    {
+      "id": "inch-part",
+      "title": "Part modelled in inches",
+      "file": "studio/templates/inch-part.json",
+      "description": "Slice an STL whose coordinates are inches; the model is scaled by 25.4 before slicing with the PLA profile at 0.254 mm layers.",
+      "fields": {
+        "model": {
+          "label": "STL model (absolute path)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "stl"
+          ],
+          "description": "Closed, consistently oriented STL part; the file must exist when the slice runs."
+        }
+      },
+      "testValues": {
+        "model": "/studio-test/part.stl"
+      },
+      "requires": "An absolute path to an existing closed STL and a configured PrusaSlicer 2.9.6 console executable. The G-code is never sent to a printer."
+    }
+  ],
+  "snippets": [
+    {
+      "id": "model-file",
+      "title": "STL model and units",
+      "category": "model",
+      "icon": "layers",
+      "description": "Select the STL file and state whether its coordinates are millimetres or inches.",
+      "fields": {
+        "model": {
+          "label": "STL model (absolute path)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "stl"
+          ],
+          "description": "Closed, consistently oriented STL part; the file must exist when the slice runs."
+        },
+        "units": {
+          "label": "STL units",
+          "type": "enum",
+          "values": [
+            "millimetre",
+            "inch"
+          ],
+          "required": true,
+          "default": "millimetre"
+        }
+      },
+      "testValues": {
+        "model": "/studio-test/part.stl"
+      },
+      "inserts": [
+        {
+          "at": "/model",
+          "values": [
+            {
+              "file": {
+                "$fill": "model"
+              },
+              "units": {
+                "$fill": "units"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pin-model-digest",
+      "title": "Pin STL bytes",
+      "category": "model",
+      "icon": "layers",
+      "description": "Refuse to slice if the STL bytes differ from this SHA-256 digest.",
+      "fields": {
+        "digest": {
+          "label": "SHA-256 (64 lowercase hex digits)",
+          "type": "string",
+          "required": true
+        }
+      },
+      "testValues": {
+        "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "inserts": [
+        {
+          "at": "/model/sha256",
+          "values": [
+            {
+              "$fill": "digest"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bed-placement",
+      "title": "Placement centre",
+      "category": "model",
+      "icon": "layers",
+      "description": "Centre the model bounding box on a chosen bed point in millimetres instead of the bed centre.",
+      "fields": {
+        "x": {
+          "label": "Centre X (mm)",
+          "type": "number",
+          "required": true,
+          "default": 125,
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "y": {
+          "label": "Centre Y (mm)",
+          "type": "number",
+          "required": true,
+          "default": 105,
+          "minimum": 0,
+          "maximum": 1000
+        }
+      },
+      "inserts": [
+        {
+          "at": "/placement",
+          "values": [
+            {
+              "centre_mm": [
+                {
+                  "$fill": "x"
+                },
+                {
+                  "$fill": "y"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer-height",
+      "title": "Layer height",
+      "category": "profile",
+      "icon": "layers",
+      "description": "Set the layer height above the first layer; keep it at most 0.8 x the nozzle diameter.",
+      "fields": {
+        "height": {
+          "label": "Layer height (mm)",
+          "type": "number",
+          "required": true,
+          "default": 0.2,
+          "minimum": 0.04,
+          "maximum": 1.0
+        }
+      },
+      "inserts": [
+        {
+          "at": "/print/layerHeight_mm",
+          "values": [
+            {
+              "$fill": "height"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "infill",
+      "title": "Sparse infill",
+      "category": "profile",
+      "icon": "layers",
+      "description": "Set the sparse infill density and pattern; 100% requires rectilinear.",
+      "fields": {
+        "density": {
+          "label": "Infill density (%)",
+          "type": "number",
+          "required": true,
+          "default": 20,
+          "minimum": 0,
+          "maximum": 100
+        },
+        "pattern": {
+          "label": "Infill pattern",
+          "type": "enum",
+          "values": [
+            "rectilinear",
+            "grid",
+            "gyroid"
+          ],
+          "required": true,
+          "default": "grid"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/print",
+          "merge": {
+            "infillDensity_percent": {
+              "$fill": "density"
+            },
+            "infillPattern": {
+              "$fill": "pattern"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "temperatures",
+      "title": "Nozzle and bed temperatures",
+      "category": "profile",
+      "icon": "layers",
+      "description": "Set first-layer and later nozzle and bed setpoints in degrees Celsius. These are copied into G-code; Schemaxis does not judge their suitability for a material.",
+      "fields": {
+        "firstNozzle": {
+          "label": "First-layer nozzle (degC)",
+          "type": "number",
+          "required": true,
+          "default": 215,
+          "minimum": 150,
+          "maximum": 320
+        },
+        "nozzle": {
+          "label": "Nozzle (degC)",
+          "type": "number",
+          "required": true,
+          "default": 210,
+          "minimum": 150,
+          "maximum": 320
+        },
+        "firstBed": {
+          "label": "First-layer bed (degC)",
+          "type": "number",
+          "required": true,
+          "default": 65,
+          "minimum": 0,
+          "maximum": 130
+        },
+        "bed": {
+          "label": "Bed (degC)",
+          "type": "number",
+          "required": true,
+          "default": 60,
+          "minimum": 0,
+          "maximum": 130
+        }
+      },
+      "inserts": [
+        {
+          "at": "/material",
+          "merge": {
+            "firstLayerNozzleTemperature_C": {
+              "$fill": "firstNozzle"
+            },
+            "nozzleTemperature_C": {
+              "$fill": "nozzle"
+            },
+            "firstLayerBedTemperature_C": {
+              "$fill": "firstBed"
+            },
+            "bedTemperature_C": {
+              "$fill": "bed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "speeds",
+      "title": "Print and travel speeds",
+      "category": "profile",
+      "icon": "layers",
+      "description": "Set perimeter, infill, first-layer and travel speeds in mm/s; cooling slowdown can only reduce them.",
+      "fields": {
+        "perimeter": {
+          "label": "Perimeter (mm/s)",
+          "type": "number",
+          "required": true,
+          "default": 40,
+          "minimum": 5,
+          "maximum": 500
+        },
+        "infill": {
+          "label": "Infill (mm/s)",
+          "type": "number",
+          "required": true,
+          "default": 60,
+          "minimum": 5,
+          "maximum": 500
+        },
+        "first": {
+          "label": "First layer (mm/s)",
+          "type": "number",
+          "required": true,
+          "default": 20,
+          "minimum": 5,
+          "maximum": 200
+        },
+        "travel": {
+          "label": "Travel (mm/s)",
+          "type": "number",
+          "required": true,
+          "default": 150,
+          "minimum": 10,
+          "maximum": 1000
+        }
+      },
+      "inserts": [
+        {
+          "at": "/print",
+          "merge": {
+            "perimeterSpeed_mm_s": {
+              "$fill": "perimeter"
+            },
+            "infillSpeed_mm_s": {
+              "$fill": "infill"
+            },
+            "firstLayerSpeed_mm_s": {
+              "$fill": "first"
+            },
+            "travelSpeed_mm_s": {
+              "$fill": "travel"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "time-limit",
+      "title": "Print-time limit",
+      "category": "limits",
+      "icon": "layers",
+      "description": "Fail the attempt with PERFORMANCE_NOT_MET when the native print-time estimate exceeds this many seconds.",
+      "fields": {
+        "seconds": {
+          "label": "Maximum estimated print time (s)",
+          "type": "number",
+          "required": true,
+          "default": 3600,
+          "minimum": 0,
+          "maximum": 1000000000.0
+        }
+      },
+      "inserts": [
+        {
+          "at": "/requirements/-",
+          "values": [
+            {
+              "name": "print_time",
+              "quantity": "printTime_s",
+              "maximum": {
+                "$fill": "seconds"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "filament-limit",
+      "title": "Filament mass limit",
+      "category": "limits",
+      "icon": "layers",
+      "description": "Fail the attempt with PERFORMANCE_NOT_MET when the native filament mass estimate exceeds this many grams.",
+      "fields": {
+        "grams": {
+          "label": "Maximum filament mass (g)",
+          "type": "number",
+          "required": true,
+          "default": 50,
+          "minimum": 0,
+          "maximum": 1000000000.0
+        }
+      },
+      "inserts": [
+        {
+          "at": "/requirements/-",
+          "values": [
+            {
+              "name": "filament_mass",
+              "quantity": "filamentMass_g",
+              "maximum": {
+                "$fill": "grams"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "viewers": [
+    "text",
+    "table"
+  ]
+}

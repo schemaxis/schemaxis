@@ -2,13 +2,13 @@
   "version": "schemaxis.readiness/1",
   "routes": {
     "schemaxis.ffmpeg/1": {
-      "guide": "docs/media-workflows.md#ffmpeg-publication",
+      "guide": "docs/ffmpeg.md",
       "context": {
-        "purpose": "Publish bounded PNG frame sequences or declared Aseprite sprite sheets as verified H.264 or FFV1 videos. The editable starting example is plan-only until its absolute PNG path is replaced. An optional deliverable policy expresses dimensions, frame count, duration, file size and decoded pixel-error requirements.",
+        "purpose": "Publish PNG frames, timed sprite sheets or an exclusive frame range from an existing silent MP4/H.264 or Matroska/FFV1 source. Output fps retimes the selected presentation frames. Optional deliverable requirements constrain dimensions, duration, bytes and per-frame RGB error.",
         "assumptions": "Exactly one node; explicit input order and constant frame rate. A matching ffprobe executable is required beside FFmpeg. The adaptor uses their public command-line interfaces.",
-        "constraints": "No audio, arbitrary filter graph or colour-management guarantee. PNG subset and byte/frame limits apply; alpha composites onto black. H.264 needs even dimensions and is lossy. Sheet durations must be representable at the chosen frame rate.",
+        "constraints": "One node, no audio or arbitrary filter graph. Existing-video sources: 1..600 frames, 32 MiB input, 192 MiB RGB, 4096 px per side, integer constant rate; no interlacing, non-square pixels or rotation/stream side data. MP4 edit lists use native presentation semantics. PNG alpha composites black; H.264 is lossy and needs even dimensions.",
         "inspection": "Inspect video and retained native decode/probe evidence. Verify dimensions, frame count, rate and duration, and every decoded frame. FFV1 must match RGB bytes; H.264 mean RGB error is bounded at 16/255 per frame. These are bounded fidelity checks, not perceptual certification. Deliverable acceptance is independently reconstructed from authored requirements and actual retained native observations.",
-        "recovery": "INVALID_RESOURCE requires absolute PNG/metadata paths. Missing inputs need actual files, not placeholder paths. Correct dimensions or frame timing for native rejection; use FFV1 if H.264 exceeds the fidelity bound. Replan and rerun with retained failure logs. DELIVERABLE_NOT_MET retains a correct video with observed requirements and corrective next actions; revise sources, fps or codec before a fresh run."
+        "recovery": "INVALID_RESOURCE requires absolute PNG/metadata paths. Missing inputs need actual files, not placeholder paths. Correct dimensions or frame timing for native rejection; use FFV1 if H.264 exceeds the fidelity bound. Replan and rerun with retained failure logs. DELIVERABLE_NOT_MET retains a correct video with observed requirements and corrective next actions; revise sources, fps or codec before a fresh run. INVALID_FRAME_RANGE requires a nonempty zero-based inclusive-start/exclusive-end range within the complete source. UNSUPPORTED_VIDEO requires a supported silent progressive source with uniform presentation timestamps."
       },
       "examples": [
         {
@@ -76,21 +76,38 @@
           "expect": "invalid",
           "fault": "INVALID_ARGUMENT",
           "schemaValid": false
+        },
+        {
+          "id": "video-range",
+          "reference": "examples/schemaxis/ffmpeg-video-range.json"
+        },
+        {
+          "id": "video-range-variant",
+          "reference": "examples/schemaxis/ffmpeg-video-range-variant.json"
+        },
+        {
+          "id": "video-range-invalid",
+          "reference": "examples/schemaxis/ffmpeg-video-range-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_FRAME_RANGE"
         }
       ],
       "conformance": [
-        "tests/unit/test_media_geospatial.py"
+        "tests/unit/test_media_geospatial.py",
+        "tests/unit/test_ffmpeg_video_input.py"
       ],
       "acceptance": [
         "tools/qualify_media_geospatial.py",
-        "tools/qualify_ffmpeg_deliverable.py"
+        "tools/qualify_ffmpeg_deliverable.py",
+        "tools/qualify_ffmpeg_video.py"
       ],
       "profiles": {
         "workflow": {
-          "scope": "Consumes image, spriteSheet and spriteMetadata artifacts. Explicit frame order, fixed rate, alpha-on-black and codec-dependent losses; no automatic format conversion.",
+          "scope": "Consumes image, spriteSheet, spriteMetadata and bounded MP4/H264 or Matroska/FFV1 video artifacts; fixed output rate, silent publications, no automatic conversion.",
           "references": [
             "docs/media-workflows.md#ffmpeg-publication",
-            "tests/unit/test_media_geospatial.py"
+            "tests/unit/test_media_geospatial.py",
+            "docs/ffmpeg.md"
           ]
         },
         "composition": {
@@ -110,7 +127,7 @@
           "timeout": "Native encoding and decoding use a shared elapsed-time budget.",
           "cancellation": "Owned native subprocess trees use shared cancellation and retain partial evidence.",
           "logs": "Retain stage stdout/stderr, commands, probe output, decoded RGB and submissions.",
-          "verification": "Recheck full decoded RGB against retained inputs, dimensions, count, duration, hashes and declared codec-dependent error limits. Authored deliverable acceptance is reconstructed from native duration, dimensions/count, actual compressed byte size and per-frame mean RGB errors; unmet results cannot be published as successes. New native decode/probe launchers bind the encoded input digest to each owned stage; launcher source, bindings and decoded/probe output digests are replayed offline. Historical direct commands remain explicitly unbound. Source capture and scheduler fingerprints reject non-regular inputs before opening and recheck descriptors, with bounded byte reads."
+          "verification": "Recheck full decoded RGB against retained inputs, dimensions, count, duration, hashes and declared codec-dependent error limits. Authored deliverable acceptance is reconstructed from native duration, dimensions/count, actual compressed byte size and per-frame mean RGB errors; unmet results cannot be published as successes. New native decode/probe launchers bind the encoded input digest to each owned stage; launcher source, bindings and decoded/probe output digests are replayed offline. Historical direct commands remain explicitly unbound. Source capture and scheduler fingerprints reject non-regular inputs before opening and recheck descriptors, with bounded byte reads. Existing video sources retain every decoded frame plus captured compressed bytes; bound source probe/decode launchers and full-source cadence validation precede pure index slicing. Native source processes have POSIX memory/file caps; all stages share one timeout."
         },
         "data": [
           {
@@ -170,6 +187,22 @@
               "H.264 is lossy; FFV1 is byte-exact after alpha compositing."
             ],
             "scope": "No colour-management guarantee."
+          },
+          {
+            "id": "source-video",
+            "direction": "input",
+            "kind": "video",
+            "format": "MP4/H.264 yuv420p or Matroska/FFV1 bgr0",
+            "traits": {
+              "frameIndices": "zero-based presentation frames, inclusive start/exclusive end",
+              "frameRate": "integer constant source rate; output fps retimes selection",
+              "audio": false
+            },
+            "losses": [
+              "FFV1 output preserves source decoded RGB, not pre-compression source colours.",
+              "No colour-management guarantee; non-square pixels, rotation/side data and interlacing rejected."
+            ],
+            "scope": "Exactly one video stream, <=600 frames,32 MiB compressed,192 MiB RGB; fixed local demuxers; default MP4 edit-list presentation is honoured."
           }
         ],
         "inspection": [
@@ -181,8 +214,8 @@
         ],
         "authoring": {
           "model": "nodes",
-          "example": "ordered-frames",
-          "reuse": "Bind ordered PNG files, choose the declared codec and change fps with a JSON pointer edit. Plan the new revision and verify a fresh run; the acceptance cases supply portable repository fixture bindings."
+          "example": "video-range",
+          "reuse": "Bind a captured source video; select startFrame inclusive/endFrame exclusive and choose output fps to retime. Changes to source bytes invalidate scheduler reuse; replan and run into a fresh directory."
         },
         "features": {
           "workflow": {
@@ -227,7 +260,7 @@
           },
           "conversion": {
             "status": "supported",
-            "scope": "Explicit PNG or sprite-sheet to video encoding; FFV1 preserves RGB after alpha-on-black compositing, H.264 is lossy. No automatic conversion planning."
+            "scope": "Explicit PNG/sprite-sheet or bounded existing-video frame-range conversion to silent H.264/FFV1; FFV1 preserves decoded source RGB, H.264 is lossy. No automatic conversion planning."
           }
         },
         "cases": [
@@ -327,8 +360,88 @@
             "resources": {
               "/nodes/0/options/files/0": "examples/schemaxis/catalogue-texture.png"
             }
+          },
+          {
+            "id": "video-range-baseline",
+            "example": "video-range",
+            "edits": [],
+            "scope": "Known six-frame 32x24 FFV1 source at 10 fps; presentation range yields 3 frames at 12 fps, independently decoded RGB exact. Source capture/selection/readback; does not qualify arbitrary MP4 edits or audio.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 3
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/fps",
+                "expected": 12
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/meanErrors",
+                "expected": [
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/ffmpeg-video-source.mkv"
+            }
+          },
+          {
+            "id": "video-range-variant",
+            "example": "video-range-variant",
+            "edits": [],
+            "scope": "Known six-frame 32x24 FFV1 source at 10 fps; presentation range yields 4 frames at 20 fps, independently decoded RGB exact. Source capture/selection/readback; does not qualify arbitrary MP4 edits or audio.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 4
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/fps",
+                "expected": 20
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/meanErrors",
+                "expected": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/ffmpeg-video-source.mkv"
+            }
           }
         ]
+      },
+      "completion": {
+        "scope": "Existing-video source/frame-range operation and its schema, capture/native verification, discovery, guidance and Studio integration. Legacy image and sheet regressions exercised.",
+        "review": [
+          "verification/2026-10-17-ffmpeg-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "Inspect retained publications and receipts; no native node inspection hook is advertised.",
+          "mpi": "Only serial execution is qualified; do not request multiple ranks.",
+          "time-batches": "No finite native time-list batching support in this route.",
+          "live-editing": "Use bounded batch execution; no persistent native editing session is promised.",
+          "native-save": "Inspect and reuse declared publications; no console native-save extension is advertised for this route."
+        }
       }
     }
   }

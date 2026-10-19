@@ -1,0 +1,323 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.apachearrow/1": {
+      "guide": "docs/apachearrow.md",
+      "context": {
+        "purpose": "Prepare a typed nullable CSV table for Parquet interchange with exact identifiers, Unicode and UTC microseconds.",
+        "assumptions": "Explicit six-type schema, nullability and reserved \\N; isolated PyArrow26.0.0/C++26.0.0 on POSIX.",
+        "constraints": "32 columns,10000 rows,200000 cells,8MiB CSV,4096-byte text cells; no metadata/units,nested types,SQL or general Parquet input.",
+        "inspection": "Inspect table-report.json; independent decoding checks every output value/null/type and native CSV snapshots check all source cells.",
+        "recovery": "Correct located source/column/predicate/selection/literal faults, configure isolated native Python, retain failed verification evidence and retry in a fresh directory."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/apachearrow-measurements.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/apachearrow-selection.json"
+        },
+        {
+          "id": "empty",
+          "reference": "examples/schemaxis/apachearrow-empty.json"
+        },
+        {
+          "id": "null-row",
+          "reference": "examples/schemaxis/apachearrow-null-row.json"
+        },
+        {
+          "id": "invalid-cast",
+          "reference": "examples/schemaxis/apachearrow-cast-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARROW_SELECTION",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_apachearrow.py"
+      ],
+      "acceptance": [
+        "tools/qualify_apachearrow.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified CSV artifact paths and report values use scheduled workflow handoffs.",
+          "references": [
+            "docs/apachearrow.md",
+            "tools/qualify_apachearrow.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared references, expressions and finite studies resolve to the same literal table contract.",
+          "references": [
+            "docs/apachearrow.md",
+            "tools/qualify_apachearrow.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://arrow.apache.org/docs/python/generated/pyarrow.csv.ConvertOptions.html",
+          "https://arrow.apache.org/docs/python/generated/pyarrow.Table.html",
+          "https://arrow.apache.org/docs/python/generated/pyarrow.compute.cast.html",
+          "https://arrow.apache.org/docs/python/generated/pyarrow.parquet.write_table.html",
+          "https://github.com/apache/parquet-format/blob/master/src/main/thrift/parquet.thrift"
+        ],
+        "lifecycle": {
+          "timeout": "Single total deadline plus native CPU30s,AS2GiB,FSIZE32MiB caps; default60s.",
+          "cancellation": "Owned process-group cancellation and prepublication check.",
+          "logs": "Captured CSV,authored/plan/config/worker/current implementation fingerprints,consumed-input hashes,submissions/stdout/stderr.",
+          "verification": "Independent stdlib CSV oracle and closed Parquet Compact-Thrift/PLAIN/null-level decoder; exact float bits,logical schema,all nulls and ordered rows. Additional native source and fresh reopen snapshots."
+        },
+        "data": [
+          {
+            "id": "csv",
+            "direction": "input",
+            "kind": "file",
+            "format": "UTF-8 typed CSV",
+            "traits": {
+              "null": "reserved \\N",
+              "types": "bool/int32/int64/float64/utf8/UTC microseconds"
+            },
+            "losses": [
+              "No inferred schema,metadata or units; quoted null token still means null."
+            ],
+            "scope": "Regular local capture<=8MiB; full source validation before launch."
+          },
+          {
+            "id": "parquet",
+            "direction": "output",
+            "kind": "file",
+            "format": "Parquet2.6,PLAIN,v1 pages,uncompressed",
+            "traits": {
+              "schema": "flat explicit required/optional",
+              "utc": "microseconds adjusted to UTC"
+            },
+            "losses": [
+              "No Arrow schema metadata,compression,dictionary,nested types or original CSV formatting."
+            ],
+            "scope": "Exact bounded independently decoded output."
+          },
+          {
+            "id": "report",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON table report",
+            "traits": {
+              "int64": "decimal strings",
+              "timestamps": "canonical UTC text"
+            },
+            "losses": [
+              "Generic JSON consumers may erase signed zero; Parquet bits are checked separately."
+            ],
+            "scope": "All output rows,ordered columns,null counts,source row indices and source SHA256."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect complete table-report.json and retained logs.",
+            "limits": "No live native table editor."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Every source byte digest participates in reuse identity; same-path edits invalidate reuse."
+        },
+        "features": {
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native table session; inspect the verified report."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "One native CPU/I/O thread; no MPI."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No time-list batches; use finite document studies."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No persistent native state or reverse editing."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No general Parquet importer or arbitrary format conversion; this route produces the closed declared CSV-to-Parquet subset."
+          },
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified CSV artifact paths and report values use scheduled workflow handoffs."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared references, expressions and finite studies resolve to the same literal table contract."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Every source byte digest participates in reuse identity; same-path edits invalidate reuse."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable typed source/column declarations and undo through common authoring."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Nested filter, selection, safe widening and null replacement fields are editable."
+          },
+          "native-save": {
+            "status": "supported",
+            "scope": "Publish a fresh typed nullable Parquet file checked by an independent stdlib decoder."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/apachearrow/measurements.csv"
+            },
+            "scope": "Independent exact values/nulls/schema; native CSV and fresh Parquet snapshots.",
+            "checks": [
+              {
+                "file": "table-report.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    "9007199254740993",
+                    -2147483648,
+                    -0.0,
+                    true,
+                    "",
+                    "1969-12-31T23:59:59.999999Z"
+                  ],
+                  [
+                    "9223372036854775807",
+                    2147483647,
+                    1.5,
+                    false,
+                    "NA",
+                    "2000-02-29T00:00:00.000001Z"
+                  ],
+                  [
+                    "-9223372036854775808",
+                    0,
+                    null,
+                    null,
+                    null,
+                    null
+                  ],
+                  [
+                    "4",
+                    1,
+                    0.1,
+                    true,
+                    "caf\u00e9, snow \u96ea",
+                    "1970-01-01T00:00:00.000000Z"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/apachearrow/measurements.csv"
+            },
+            "scope": "Independent exact values/nulls/schema; native CSV and fresh Parquet snapshots.",
+            "checks": [
+              {
+                "file": "table-report.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    "",
+                    "-2147483648",
+                    "1969-12-31T23:59:59.999999Z"
+                  ],
+                  [
+                    "caf\u00e9, snow \u96ea",
+                    "1",
+                    "1970-01-01T00:00:00.000000Z"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "empty",
+            "example": "empty",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/apachearrow/measurements.csv"
+            },
+            "scope": "Independent exact values/nulls/schema; native CSV and fresh Parquet snapshots.",
+            "checks": [
+              {
+                "file": "table-report.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "null-row",
+            "example": "null-row",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/apachearrow/measurements.csv"
+            },
+            "scope": "Independent exact values/nulls/schema; native CSV and fresh Parquet snapshots.",
+            "checks": [
+              {
+                "file": "table-report.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    "-9223372036854775808",
+                    0,
+                    null,
+                    null,
+                    null,
+                    null
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial prepareTable route,all nested fields,closed six-type CSV/Parquet semantics,normal independent verification and workflow handoff.",
+        "review": [
+          "verification/2026-10-17-apachearrow-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native table session; inspect the verified report.",
+          "mpi": "One native CPU/I/O thread; no MPI.",
+          "time-batches": "No time-list batches; use finite document studies.",
+          "live-editing": "No persistent native state or reverse editing.",
+          "conversion": "No general Parquet importer or arbitrary format conversion; this route produces the closed declared CSV-to-Parquet subset."
+        }
+      }
+    }
+  }
+}

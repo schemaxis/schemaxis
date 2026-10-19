@@ -1,0 +1,453 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.r/1",
+    "operation": "linearRegression",
+    "predictors": [
+      {
+        "name": "temperature",
+        "unit": "degC"
+      }
+    ],
+    "response": {
+      "name": "reading",
+      "unit": "V"
+    },
+    "training": [
+      [
+        -2,
+        6.1
+      ],
+      [
+        -1,
+        7.8
+      ],
+      [
+        1,
+        12.2
+      ],
+      [
+        2,
+        13.9
+      ]
+    ],
+    "heldout": [
+      [
+        0,
+        10.1
+      ],
+      [
+        3,
+        15.8
+      ]
+    ],
+    "requirements": [
+      {
+        "name": "training_rmse",
+        "scope": "training",
+        "metric": "rmse",
+        "maximum": 0.17
+      },
+      {
+        "name": "heldout_error",
+        "scope": "heldout",
+        "metric": "maxAbsoluteError",
+        "maximum": 0.21
+      },
+      {
+        "name": "slope_interval",
+        "scope": "training",
+        "metric": "coefficientInterval",
+        "term": "temperature",
+        "minimum": 1.5,
+        "maximum": 2.5
+      }
+    ],
+    "inference": {
+      "level": 0.95
+    }
+  },
+  "categories": [
+    {
+      "id": "models",
+      "title": "Regression models",
+      "icon": "layers"
+    },
+    {
+      "id": "inference",
+      "title": "Coefficient inference",
+      "icon": "layers"
+    },
+    {
+      "id": "requirements",
+      "title": "Acceptance requirements",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [
+    {
+      "id": "enable-inference",
+      "title": "Coefficient inference",
+      "category": "inference",
+      "icon": "layers",
+      "description": "Add classical standard errors, t statistics, p-values, confidence intervals, R-squared and the overall F test. Needs genuine residual scatter and assumes independent, constant-variance, normal errors.",
+      "fields": {
+        "level": {
+          "label": "Confidence level",
+          "type": "number",
+          "required": true,
+          "default": 0.95,
+          "minimum": 0.5,
+          "maximum": 0.999,
+          "description": "Two-sided coverage of each coefficient interval, for example 0.95 for 95%."
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "merge": {
+            "inference": {
+              "level": {
+                "$fill": "level"
+              }
+            }
+          }
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.r/1",
+        "operation": "linearRegression",
+        "predictors": [
+          {
+            "name": "temperature",
+            "unit": "degC"
+          }
+        ],
+        "response": {
+          "name": "reading",
+          "unit": "V"
+        },
+        "training": [
+          [
+            -2,
+            6.1
+          ],
+          [
+            -1,
+            7.8
+          ],
+          [
+            1,
+            12.2
+          ],
+          [
+            2,
+            13.9
+          ]
+        ],
+        "heldout": [
+          [
+            0,
+            10.1
+          ],
+          [
+            3,
+            15.8
+          ]
+        ],
+        "requirements": [
+          {
+            "name": "training_rmse",
+            "scope": "training",
+            "metric": "rmse",
+            "maximum": 0.17
+          },
+          {
+            "name": "heldout_error",
+            "scope": "heldout",
+            "metric": "maxAbsoluteError",
+            "maximum": 0.21
+          },
+          {
+            "name": "calibration_prediction",
+            "scope": "heldout",
+            "metric": "prediction",
+            "sampleIndex": 0,
+            "minimum": 9.99,
+            "maximum": 10.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "coefficient-interval",
+      "title": "Coefficient interval requirement",
+      "category": "requirements",
+      "icon": "layers",
+      "description": "Require the confidence interval of one coefficient to lie inside inclusive bounds (an equivalence-style precision check in coefficient units). Needs inference.",
+      "fields": {
+        "term": {
+          "label": "Coefficient (intercept or predictor name)",
+          "type": "string",
+          "required": true,
+          "default": "temperature"
+        },
+        "minimum": {
+          "label": "Lowest acceptable lower confidence limit",
+          "type": "number",
+          "required": true,
+          "default": 1.5
+        },
+        "maximum": {
+          "label": "Highest acceptable upper confidence limit",
+          "type": "number",
+          "required": true,
+          "default": 2.5
+        }
+      },
+      "inserts": [
+        {
+          "at": "/requirements/-",
+          "values": [
+            {
+              "name": "coefficient_interval",
+              "scope": "training",
+              "metric": "coefficientInterval",
+              "term": {
+                "$fill": "term"
+              },
+              "minimum": {
+                "$fill": "minimum"
+              },
+              "maximum": {
+                "$fill": "maximum"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "heldout-error",
+      "title": "Held-out error limit",
+      "category": "requirements",
+      "icon": "layers",
+      "description": "Require the largest absolute held-out residual to stay within a response-unit maximum.",
+      "fields": {
+        "maximum": {
+          "label": "Maximum absolute held-out error (response units)",
+          "type": "number",
+          "required": true,
+          "default": 0.25,
+          "minimum": 0
+        }
+      },
+      "inserts": [
+        {
+          "at": "/requirements/-",
+          "values": [
+            {
+              "name": "heldout_error_budget",
+              "scope": "heldout",
+              "metric": "maxAbsoluteError",
+              "maximum": {
+                "$fill": "maximum"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "training-rmse",
+      "title": "Training RMSE limit",
+      "category": "requirements",
+      "icon": "layers",
+      "description": "Require the root-mean-square training residual to stay within a response-unit maximum.",
+      "fields": {
+        "maximum": {
+          "label": "Maximum training RMSE (response units)",
+          "type": "number",
+          "required": true,
+          "default": 0.2,
+          "minimum": 0
+        }
+      },
+      "inserts": [
+        {
+          "at": "/requirements/-",
+          "values": [
+            {
+              "name": "training_rmse_budget",
+              "scope": "training",
+              "metric": "rmse",
+              "maximum": {
+                "$fill": "maximum"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": "calibration-inference",
+      "title": "Calibration line with coefficient intervals",
+      "description": "Fit reading = intercept + slope*temperature to four training rows, report coefficient uncertainty and require the slope interval inside [1.5, 2.5] V/degC.",
+      "fields": {
+        "level": {
+          "label": "Confidence level",
+          "type": "number",
+          "required": true,
+          "default": 0.95,
+          "minimum": 0.5,
+          "maximum": 0.999,
+          "description": "Two-sided coverage of each coefficient interval, for example 0.95 for 95%."
+        }
+      },
+      "document": {
+        "version": "schemaxis.r/1",
+        "operation": "linearRegression",
+        "predictors": [
+          {
+            "name": "temperature",
+            "unit": "degC"
+          }
+        ],
+        "response": {
+          "name": "reading",
+          "unit": "V"
+        },
+        "training": [
+          [
+            -2,
+            6.1
+          ],
+          [
+            -1,
+            7.8
+          ],
+          [
+            1,
+            12.2
+          ],
+          [
+            2,
+            13.9
+          ]
+        ],
+        "heldout": [
+          [
+            0,
+            10.1
+          ],
+          [
+            3,
+            15.8
+          ]
+        ],
+        "requirements": [
+          {
+            "name": "training_rmse",
+            "scope": "training",
+            "metric": "rmse",
+            "maximum": 0.17
+          },
+          {
+            "name": "heldout_error",
+            "scope": "heldout",
+            "metric": "maxAbsoluteError",
+            "maximum": 0.21
+          },
+          {
+            "name": "slope_interval",
+            "scope": "training",
+            "metric": "coefficientInterval",
+            "term": "temperature",
+            "minimum": 1.5,
+            "maximum": 2.5
+          }
+        ],
+        "inference": {
+          "level": {
+            "$fill": "level"
+          }
+        }
+      }
+    },
+    {
+      "id": "calibration-line",
+      "title": "Calibration line with held-out checks",
+      "description": "Fit a known calibration line and require finite training RMSE, held-out error and a selected prediction bound; no inference.",
+      "document": {
+        "version": "schemaxis.r/1",
+        "operation": "linearRegression",
+        "predictors": [
+          {
+            "name": "temperature",
+            "unit": "degC"
+          }
+        ],
+        "response": {
+          "name": "reading",
+          "unit": "V"
+        },
+        "training": [
+          [
+            -2,
+            6.1
+          ],
+          [
+            -1,
+            7.8
+          ],
+          [
+            1,
+            12.2
+          ],
+          [
+            2,
+            13.9
+          ]
+        ],
+        "heldout": [
+          [
+            0,
+            10.1
+          ],
+          [
+            3,
+            15.8
+          ]
+        ],
+        "requirements": [
+          {
+            "name": "training_rmse",
+            "scope": "training",
+            "metric": "rmse",
+            "maximum": 0.17
+          },
+          {
+            "name": "heldout_error",
+            "scope": "heldout",
+            "metric": "maxAbsoluteError",
+            "maximum": 0.21
+          },
+          {
+            "name": "calibration_prediction",
+            "scope": "heldout",
+            "metric": "prediction",
+            "sampleIndex": 0,
+            "minimum": 9.99,
+            "maximum": 10.01
+          }
+        ]
+      }
+    }
+  ],
+  "viewers": [
+    "table",
+    "text"
+  ]
+}

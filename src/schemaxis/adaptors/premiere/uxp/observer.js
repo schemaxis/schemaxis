@@ -41,13 +41,15 @@ function request(raw, now) {
     sha256(raw);
     const value = JSON.parse(raw);
     closed(value,["version","operation","nonce","expiresAtMs","responseFile","contract"]);
-    if(value.version!=="schemaxis.premiere.request/1" || value.operation!=="sequenceContract" || !/^[0-9a-f]{32}$/.test(value.nonce) || value.responseFile!=="response-"+value.nonce+".json") throw Error("Invalid attempt identity");
+    if(value.version!=="schemaxis.premiere.request/1" || !["sequenceContract","sequenceLayout"].includes(value.operation) || !/^[0-9a-f]{32}$/.test(value.nonce) || value.responseFile!=="response-"+value.nonce+".json") throw Error("Invalid attempt identity");
     integer(value.expiresAtMs,1,999999999999999);
     if(value.expiresAtMs<=now || value.expiresAtMs>now+3600000) throw Error("Request expired or deadline exceeds one hour");
-    closed(value.contract,["version","operation","options","timebaseTicks","endTicks","frames","clips","losses"]);
-    if(value.contract.version!=="schemaxis.premiere.plan/1" || value.contract.operation!=="sequenceContract") throw Error("Invalid planned contract");
+    closed(value.contract,["version","operation","options","timebaseTicks","endTicks","frames",value.operation==="sequenceLayout"?"tracks":"clips","losses"]);
+    if(value.contract.version!=="schemaxis.premiere.plan/1" || value.contract.operation!==value.operation) throw Error("Invalid planned contract");
     integer(value.contract.frames,1,600);
-    if(!Array.isArray(value.contract.clips) || value.contract.clips.length<1 || value.contract.clips.length>128) throw Error("Clip contract exceeds bound");
+    if(value.operation==="sequenceLayout") {
+        if(!Array.isArray(value.contract.tracks) || value.contract.tracks.length<1 || value.contract.tracks.length>8) throw Error("Track contract exceeds bound");
+    } else if(!Array.isArray(value.contract.clips) || value.contract.clips.length<1 || value.contract.clips.length>128) throw Error("Clip contract exceeds bound");
     return value;
 }
 async function active(ppro) {
@@ -57,43 +59,53 @@ async function active(ppro) {
     if(!sequence) throw Error("Activate the sequence to inspect");
     return {project,sequence,identity:{project:guid(project.guid),sequence:guid(sequence.guid)}};
 }
-async function snapshot(ppro,uxp) {
+async function snapshot(ppro,uxp,operation="sequenceContract") {
+    const layout=operation==="sequenceLayout";
     const state=await active(ppro), project=state.project, sequence=state.sequence;
     const frame=await sequence.getFrameSize();
-    const videoTrackCount=integer(await sequence.getVideoTrackCount(),1,1);
+    const videoTrackCount=integer(await sequence.getVideoTrackCount(),1,layout?8:1);
     const audioTrackCount=integer(await sequence.getAudioTrackCount(),0,8);
     const captionTrackCount=integer(await sequence.getCaptionTrackCount(),0,0);
-    const track=await sequence.getVideoTrack(0);
-    // Public constants are Clip=1 and Transition=2. Include-empty is false.
-    const nativeClips=track.getTrackItems(1,false), transitions=track.getTrackItems(2,false);
-    if(!Array.isArray(nativeClips) || nativeClips.length<1 || nativeClips.length>128 || !Array.isArray(transitions) || transitions.length>128) throw Error("Native track item count exceeds bound");
     let audioClipCount=0;
     for(let i=0;i<audioTrackCount;i++) {
         const audio=await sequence.getAudioTrack(i), items=audio.getTrackItems(1,false), audioTransitions=audio.getTrackItems(2,false);
         if(!Array.isArray(items) || !Array.isArray(audioTransitions) || items.length>128 || audioTransitions.length>128) throw Error("Native audio count exceeds bound");
         audioClipCount+=items.length+audioTransitions.length;
     }
-    const clips=[];
-    for(const item of nativeClips) {
-        const base=await item.getProjectItem(), source=ppro.ClipProjectItem.cast(base);
-        if(!source) throw Error("Video item is not a media clip");
-        const reversed=await item.isSpeedReversed();
-        if(reversed!==0 && reversed!==1) throw Error("Invalid native reversal flag");
-        clips.push({name:text(await item.getName()),projectItemId:text(base.getId()),sourcePath:text(await source.getMediaFilePath()),
-            startTicks:ticks(await item.getStartTime()),endTicks:ticks(await item.getEndTime()),
-            inTicks:ticks(await item.getInPoint()),outTicks:ticks(await item.getOutPoint()),durationTicks:ticks(await item.getDuration()),
-            disabled:boolean(await item.isDisabled()),adjustmentLayer:boolean(await item.isAdjustmentLayer()),reversed:reversed===1,
-            offline:boolean(await source.isOffline()),nested:boolean(await source.isSequence()),merged:boolean(await source.isMergedClip()),
-            multicam:boolean(await source.isMulticamClip()),proxy:boolean(await source.hasProxy())});
+    const tracks=[];
+    let totalClips=0;
+    for(let index=0;index<videoTrackCount;index++) {
+        const track=await sequence.getVideoTrack(index);
+        // Public constants are Clip=1 and Transition=2. Include-empty is false.
+        const nativeClips=track.getTrackItems(1,false), transitions=track.getTrackItems(2,false);
+        if(!Array.isArray(nativeClips) || (!layout && nativeClips.length<1) || nativeClips.length>128 || !Array.isArray(transitions) || transitions.length>128) throw Error("Native track item count exceeds bound");
+        totalClips+=nativeClips.length;
+        if(totalClips>128) throw Error("Total native clip count exceeds bound");
+        const clips=[];
+        for(const item of nativeClips) {
+            const base=await item.getProjectItem(), source=ppro.ClipProjectItem.cast(base);
+            if(!source) throw Error("Video item is not a media clip");
+            const reversed=await item.isSpeedReversed();
+            if(reversed!==0 && reversed!==1) throw Error("Invalid native reversal flag");
+            clips.push({name:text(await item.getName()),projectItemId:text(base.getId()),sourcePath:text(await source.getMediaFilePath()),
+                startTicks:ticks(await item.getStartTime()),endTicks:ticks(await item.getEndTime()),
+                inTicks:ticks(await item.getInPoint()),outTicks:ticks(await item.getOutPoint()),durationTicks:ticks(await item.getDuration()),
+                disabled:boolean(await item.isDisabled()),adjustmentLayer:boolean(await item.isAdjustmentLayer()),reversed:reversed===1,
+                offline:boolean(await source.isOffline()),nested:boolean(await source.isSequence()),merged:boolean(await source.isMergedClip()),
+                multicam:boolean(await source.isMulticamClip()),proxy:boolean(await source.hasProxy())});
+        }
+        // Exact decimal comparison without converting ticks to imprecise numbers.
+        clips.sort((a,b)=>a.startTicks.length-b.startTicks.length || (a.startTicks<b.startTicks?-1:a.startTicks>b.startTicks?1:0));
+        tracks.push({index:integer(await track.getIndex(),index,index),name:text(track.name,256),muted:boolean(await track.isMuted()),audioClipCount,transitionCount:transitions.length,clips});
     }
-    // Exact decimal comparison without converting ticks to imprecise numbers.
-    clips.sort((a,b)=>a.startTicks.length-b.startTicks.length || (a.startTicks<b.startTicks?-1:a.startTicks>b.startTicks?1:0));
+    if(totalClips<1) throw Error("Native layout must contain a clip");
     const observed={runtime:{hostName:text(uxp.host.name),hostVersion:text(uxp.host.version),uxpVersion:text(uxp.versions.uxp),applicationPath:text(uxp.host.applicationPath)},
         project:{name:text(project.name),path:text(project.path),guid:state.identity.project},
         sequence:{name:text(sequence.name),guid:state.identity.sequence,width:integer(frame.width,2,8192),height:integer(frame.height,2,8192),
             timebaseTicks:text(await sequence.getTimebase(),19),zeroPointTicks:ticks(await sequence.getZeroPoint()),endTicks:ticks(await sequence.getEndTime()),
-            videoTrackCount,audioTrackCount,captionTrackCount},
-        track:{index:integer(await track.getIndex(),0,0),name:text(track.name,256),muted:boolean(await track.isMuted()),audioClipCount,transitionCount:transitions.length},clips};
+            videoTrackCount,audioTrackCount,captionTrackCount}};
+    if(layout) observed.tracks=tracks;
+    else { const {clips,...track}=tracks[0]; observed.track=track; observed.clips=clips; }
     if(JSON.stringify((await active(ppro)).identity)!==JSON.stringify(state.identity)) throw Error("Active project or sequence changed during observation");
     return observed;
 }
@@ -103,7 +115,7 @@ async function observeFolder(folder,ppro,uxp) {
     if(requests.length!==1) throw Error("Select the fresh Schemaxis job folder containing request.json");
     const file=requests[0],raw=await file.read(),job=request(raw,Date.now()),digest=sha256(raw);
     if(entries.some(entry=>entry.name===job.responseFile)) throw Error("This attempt already has a response; use a fresh job");
-    const first=await snapshot(ppro,uxp),second=await snapshot(ppro,uxp);
+    const first=await snapshot(ppro,uxp,job.operation),second=await snapshot(ppro,uxp,job.operation);
     if(JSON.stringify(first)!==JSON.stringify(second)) throw Error("Sequence changed between observations; retry while idle");
     // Re-read the request immediately before writing; stale jobs cannot borrow
     // an observation gathered for an earlier authored contract or nonce.

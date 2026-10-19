@@ -1,0 +1,862 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.prusaslicer/1": {
+      "guide": "docs/prusaslicer.md",
+      "context": {
+        "purpose": "Turn one closed STL part into FFF/FDM G-code with an explicit printer, filament and print profile, and publish independently replayed layer, temperature and filament evidence plus native time/filament estimates. Use it to prepare and compare print settings, not to control a printer.",
+        "assumptions": "PrusaSlicer 2.9.6 console; millimetres, mm/s, degC, g/cm3 and seconds; STL coordinates in declared millimetres or inches, triangle winding authoritative. Generic Marlin 2 G-code with homing at the bed origin; the declared feedrate/acceleration limits drive only the native time estimate. Schemaxis renders the complete configuration; no user or vendor presets are loaded.",
+        "constraints": "One closed, consistently oriented, non-degenerate STL of at most 16 MiB and 100000 triangles that fits the bed around its placement centre. Layer heights <= 0.8 x nozzle, extrusion width 1-2 nozzle diameters and above every layer height; 100% infill only rectilinear. One thread, one extruder; no supports, brim, skirt, raft, ironing, modifiers, variable layer height, arcs, binary G-code, custom G-code or post-processing. No printer upload, physical print, firmware, material or safety claim.",
+        "inspection": "Independently parse the STL (bounds, signed volume, edge pairing) and compare with native --info; read back every written setting from the configuration embedded in the G-code; replay all G-code motion to derive layers, extrusion envelope, per-layer temperature/fan setpoints, feedrate limits, filament length/volume/mass and kinematic time bounds; a fresh native process must regenerate identical G-code from the published embedded configuration.",
+        "recovery": "Profile, path, model, digest and fit faults are raised before any native launch with exact locations. Native or replay mismatches retain all logs as VERIFICATION_FAILED. Exceeded named estimate limits fail with PERFORMANCE_NOT_MET and signed margins; adjust the profile or limit and run a fresh attempt."
+      },
+      "examples": [
+        {
+          "id": "pla-baseline",
+          "reference": "examples/schemaxis/prusaslicer-pla.json"
+        },
+        {
+          "id": "petg-variant",
+          "reference": "examples/schemaxis/prusaslicer-petg.json"
+        },
+        {
+          "id": "inch-model",
+          "reference": "examples/schemaxis/prusaslicer-inch.json"
+        },
+        {
+          "id": "layer-taller-than-nozzle",
+          "document": {
+            "version": "schemaxis.prusaslicer/1",
+            "operation": "sliceModel",
+            "model": {
+              "file": "/replace-with-your-model/part.stl",
+              "units": "millimetre"
+            },
+            "printer": {
+              "bedSize_mm": [
+                250,
+                210
+              ],
+              "maxPrintHeight_mm": 210,
+              "nozzleDiameter_mm": 0.4,
+              "gcodeFlavour": "marlin2",
+              "maxFeedrate_mm_s": 200,
+              "maxAcceleration_mm_s2": 1500
+            },
+            "material": {
+              "type": "PLA",
+              "filamentDiameter_mm": 1.75,
+              "density_g_cm3": 1.24,
+              "nozzleTemperature_C": 210,
+              "firstLayerNozzleTemperature_C": 215,
+              "bedTemperature_C": 60,
+              "firstLayerBedTemperature_C": 65,
+              "fanSpeed_percent": 100
+            },
+            "print": {
+              "layerHeight_mm": 0.36,
+              "firstLayerHeight_mm": 0.2,
+              "extrusionWidth_mm": 0.45,
+              "perimeters": 2,
+              "topSolidLayers": 4,
+              "bottomSolidLayers": 3,
+              "infillDensity_percent": 20,
+              "infillPattern": "grid",
+              "perimeterSpeed_mm_s": 40,
+              "infillSpeed_mm_s": 60,
+              "firstLayerSpeed_mm_s": 20,
+              "travelSpeed_mm_s": 150
+            }
+          },
+          "expect": "invalid",
+          "fault": "INVALID_PROFILE"
+        },
+        {
+          "id": "gyroid-solid-infill",
+          "document": {
+            "version": "schemaxis.prusaslicer/1",
+            "operation": "sliceModel",
+            "model": {
+              "file": "/replace-with-your-model/part.stl",
+              "units": "millimetre"
+            },
+            "printer": {
+              "bedSize_mm": [
+                250,
+                210
+              ],
+              "maxPrintHeight_mm": 210,
+              "nozzleDiameter_mm": 0.4,
+              "gcodeFlavour": "marlin2",
+              "maxFeedrate_mm_s": 200,
+              "maxAcceleration_mm_s2": 1500
+            },
+            "material": {
+              "type": "PLA",
+              "filamentDiameter_mm": 1.75,
+              "density_g_cm3": 1.24,
+              "nozzleTemperature_C": 210,
+              "firstLayerNozzleTemperature_C": 215,
+              "bedTemperature_C": 60,
+              "firstLayerBedTemperature_C": 65,
+              "fanSpeed_percent": 100
+            },
+            "print": {
+              "layerHeight_mm": 0.2,
+              "firstLayerHeight_mm": 0.2,
+              "extrusionWidth_mm": 0.45,
+              "perimeters": 2,
+              "topSolidLayers": 4,
+              "bottomSolidLayers": 3,
+              "infillDensity_percent": 100,
+              "infillPattern": "gyroid",
+              "perimeterSpeed_mm_s": 40,
+              "infillSpeed_mm_s": 60,
+              "firstLayerSpeed_mm_s": 20,
+              "travelSpeed_mm_s": 150
+            }
+          },
+          "expect": "invalid",
+          "fault": "INVALID_PROFILE"
+        },
+        {
+          "id": "centre-off-bed",
+          "document": {
+            "version": "schemaxis.prusaslicer/1",
+            "operation": "sliceModel",
+            "model": {
+              "file": "/replace-with-your-model/part.stl",
+              "units": "millimetre"
+            },
+            "printer": {
+              "bedSize_mm": [
+                250,
+                210
+              ],
+              "maxPrintHeight_mm": 210,
+              "nozzleDiameter_mm": 0.4,
+              "gcodeFlavour": "marlin2",
+              "maxFeedrate_mm_s": 200,
+              "maxAcceleration_mm_s2": 1500
+            },
+            "material": {
+              "type": "PLA",
+              "filamentDiameter_mm": 1.75,
+              "density_g_cm3": 1.24,
+              "nozzleTemperature_C": 210,
+              "firstLayerNozzleTemperature_C": 215,
+              "bedTemperature_C": 60,
+              "firstLayerBedTemperature_C": 65,
+              "fanSpeed_percent": 100
+            },
+            "print": {
+              "layerHeight_mm": 0.2,
+              "firstLayerHeight_mm": 0.2,
+              "extrusionWidth_mm": 0.45,
+              "perimeters": 2,
+              "topSolidLayers": 4,
+              "bottomSolidLayers": 3,
+              "infillDensity_percent": 20,
+              "infillPattern": "grid",
+              "perimeterSpeed_mm_s": 40,
+              "infillSpeed_mm_s": 60,
+              "firstLayerSpeed_mm_s": 20,
+              "travelSpeed_mm_s": 150
+            },
+            "placement": {
+              "centre_mm": [
+                260,
+                100
+              ]
+            }
+          },
+          "expect": "invalid",
+          "fault": "MODEL_OUT_OF_BOUNDS"
+        },
+        {
+          "id": "relative-model-path",
+          "document": {
+            "version": "schemaxis.prusaslicer/1",
+            "operation": "sliceModel",
+            "model": {
+              "file": "part.stl",
+              "units": "millimetre"
+            },
+            "printer": {
+              "bedSize_mm": [
+                250,
+                210
+              ],
+              "maxPrintHeight_mm": 210,
+              "nozzleDiameter_mm": 0.4,
+              "gcodeFlavour": "marlin2",
+              "maxFeedrate_mm_s": 200,
+              "maxAcceleration_mm_s2": 1500
+            },
+            "material": {
+              "type": "PLA",
+              "filamentDiameter_mm": 1.75,
+              "density_g_cm3": 1.24,
+              "nozzleTemperature_C": 210,
+              "firstLayerNozzleTemperature_C": 215,
+              "bedTemperature_C": 60,
+              "firstLayerBedTemperature_C": 65,
+              "fanSpeed_percent": 100
+            },
+            "print": {
+              "layerHeight_mm": 0.2,
+              "firstLayerHeight_mm": 0.2,
+              "extrusionWidth_mm": 0.45,
+              "perimeters": 2,
+              "topSolidLayers": 4,
+              "bottomSolidLayers": 3,
+              "infillDensity_percent": 20,
+              "infillPattern": "grid",
+              "perimeterSpeed_mm_s": 40,
+              "infillSpeed_mm_s": 60,
+              "firstLayerSpeed_mm_s": 20,
+              "travelSpeed_mm_s": 150
+            }
+          },
+          "expect": "invalid",
+          "fault": "INVALID_RESOURCE",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_prusaslicer.py"
+      ],
+      "acceptance": [
+        "tools/qualify_prusaslicer.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "G-code, numeric per-layer CSV, summary and generated config are verified publications; the STL digest and exact plan permit scheduler reuse.",
+          "references": [
+            "docs/prusaslicer.md",
+            "tests/unit/test_prusaslicer.py",
+            "tools/qualify_prusaslicer.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared expressions and JSON document references resolve before bounded profile planning.",
+          "references": [
+            "docs/prusaslicer.md",
+            "tests/unit/test_prusaslicer.py"
+          ]
+        }
+      },
+      "completion": {
+        "scope": "New route schemaxis.prusaslicer/1 with operation sliceModel: schema, semantics, native mapping, execution, discovery, guidance, Help, Studio starters, tests, qualification recipe and upstream maintenance.",
+        "review": [
+          "verification/2026-10-16-prusaslicer-completion.md"
+        ],
+        "notApplicable": {
+          "mpi": "Slicing a bounded single part is serial; the adaptor pins exactly one native thread."
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/prusa3d/PrusaSlicer/wiki/Command-Line-Interface",
+          "https://github.com/prusa3d/PrusaSlicer/releases/tag/version_2.9.6",
+          "https://github.com/prusa3d/PrusaSlicer/blob/version_2.9.6/src/libslic3r/PrintConfig.cpp",
+          "https://github.com/prusa3d/PrusaSlicer/blob/version_2.9.6/src/CLI/CLI_DynamicPrintConfig.hpp",
+          "https://github.com/prusa3d/PrusaSlicer/blob/version_2.9.6/src/libslic3r/GCode.cpp",
+          "https://github.com/prusa3d/PrusaSlicer/blob/version_2.9.6/src/libslic3r/GCode/GCodeProcessor.cpp",
+          "https://flathub.org/apps/com.prusa3d.PrusaSlicer"
+        ],
+        "lifecycle": {
+          "timeout": "One finite deadline covers the version probe, native model info, slicing, the fresh reload and full independent verification.",
+          "cancellation": "Shared process-tree cancellation for each native stage plus a post-verification cancellation gate; failed or cancelled attempts are never reusable.",
+          "logs": "Each stage retains its exact command, submission record, stdout and stderr; the STL copy, generated config, G-code and reloaded G-code are retained.",
+          "verification": "Independent STL analysis against native --info, full readback of the configuration embedded in the G-code, a pure-Python G-code replay of layers, envelope, setpoints, feedrates, filament arithmetic and kinematic time bounds, and identical fresh-reload G-code."
+        },
+        "data": [
+          {
+            "id": "model",
+            "direction": "input",
+            "kind": "geometry",
+            "format": "STL (binary or ASCII)",
+            "traits": {
+              "units": "declared millimetre or inch",
+              "closed": true
+            },
+            "losses": [
+              "Facet normals are ignored; triangle winding defines orientation.",
+              "Edge pairing does not detect self-intersections."
+            ],
+            "scope": "One closed, consistently oriented object; bytes are copied into the attempt and bound by SHA-256."
+          },
+          {
+            "id": "gcode",
+            "direction": "output",
+            "kind": "text",
+            "format": "G-code (Marlin 2 flavour, ASCII)",
+            "traits": {
+              "units": "mm, mm/min, degC",
+              "editable": true
+            },
+            "losses": [
+              "Generic machine model only; not validated for any physical printer, firmware or material."
+            ],
+            "scope": "Single-extruder planar layers with embedded native configuration and estimates."
+          },
+          {
+            "id": "layers",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV",
+            "traits": {
+              "units": "mm, mm/s, degC, percent",
+              "numeric": true
+            },
+            "losses": [
+              "Per-layer aggregates; individual moves remain in the G-code."
+            ],
+            "scope": "One row per replayed extrusion layer with z, path and filament length, envelope, peak feedrate and setpoints."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.prusaslicer.summary/1",
+            "traits": {
+              "units": "mm, s, degC, g"
+            },
+            "losses": [
+              "Native estimates are model estimates checked only against kinematic bounds and filament arithmetic."
+            ],
+            "scope": "Native estimates, independent replay results, requirement margins and explicit losses."
+          },
+          {
+            "id": "config",
+            "direction": "output",
+            "kind": "text",
+            "format": "PrusaSlicer INI",
+            "traits": {
+              "editable": true
+            },
+            "losses": [
+              "Only the fixed policy keys rendered by Schemaxis; native defaults fill all others and are visible in the G-code block."
+            ],
+            "scope": "Exact configuration passed to the native slicer."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect the G-code, the generated configuration and the slice summary.",
+            "limits": "No toolpath preview; ParaView or native G-code viewers are not invoked."
+          },
+          {
+            "panel": "table",
+            "scope": "Inspect per-layer z, extrusion and setpoint aggregates.",
+            "limits": "Aggregates only; no per-move or physical deposition model."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "pla-baseline",
+          "reuse": "Replace model.file with an absolute STL path, state its units, then edit printer, material and print values with JSON pointers; replan and run a fresh attempt. Pin model.sha256 to refuse changed bytes."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "G-code, numeric per-layer CSV, summary and generated config are verified publications; the STL digest and exact plan permit scheduler reuse."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Batch console slicing only; no interactive native inspection hook."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared expressions and JSON document references resolve before bounded profile planning."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Single-process slicing with exactly one native thread."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The STL path and its SHA-256 are complete external input provenance; reuse requires identical bytes."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No time-dependent data."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared document drafts, revisions and complete validation."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON pointer edits of model, printer, material, print, placement and requirements with full replanning."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Each attempt launches fresh console processes; no persistent PrusaSlicer session."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The generated config and G-code are ordinary publications; no 3MF project or native-save hook."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Slicing is the operation itself; no mesh-format conversion, repair or STEP import."
+          }
+        },
+        "cases": [
+          {
+            "id": "pla-box",
+            "example": "pla-baseline",
+            "edits": [],
+            "resources": {
+              "/model/file": "examples/schemaxis/prusaslicer-box.stl"
+            },
+            "scope": "Analytic 24 x 16 x 10 mm box (3840 mm3) on a 250 x 210 mm bed centred at (125, 105): 0.2 mm layers give exactly 50 layers from z = 0.2 to 10.0; with 0.45 mm extrusion width the external-perimeter centreline is the footprint inset by 0.225 mm. Declared PLA setpoints are 215/210 degC nozzle and 65/60 degC bed. Native estimates are additionally checked against kinematic bounds by the adaptor; no physical print outcome is qualified.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/model/volume_mm3",
+                "expected": 3840,
+                "absolute": 0,
+                "relative": 1e-09
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/model/nativeInfo/volume",
+                "expected": 3840,
+                "absolute": 0,
+                "relative": 1e-05
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layers/count",
+                "expected": 50,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layers/first_mm",
+                "expected": 0.2,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layers/top_mm",
+                "expected": 10.0,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/maxDeviation_mm",
+                "expected": 0,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/0/0",
+                "expected": 113.225,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/0/1",
+                "expected": 136.775,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/1/0",
+                "expected": 97.225,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/1/1",
+                "expected": 112.775,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/firstLayerNozzle_C",
+                "expected": 215,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/nozzle_C",
+                "expected": 210,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/firstLayerBed_C",
+                "expected": 65,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/bed_C",
+                "expected": 60,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fan_percent",
+                "expected": 100,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/reopenedIdentical",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/assessment/accepted",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "petg-solid-box",
+            "example": "petg-variant",
+            "edits": [],
+            "resources": {
+              "/model/file": "examples/schemaxis/prusaslicer-box.stl"
+            },
+            "scope": "Same analytic box with a distinct 0.6 mm nozzle PETG profile on a 300 x 300 mm bed centred at (150, 150): a 0.4 mm first layer then 0.3 mm layers give 1 + (10 - 0.4)/0.3 = 33 layers; 0.68 mm width insets the footprint by 0.34 mm. 100% rectilinear infill should deposit approximately the solid model volume (ratio 1 within 10% for flow-model overlap). Setpoints 240/245 degC nozzle, 85/90 degC bed and 40% fan.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/model/volume_mm3",
+                "expected": 3840,
+                "absolute": 0,
+                "relative": 1e-09
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/model/nativeInfo/volume",
+                "expected": 3840,
+                "absolute": 0,
+                "relative": 1e-05
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layers/count",
+                "expected": 33,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layers/first_mm",
+                "expected": 0.4,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layers/top_mm",
+                "expected": 10.0,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/maxDeviation_mm",
+                "expected": 0,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/0/0",
+                "expected": 138.34,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/0/1",
+                "expected": 161.66,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/1/0",
+                "expected": 142.34,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/1/1",
+                "expected": 157.66,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/firstLayerNozzle_C",
+                "expected": 240,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/nozzle_C",
+                "expected": 245,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/firstLayerBed_C",
+                "expected": 85,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/bed_C",
+                "expected": 90,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fan_percent",
+                "expected": 40,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/reopenedIdentical",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/assessment/accepted",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/filament/depositedToModelVolume",
+                "expected": 1.0,
+                "absolute": 0,
+                "relative": 0.1
+              }
+            ]
+          },
+          {
+            "id": "inch-box",
+            "example": "inch-model",
+            "edits": [],
+            "resources": {
+              "/model/file": "examples/schemaxis/prusaslicer-box-inch.stl"
+            },
+            "scope": "Analytic 1.0 x 0.6 x 0.4 inch box (0.24 in3 in file units) declared in inches and scaled by 25.4 to 25.4 x 15.24 x 10.16 mm (3932.89536 mm3): 0.254 mm layers give exactly 40 layers to z = 10.16; the 0.45 mm width insets the footprint by 0.225 mm around (125, 105).",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/model/volume_mm3",
+                "expected": 3932.8953599999995,
+                "absolute": 0,
+                "relative": 1e-09
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/model/nativeInfo/volume",
+                "expected": 0.24,
+                "absolute": 0,
+                "relative": 1e-05
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layers/count",
+                "expected": 40,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layers/first_mm",
+                "expected": 0.254,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/layers/top_mm",
+                "expected": 10.16,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/maxDeviation_mm",
+                "expected": 0,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/0/0",
+                "expected": 112.525,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/0/1",
+                "expected": 137.475,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/1/0",
+                "expected": 97.605,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/envelope/observed_mm/1/1",
+                "expected": 112.395,
+                "absolute": 0.011,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/firstLayerNozzle_C",
+                "expected": 215,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/nozzle_C",
+                "expected": 210,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/firstLayerBed_C",
+                "expected": 65,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/temperatures/bed_C",
+                "expected": 60,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fan_percent",
+                "expected": 100,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/reopenedIdentical",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/assessment/accepted",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

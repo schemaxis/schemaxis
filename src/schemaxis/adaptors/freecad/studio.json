@@ -12,6 +12,11 @@
       "icon": "file-code"
     },
     {
+      "id": "partdesign",
+      "title": "Sketch-based parts",
+      "icon": "layers"
+    },
+    {
       "id": "features",
       "title": "Features & booleans",
       "icon": "layers"
@@ -91,6 +96,22 @@
     "output": "base"
   },
   "templates": [
+    {
+      "id": "mechanical-part",
+      "title": "Sketch, Pad and through-hole",
+      "description": "Make an editable PartDesign Body from constrained sketches, a Pad and a through-all Pocket. Named dimensions persist in batch FCStd output.",
+      "file": "studio/templates/mechanical-part.json",
+      "fields": {
+        "thickness": {
+          "label": "Pad thickness (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 2,
+          "maximum": 50,
+          "default": 5
+        }
+      }
+    },
     {
       "id": "solid-box",
       "title": "Parametric solid",
@@ -216,6 +237,22 @@
           "required": true,
           "minimum": 0.01,
           "default": 20
+        }
+      }
+    },
+    {
+      "id": "persistent-plate",
+      "title": "Plate with a persistent thickness",
+      "description": "Drive the stock and drill depth from one named length retained in the native FCStd. Batch runs only.",
+      "file": "studio/templates/persistent-plate.json",
+      "fields": {
+        "thickness": {
+          "label": "Stock thickness (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 2,
+          "maximum": 10,
+          "default": 5
         }
       }
     }
@@ -3014,6 +3051,174 @@
         ]
       },
       "requires": "Use in a schemaxis.freecad.assembly/1 document with the shared postHeight dimension."
+    },
+    {
+      "id": "add-importSTEP",
+      "title": "Checked STEP import",
+      "category": "io",
+      "description": "Import one supplier STEP solid with the unit it declares, its axis orientation and placement, checked against the volume and part-frame centre of mass you know from its drawing.",
+      "fields": {
+        "id": {
+          "label": "Feature ID",
+          "type": "id",
+          "required": true,
+          "default": "importedPart"
+        },
+        "file": {
+          "label": "Source .step file",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "step",
+            "stp"
+          ]
+        },
+        "units": {
+          "label": "Unit the file declares",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "mm",
+            "cm",
+            "m",
+            "inch"
+          ],
+          "default": "mm"
+        },
+        "up": {
+          "label": "File axis that becomes +Z",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "+X",
+            "-X",
+            "+Y",
+            "-Y",
+            "+Z",
+            "-Z"
+          ],
+          "default": "+Z"
+        },
+        "xAxis": {
+          "label": "File axis that becomes +X",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "+X",
+            "-X",
+            "+Y",
+            "-Y",
+            "+Z",
+            "-Z"
+          ],
+          "default": "+X"
+        },
+        "position": {
+          "label": "Position (mm)",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "volume": {
+          "label": "Expected volume (mm³)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.001,
+          "maximum": 1000000000000000.0,
+          "default": 1000
+        },
+        "centre": {
+          "label": "Expected centre of mass in the part frame (mm)",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        "refine": {
+          "label": "Merge coplanar faces (Part::Refine)",
+          "type": "boolean",
+          "required": true,
+          "default": false
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "importSTEP",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                },
+                "units": {
+                  "$fill": "units"
+                },
+                "orientation": {
+                  "z": {
+                    "$fill": "up"
+                  },
+                  "x": {
+                    "$fill": "xAxis"
+                  }
+                },
+                "placement": {
+                  "position": {
+                    "$fill": "position"
+                  },
+                  "clocking": 0
+                },
+                "expect": {
+                  "volume": {
+                    "value": {
+                      "$fill": "volume"
+                    }
+                  },
+                  "centreOfMass": {
+                    "value": {
+                      "$fill": "centre"
+                    }
+                  }
+                },
+                "refine": {
+                  "$fill": "refine"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ],
+      "requires": "A STEP file with one solid, the unit it assigns, and its known volume and part-frame centre of mass are needed at planning; the test values use the repository example and plan from the repository root.",
+      "testValues": {
+        "file": "examples/schemaxis/freecad-import-step-bracket.step",
+        "units": "inch",
+        "up": "+Y",
+        "xAxis": "+X",
+        "volume": 10840,
+        "centre": [
+          -0.8081180811808119,
+          -0.24354243542435425,
+          5
+        ]
+      }
     }
   ],
   "viewers": [
@@ -3021,5 +3226,6 @@
     "image",
     "table",
     "text"
-  ]
+  ],
+  "helpGuide": "docs/freecad-part-design.md"
 }

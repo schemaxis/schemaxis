@@ -1,0 +1,137 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "window": {
+      "status": "reviewed",
+      "explanation": "Crop a georeferenced raster and choose a new grid shape while preserving the selected extent, CRS, band units and nodata. Useful for bounded GIS elevation, temperature and categorical grid subsets.",
+      "sources": [
+        "docs/gdal.md#contract-and-units"
+      ],
+      "pitfalls": [
+        "Nearest downsampling loses unsampled pixels and is not an average.",
+        "CRS assertion never reprojects coordinates; EPSG:4326 raster axes are longitude then latitude."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/gdal-window.json",
+          "purpose": "Extract a nodata-aware elevation window with independently checked pixels."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.gdal/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Extract a raster pixel window and optionally resize its grid. All fields are required so source metadata and sampling intent remain explicit; no reprojection or arbitrary native flags.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.gdal/1 for this document contract. The native GDAL 3.13.3 runtime version is checked separately.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose window to crop by source pixel coordinates and nearest-neighbour resize without changing the window extent.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Absolute local .tif/.tiff regular file, at most 8 MiB and 262144 pixels. Single-band north-up uncompressed strips only, no symlink/device/remote input. Source bytes are captured; changes invalidate reuse.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ],
+          "fileExtensions": [
+            ".tif",
+            ".tiff"
+          ]
+        },
+        "/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based leftmost source column, in pixels, from the upper-left corner. The window must remain fully inside the source; no padded pixels.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based topmost source row, in pixels, increasing downward. It is not a northing; north-up grids have negative geotransform y spacing.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/width": {
+          "status": "reviewed",
+          "explanation": "Number of source columns to retain,1\u20134096 pixels. Together with height at most 262144; x+width must fit the source.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/height": {
+          "status": "reviewed",
+          "explanation": "Number of source rows to retain,1\u20134096 pixels. Together with width at most 262144; y+height must fit the source.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/outputWidth": {
+          "status": "reviewed",
+          "explanation": "Number of columns on the output grid,1\u20134096, at most 262144 output pixels. Equal to width retains horizontal spacing; a changed count preserves extent and changes pixel width.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/outputHeight": {
+          "status": "reviewed",
+          "explanation": "Number of rows on the output grid,1\u20134096, at most 262144 output pixels. Equal to height retains vertical spacing; a changed count preserves extent and negative y spacing.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/epsg": {
+          "status": "reviewed",
+          "explanation": "Required assertion of source CRS, 4326 or 3857. 4326 raster coordinates are x longitude and y latitude in degrees; 3857 uses easting/northing metres. A mismatch is refused; this field does not reproject.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/units": {
+          "status": "reviewed",
+          "explanation": "Required assertion of band value units: m for metres, K for kelvin, 1 for dimensionless. Distinct from horizontal CRS units. Source units must match and output units are preserved, without vertical-datum inference.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/nodata": {
+          "status": "reviewed",
+          "explanation": "Required finite source nodata sentinel. Must match the tag and fit the source dtype exactly. Nearest sampling copies a nodata pixel unchanged; statistics exclude it and use null extrema/mean when every pixel is nodata.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/resampling": {
+          "status": "reviewed",
+          "explanation": "Only nearest is supported. Output centres select source indices floor((2*i+1)*sourceSize/(2*outputSize)); ties select the higher index. No averaging or conservation; bilinear is deliberately refused.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/lossPolicy": {
+          "status": "reviewed",
+          "explanation": "Choose strict to refuse unsupported bands, masks, overviews, compression or metadata. Only TIFF strip layout, byte order and descriptive CRS citations may change; no silent semantic metadata loss.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        }
+      }
+    }
+  }
+}

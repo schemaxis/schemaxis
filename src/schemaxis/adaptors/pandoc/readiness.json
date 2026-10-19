@@ -1,0 +1,254 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.pandoc/1": {
+      "guide": "docs/pandoc.md",
+      "context": {
+        "purpose": "Publish small structured reports as standalone HTML and editable Word DOCX.",
+        "assumptions": "Plain single-space text, one-row table headers, bounded local RGB/RGBA PNG imagery; default Pandoc typography.",
+        "constraints": "Up to 32 sections,128 content blocks, 65536 characters,8 images; heading levels 1–3 start at 1 and increase by at most 1. No authored markup/scripts/styles/templates/filters.",
+        "inspection": "Compare ordered headings, paragraph text, complete table cells and image alt/media bytes in HTML, independent OOXML and fresh native DOCX JSON readback. Inspect the report-summary loss policy and generated documents.",
+        "recovery": "INVALID_REPORT_TABLE needs rectangular rows; INVALID_HEADING_ORDER needs an outline starting at 1. INVALID_REPORT_IMAGE needs an absolute regular plain RGB/RGBA PNG. INVALID_REPORT_TEXT needs single-space plain text. INTERPRETER_NOT_FOUND needs configured Pandoc; retained logs and failed result explain native faults."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/pandoc-report.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/pandoc-report-variant.json"
+        },
+        {
+          "id": "ragged-table",
+          "reference": "examples/schemaxis/pandoc-table-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_REPORT_TABLE",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_pandoc_admission.py"
+      ],
+      "acceptance": [
+        "tools/qualify_pandoc.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Report jobs run within the common workflow with independently verified publications; no arbitrary document-format import.",
+          "references": [
+            "docs/pandoc.md",
+            "tools/qualify_pandoc.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure expressions and finite visits resolve before report planning.",
+          "references": [
+            "docs/pandoc.md",
+            "tools/qualify_pandoc.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://pandoc.org/MANUAL.html#creating-a-self-contained-web-page",
+          "https://pandoc.org/MANUAL.html#option--sandbox",
+          "https://github.com/jgm/pandoc-types/blob/master/src/Text/Pandoc/Definition.hs",
+          "https://pandoc.org/MANUAL.html#option--extract-media"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers runtime/API probes, both writers, fresh readback and verification.",
+          "cancellation": "Owned native processes use shared cancellation; check again before publication.",
+          "logs": "Retain authored/effective plans, captured PNGs/digests, trusted AST, runtime, commands, stdout/stderr, HTML/DOCX, extracted readback media and failed/succeeded results.",
+          "verification": "Independent HTML parser and standard-library ZIP/OOXML relationships/cells/headings/image geometry/media checks compare with authored values; fresh Pandoc DOCX reader repeats the semantic check. Every image source is captured as a bounded regular file."
+        },
+        "data": [
+          {
+            "id": "report",
+            "direction": "output",
+            "kind": "file",
+            "format": "DOCX",
+            "traits": {
+              "content": "ordered headings/plain text/rectangular tables/embedded PNG"
+            },
+            "losses": [
+              "Default typography/pagination only; no exact layout, rich text or accessibility certification."
+            ],
+            "scope": "Editable report document with independently checked native semantic readback."
+          },
+          {
+            "id": "html",
+            "direction": "output",
+            "kind": "text",
+            "format": "standalone HTML5",
+            "traits": {
+              "media": "embedded PNG data URI"
+            },
+            "losses": [
+              "Browser rendering is not a pixel-equivalence contract."
+            ],
+            "scope": "Standalone report document with independent ordered semantic verification."
+          },
+          {
+            "id": "png",
+            "direction": "input",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "colour": "8-bit RGB/RGBA",
+              "pixels": "at most 1048576"
+            },
+            "losses": [
+              "Only IHDR/IDAT/IEND chunks; export a plain PNG without auxiliary metadata."
+            ],
+            "scope": "At most 8 bounded local source PNGs captured with paths and SHA-256."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect report-summary.json and standalone HTML report source.",
+            "limits": "DOCX remains a downloadable/editable native document; no embedded Word editor."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit structured report values, plan fresh, render and independently verify; image bytes participate in reuse identity."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Report jobs run within the common workflow with independently verified publications; no arbitrary document-format import."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This batch report route does not implement native-inspection; it publishes only the declared HTML/DOCX subset."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure expressions and finite visits resolve before report planning."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This batch report route does not implement mpi; it publishes only the declared HTML/DOCX subset."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Captured local image digests invalidate reuse when the same source path changes."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This batch report route does not implement time-batches; it publishes only the declared HTML/DOCX subset."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON source editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer edits for title, section headings, text, cells and image display width."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This batch report route does not implement live-editing; it publishes only the declared HTML/DOCX subset."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This batch report route does not implement native-save; it publishes only the declared HTML/DOCX subset."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This batch report route does not implement conversion; it publishes only the declared HTML/DOCX subset."
+          }
+        },
+        "cases": [
+          {
+            "id": "calibration-report",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/sections/1/content/1/source": "examples/schemaxis/fixtures/pandoc/calibration.png"
+            },
+            "scope": "Native ordered headings/text/cells and embedded image bytes checked in independent HTML/OOXML and fresh DOCX JSON readback; variant changes a cell, heading level and image width.",
+            "checks": [
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/sections",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/tables",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/images",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "changed-cells-width-heading",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/sections/1/content/1/source": "examples/schemaxis/fixtures/pandoc/calibration-alpha.png"
+            },
+            "scope": "Native ordered headings/text/cells and embedded image bytes checked in independent HTML/OOXML and fresh DOCX JSON readback; variant changes a cell, heading level and image width.",
+            "checks": [
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/sections",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/tables",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/images",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial structured report publication route, all declarations and native outputs.",
+        "review": [
+          "verification/2026-10-17-pandoc-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "This batch report route does not implement native-inspection; it publishes only the declared HTML/DOCX subset.",
+          "mpi": "This batch report route does not implement mpi; it publishes only the declared HTML/DOCX subset.",
+          "time-batches": "This batch report route does not implement time-batches; it publishes only the declared HTML/DOCX subset.",
+          "live-editing": "This batch report route does not implement live-editing; it publishes only the declared HTML/DOCX subset.",
+          "native-save": "This batch report route does not implement native-save; it publishes only the declared HTML/DOCX subset.",
+          "conversion": "This batch report route does not implement conversion; it publishes only the declared HTML/DOCX subset."
+        }
+      }
+    }
+  }
+}

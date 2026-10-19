@@ -1,0 +1,111 @@
+{
+  "id": "gnuplot",
+  "version": "schemaxis.gnuplot/1",
+  "adaptor": "schemaxis.adaptors.gnuplot.adaptor",
+  "declarations": "schemaxis.adaptors.gnuplot.adaptor:DECLARATIONS",
+  "runtimeFamily": "6.0",
+  "execution": "Isolated numeric CSV scientific plotting with SVG geometry and PNG pixel verification",
+  "executables": [
+    "gnuplot"
+  ],
+  "keywords": [
+    "scientific plot",
+    "CSV",
+    "error bars",
+    "logarithmic",
+    "SVG",
+    "PNG"
+  ],
+  "display": {
+    "name": "Gnuplot",
+    "mark": "Gp",
+    "colour": "#a44330"
+  },
+  "capabilities": "schemaxis.adaptors.gnuplot.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.gnuplot/1",
+    "operation": "plot",
+    "title": "Sensor calibration",
+    "source": "/replace/with/calibration.csv",
+    "columns": [
+      {
+        "name": "time",
+        "unit": "s"
+      },
+      {
+        "name": "reading",
+        "unit": "V"
+      },
+      {
+        "name": "uncertainty",
+        "unit": "V"
+      }
+    ],
+    "series": [
+      {
+        "label": "Measured",
+        "x": "time",
+        "y": "reading",
+        "error": "uncertainty",
+        "colour": "red"
+      }
+    ],
+    "xAxis": {
+      "label": "Time",
+      "unit": "s",
+      "range": [
+        0,
+        2
+      ],
+      "scale": "linear"
+    },
+    "yAxis": {
+      "label": "Reading",
+      "unit": "V",
+      "range": [
+        0,
+        4
+      ],
+      "scale": "linear"
+    },
+    "width": 800,
+    "height": 600
+  },
+  "routes": {
+    "schemaxis.gnuplot/1": {
+      "module": "schemaxis.adaptors.gnuplot.adaptor",
+      "schema": "schemaxis.adaptors.gnuplot.adaptor:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "gnuplot",
+      "acceptedArtifacts": [],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.gnuplot.adaptor:query",
+        "reusableInputs": "schemaxis.adaptors.gnuplot.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.gnuplot.adaptor:resources"
+      }
+    }
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--gnuplot",
+      "dest": "gnuplot",
+      "help": "Absolute Gnuplot executable with svg and png terminals"
+    }
+  ]
+}

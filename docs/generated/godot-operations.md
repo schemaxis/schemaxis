@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[box](#box), [camera](#camera), [capsule](#capsule), [cylinder](#cylinder), [directionalLight](#directionallight), [material](#material), [omniLight](#omnilight), [plane](#plane), [readGLTF](#readgltf), [sphere](#sphere), [spotLight](#spotlight), [sprite3D](#sprite3d), [torus](#torus)
+[box](#box), [camera](#camera), [capsule](#capsule), [cylinder](#cylinder), [directionalLight](#directionallight), [material](#material), [omniLight](#omnilight), [plane](#plane), [readGLTF](#readgltf), [sphere](#sphere), [spotLight](#spotlight), [sprite3D](#sprite3d), [torus](#torus), [transformGroup](#transformgroup)
 
 ## box
 
@@ -24,13 +24,14 @@ Native binding: `BoxMesh`. Output kind: `["geometry"]`.
 | Input port | Multiplicity | Required | Kind |
 | --- | --- | --- | --- |
 | `material` | one node | yes | `material` |
+| `parent` | one node | no | `group` |
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `position` | World position [x, y, z] of the box centre in metres (the BoxMesh is centred on its node). A box resting on the ground at y = 0 needs y equal to half its height. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `position` | World position [x, y, z] of the box centre in metres (the BoxMesh is centred on its node). A box resting on the ground at y = 0 needs y equal to half its height. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `size` | Full edge lengths [x, y, z] of the box in metres before rotation and scale, written to BoxMesh size. The box extends half of each length on either side of position. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":10000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
-| `rotation` | Orientation of the box as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. A box rotated [0, 45, 0] turns its faces 45 degrees about the vertical axis. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
-| `scale` | Scale factors [x, y, z] along the box's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. For a box, changing size is usually clearer than scaling; scale keeps BoxMesh size unchanged and stretches the node. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
+| `rotation` | Orientation of the box as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. A box rotated [0, 45, 0] turns its faces 45 degrees about the vertical axis. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `scale` | Scale factors [x, y, z] along the box's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. For a box, changing size is usually clearer than scaling; scale keeps BoxMesh size unchanged and stretches the node. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
 
 
 ## camera
@@ -71,14 +72,15 @@ Native binding: `CapsuleMesh`. Output kind: `["geometry"]`.
 | Input port | Multiplicity | Required | Kind |
 | --- | --- | --- | --- |
 | `material` | one node | yes | `material` |
+| `parent` | one node | no | `group` |
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `position` | World position [x, y, z] of the capsule centre in metres, half-way along its axis. An upright capsule standing on the ground at y = 0 needs y equal to height / 2. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `position` | World position [x, y, z] of the capsule centre in metres, half-way along its axis. An upright capsule standing on the ground at y = 0 needs y equal to height / 2. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `radius` | Radius in metres of the capsule body and of its two hemispherical ends. It may be at most half of height. | `{"type":"number","minimum":0.001,"maximum":10000}` | `0.5` |
 | `height` | Total length of the capsule along its local Y axis in metres, including both hemispherical ends, so the straight part is height - 2 x radius long. It must be at least twice the radius. | `{"type":"number","minimum":0.002,"maximum":10000}` | `2` |
-| `rotation` | Orientation of the capsule as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the capsule along the X axis. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
-| `scale` | Scale factors [x, y, z] along the capsule's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Non-uniform factors distort the round ends into ellipsoidal caps; prefer radius and height for size changes. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
+| `rotation` | Orientation of the capsule as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the capsule along the X axis. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `scale` | Scale factors [x, y, z] along the capsule's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Non-uniform factors distort the round ends into ellipsoidal caps; prefer radius and height for size changes. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
 
 
 ## cylinder
@@ -95,14 +97,15 @@ Native binding: `CylinderMesh`. Output kind: `["geometry"]`.
 | Input port | Multiplicity | Required | Kind |
 | --- | --- | --- | --- |
 | `material` | one node | yes | `material` |
+| `parent` | one node | no | `group` |
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `position` | World position [x, y, z] of the cylinder centre in metres, half-way along its axis. An upright cylinder standing on the ground at y = 0 needs y equal to height / 2. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `position` | World position [x, y, z] of the cylinder centre in metres, half-way along its axis. An upright cylinder standing on the ground at y = 0 needs y equal to height / 2. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `radius` | Radius of the cylinder in metres, written to both the top and bottom radius of the native CylinderMesh, so the sides are straight. | `{"type":"number","minimum":0.001,"maximum":10000}` | `0.5` |
 | `height` | Length of the cylinder along its local Y axis in metres; it extends height / 2 on either side of position. | `{"type":"number","minimum":0.001,"maximum":10000}` | `1` |
-| `rotation` | Orientation of the cylinder as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the cylinder along the X axis; [90, 0, 0] lays it along Z. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
-| `scale` | Scale factors [x, y, z] along the cylinder's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal X and Z factors give an elliptical cross-section; the Y factor multiplies the height. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
+| `rotation` | Orientation of the cylinder as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the cylinder along the X axis; [90, 0, 0] lays it along Z. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `scale` | Scale factors [x, y, z] along the cylinder's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal X and Z factors give an elliptical cross-section; the Y factor multiplies the height. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
 
 
 ## directionalLight
@@ -181,13 +184,14 @@ Native binding: `PlaneMesh`. Output kind: `["geometry"]`.
 | Input port | Multiplicity | Required | Kind |
 | --- | --- | --- | --- |
 | `material` | one node | yes | `material` |
+| `parent` | one node | no | `group` |
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `position` | World position [x, y, z] of the plane centre in metres. For a ground plane, y is the ground height; objects meant to rest on it must be placed relative to this height. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `position` | World position [x, y, z] of the plane centre in metres. For a ground plane, y is the ground height; objects meant to rest on it must be placed relative to this height. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `size` | Lengths [x, z] of the rectangle in metres: the first element is the extent along local X, the second along local Z. The plane has no thickness; it extends half of each length on either side of position. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":10000},"minItems":2,"maxItems":2}` | `[10,10]` |
-| `rotation` | Orientation of the plane as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] turns the horizontal plane into a wall facing +Z; [-90, 0, 0] faces it towards -Z. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
-| `scale` | Scale factors [x, y, z] along the plane's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The X and Z factors multiply the two size lengths; the Y factor has no visible effect on a flat plane. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
+| `rotation` | Orientation of the plane as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] turns the horizontal plane into a wall facing +Z; [-90, 0, 0] faces it towards -Z. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `scale` | Scale factors [x, y, z] along the plane's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The X and Z factors multiply the two size lengths; the Y factor has no visible effect on a flat plane. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
 
 
 ## readGLTF
@@ -205,13 +209,14 @@ Native binding: `GLTFDocument`. Output kind: `["geometry"]`.
 | Input port | Multiplicity | Required | Kind |
 | --- | --- | --- | --- |
 | `material` | one node | yes | `material` |
+| `parent` | one node | no | `group` |
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `position` | World position [x, y, z] in metres where the glTF mesh's own origin is placed. The mesh is not re-centred: if its vertices lie away from their origin, the mesh appears offset from position by the same amount. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `position` | World position [x, y, z] in metres where the glTF mesh's own origin is placed. The mesh is not re-centred: if its vertices lie away from their origin, the mesh appears offset from position by the same amount. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `file` | Absolute path of the .gltf 2.0 file to import. The file must contain one scene with one untransformed node, one mesh with one TRIANGLES primitive, embedded base64 buffers, float POSITION and optional NORMAL, at most 100000 elements per accessor and 8 MiB in size. Its bytes are copied into the run directory and hashed before import. glTF coordinates are metres with +Y up, the same convention as Godot, so vertices are used without axis or unit conversion. In a workflow, a gltf artifact from an earlier operation can supply this file. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
-| `rotation` | Orientation of the imported mesh as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation turns the mesh about its glTF origin, not about its centre. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
-| `scale` | Scale factors [x, y, z] along the imported mesh's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Use it to convert a model authored in other length units, for example 0.001 for millimetres; scaling is about the glTF origin. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
+| `rotation` | Orientation of the imported mesh as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation turns the mesh about its glTF origin, not about its centre. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `scale` | Scale factors [x, y, z] along the imported mesh's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Use it to convert a model authored in other length units, for example 0.001 for millimetres; scaling is about the glTF origin. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
 
 
 ## sphere
@@ -228,13 +233,14 @@ Native binding: `SphereMesh`. Output kind: `["geometry"]`.
 | Input port | Multiplicity | Required | Kind |
 | --- | --- | --- | --- |
 | `material` | one node | yes | `material` |
+| `parent` | one node | no | `group` |
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `position` | World position [x, y, z] of the sphere centre in metres. A sphere resting on the ground at y = 0 needs y equal to its radius. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `position` | World position [x, y, z] of the sphere centre in metres. A sphere resting on the ground at y = 0 needs y equal to its radius. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `radius` | Radius of the sphere in metres, from 0.001 to 10000. Schemaxis also sets the native SphereMesh height to twice this value, so the result is always a full sphere with diameter 2 x radius. | `{"type":"number","minimum":0.001,"maximum":10000}` | `0.5` |
-| `rotation` | Orientation of the sphere as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation is visible only when scale is non-uniform or the material shows the tessellation; it still changes the verified transform. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
-| `scale` | Scale factors [x, y, z] along the sphere's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal factors turn the sphere into an ellipsoid with semi-axes radius x factor. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
+| `rotation` | Orientation of the sphere as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation is visible only when scale is non-uniform or the material shows the tessellation; it still changes the verified transform. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `scale` | Scale factors [x, y, z] along the sphere's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal factors turn the sphere into an ellipsoid with semi-axes radius x factor. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
 
 
 ## spotLight
@@ -298,11 +304,33 @@ Native binding: `TorusMesh`. Output kind: `["geometry"]`.
 | Input port | Multiplicity | Required | Kind |
 | --- | --- | --- | --- |
 | `material` | one node | yes | `material` |
+| `parent` | one node | no | `group` |
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `position` | World position [x, y, z] of the torus centre (the centre of the hole) in metres. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `position` | World position [x, y, z] of the torus centre (the centre of the hole) in metres. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `innerRadius` | Radius of the hole in metres: the distance from the torus centre to the inner edge of the tube, written to TorusMesh inner_radius. It must be smaller than outerRadius; the tube thickness is outerRadius - innerRadius. | `{"type":"number","minimum":0.001,"maximum":10000}` | `0.5` |
 | `outerRadius` | Overall radius of the torus in metres: the distance from the centre to the outer edge of the tube, written to TorusMesh outer_radius. The torus is 2 x outerRadius wide in X and Z. | `{"type":"number","minimum":0.002,"maximum":10000}` | `1` |
-| `rotation` | Orientation of the torus as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] stands the ring upright, with its hole facing along Z. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
-| `scale` | Scale factors [x, y, z] along the torus's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The Y factor changes the tube thickness in the vertical direction only, flattening or stretching the ring. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
+| `rotation` | Orientation of the torus as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] stands the ring upright, with its hole facing along Z. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `scale` | Scale factors [x, y, z] along the torus's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The Y factor changes the tube thickness in the vertical direction only, flattening or stretching the ring. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |
+
+
+## transformGroup
+
+Create a named, non-renderable Node3D transform group to move, rotate and scale a static assembly together. Connect child geometry or other groups through inputs.parent. Transform options are local to the parent; leaving parent out attaches to the scene root. Group world bounds enclose descendant geometry; empty groups have no bounds. Cameras, lights and sprites stay at the root.
+
+Common mistakes and assumptions:
+
+- This is a transform hierarchy, not Godot named membership groups, animation, instancing or physics. All descendants remain owned by the saved scene root.
+
+Native binding: `Node3D`. Output kind: `["group"]`.
+
+| Input port | Multiplicity | Required | Kind |
+| --- | --- | --- | --- |
+| `parent` | one node | no | `group` |
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `position` | XYZ translation of the group pivot relative to its parent, in metres. Default [0,0,0], each component within ±100000 m. An ancestor rotation or scale changes the world displacement. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `rotation` | XYZ Euler angles in degrees, default [0,0,0], each within [-180,180]. Godot intrinsic YXZ means points are scaled, rotated Z then X then Y, and translated. Ancestor transforms apply afterward. | `{"type":"array","items":{"type":"number","minimum":-180,"maximum":180},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `scale` | Positive dimensionless XYZ scale, default [1,1,1], components in [0.001,1000]. Zero and mirrored/negative scales are rejected. Non-uniform scales combined with child rotations can induce shear; full affine composition is preserved. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":1000},"minItems":3,"maxItems":3}` | `[1,1,1]` |

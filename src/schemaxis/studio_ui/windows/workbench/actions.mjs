@@ -2,7 +2,7 @@
 import {h} from '../../lib/dom.mjs';
 import {reportDiagnostics} from '../../editor/settle-server.mjs';
 import {openDialog} from '../../shell/dialog.mjs';
-import {diagnosticPointer, mapDiagnostics, operationPointer, valueAt} from './model.mjs';
+import {diagnosticPointer, mapDiagnostics, operationPointer, validationRequest, valueAt} from './model.mjs';
 
 export function createActions({ctx, store, editor, params, load, viewers, showTab}) {
   async function publish() {
@@ -29,13 +29,15 @@ export function createActions({ctx, store, editor, params, load, viewers, showTa
   async function validate({success = true} = {}) {
     editor.flushDiagnostics();
     const version = editor.getTextVersion();
-    const result = await ctx.api.post('/api/validate', {provider: store.get().provider, source: editor.getValue(), format: editor.getOption('format') || 'json'});
+    const result = await ctx.api.post('/api/validate', validationRequest(store.get(), params, editor.getValue(),
+      editor.getOption('format') || 'json'));
     if (version !== editor.getTextVersion()) return result;
     const diagnostics = mapDiagnostics(result.diagnostics, store.get().value);
     editor.setDiagnostics(diagnostics);
     const problems = reportDiagnostics(ctx, editor, {document: params.document, show: () => showTab('input')});
     if (success && result.valid && !problems.length) {
-      ctx.notify.ok('Input validated', {body: 'The host planner accepted this input.'});
+      ctx.notify.ok(result.validation?.deferred ? 'Workflow references checked' : 'Input validated', {
+        body: result.validation?.deferred ? result.validation.message : 'The host planner accepted this input.'});
     }
 
     return result;
@@ -86,6 +88,13 @@ export function createActions({ctx, store, editor, params, load, viewers, showTa
   async function preview(run = false) {
     const validation = await validate({success: false});
     if (!validation.valid) return;
+    if (params.operation && validation.validation?.requiresWorkflow) {
+      ctx.notify.info('Run from the workflow', {
+        body: validation.validation.deferred
+          ? 'This operation needs files or values produced by earlier workflow steps.'
+          : 'Run this operation from its workflow to preserve its resolved inputs and connections.'});
+      return;
+    }
     const record = await publish();
     if (params.operation) {
       const separate = await ctx.api.post('/api/documents', {action: 'new', provider: store.get().provider,

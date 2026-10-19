@@ -28,19 +28,22 @@ ROWS={'type':'array','items':{'type':'array','items':NUMBER,'minItems':2,'maxIte
 REQUIREMENT={'type':'object','properties':{
     'name':{'type':'string','minLength':1,'maxLength':64,'required':True},
     'scope':{'type':'enum','values':['training','heldout'],'required':True},
-    'metric':{'type':'enum','values':['rmse','maxAbsoluteError','prediction'],'required':True},
+    'metric':{'type':'enum','values':['rmse','maxAbsoluteError','prediction','coefficientInterval'],'required':True},
+    'term':{'type':'string','minLength':1,'maxLength':32},
     'sampleIndex':{'type':'integer','minimum':0,'maximum':511},
     'minimum':{'type':'number','minimum':-1e18,'maximum':1e18},
     'maximum':{'type':'number','minimum':-1e18,'maximum':1e18}}}
 OPTIONS={'predictors':{'type':'array','items':VARIABLE,'minItems':1,'maxItems':8,'required':True},
     'response':VARIABLE,'training':ROWS,'heldout':{**ROWS,'minItems':1,'required':False},
     'intercept':{'type':'boolean','default':True},
+    'inference':{'type':'object','properties':{'level':{'type':'number','minimum':0.5,'maximum':0.999,'default':0.95}}},
     'requirements':{'type':'array','items':REQUIREMENT,'minItems':1,'maxItems':32}}
-DECLARATIONS={'linearRegression':{'native':'stats::lm / base::saveRDS / stats::predict',
+DECLARATIONS={'linearRegression':{'native':'stats::lm / base::saveRDS / stats::predict / stats::summary.lm / stats::confint',
     'kinds':['table','text'],'inputs':{},'options':{key:{'value':value} for key,value in OPTIONS.items()}}}
 LOSSES=['Unweighted numeric additive ordinary least squares only; no categorical, interaction, polynomial or authored formula terms',
     'Declared units are retained labels, not unit conversion or physical calibration',
-    'Finite training/held-out rows only; no causal inference, confidence intervals, hypothesis tests or future-generalisation guarantee',
+    'Finite training/held-out rows only; no causal inference or future-generalisation guarantee',
+    'Optional coefficient inference assumes a correct additive mean, independent homoscedastic normal errors and fixed predictors; it is not a prediction interval, model selection or multiplicity-adjusted test',
     'RDS is retained native replay evidence, not a cross-machine interchange or imported arbitrary model']
 
 
@@ -71,15 +74,28 @@ def plan(document):
             prediction=reference.predicted(prepared,row,independent['coefficients'])
             if not math.isfinite(prediction) or abs(prediction)>1e100 or abs(row[-1]-prediction)>1e100:
                 fail('INVALID_PREDICTION','projected prediction/residual exceeds the numeric table budget',f'$.{scope}[{index}]')
+    if 'inference' in prepared:reference.residual_variance(prepared,independent)
+    terms=(['intercept'] if prepared['intercept'] else [])+[p['name'] for p in prepared['predictors']]
     seen=set()
     for index,requirement in enumerate(prepared.get('requirements',[])):
         at=f'$.requirements[{index}]';name=requirement['name'];metric=requirement['metric']
         if name in seen or re.fullmatch(r'[a-z][a-z0-9_]{0,63}',name) is None:
             fail('INVALID_REQUIREMENT','requirement names must be unique lowercase identifiers',at+'.name')
         seen.add(name)
-        if requirement['scope']=='heldout' and 'heldout' not in prepared:
+        if requirement['scope']=='heldout' and 'heldout' not in prepared and metric!='coefficientInterval':
             fail('INVALID_REQUIREMENT','held-out requirements need explicit held-out observed rows',at+'.scope')
-        if metric=='prediction':
+        if metric!='coefficientInterval' and 'term' in requirement:
+            fail('INVALID_REQUIREMENT','term applies only to coefficientInterval',at+'.term')
+        if metric=='coefficientInterval':
+            if 'inference' not in prepared:fail('INVALID_REQUIREMENT','coefficientInterval needs declared inference and its confidence level','$.inference')
+            if requirement['scope']!='training':fail('INVALID_REQUIREMENT','coefficient intervals come from the training fit; use scope training',at+'.scope')
+            if requirement.get('term') not in terms:fail('INVALID_REQUIREMENT','term must name intercept (when enabled) or a declared predictor',at+'.term')
+            if 'sampleIndex' in requirement:fail('INVALID_REQUIREMENT','coefficientInterval does not select a sample',at+'.sampleIndex')
+            if not any(bound in requirement for bound in ('minimum','maximum')):
+                fail('INVALID_REQUIREMENT','coefficientInterval needs an inclusive lower or upper bound on the confidence limits',at)
+            if requirement.get('minimum',-math.inf)>requirement.get('maximum',math.inf):
+                fail('INVALID_REQUIREMENT','minimum must not exceed maximum',at)
+        elif metric=='prediction':
             if 'sampleIndex' not in requirement or requirement['sampleIndex']>=len(prepared[requirement['scope']]):
                 fail('INVALID_REQUIREMENT','prediction needs a valid zero-based declared sample index',at+'.sampleIndex')
             if not any(bound in requirement for bound in ('minimum','maximum')):
@@ -106,7 +122,10 @@ def schema():
     prediction=object_schema({**common,'metric':{'const':'prediction'},
         **{key:properties[key] for key in ('sampleIndex','minimum','maximum')}},['name','scope','metric','sampleIndex'])
     prediction['anyOf']=[{'required':['minimum']},{'required':['maximum']}]
-    fields['requirements']['items']={'oneOf':[error,prediction]}
+    interval=object_schema({'name':properties['name'],'scope':{'const':'training'},'metric':{'const':'coefficientInterval'},
+        'term':{**properties['term'],'pattern':'^[a-z][a-z0-9_]{0,31}$'},**{key:properties[key] for key in ('minimum','maximum')}},['name','scope','metric','term'])
+    interval['anyOf']=[{'required':['minimum']},{'required':['maximum']}]
+    fields['requirements']['items']={'oneOf':[error,prediction,interval]}
     return {'$schema':DRAFT,**object_schema(fields,['version','operation','predictors','response','training'])}
 
 
@@ -167,7 +186,8 @@ def sources(prepared,directory):
 
 def commands(executable,directory,prepared):
     common=[executable,'--vanilla','--default-packages=stats,utils',str(directory/'worker.R')]
-    options=[str(len(prepared['predictors'])),str(int(prepared['intercept'])),str(int('heldout' in prepared))]
+    options=[str(len(prepared['predictors'])),str(int(prepared['intercept'])),str(int('heldout' in prepared)),
+        repr(float(prepared['inference']['level'])) if 'inference' in prepared else 'none']
     return {stage:common+[stage,*options] for stage in ('fit','reopen')}
 
 
@@ -209,7 +229,7 @@ def native_tables(directory,prepared,stage):
     independent=reference.decompose(prepared['training'],prepared['intercept'])
     # Response-scale roundoff bound; zero response uses the smallest float ULP,
     # not a unit-dependent fixed voltage/error floor.
-    tolerance=128*math.ulp(max(abs(row[-1]) for row in prepared['training']))*max(1,prepared['scaledInfinityCondition'])
+    tolerance=reference.response_tolerance(prepared['training'],prepared['scaledInfinityCondition'])
     for i,(row,expected) in enumerate(zip(scaled['rows'],independent['scaledCoefficients'])):
         if row[0]!=i or not math.isclose(row[1],expected,rel_tol=1e-10,abs_tol=tolerance):
             fail('VERIFICATION_FAILED','native coefficient differs from independent Householder QR',stage)
@@ -224,10 +244,51 @@ def native_tables(directory,prepared,stage):
             expected=[i,authored[-1],predicted,residual]+([predicted,residual] if scope=='training' else [])
             if native[0]!=i or not math.isclose(native[1],authored[-1],rel_tol=1e-14,abs_tol=128*math.ulp(abs(authored[-1]))) or not close(native[2:],expected[2:],rel=1e-10,absolute=tolerance):
                 fail('VERIFICATION_FAILED','native prediction/residual differs from independent model',stage+'-'+scope)
-    return coefficients,result
+    return coefficients,result,native_inference(directory,prepared,stage,independent,tolerance)
 
 
-def summaries(prepared,coefficients,tables):
+INFERENCE_COLUMNS=['coefficientIndex','scaledEstimate','scaledStandardError','tStatistic','pValue','scaledLower','scaledUpper']
+STATISTICS_COLUMNS=['level','residualDF','criticalValue','sigma','rSquared','adjustedRSquared','fStatistic','fNumeratorDF','fDenominatorDF','fPValue']
+
+
+def native_inference(directory,prepared,stage,independent,tolerance):
+    """Check native summary.lm/confint values against independent QR inference."""
+    if 'inference' not in prepared:return None
+    table=read_table(directory,stage+'-inference.csv');statistics=read_table(directory,stage+'-statistics.csv')
+    if table['columns']!=INFERENCE_COLUMNS or len(table['rows'])!=prepared['rank'] or statistics['columns']!=STATISTICS_COLUMNS or len(statistics['rows'])!=1:
+        fail('VERIFICATION_FAILED','native inference table dimensions differ',stage)
+    if [row[0] for row in table['rows']]!=list(range(prepared['rank'])):fail('VERIFICATION_FAILED','native inference coefficient order differs',stage)
+    native={**dict(zip(STATISTICS_COLUMNS,statistics['rows'][0])),'coefficients':[dict(zip(INFERENCE_COLUMNS[1:],row[1:])) for row in table['rows']]}
+    expected=reference.inference(prepared,independent)
+    differing=reference.compare_inference(native,expected,tolerance)
+    if differing:fail('VERIFICATION_FAILED','native '+differing+' differs from independent QR inference',stage+'-inference')
+    native.update({key:expected[key] for key in ('residualDF','fNumeratorDF','fDenominatorDF')})  # exactly equal counts
+    terms=(['intercept'] if prepared['intercept'] else [])+[p['name'] for p in prepared['predictors']]
+    coefficients=[{'term':term,'units':unit,'estimate':item['scaledEstimate']/scale,'standardError':item['scaledStandardError']/scale,
+        'tStatistic':item['tStatistic'],'pValue':item['pValue'],'lower':item['scaledLower']/scale,'upper':item['scaledUpper']/scale}
+        for term,unit,item,scale in zip(terms,reference.coefficient_units(prepared),native['coefficients'],prepared['scales'])]
+    return {**{key:native[key] for key in STATISTICS_COLUMNS},'coefficients':coefficients}
+
+
+def inference_summary(prepared,inferred):
+    intercept=prepared['intercept']
+    return {'version':'schemaxis.r.inference/1','method':'Classical ordinary least-squares t and F inference: stats::summary.lm, stats::confint and stats::pf',
+        'level':inferred['level'],'residualDF':inferred['residualDF'],'criticalValue':inferred['criticalValue'],
+        'residualStandardError':{'value':inferred['sigma'],'units':prepared['response']['unit']},
+        'rSquared':inferred['rSquared'],'adjustedRSquared':inferred['adjustedRSquared'],
+        'rSquaredBasis':'centred on the mean response' if intercept else 'uncentred (about zero); not comparable with an intercept model',
+        'fTest':{'statistic':inferred['fStatistic'],'numeratorDF':inferred['fNumeratorDF'],'denominatorDF':inferred['fDenominatorDF'],'pValue':inferred['fPValue'],
+            'hypothesis':'all predictor coefficients are zero (intercept retained)' if intercept else 'all coefficients are zero (no intercept)'},
+        'coefficients':inferred['coefficients'],
+        'assumptions':['The declared additive linear mean is correct for the training rows.',
+            'Errors are independent, have constant variance and are normally distributed; exact t/F levels depend on normality.',
+            'Predictor values are fixed and measured without error; rows are not replicated pseudo-observations.'],
+        'tolerance':{'relative':reference.INFERENCE_RELATIVE,'distributionRelative':reference.DISTRIBUTION_RELATIVE,
+            'minimumResidualStandardErrorRatio':reference.VARIANCE_RATIO,'pValues':'native value within the independent image of the t/F tolerance interval'},
+        'limits':'Per-coefficient two-sided tests and intervals are not adjusted for multiple comparisons, are not prediction intervals for new observations and do not establish causality or validate the model choice.'}
+
+
+def summaries(prepared,coefficients,tables,inferred=None):
     names=(['intercept'] if prepared['intercept'] else [])+[p['name'] for p in prepared['predictors']]
     details={'version':'schemaxis.r.summary/1','operation':prepared['operation'],
         'predictors':prepared['predictors'],'response':prepared['response'],'intercept':prepared['intercept'],
@@ -235,13 +296,21 @@ def summaries(prepared,coefficients,tables):
         'rank':prepared['rank'],'residualDF':prepared['residualDF'],
         'scaledInfinityCondition':prepared['scaledInfinityCondition'],'maximumScaledInfinityCondition':reference.CONDITION_LIMIT,
         'metrics':{scope:reference.metrics(table['rows']) for scope,table in tables.items()},
-        'verificationTolerance':{'relative':1e-10,'absoluteResponseUnits':128*math.ulp(max(abs(row[-1]) for row in prepared['training']))*max(1,prepared['scaledInfinityCondition'])},'losses':LOSSES}
-    if 'requirements' in prepared:details['acceptance']=reference.assess(prepared,tables)
+        'verificationTolerance':{'relative':1e-10,'absoluteResponseUnits':reference.response_tolerance(prepared['training'],prepared['scaledInfinityCondition'])},'losses':LOSSES}
+    if inferred is not None:details['inference']=inference_summary(prepared,inferred)
+    if 'requirements' in prepared:details['acceptance']=reference.assess(prepared,tables,inferred)
     return details
 
 
 def publications(prepared):
-    return [('coefficients.csv','table'),('training.csv','table')]+([('heldout.csv','table')] if 'heldout' in prepared else [])+[('regression-summary.json','text')]
+    # Opt-in inference is appended so existing artifact indices never move.
+    return ([('coefficients.csv','table'),('training.csv','table')]+([('heldout.csv','table')] if 'heldout' in prepared else [])
+        +[('regression-summary.json','text')]+([('inference.csv','table')] if 'inference' in prepared else []))
+
+
+def inference_table(inferred):
+    return {'columns':['coefficientIndex','estimate','standardError','tStatistic','pValue','lower','upper'],
+        'rows':[[i,item['estimate'],item['standardError'],item['tStatistic'],item['pValue'],item['lower'],item['upper']] for i,item in enumerate(inferred['coefficients'])]}
 
 
 def manifest(directory,prepared):
@@ -253,6 +322,7 @@ def evidence_names(prepared):
     for stage in ('fit','reopen'):
         names += [stage+'-'+scope+'.csv' for scope in ('training','heldout') if scope in prepared]
         names += [stage+'-coefficients.csv',stage+'-metadata.csv',stage+'-runtime.txt',stage+'-launcher.py',stage+'-inputs.json',stage+'-submission.json',stage+'.stdout',stage+'.stderr']
+        names += [stage+'-inference.csv',stage+'-statistics.csv'] if 'inference' in prepared else []
     return names
 
 
@@ -280,11 +350,12 @@ def run(document,directory,*,executable=None,timeout=300):
             script=directory/(stage+'-launcher.py');script.write_text(launcher(directory,prepared,stage,native[stage]))
             execute([sys.executable,str(script)],directory,stage,deadline-time.monotonic(),
                 {'OMP_NUM_THREADS':'1','OPENBLAS_NUM_THREADS':'1','LC_ALL':'C'})
-        coefficients,tables=native_tables(directory,prepared,'reopen')
+        coefficients,tables,inferred=native_tables(directory,prepared,'reopen')
         write_csv(directory/'coefficients.csv',{'columns':['coefficientIndex','estimate'],
             'rows':[[i,value] for i,value in enumerate(coefficients)]})
         for scope,table in tables.items():write_csv(directory/(scope+'.csv'),{'columns':table['columns'][:4],'rows':[row[:4] for row in table['rows']]})
-        atomic_json(directory/'regression-summary.json',summaries(prepared,coefficients,tables))
+        atomic_json(directory/'regression-summary.json',summaries(prepared,coefficients,tables,inferred))
+        if inferred is not None:write_csv(directory/'inference.csv',inference_table(inferred))
         runtime=payload(directory,'fit-runtime.txt').decode().strip()
         atomic_json(directory/'verification.json',{'artifacts':manifest(directory,prepared),'runtime':runtime,
             'evidence':{name:digest(directory,name) for name in evidence_names(prepared)}})
@@ -332,16 +403,19 @@ def verify(directory,require_result=True):
                 fail('VERIFICATION_FAILED','native command or completion differs',stage)
             bindings={str(path):digest(directory,path.name) for path in stage_inputs(directory,prepared,stage)}
             if read(directory,stage+'-inputs.json')!=bindings:fail('VERIFICATION_FAILED','native stage consumed different input/model bytes',stage)
-        coefficients,tables=native_tables(directory,prepared,'fit');reopened,reopened_tables=native_tables(directory,prepared,'reopen')
+        coefficients,tables,inferred=native_tables(directory,prepared,'fit');reopened,reopened_tables,reinferred=native_tables(directory,prepared,'reopen')
         if not close(coefficients,reopened,rel=1e-12,absolute=1e-12) or not close(tables,reopened_tables,rel=1e-12,absolute=1e-12):
             fail('VERIFICATION_FAILED','fresh native model reopen differs')
-        details=summaries(prepared,reopened,reopened_tables)
+        if not close(inferred,reinferred,rel=1e-12,absolute=1e-300):fail('VERIFICATION_FAILED','fresh native model reopen inference differs')
+        details=summaries(prepared,reopened,reopened_tables,reinferred)
         if read(directory,'regression-summary.json')!=details:fail('VERIFICATION_FAILED','summary differs from independently checked native model')
         coefficient_table={'columns':['coefficientIndex','estimate'],'rows':[[i,value] for i,value in enumerate(reopened)]}
         if read_table(directory,'coefficients.csv')!=coefficient_table:fail('VERIFICATION_FAILED','published coefficients differ')
         for scope,table in reopened_tables.items():
             if read_table(directory,scope+'.csv')!={'columns':table['columns'][:4],'rows':[row[:4] for row in table['rows']]}:
                 fail('VERIFICATION_FAILED','published prediction table differs',scope)
+        if reinferred is not None and read_table(directory,'inference.csv')!=inference_table(reinferred):
+            fail('VERIFICATION_FAILED','published inference table differs')
         runtime=payload(directory,'fit-runtime.txt').decode().strip()
         if not re.fullmatch(r'R version \d+\.\d+\.\d+[^\r\n]*',runtime) or payload(directory,'reopen-runtime.txt').decode().strip()!=runtime:
             fail('VERIFICATION_FAILED','native R runtime identity differs')
@@ -351,6 +425,7 @@ def verify(directory,require_result=True):
         if 'acceptance' in details and not details['acceptance']['accepted']:
             fail('FIT_REQUIREMENT_NOT_MET','verified regression does not meet the named finite fit requirements','$.requirements',assessment=details['acceptance'])
         result={'verified':True,'artifacts':len(expected['artifacts']),'runtime':runtime,'rank':prepared['rank'],'metrics':details['metrics']}
+        if 'inference' in details:result['inference']={'level':details['inference']['level'],'residualDF':details['inference']['residualDF']}
         if 'acceptance' in details:result['acceptance']=details['acceptance']
         return result
     except (OSError,ValueError,KeyError,TypeError,IndexError,StopIteration,SyntaxError,OverflowError) as error:

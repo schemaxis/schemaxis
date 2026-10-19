@@ -103,13 +103,17 @@ def prepare(document):
     literals(document)
     if not isinstance(document, dict):
         fault('INVALID_DOCUMENT', 'Expected a document object')
+    if any(isinstance(n,dict) and (n.get('filter') in ('body','pad','pocket') or (isinstance(n.get('inputs'),dict) and 'body' in n['inputs'])) for n in (document.get('nodes') if isinstance(document.get('nodes'),list) else [])):
+        fault('UNSUPPORTED_LIVE_INPUT','PartDesign Body workflows currently require a batch run')
+    if 'parameters' in document or any(isinstance(n, dict) and 'drive' in n for n in (document.get('nodes') if isinstance(document.get('nodes'), list) else [])):
+        fault('UNSUPPORTED_LIVE_INPUT', 'Native parameters and drive are batch-only; use run with finite variants')
     if 'designStudy' in document:
         fault('UNSUPPORTED_LIVE_INPUT', 'Run designStudy through batch execution; a live apply accepts one candidate')
     nodes = document.get('nodes')
     if not isinstance(nodes, list) or not 1 <= len(nodes) <= 100:
         fault('LIVE_LIMIT', 'Provide 1 to 100 live nodes')
-    if any(isinstance(n, dict) and n.get('filter') == 'readSTEP' for n in nodes):
-        fault('UNSUPPORTED_LIVE_INPUT', 'Live STEP imports are not supported')
+    if any(isinstance(n, dict) and n.get('filter') in ('readSTEP', 'importSTEP') for n in nodes):
+        fault('UNSUPPORTED_LIVE_INPUT', 'Live STEP imports are not supported; use a batch run')
     return plan(document, allow_profile=True)
 
 

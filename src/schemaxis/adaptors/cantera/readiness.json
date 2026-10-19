@@ -4,11 +4,11 @@
     "schemaxis.cantera/1": {
       "guide": "docs/cantera.md",
       "context": {
-        "purpose": "Compute frozen-composition ideal-gas properties or TP/HP equilibrium sweeps for the ten-species hydrogen/oxygen h2o2 mechanism; export independently checked numeric state tables.",
-        "assumptions": "Isolated Cantera 3.2.x Python with the qualified h2o2.yaml SHA256. Only ideal-gas ohmech phase. SI K, Pa, kg, J; composition amounts are explicitly mole or mass basis and normalised.",
-        "constraints": "Two nodes, 2\u2013100 independent temperature samples, 300\u20133500 K initial and final temperatures, 1000\u201310000000 Pa. H2,H,O,O2,OH,H2O,HO2,H2O2,AR,N2 only. N2/Ar are inert; no NOx, carbon, condensed phases, kinetics, transport or ignition delay.",
-        "inspection": "Read results.csv with numeric columns including units and X_/Y_ species fractions. chemistry-summary.json explains mechanism hash, phase, input basis and independent element/equilibrium residuals. Keep both when handing the table to Calc.",
-        "recovery": "INVALID_COMPOSITION needs distinct supported species and positive total amount. INTERPRETER_NOT_FOUND needs a configured Cantera Python. A changed mechanism needs explicit requalification. HP states outside 300\u20133500 K fail verification; choose a supported initial state/composition. Native failures retain logs; use a fresh directory after correcting input."
+        "purpose": "Compute frozen-composition ideal-gas properties, TP/HP equilibrium sweeps or closed adiabatic constant-pressure/constant-volume reactor time histories for the ten-species hydrogen/oxygen h2o2 mechanism; export independently checked numeric state tables.",
+        "assumptions": "Isolated Cantera 3.2.x Python with the qualified h2o2.yaml SHA256. Only ideal-gas ohmech phase and its 29 reactions. SI K, Pa, kg, J, s; composition amounts are explicitly mole or mass basis and normalised. Reactors are closed, adiabatic and homogeneous with Cantera's default 1 m3 initial volume.",
+        "constraints": "Two nodes. Sweeps: 2\u2013100 independent temperature samples, 300\u20133500 K initial and final temperatures, 1000\u201310000000 Pa. Reactor histories: one initial temperature 300\u20133500 K, 2\u2013100 strictly increasing sample times, each in seconds between 0 and 1, rtol 1e-12\u20131e-8, atol 1e-20\u20131e-12, maxSteps 100\u2013100000 and all states within 300\u20133500 K. H2,H,O,O2,OH,H2O,HO2,H2O2,AR,N2 only. N2/Ar are inert; no NOx, carbon, condensed phases, transport, walls, heat loss, inflow or flames.",
+        "inspection": "Read results.csv with numeric columns including units and X_/Y_ species fractions; reactor tables start with time_s instead of initialTemperature_K. chemistry-summary.json explains mechanism hash, phase, input basis, independent element/equilibrium/energy residuals and, for reactors, model, read-back solver settings, the declared ignition criterion and delay, and verification tolerances. Keep both when handing the table to Calc.",
+        "recovery": "INVALID_COMPOSITION needs distinct supported species and positive total amount. INVALID_TIMES needs strictly increasing reactor sample times. INTERPRETER_NOT_FOUND needs a configured Cantera Python. UNSUPPORTED_STATE means a reactor state left 300\u20133500 K; dilute the mixture or start colder. A changed mechanism needs explicit requalification. HP states outside 300\u20133500 K fail verification; choose a supported initial state/composition. Native failures retain logs; use a fresh directory after correcting input."
       },
       "examples": [
         {
@@ -22,6 +22,10 @@
         {
           "id": "adiabatic",
           "reference": "examples/schemaxis/cantera-adiabatic.json"
+        },
+        {
+          "id": "reactor",
+          "reference": "examples/schemaxis/cantera-reactor.json"
         },
         {
           "id": "zero-composition",
@@ -62,10 +66,66 @@
           "expect": "invalid",
           "fault": "INVALID_COMPOSITION",
           "schemaValid": true
+        },
+        {
+          "id": "unordered-reactor-times",
+          "document": {
+            "version": "schemaxis.cantera/1",
+            "nodes": [
+              {
+                "id": "fuelAir",
+                "filter": "gas",
+                "options": {
+                  "pressure": 101325,
+                  "basis": "mole",
+                  "composition": [
+                    {
+                      "species": "H2",
+                      "amount": 2
+                    },
+                    {
+                      "species": "O2",
+                      "amount": 1
+                    },
+                    {
+                      "species": "N2",
+                      "amount": 3.76
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "ignition",
+                "filter": "reactorHistory",
+                "inputs": {
+                  "input": "fuelAir"
+                },
+                "options": {
+                  "model": "constantPressure",
+                  "temperature": 1000,
+                  "times": [
+                    0,
+                    0.0002,
+                    0.0001,
+                    0.001
+                  ],
+                  "relativeTolerance": 1e-09,
+                  "absoluteTolerance": 1e-15,
+                  "maxSteps": 20000,
+                  "ignitionTemperatureRise": 400
+                }
+              }
+            ],
+            "output": "ignition"
+          },
+          "expect": "invalid",
+          "fault": "INVALID_TIMES",
+          "schemaValid": true
         }
       ],
       "conformance": [
-        "tests/unit/test_cantera_admission.py"
+        "tests/unit/test_cantera_admission.py",
+        "tests/unit/test_cantera_reactor.py"
       ],
       "acceptance": [
         "tools/qualify_cantera.py"
@@ -90,13 +150,17 @@
         "api": [
           "https://cantera.org/stable/python/thermo.html",
           "https://cantera.org/stable/reference/thermo/species-thermo.html",
-          "https://raw.githubusercontent.com/Cantera/cantera/v3.2.0/data/h2o2.yaml"
+          "https://raw.githubusercontent.com/Cantera/cantera/v3.2.0/data/h2o2.yaml",
+          "https://cantera.org/stable/python/zerodim.html",
+          "https://cantera.org/stable/reference/reactors/ideal-gas-constant-pressure-reactor.html",
+          "https://cantera.org/stable/reference/reactors/ideal-gas-reactor.html",
+          "https://cantera.org/stable/reference/kinetics/rate-constants.html"
         ],
         "lifecycle": {
-          "timeout": "One total deadline bounds build and fresh-process CSV reopen. Kit watchdog independently bounds the entire attempt.",
+          "timeout": "One total deadline bounds build (including the reactor sample and ignition passes) and fresh-process CSV reopen. ReactorNet maxSteps bounds each sample interval, the ignition pass stops after 200000 steps and host independent integration after 50000 steps. Kit watchdog independently bounds the entire attempt.",
           "cancellation": "Shared owned native process cancellation; final cancellation check precedes publication.",
-          "logs": "authored.json, plan.json, built/reopened native records, captured mechanism bytes/hash, worker source, stage stdout/stderr, CSV, summary and incomplete/failure results remain in each fresh attempt.",
-          "verification": "Pure host NASA7/ideal-gas formulas verify all thermodynamic properties, normalised mass/mole fractions and element inventories. Equilibrium checks all accessible species chemical potentials against element potentials; TP holds T/P, HP holds enthalpy/P. A second Cantera process reloads the saved CSV states. No success flag substitutes for numerical checks."
+          "logs": "authored.json, plan.json, built/reopened native records (reactor solver readback, initial mass/volume, per-sample mass/volume/net production rates and the ignition-pass step record), captured mechanism bytes/hash, worker source, stage stdout/stderr, CSV, summary and incomplete/failure results remain in each fresh attempt.",
+          "verification": "Pure host NASA7/ideal-gas formulas verify all thermodynamic properties, normalised mass/mole fractions and element inventories. Equilibrium checks all accessible species chemical potentials against element potentials; TP holds T/P, HP holds enthalpy/P. A second Cantera process reloads the saved CSV states. No success flag substitutes for numerical checks. Reactor histories: host Python re-evaluates all 29 h2o2 rates (elementary, three-body, Troe falloff, reverse rates from NASA7 equilibrium constants) and integrates the adiabatic reactor with its own L-stable Rosenbrock method. Native and fresh-process net production rates must agree within 1e-10 of the gross rate; sampled T/X must lie within the independent solution over a 1% time window (plus 0.5 K and 1e-6); the declared ignition delay must agree within 1%; elements, mass, density (constant volume) and specific enthalpy or internal energy are conserved; solver settings and the 1 m3 initial volume are read back."
         },
         "data": [
           {
@@ -110,10 +174,10 @@
               "phase": "ideal-gas ohmech"
             },
             "losses": [
-              "CSV alone omits input basis and mechanism provenance; retain summary.",
-              "No kinetics, transport, phase transitions, carbon or NOx chemistry."
+              "CSV alone omits input basis, mechanism provenance, reactor model and ignition criterion; retain summary.",
+              "No transport, phase transitions, carbon or NOx chemistry; reactor kinetics only for one closed adiabatic homogeneous reactor."
             ],
-            "scope": "One row per independent initial temperature, ten species X and Y; at most 100 rows."
+            "scope": "One row per independent initial temperature (sweeps) or per requested sample time (reactor histories), ten species X and Y; at most 100 rows."
           },
           {
             "id": "summary",
@@ -127,25 +191,25 @@
             "losses": [
               "Independent residuals qualify this ideal-gas mechanism, not its suitability for an experiment."
             ],
-            "scope": "Input basis, normalised initial composition, mechanism identity, per-row conservation/equilibrium residuals and limits."
+            "scope": "Input basis, normalised initial composition, mechanism identity, per-row conservation/equilibrium residuals and limits; for reactors also model, solver readback, ignition criterion/delay, independent delay and tolerances."
           }
         ],
         "inspection": [
           {
             "panel": "table",
-            "scope": "Inspect temperatures, pressure, density, energies, heat capacities and mole/mass fractions in results.csv.",
+            "scope": "Inspect times or temperatures, pressure, density, energies, heat capacities and mole/mass fractions in results.csv.",
             "limits": "2\u2013100 finite numeric rows; no native chemistry viewer."
           },
           {
             "panel": "text",
-            "scope": "Read chemistry-summary.json for mechanism identity, units, independent checks and loss limits.",
+            "scope": "Read chemistry-summary.json for mechanism identity, units, reactor model and ignition criterion, independent checks and loss limits.",
             "limits": "A bounded summary, not interactive native state inspection."
           }
         ],
         "authoring": {
           "model": "nodes",
           "example": "baseline",
-          "reuse": "Edit gas pressure, composition and basis, then table temperatures/mode using shared source/property authoring. Plan a fresh revision; execute and inspect the same CSV/summary. Use the equilibrium/adiabatic examples for reactive states."
+          "reuse": "Edit gas pressure, composition and basis, then table temperatures/mode or reactor model, initial temperature, sample times and tolerances using shared source/property authoring. Plan a fresh revision; execute and inspect the same CSV/summary. Use the equilibrium/adiabatic examples for reactive equilibrium states and the reactor example for time histories."
         },
         "features": {
           "workflow": {
@@ -178,7 +242,7 @@
           },
           "property-authoring": {
             "status": "supported",
-            "scope": "Shared JSON pointer editing of gas composition, pressure, temperature arrays and equilibrium mode."
+            "scope": "Shared JSON pointer editing of gas composition, pressure, temperature arrays, equilibrium mode and reactor settings."
           },
           "live-editing": {
             "status": "unsupported",
@@ -435,8 +499,226 @@
                 "absolute": 1e-07
               }
             ]
+          },
+          {
+            "id": "reactor-constant-pressure",
+            "example": "reactor",
+            "edits": [],
+            "scope": "Closed adiabatic stoichiometric H2/air at 1000 K and 101325 Pa. Literals are independent: initial T and pressure are authored, final specific enthalpy is the host NASA7 value of the initial state (tolerance includes the 0.19 J/kg NASA7 range-boundary jump), final T and the 400 K-rise ignition delay come from the host Rosenbrock integration of the published rates, and a zero chemical-potential residual shows the 20 ms state reached HP equilibrium.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/0/1",
+                "expected": 1000,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/10/2",
+                "expected": 101325,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/10/4",
+                "expected": 1024362.3907492956,
+                "absolute": 0.5
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/10/1",
+                "expected": 2692.8133,
+                "absolute": 0.5
+              },
+              {
+                "file": "chemistry-summary.json",
+                "format": "json",
+                "pointer": "/ignition/delay_s",
+                "expected": 0.00031114,
+                "relative": 0.01
+              },
+              {
+                "file": "chemistry-summary.json",
+                "format": "json",
+                "pointer": "/independent/finalEquilibriumResidual_RT",
+                "expected": 0,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "reactor-constant-volume",
+            "example": "reactor",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/model",
+                "value": "constantVolume"
+              }
+            ],
+            "scope": "Same mixture in a closed 1 m3 adiabatic constant-volume reactor: density stays at the initial ideal-gas value PW/(RT), specific internal energy stays at its initial NASA7 value; final T and ignition delay are independent host-integration literals.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/10/3",
+                "expected": 0.25484163256547593,
+                "relative": 1e-09
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/10/5",
+                "expected": 626762.5206654042,
+                "absolute": 0.5
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/10/1",
+                "expected": 2908.6235,
+                "absolute": 0.5
+              },
+              {
+                "file": "chemistry-summary.json",
+                "format": "json",
+                "pointer": "/ignition/delay_s",
+                "expected": 0.00030414,
+                "relative": 0.01
+              },
+              {
+                "file": "chemistry-summary.json",
+                "format": "json",
+                "pointer": "/independent/finalEquilibriumResidual_RT",
+                "expected": 0,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "reactor-hotter-start",
+            "example": "reactor",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/temperature",
+                "value": 1200
+              }
+            ],
+            "scope": "A 1200 K start ignites about 6.7 times sooner; the delay and final T are independent host-integration literals and the final enthalpy is the initial NASA7 value (no range-boundary crossing).",
+            "checks": [
+              {
+                "file": "chemistry-summary.json",
+                "format": "json",
+                "pointer": "/ignition/delay_s",
+                "expected": 4.6702e-05,
+                "relative": 0.01
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/10/4",
+                "expected": 1337681.9454101066,
+                "absolute": 0.5
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/10/1",
+                "expected": 2763.3197,
+                "absolute": 0.5
+              }
+            ]
+          },
+          {
+            "id": "reactor-inert-argon",
+            "example": "reactor",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/composition",
+                "value": [
+                  {
+                    "species": "AR",
+                    "amount": 1
+                  }
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/model",
+                "value": "constantVolume"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/temperature",
+                "value": 1500
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/times",
+                "value": [
+                  0,
+                  0.001,
+                  0.01
+                ]
+              }
+            ],
+            "scope": "Limiting case: pure argon has no reactions, so a closed adiabatic constant-volume reactor keeps T=1500 K and P=101325 Pa exactly; h=5R(T-298.15)/(2M) and cp=5R/(2M) are analytic.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/2/1",
+                "expected": 1500,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/2/2",
+                "expected": 101325,
+                "absolute": 1e-07,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/2/4",
+                "expected": 625327.7157464001,
+                "relative": 1e-08
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/2/7",
+                "expected": 520.30429400208,
+                "relative": 1e-08
+              }
+            ]
           }
         ]
+      },
+      "completion": {
+        "scope": "Route schemaxis.cantera/1: new reactorHistory operation (schema, planning, native ReactorNet mapping, independent kinetics verification, guidance, discovery, Studio starter/snippets, examples, host tests, conformance cases and native acceptance); gas/document/output guidance updated for the third table operation. thermoSweep/equilibrate behaviour unchanged and not re-reviewed beyond regression.",
+        "review": [
+          "verification/2026-10-16-cantera-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "Batch route; results are inspected through published CSV/summary panels, not a live native reactor.",
+          "mpi": "Serial single-reactor integration; this integration explicitly supports serial execution only.",
+          "time-batches": "Reactor sample times are an authored option inside one run, not shared time-batch chunking.",
+          "live-editing": "No persistent native worker; each revision is a fresh isolated run.",
+          "native-save": "Cantera has no project document for this route; outputs are CSV and JSON.",
+          "conversion": "No mechanism or format conversion is offered; exporting data does not translate the chemistry model for another solver."
+        }
       }
     }
   }

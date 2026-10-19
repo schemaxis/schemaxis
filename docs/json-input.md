@@ -1,6 +1,6 @@
 # Schemaxis JSON input — current reference
 
-Updated 2026-10-10 against the current working code. This page covers the input
+Updated 2026-10-17 against the current working code. This page covers the input
 language; the generated appendices cover every registered option.
 
 A file declares an application task or workflow; graph routes use
@@ -31,15 +31,29 @@ schemas.
 | `schemaxis.ffmpeg/1` | PNG/sprite-sheet video publication | Exactly one `nodes` entry; optional `deliverable` requirements |
 | `schemaxis.inkscape/1` | Measured editable technical diagrams | `operation`, page `width`/`height`, `boxes`, optional `links` and layout budgets; see [diagram guide](inkscape.md) |
 | `schemaxis.shotcut/1` | Verified cuts and editable video project bundles | One `editTimeline` node with named `assets` and ordered `clips`; see [timeline guide](shotcut.md) |
-| `schemaxis.premiere/1` | Experimental read-only sequence inspection; native qualification pending | `operation: "sequenceContract"`, expected project/sequence identity, dimensions, integer frame rate and ordered source ranges; see [Premiere guide](premiere.md) |
-| `schemaxis.cantera/1` | Ideal-gas thermodynamics and TP/HP equilibrium | Two ordered `nodes`, `output`; see [thermochemistry guide](cantera.md) |
+| `schemaxis.premiere/1` | Experimental read-only sequence inspection; native qualification pending | `sequenceContract` checks ordered source ranges; `sequenceLayout` checks complete named tracks, timeline ranges and coverage requirements; see [Premiere guide](premiere.md) |
+| `schemaxis.cantera/1` | Ideal-gas thermodynamics, TP/HP equilibrium and closed adiabatic reactor histories | Two ordered `nodes`, `output`; see [chemistry guide](cantera.md) |
 | `schemaxis.ngspice/1` | Linear DC/AC circuits and first-order RC transients | `operation`, `circuit`, sweep parameters, optional sampled `requirements`; see [circuit guide](ngspice.md) |
 | `schemaxis.gmsh/1` | Single-solid tetrahedral meshing | `units: "mm"`, two ordered `nodes`, `output`; see [meshing guide](gmsh.md) |
 | `schemaxis.calculix/1` | Checked linear-elastic cantilever | `operation: "cantileverBeam"`, `beam`, `material`, `load`; optional `mesh`, `requirements`; see [structural guide](calculix.md) |
 | `schemaxis.qgis/1` | Bounded vector GIS | `nodes`, `output`; optional `preview` |
 | `schemaxis.octave/1` | Bounded 1D numerical analysis | Ordered `nodes`, selected `outputs`; see [analysis guide](numerical-analysis.md) |
-| `schemaxis.r/1` | Checked additive numeric regression | `operation: "linearRegression"`, `predictors`, `response`, `training`; optional `heldout`, `intercept`, `requirements`; see [regression guide](r.md) |
+| `schemaxis.r/1` | Checked additive numeric regression and optional classical coefficient inference | `operation: "linearRegression"`, `predictors`, `response`, `training`; optional `heldout`, `intercept`, `inference`, `requirements`; see [regression guide](r.md) |
 | `schemaxis.calc/1` | Recalculated XLSX/ODS numeric workbook | One `nodes` entry; optional named `requirements`; see [workbook guide](calc.md) |
+| `schemaxis.kicad/1` | Two-layer board inspection, DRC and Excellon drills | `operation`, `board`; operation-specific finding limits and drill options; see [board guide](kicad.md) |
+| `schemaxis.imagej/1` | Calibrated grayscale particle measurements | `operation: "analyzeParticles"`, `image`, `calibration`, `threshold`; optional connectivity, hole, edge and area settings; see [imaging guide](imagej.md) |
+| `schemaxis.prusaslicer/1` | Bounded FFF slicing with independent G-code checks | `operation: "sliceModel"`, `model`, `printer`, `material`, `print`; see [slicing guide](prusaslicer.md) |
+| `schemaxis.pandoc/1` | Structured report to HTML and DOCX | `operation: "report"`, `title`, ordered `sections` with paragraph/table/image blocks; see [report guide](pandoc.md) |
+| `schemaxis.gnuplot/1` | Numeric CSV plots to SVG and PNG | Declared series, axes, units and optional symmetric errors; see [plot guide](gnuplot.md) |
+| `schemaxis.sqlite/1` | Typed relational summaries | `operation: "summarise"`, captured table declarations, keys and bounded join/filter/group query; see [SQLite guide](sqlite.md) |
+| `schemaxis.mupdf/1` | Ordered PDF page review | `operation: "review"`, `source`, `pages`, `dpi`, `rotation`; see [PDF guide](mupdf.md) |
+| `schemaxis.qpdf/1` | Bounded PDF page assembly | `operation: "assemble"`, named `sources` and ordered `pages` with repeats and relative quarter turns; see [assembly guide](qpdf.md) |
+| `schemaxis.imagemagick/1` | Exact PNG preparation and sheets | `operation: "raster"`, `images`, explicit colour/alpha policy and optional `sheet`; see [raster guide](imagemagick.md) |
+| `schemaxis.sox/1` | PCM16 audio assembly | `operation: "assemble"`, ordered `clips` with source frames, gain and fades; see [audio guide](sox.md) |
+| `schemaxis.graphviz/1` | Automatic directed graph layout | `operation: "layout"`, named `nodes` and `edges`, optional rank direction and cycle policy; see [graph layout guide](graphviz.md) |
+| `schemaxis.meshio/1` | ASCII VTU/VTK mesh interchange | `operation: "convert"`, `source`, explicit source/target formats and coordinate units, strict loss policy; see [mesh interchange guide](meshio.md) |
+| `schemaxis.gdal/1` | Georeferenced raster windows | `operation: "window"`, `source`, source window and output grid dimensions, matching CRS/units/nodata assertions; see [raster window guide](gdal.md) |
+| `schemaxis.openscad/1` | Dimensioned plates and spacers | `operation: "plate"` or `"spacer"`, matching dimensions, `units: "mm"`, optional polygon segments and translation; see [part guide](openscad.md) |
 | `schemaxis.workflow/1` | Verified artifact/value handoffs between supported pipelines | `operations`; optional `execution`, `dimensions`, `definitions`, `settings`, `axes`, `maxStates` |
 
 The shared graph format below applies to **ParaView and Blender pipelines**.

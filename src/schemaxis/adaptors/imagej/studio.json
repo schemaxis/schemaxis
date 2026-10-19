@@ -1,0 +1,380 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.imagej/1",
+    "operation": "analyzeParticles",
+    "image": "/replace-with-your-input/particles-8bit.pgm",
+    "calibration": {
+      "pixelWidth": 0.5,
+      "pixelHeight": 0.5,
+      "unit": "um"
+    },
+    "threshold": {
+      "lower": 100,
+      "upper": 255
+    },
+    "connectivity": "eight",
+    "includeHoles": false,
+    "excludeEdges": false,
+    "minimumArea": 0
+  },
+  "categories": [
+    {
+      "id": "threshold",
+      "title": "Threshold",
+      "icon": "layers"
+    },
+    {
+      "id": "calibration",
+      "title": "Calibration",
+      "icon": "layers"
+    },
+    {
+      "id": "filters",
+      "title": "Particle filters",
+      "icon": "layers"
+    }
+  ],
+  "templates": [
+    {
+      "id": "particle-table",
+      "title": "Particle measurement table",
+      "description": "Threshold an 8- or 16-bit grayscale image within a chosen raw intensity window and measure every 8-connected particle in calibrated units.",
+      "file": "studio/templates/particle-table.json",
+      "fields": {
+        "image": {
+          "label": "Grayscale image (.pgm, .tif)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "description": "Absolute path to one 8- or 16-bit unsigned grayscale plane."
+        },
+        "size": {
+          "label": "Pixel size",
+          "type": "number",
+          "required": true,
+          "default": 0.5,
+          "minimum": 1e-06,
+          "maximum": 1000000.0,
+          "description": "Width and height of one pixel in the selected unit (square pixels)."
+        },
+        "unit": {
+          "label": "Length unit",
+          "type": "enum",
+          "required": true,
+          "default": "um",
+          "values": [
+            "nm",
+            "um",
+            "mm",
+            "cm",
+            "m"
+          ]
+        },
+        "lower": {
+          "label": "Lowest foreground intensity",
+          "type": "integer",
+          "required": true,
+          "default": 100,
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Inclusive raw intensity; pixels at or above it (up to the upper bound) are particle pixels."
+        },
+        "upper": {
+          "label": "Highest foreground intensity",
+          "type": "integer",
+          "required": true,
+          "default": 255,
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Inclusive raw intensity, at least the lower bound. Use at most 255 for 8-bit images or 65535 for 16-bit images."
+        }
+      },
+      "testValues": {
+        "image": "/replace-with-your-input/particles-8bit.pgm",
+        "size": 0.5,
+        "unit": "um",
+        "lower": 100,
+        "upper": 255
+      },
+      "requires": "Java 11+ with jdk.compiler and ImageJ 1.54 ij.jar for native execution."
+    },
+    {
+      "id": "filled-particles",
+      "title": "Filled particles away from edges",
+      "description": "Measure particles with interior holes filled, dropping particles that touch the image border and specks below 0.5 square units.",
+      "file": "studio/templates/filled-particles.json",
+      "fields": {
+        "image": {
+          "label": "Grayscale image (.pgm, .tif)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "description": "Absolute path to one 8- or 16-bit unsigned grayscale plane."
+        },
+        "size": {
+          "label": "Pixel size",
+          "type": "number",
+          "required": true,
+          "default": 0.5,
+          "minimum": 1e-06,
+          "maximum": 1000000.0,
+          "description": "Width and height of one pixel in the selected unit (square pixels)."
+        },
+        "unit": {
+          "label": "Length unit",
+          "type": "enum",
+          "required": true,
+          "default": "um",
+          "values": [
+            "nm",
+            "um",
+            "mm",
+            "cm",
+            "m"
+          ]
+        },
+        "lower": {
+          "label": "Lowest foreground intensity",
+          "type": "integer",
+          "required": true,
+          "default": 100,
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Inclusive raw intensity; pixels at or above it (up to the upper bound) are particle pixels."
+        },
+        "upper": {
+          "label": "Highest foreground intensity",
+          "type": "integer",
+          "required": true,
+          "default": 255,
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Inclusive raw intensity, at least the lower bound. Use at most 255 for 8-bit images or 65535 for 16-bit images."
+        }
+      },
+      "testValues": {
+        "image": "/replace-with-your-input/particles-8bit.pgm",
+        "size": 0.5,
+        "unit": "um",
+        "lower": 100,
+        "upper": 255
+      },
+      "requires": "Java 11+ with jdk.compiler and ImageJ 1.54 ij.jar for native execution."
+    }
+  ],
+  "snippets": [
+    {
+      "id": "threshold-window",
+      "title": "Intensity threshold window",
+      "category": "threshold",
+      "icon": "layers",
+      "description": "Set the inclusive raw intensity window that defines particle pixels.",
+      "fields": {
+        "lower": {
+          "label": "Lowest foreground intensity",
+          "type": "integer",
+          "required": true,
+          "default": 100,
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Inclusive raw intensity; pixels at or above it (up to the upper bound) are particle pixels."
+        },
+        "upper": {
+          "label": "Highest foreground intensity",
+          "type": "integer",
+          "required": true,
+          "default": 255,
+          "minimum": 0,
+          "maximum": 65535
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "merge": {
+            "threshold": {
+              "lower": {
+                "$fill": "lower"
+              },
+              "upper": {
+                "$fill": "upper"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pixel-calibration",
+      "title": "Pixel calibration",
+      "category": "calibration",
+      "icon": "layers",
+      "description": "Declare the physical width and height of one pixel and the length unit used by every published measurement.",
+      "fields": {
+        "width": {
+          "label": "Pixel width",
+          "type": "number",
+          "required": true,
+          "default": 0.5,
+          "minimum": 1e-06,
+          "maximum": 1000000.0,
+          "description": "Physical width of one pixel."
+        },
+        "height": {
+          "label": "Pixel height",
+          "type": "number",
+          "required": true,
+          "default": 0.5,
+          "minimum": 1e-06,
+          "maximum": 1000000.0,
+          "description": "Physical height of one pixel."
+        },
+        "unit": {
+          "label": "Length unit",
+          "type": "enum",
+          "required": true,
+          "default": "um",
+          "values": [
+            "nm",
+            "um",
+            "mm",
+            "cm",
+            "m"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "merge": {
+            "calibration": {
+              "pixelWidth": {
+                "$fill": "width"
+              },
+              "pixelHeight": {
+                "$fill": "height"
+              },
+              "unit": {
+                "$fill": "unit"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "size-window",
+      "title": "Particle area window",
+      "category": "filters",
+      "icon": "layers",
+      "description": "Keep only particles whose calibrated area lies within an inclusive window.",
+      "fields": {
+        "minimum": {
+          "label": "Minimum area (unit^2)",
+          "type": "number",
+          "required": true,
+          "default": 0.5,
+          "minimum": 0,
+          "maximum": 1e+30
+        },
+        "maximum": {
+          "label": "Maximum area (unit^2)",
+          "type": "number",
+          "required": true,
+          "default": 100,
+          "minimum": 0,
+          "maximum": 1e+30
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "merge": {
+            "minimumArea": {
+              "$fill": "minimum"
+            },
+            "maximumArea": {
+              "$fill": "maximum"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "connectivity",
+      "title": "Particle connectivity",
+      "category": "filters",
+      "icon": "layers",
+      "description": "Choose whether corner-touching pixels join one particle; four connectivity also fills holes.",
+      "fields": {
+        "connectivity": {
+          "label": "Connectivity",
+          "type": "enum",
+          "required": true,
+          "default": "eight",
+          "values": [
+            "eight",
+            "four"
+          ]
+        },
+        "holes": {
+          "label": "Include holes",
+          "type": "boolean",
+          "required": true,
+          "default": false
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "merge": {
+            "connectivity": {
+              "$fill": "connectivity"
+            },
+            "includeHoles": {
+              "$fill": "holes"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "edge-exclusion",
+      "title": "Exclude edge particles",
+      "category": "filters",
+      "icon": "layers",
+      "description": "Drop particles whose bounding box touches the image border, since they may be cut off.",
+      "fields": {
+        "exclude": {
+          "label": "Exclude edge particles",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "merge": {
+            "excludeEdges": {
+              "$fill": "exclude"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "viewers": [
+    "table",
+    "text"
+  ]
+}

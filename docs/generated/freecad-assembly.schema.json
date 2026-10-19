@@ -114,6 +114,114 @@
               "id",
               "type"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "mounts": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 16,
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "number",
+                            "minimum": -100000,
+                            "maximum": 100000
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "terms": {
+                                "type": "object",
+                                "minProperties": 1,
+                                "maxProperties": 4,
+                                "propertyNames": {
+                                  "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+                                },
+                                "additionalProperties": {
+                                  "type": "number",
+                                  "minimum": -1000000,
+                                  "maximum": 1000000,
+                                  "not": {
+                                    "const": 0
+                                  }
+                                }
+                              },
+                              "offset": {
+                                "type": "number",
+                                "minimum": -1000000,
+                                "maximum": 1000000,
+                                "default": 0
+                              }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                              "terms"
+                            ]
+                          }
+                        ]
+                      },
+                      "minItems": 3,
+                      "maxItems": 3,
+                      "default": [
+                        0,
+                        0,
+                        0
+                      ]
+                    },
+                    "z": {
+                      "enum": [
+                        "+X",
+                        "-X",
+                        "+Y",
+                        "-Y",
+                        "+Z",
+                        "-Z"
+                      ],
+                      "default": "+Z"
+                    },
+                    "x": {
+                      "enum": [
+                        "+X",
+                        "-X",
+                        "+Y",
+                        "-Y",
+                        "+Z",
+                        "-Z"
+                      ],
+                      "default": "+X"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source",
+              "mounts"
+            ],
+            "title": "Modelled part"
           }
         ]
       },
@@ -192,12 +300,37 @@
                   "top",
                   "bottom"
                 ]
+              },
+              "mount": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
               }
             },
             "additionalProperties": false,
             "required": [
-              "component",
-              "face"
+              "component"
+            ],
+            "oneOf": [
+              {
+                "required": [
+                  "face"
+                ],
+                "not": {
+                  "required": [
+                    "mount"
+                  ]
+                }
+              },
+              {
+                "required": [
+                  "mount"
+                ],
+                "not": {
+                  "required": [
+                    "face"
+                  ]
+                }
+              }
             ]
           },
           "child": {
@@ -212,12 +345,37 @@
                   "top",
                   "bottom"
                 ]
+              },
+              "mount": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
               }
             },
             "additionalProperties": false,
             "required": [
-              "component",
-              "face"
+              "component"
+            ],
+            "oneOf": [
+              {
+                "required": [
+                  "face"
+                ],
+                "not": {
+                  "required": [
+                    "mount"
+                  ]
+                }
+              },
+              {
+                "required": [
+                  "mount"
+                ],
+                "not": {
+                  "required": [
+                    "face"
+                  ]
+                }
+              }
             ]
           },
           "offset": {
@@ -234,6 +392,12 @@
               0,
               0
             ]
+          },
+          "clocking": {
+            "type": "number",
+            "minimum": -360,
+            "maximum": 360,
+            "default": 0
           }
         },
         "additionalProperties": false,

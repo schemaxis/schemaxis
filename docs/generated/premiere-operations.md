@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[sequenceContract](#sequencecontract)
+[sequenceContract](#sequencecontract), [sequenceLayout](#sequencelayout)
 
 ## sequenceContract
 
@@ -33,3 +33,30 @@ Inputs: none.
 | `width` | Expected sequence frame width in pixels, 2 to 8192, compared with the sequence settings; rendered output is not inspected. | `{"type":"integer","minimum":2,"maximum":8192}` | `1920` |
 | `height` | Expected sequence frame height in pixels, 2 to 8192, compared with the sequence settings; rendered output is not inspected. | `{"type":"integer","minimum":2,"maximum":8192}` | `1080` |
 | `clips` | Ordered list of 1 to 128 clips expected back-to-back from the start of the sequence on its only unmuted video track, with no gaps. The total length of all clips must not exceed 600 frames. | `{"type":"array","minItems":1,"maxItems":128,"items":{"type":"object","properties":{"sourcePath":{"type":"string","minLength":1,"maxLength":4096,"required":true},"startFrame":{"type":"integer","minimum":0,"maximum":1000000,"default":0},"frameCount":{"type":"integer","minimum":1,"maximum":600,"required":true}}}}` | **required** |
+
+
+## sequenceLayout
+
+Inspect a complete named multitrack timeline without editing it. Declare every video track, source and timeline interval, and optional coverage requirements such as at least one active track through a programme or two overlapping tracks during an insert. The UXP panel reads the active sequence twice; the host publishes its observation and an independently rebuilt layout report with occupied frames, gaps and requirement decisions.
+
+Common mistakes and assumptions:
+
+- Native Premiere execution remains unqualified; Linux cannot run the panel.
+- Coverage measures editorial intervals, not rendered visibility: effects, opacity, masks, internal time remapping and source contents are not inspected.
+- All tracks must be unmuted and clips enabled, with empty audio tracks and no captions/transitions.
+- Intervals use integer sequence frames and exclusive ends; fractional/drop-frame rates are unsupported.
+
+Native binding: `Premiere read-only UXP complete named video track observation`. Output kind: `["sequenceObservation","sequenceLayout"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `projectPath` | Absolute path of the saved project that is open in Premiere, exactly as Premiere reports it (a Windows drive path or a macOS path). Schemaxis compares the text only and never reads the project file. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `sequenceName` | Exact name of the active sequence to inspect; no sequence is selected or modified. | `{"type":"string","minLength":1,"maxLength":256}` | **required** |
+| `fps` | Expected sequence frame rate as an integer: 24, 25, 30, 50 or 60 frames per second. It sets the frame length used to convert startFrame and frameCount into Premiere time ticks. | `{"type":"integer","minimum":24,"maximum":60}` | `25` |
+| `width` | Expected sequence frame width in pixels, 2 to 8192, compared with the sequence settings; rendered output is not inspected. | `{"type":"integer","minimum":2,"maximum":8192}` | `1920` |
+| `height` | Expected sequence frame height in pixels, 2 to 8192, compared with the sequence settings; rendered output is not inspected. | `{"type":"integer","minimum":2,"maximum":8192}` | `1080` |
+| `endFrame` | Exclusive sequence end in zero-based sequence frames, from 1 to 600. Required for sequenceLayout and must equal the latest clip end across all tracks. No trailing empty padding is accepted. | `{"type":"integer","minimum":1,"maximum":600}` | **required** |
+| `tracks` | Complete ordered list of 1 to 8 video tracks, starting with native index zero. Include empty tracks. Names must be unique; undeclared extra native tracks or a different order fail. Every track must be unmuted; this is not a selected-track subset. | `{"type":"array","minItems":1,"maxItems":8,"items":{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":256,"required":true},"clips":{"type":"array","minItems":0,"maxItems":128,"required":true,"items":{"type":"object","properties":{"sourcePath":{"type":"string","minLength":1,"maxLength":4096,"required":true},"startFrame":{"type":"integer","minimum":0,"maximum":1000000,"default":0},"frameCount":{"type":"integer","minimum":1,"maximum":600,"required":true},"timelineFrame":{"type":"integer","minimum":0,"maximum":599,"required":true}}}}}}}` | **required** |
+| `requirements` | Up to 32 named editorial coverage decisions. Each selects declared tracks and a half-open sequence range; every frame must have at least minimumActiveTracks selected tracks occupied by a clip. Omission or an empty list reports gaps without adding a coverage gate. | `{"type":"array","minItems":0,"maxItems":32,"items":{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":256,"required":true},"tracks":{"type":"array","minItems":1,"maxItems":8,"required":true,"items":{"type":"string","minLength":1,"maxLength":256}},"startFrame":{"type":"integer","minimum":0,"maximum":599,"required":true},"frameCount":{"type":"integer","minimum":1,"maximum":600,"required":true},"minimumActiveTracks":{"type":"integer","minimum":1,"maximum":8,"default":1}}}}` | `[]` |

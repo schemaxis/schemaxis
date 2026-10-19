@@ -1,0 +1,88 @@
+{
+  "id": "imagej",
+  "version": "schemaxis.imagej/1",
+  "adaptor": "schemaxis.adaptors.imagej.adaptor",
+  "runtimeFamily": "1.54",
+  "execution": "Isolated headless ImageJ 1.54 (ij.jar) through a fixed Java source program: inclusive-threshold particle analysis with independent labelling verification",
+  "executables": [
+    "java"
+  ],
+  "keywords": [
+    "image analysis",
+    "particles",
+    "threshold",
+    "segmentation",
+    "microscopy",
+    "calibration",
+    "CSV"
+  ],
+  "display": {
+    "name": "ImageJ",
+    "mark": "IJ",
+    "colour": "#3b6ea5"
+  },
+  "capabilities": "schemaxis.adaptors.imagej.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.imagej/1",
+    "operation": "analyzeParticles",
+    "image": "/replace-with-your-input/particles-8bit.pgm",
+    "calibration": {
+      "pixelWidth": 0.5,
+      "pixelHeight": 0.5,
+      "unit": "um"
+    },
+    "threshold": {
+      "lower": 100,
+      "upper": 255
+    },
+    "connectivity": "eight",
+    "includeHoles": false,
+    "excludeEdges": false,
+    "minimumArea": 0
+  },
+  "routes": {
+    "schemaxis.imagej/1": {
+      "module": "schemaxis.adaptors.imagej.adaptor",
+      "schema": "schemaxis.adaptors.imagej.adaptor:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "imagej",
+      "acceptedArtifacts": [],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.imagej.adaptor:query",
+        "reusableInputs": "schemaxis.adaptors.imagej.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.imagej.adaptor:resources"
+      },
+      "runOptions": {
+        "jar": "imagejJar"
+      }
+    }
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--imagej",
+      "dest": "imagej",
+      "help": "Absolute Java 11+ executable (with jdk.compiler) used to run ImageJ"
+    },
+    {
+      "flag": "--imagej-jar",
+      "dest": "imagejJar",
+      "help": "Absolute ImageJ 1.54 ij.jar"
+    }
+  ]
+}

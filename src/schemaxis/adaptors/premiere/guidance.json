@@ -15,6 +15,25 @@
         "Only structure is checked; source contents, effects, colour, audio and rendered pixels are not.",
         "Each run needs a person to pick the job folder in the panel; workflow scheduling and automatic reuse are not available."
       ]
+    },
+    "sequenceLayout": {
+      "status": "reviewed",
+      "explanation": "Inspect a complete named multitrack timeline without editing it. Declare every video track, source and timeline interval, and optional coverage requirements such as at least one active track through a programme or two overlapping tracks during an insert. The UXP panel reads the active sequence twice; the host publishes its observation and an independently rebuilt layout report with occupied frames, gaps and requirement decisions.",
+      "sources": [
+        "docs/premiere.md",
+        "src/schemaxis/adaptors/premiere/layout.py"
+      ],
+      "pitfalls": [
+        "Native Premiere execution remains unqualified; Linux cannot run the panel.",
+        "Coverage measures editorial intervals, not rendered visibility: effects, opacity, masks, internal time remapping and source contents are not inspected.",
+        "All tracks must be unmuted and clips enabled, with empty audio tracks and no captions/transitions.",
+        "Intervals use integer sequence frames and exclusive ends; fractional/drop-frame rates are unsupported."
+      ],
+      "examples": [
+        {
+          "file": "examples/schemaxis/premiere-layout.json"
+        }
+      ]
     }
   },
   "routes": {
@@ -22,10 +41,10 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A read-only expectation for one Premiere Pro sequence: the open project, sequence name, frame size and rate, and the ordered clips on its single video track. Running it compares these with what Premiere reports; nothing in the project is changed. Native execution has not yet been qualified.",
+          "explanation": "Read-only expectations for the open saved Premiere sequence. Choose sequenceContract for one contiguous video track, or sequenceLayout for every named track with explicit timeline positions, gaps, overlays and coverage gates. Both produce a native observation without changing the project; layout also produces an editorial coverage report. Native qualification remains pending.",
           "sources": [
             "docs/premiere.md",
-            "src/schemaxis/adaptors/premiere/adaptor.py:22-71"
+            "src/schemaxis/adaptors/premiere/layout.py"
           ]
         },
         "/properties/version": {
@@ -40,10 +59,15 @@
           ]
         },
         "/properties/operation": {
-          "status": "reference",
-          "explanation": "Observe the active sequence through the supplied read-only UXP panel.",
+          "status": "reviewed",
+          "explanation": "Choose sequenceContract for the existing single-track contiguous cut, using clips. Choose sequenceLayout for a complete ordered track inventory, using endFrame, tracks and optional requirements. Do not mix the two input shapes.",
           "sources": [
-            "schemaxis.adaptors.premiere.adaptor:schema"
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "examples": [
+            "sequenceContract",
+            "sequenceLayout"
           ]
         },
         "/properties/projectPath": {
@@ -160,6 +184,273 @@
           "units": "Frames",
           "examples": [
             3
+          ]
+        },
+        "/properties/endFrame": {
+          "status": "reviewed",
+          "explanation": "Exclusive sequence end in zero-based sequence frames, from 1 to 600. Required for sequenceLayout and must equal the latest clip end across all tracks. No trailing empty padding is accepted.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "units": "Sequence frames",
+          "examples": [
+            10
+          ]
+        },
+        "/properties/tracks": {
+          "status": "reviewed",
+          "explanation": "Complete ordered list of 1 to 8 video tracks, starting with native index zero. Include empty tracks. Names must be unique; undeclared extra native tracks or a different order fail. Every track must be unmuted; this is not a selected-track subset.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/properties/tracks/items": {
+          "status": "reviewed",
+          "explanation": "One native video track identified by its exact name and its position in the complete track list, with all its clips. An empty clips list explicitly requires an empty track.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/properties/tracks/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Exact case-sensitive native video track name, unique in this document. Required, nonblank, at most 256 characters, without control characters. Coverage requirements refer to this same name.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "examples": [
+            "Base",
+            "Overlay"
+          ]
+        },
+        "/properties/tracks/items/properties/clips": {
+          "status": "reviewed",
+          "explanation": "All media clips on this track in increasing timeline position; an empty list requires no clips. Gaps are permitted, touching exclusive boundaries are permitted, overlapping items within a track are rejected. The complete layout has 1 to 128 clips total.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/properties/tracks/items/properties/clips/items": {
+          "status": "reviewed",
+          "explanation": "One enabled media item with exact source identity, source frame range and timeline position. Its source duration and timeline duration must agree exactly; positive normal-speed endpoint ranges are required. Effects and intermediate time remapping are not inspected.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/properties/tracks/items/properties/clips/items/properties/sourcePath": {
+          "status": "reviewed",
+          "explanation": "Required absolute native media path, compared exactly as text. This identifies the source; Schemaxis does not read or verify its contents. Replace example paths with the paths Premiere reports.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "examples": [
+            "C:\\Media\\colours.mp4"
+          ]
+        },
+        "/properties/tracks/items/properties/clips/items/properties/startFrame": {
+          "status": "reviewed",
+          "explanation": "Zero-based inclusive source in point expressed at the declared sequence timebase, from 0 to 1000000. This is not a source-native frame number for media with a different frame rate. Together with frameCount it defines the exclusive source out point.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "units": "Sequence-timebase frames",
+          "defaultMeaning": "Omitting it uses source frame 0.",
+          "examples": [
+            2
+          ]
+        },
+        "/properties/tracks/items/properties/clips/items/properties/frameCount": {
+          "status": "reviewed",
+          "explanation": "Positive clip duration, from 1 to 600 sequence frames. Required. Both source and timeline exclusive ends are their respective starts plus this count. Zero-length clips and native source/timeline duration mismatches fail.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "units": "Sequence frames",
+          "examples": [
+            4
+          ]
+        },
+        "/properties/tracks/items/properties/clips/items/properties/timelineFrame": {
+          "status": "reviewed",
+          "explanation": "Required zero-based inclusive position of the clip on the sequence, from 0 to 599. It may leave a gap after the preceding clip but cannot precede that clip's exclusive end. timelineFrame plus frameCount cannot exceed endFrame.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "units": "Sequence frames",
+          "examples": [
+            6
+          ]
+        },
+        "/properties/requirements": {
+          "status": "reviewed",
+          "explanation": "Up to 32 named editorial coverage decisions. Each selects declared tracks and a half-open sequence range; every frame must have at least minimumActiveTracks selected tracks occupied by a clip. Omission or an empty list reports gaps without adding a coverage gate.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "defaultMeaning": "No coverage requirements; exact declared layout still must match."
+        },
+        "/properties/requirements/items": {
+          "status": "reviewed",
+          "explanation": "One named frame-range coverage gate. Uncovered frame numbers are retained in layout.json and cause REQUIREMENT_FAILED. Coverage counts occupied unmuted tracks, never visible pixels.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/properties/requirements/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Required unique human-readable name for this decision, at most 256 characters without control characters. Use a purpose such as Programme coverage so a failure identifies the intended editorial check.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "examples": [
+            "Programme coverage"
+          ]
+        },
+        "/properties/requirements/items/properties/tracks": {
+          "status": "reviewed",
+          "explanation": "Required nonempty list of distinct names from the complete tracks declaration. Only these tracks contribute to this requirement. Each contributes at most one active interval at a frame; there is no wildcard.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "examples": [
+            [
+              "Base",
+              "Overlay"
+            ]
+          ]
+        },
+        "/properties/requirements/items/properties/tracks/items": {
+          "status": "reviewed",
+          "explanation": "One exact case-sensitive declared video-track name selected for this coverage gate. Unknown or repeated names fail before native execution.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "examples": [
+            "Base"
+          ]
+        },
+        "/properties/requirements/items/properties/startFrame": {
+          "status": "reviewed",
+          "explanation": "Required zero-based inclusive beginning of the coverage range, from 0 to 599. Together with frameCount it must describe a range entirely within endFrame.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "units": "Sequence frames",
+          "examples": [
+            3
+          ]
+        },
+        "/properties/requirements/items/properties/frameCount": {
+          "status": "reviewed",
+          "explanation": "Required positive length of the coverage range in sequence frames, from 1 to 600. The exclusive end is startFrame plus frameCount. Exact touching clip boundaries neither create a gap nor double-count a track.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "units": "Sequence frames",
+          "examples": [
+            10
+          ]
+        },
+        "/properties/requirements/items/properties/minimumActiveTracks": {
+          "status": "reviewed",
+          "explanation": "Minimum number of distinct selected video tracks that must contain a clip at every frame in the range. Values 1 to 8 are allowed but cannot exceed the number of selected tracks. Use 1 for union coverage and 2 for an overlay intersection.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ],
+          "units": "Count of tracks",
+          "defaultMeaning": "Omitting it requires at least one selected track at each frame.",
+          "examples": [
+            1,
+            2
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "The sequenceContract alternative requires clips and excludes multitrack layout controls, preserving the contiguous single-track contract.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reviewed",
+          "explanation": "This alternative applies only when operation is sequenceContract.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/oneOf/0/not": {
+          "status": "reviewed",
+          "explanation": "sequenceContract rejects endFrame, tracks and requirements; use sequenceLayout to author explicit named tracks and coverage.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/oneOf/0/not/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "endFrame belongs to sequenceLayout. sequenceContract derives its end from the sum of its contiguous clip durations.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/oneOf/0/not/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "tracks belongs to sequenceLayout. sequenceContract requires one ordered clips list on its sole video track.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/oneOf/0/not/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "requirements belongs to sequenceLayout. sequenceContract verifies exact source ranges without multitrack coverage decisions.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "The sequenceLayout alternative requires endFrame and the complete tracks list, with optional requirements; the legacy root clips field is excluded.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reviewed",
+          "explanation": "This alternative applies only when operation is sequenceLayout.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
+          ]
+        },
+        "/oneOf/1/not": {
+          "status": "reviewed",
+          "explanation": "sequenceLayout forbids root-level clips. Put each media item inside the clips list of its named track.",
+          "sources": [
+            "docs/premiere.md",
+            "src/schemaxis/adaptors/premiere/layout.py"
           ]
         }
       }

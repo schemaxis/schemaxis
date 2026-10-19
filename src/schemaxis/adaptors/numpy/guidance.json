@@ -1,0 +1,230 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "principalComponents": {
+      "status": "reviewed",
+      "explanation": "Find the dominant correlated patterns in captured multi-channel measurements. The route centres each channel at its mean, scales it as declared, and computes principal components by singular value decomposition in isolated NumPy. It publishes the spectrum with explained variance, labelled loadings and scores (or a retained-subspace projector) and a reconstruction in the channels' own units, each independently checked by a standard-library verifier.",
+      "sources": [
+        "docs/numpy.md#start-with-the-analytic-sensors"
+      ],
+      "pitfalls": [
+        "Repeated or near-repeated eigenvalues never publish an arbitrary per-component basis; use subspace output.",
+        "Accuracy is relative to the total variance, not to each small eigenvalue; no statistical significance or sampling-uncertainty claim is made.",
+        "Requirements are decided by the host verifier; unmet or indeterminate results are retained evidence, not accepted deliverables."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/numpy-sensors.json",
+          "purpose": "Two dominant patterns in four analytic millivolt channels."
+        },
+        {
+          "reference": "examples/schemaxis/numpy-sensors-standardised.json",
+          "purpose": "Correlation PCA with a retained-subspace projector."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.numpy/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Analyse one captured numeric CSV of correlated measurement channels with principal components. Declare the channels and their units, choose how channels are scaled, choose how many components to keep, and optionally state requirements. Results are labelled tables checked by an independent verifier; only met requirements give an accepted deliverable.",
+          "sources": [
+            "docs/numpy.md#start-with-the-analytic-sensors"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Required Schemaxis document contract schemaxis.numpy/1. It is an input-format version, separate from the qualified native NumPy 2.5.4 runtime.",
+          "sources": [
+            "docs/numpy.md#runtime-public-api-and-maintenance"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose principalComponents: centred, explicitly scaled principal component analysis with labelled loadings or a retained-subspace projector, scores, spectrum and reconstruction.",
+          "sources": [
+            "docs/numpy.md#start-with-the-analytic-sensors"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Required absolute path to a regular ASCII .csv file of at most 8 MiB. The header must equal the optional row key followed by the channels, in order. Cells are plain decimal numbers; quotes, blank lines, missing values, nan/inf, hex, digit separators and whitespace are refused with their line and column. The bytes are captured for standalone verification, and changed bytes invalidate workflow reuse.",
+          "sources": [
+            "docs/numpy.md#input-csv-and-range-contract"
+          ],
+          "fileExtensions": [
+            ".csv"
+          ],
+          "pitfalls": [
+            "Spreadsheet exports with quoted numbers, thousands separators or comma decimals are refused, not silently converted.",
+            "Raw values must be zero or have magnitude within [1e-48, 1e48] after parsing to binary64."
+          ]
+        },
+        "/properties/rowKey": {
+          "status": "reviewed",
+          "explanation": "Optional numeric column that identifies rows, such as time or sample number. It must increase strictly, is excluded from the analysis and is carried into scores and reconstruction. Omit it to number rows 1..n in file order.",
+          "sources": [
+            "docs/numpy.md#input-csv-and-range-contract"
+          ],
+          "defaultMeaning": "Rows are numbered 1..n in file order and the published key column is called row.",
+          "label": "Row key column"
+        },
+        "/properties/rowKey/properties/name": {
+          "status": "reviewed",
+          "explanation": "Exact CSV header of the row key: a letter followed by letters, digits or underscores, at most 40 characters. The names row, component, channelIndex and PC<n> are reserved.",
+          "sources": [
+            "docs/numpy.md#input-csv-and-range-contract"
+          ]
+        },
+        "/properties/rowKey/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Unit of the row key, for example s. It is recorded for interpretation and is never converted.",
+          "sources": [
+            "docs/numpy.md#input-csv-and-range-contract"
+          ]
+        },
+        "/properties/channels": {
+          "status": "reviewed",
+          "explanation": "The 2-32 analysed channels in CSV header order (after the optional row key), at most 160000 analysed cells and 10000 rows. Every listed channel is analysed; there are no ignored columns.",
+          "sources": [
+            "docs/numpy.md#input-csv-and-range-contract"
+          ]
+        },
+        "/properties/channels/items": {
+          "status": "reviewed",
+          "explanation": "One measured channel: its exact header name, its unit and, only for declared scaling, its positive scale in that unit.",
+          "sources": [
+            "docs/numpy.md#scaling-units-and-centring"
+          ]
+        },
+        "/properties/channels/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Exact CSV header identifier for this channel, unique among the row key and channels. It labels loadings, projector and reconstruction columns.",
+          "sources": [
+            "docs/numpy.md#input-csv-and-range-contract"
+          ]
+        },
+        "/properties/channels/items/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Unit of this channel, such as mV, degC or Pa. Unscaled PCA requires every channel to share one unit; units are labels and are never converted.",
+          "sources": [
+            "docs/numpy.md#scaling-units-and-centring"
+          ],
+          "pitfalls": [
+            "Mixing V and mV with scaling none is refused because variances of different units cannot be added."
+          ]
+        },
+        "/properties/channels/items/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Only for declared scaling: a positive scale in this channel's unit, such as a nominal range or sensor resolution. The centred channel is divided by it, so results become dimensionless. Each channel's sample deviation divided by its scale must lie within [1e-48, 1e48].",
+          "sources": [
+            "docs/numpy.md#scaling-units-and-centring"
+          ],
+          "pitfalls": [
+            "Extreme ratios between channels can make a channel's reconstruction uncertifiable (PCA_RECONSTRUCTION_UNCERTIFIED); in practice cross-channel scaled-spread ratios beyond about 1e8 at loadingTolerance 1e-6 are refused.",
+            "A scale with none or standardise scaling is refused rather than ignored."
+          ]
+        },
+        "/properties/scaling": {
+          "status": "reviewed",
+          "explanation": "How channels are scaled after centring at their mean. none: covariance PCA in the shared unit (eigenvalues in unit squared). standardise: divide by each n-1 sample deviation, giving correlation PCA. declared: divide by each channel's declared scale. Choose standardise when channels have different units or very different spreads you do not want to dominate.",
+          "sources": [
+            "docs/numpy.md#scaling-units-and-centring"
+          ],
+          "pitfalls": [
+            "Covariance PCA is dominated by the channels with the largest spread; that is intended only when the units and spreads are commensurable."
+          ],
+          "label": "Channel scaling"
+        },
+        "/properties/retention": {
+          "status": "reviewed",
+          "explanation": "How many components to keep: exactly one of components or minimumExplainedVariance. Kept components must be numerically resolved from the rest of the spectrum.",
+          "sources": [
+            "docs/numpy.md#retention-resolution-and-repeated-eigenvalues"
+          ]
+        },
+        "/properties/retention/properties/components": {
+          "status": "reviewed",
+          "explanation": "Keep this many leading components, 1-10 and at most the channel count. Components below the resolution threshold are refused with PCA_COMPONENT_BELOW_RESOLUTION.",
+          "sources": [
+            "docs/numpy.md#retention-resolution-and-repeated-eigenvalues"
+          ]
+        },
+        "/properties/retention/properties/minimumExplainedVariance": {
+          "status": "reviewed",
+          "explanation": "Keep the smallest number of components (at most 10) whose cumulative explained-variance fraction reaches this value in (0,1). A fraction numerically at the threshold is refused as PCA_RETENTION_BORDERLINE rather than decided by rounding.",
+          "sources": [
+            "docs/numpy.md#retention-resolution-and-repeated-eigenvalues"
+          ]
+        },
+        "/properties/output": {
+          "status": "reviewed",
+          "explanation": "components publishes per-component loadings and scores and requires every kept component to be separated from its neighbours. subspace publishes only the projector onto the kept subspace and its reconstruction, so repeated eigenvalues inside the kept set are allowed.",
+          "sources": [
+            "docs/numpy.md#retention-resolution-and-repeated-eigenvalues"
+          ],
+          "defaultMeaning": "components"
+        },
+        "/properties/loadingTolerance": {
+          "status": "reviewed",
+          "explanation": "Validated accuracy eta in [1e-9, 1e-2] (default 1e-6): the sine of the angle between each published loading (or the projector) and the exact one, bounded a posteriori in each run. After sign alignment the loading 2-norm distance is at most sqrt(2)*eta. It also sets the resolution threshold and each channel's reconstruction certification (uncertainty at most eta times the channel deviation).",
+          "sources": [
+            "docs/numpy.md#verification-tolerances-and-limits"
+          ],
+          "defaultMeaning": "1e-6",
+          "pitfalls": [
+            "Relaxing it can certify more extreme scalings but weakens what the published loadings and reconstruction claim."
+          ],
+          "label": "Loading tolerance (sine of angle)"
+        },
+        "/properties/requirements": {
+          "status": "reviewed",
+          "explanation": "Optional acceptance requirements decided by the independent host verifier as met, unmet or indeterminate using an effective tolerance published in pca-verification.json. Only met requirements give an accepted run; unmet and indeterminate runs keep their evidence but fail.",
+          "sources": [
+            "docs/numpy.md#requirements-and-the-host-verification-record"
+          ]
+        },
+        "/properties/requirements/properties/minimumExplainedVariance": {
+          "status": "reviewed",
+          "explanation": "Require the kept components to explain at least this fraction in (0,1) of the total variance of the scaled data. Within the host tolerance of the bound the result is indeterminate.",
+          "sources": [
+            "docs/numpy.md#requirements-and-the-host-verification-record"
+          ]
+        },
+        "/properties/requirements/properties/reconstructionRMS": {
+          "status": "reviewed",
+          "explanation": "Per-channel limits on the root-mean-square difference between the captured channel and its reconstruction from the kept components, in the channel's own unit (denominator n).",
+          "sources": [
+            "docs/numpy.md#requirements-and-the-host-verification-record"
+          ]
+        },
+        "/properties/requirements/properties/reconstructionRMS/items": {
+          "status": "reviewed",
+          "explanation": "One requirement: a declared channel and the largest acceptable reconstruction RMS in its unit.",
+          "sources": [
+            "docs/numpy.md#requirements-and-the-host-verification-record"
+          ]
+        },
+        "/properties/requirements/properties/reconstructionRMS/items/properties/channel": {
+          "status": "reviewed",
+          "explanation": "Name of a declared channel; each channel may appear once.",
+          "sources": [
+            "docs/numpy.md#requirements-and-the-host-verification-record"
+          ]
+        },
+        "/properties/requirements/properties/reconstructionRMS/items/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable reconstruction RMS, positive and at most 1e100, in the channel's unit. The host compares the measured RMS with this bound allowing for rounding, mean and first-order subspace uncertainty; a bound inside that band is indeterminate.",
+          "sources": [
+            "docs/numpy.md#requirements-and-the-host-verification-record"
+          ],
+          "pitfalls": [
+            "With all components kept the ideal residual is zero, yet bounds below the rounding floor (about 1e-13 of the data magnitude) are indeterminate, never met by luck."
+          ]
+        }
+      }
+    }
+  }
+}

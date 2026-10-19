@@ -1,10 +1,15 @@
 # Schemas and automatic reference generation
 
-Schemaxis exports standalone JSON Schema Draft 2020-12 contracts for all fourteen document
+Schemaxis exports standalone JSON Schema Draft 2020-12 contracts for registered document
 versions routed by `schemaxis`. Exporting uses only the Python standard library, without
-starting or importing native applications. Every schema reference is internal.
+starting or importing native applications. References in ordinary standalone exports are internal.
+The optional ParaView bundle below explicitly uses relative file references.
 Associate schemas externally in your editor: do not add `$schema` to input documents,
 whose parsers reject unknown root keys.
+
+Runs retain their contracts through the [shared schema store](schema-storage.md).
+That guide covers workspace boundaries, legacy snapshots, portable export,
+integrity checks and index recovery.
 
 ## Editor setup
 
@@ -121,6 +126,79 @@ use full document schemas for those scopes.
 Python API: `export_schema(provider='paraview', operation=None, section=None, *,
 authored=False, version=None, all_versions=False)`. Unlike the CLI convenience,
 Python callers explicitly select `authored=True` with `all_versions=True`.
+
+## Portable captures and ParaView category bundles
+
+For repeated evidence capture, keep one content-addressed schema store instead of
+copying the whole schema into every case directory. This is explicit capture,
+not an automatic cache that could hide changed declarations or extensions:
+
+```bash
+PYTHONPATH=src python3 -m schemaxis.schema_snapshots capture evidence/schema-store \
+  --name acceptance-before --version schemaxis/1
+PYTHONPATH=src python3 -m schemaxis.schema_snapshots capture evidence/schema-store \
+  --name acceptance-after --version schemaxis/1
+PYTHONPATH=src python3 -m schemaxis.schema_snapshots read \
+  evidence/schema-store/acceptance-before.snapshot.json > retained-paraview.schema.json
+```
+
+Capture defaults to authored input; use `--expanded` for the expanded contract.
+To retain an existing exported schema **byte for byte**, add
+`--input path/to/paraview.schema.json --version schemaxis/1` and accurately choose
+the authored/expanded flavour. Existing files are never migrated or deleted.
+Each `*.snapshot.json` manifest records the provider, document version, flavour,
+SHA-256, byte count and relative `schemas/<sha256>.json` reference. Identical bytes
+share one object; a changed schema gets a new identity. Capture names are immutable
+and safe to retry. Writes publish complete files atomically, including concurrent
+identical captures. Reads check hashes, byte counts and the literal document
+version without generating a replacement or loading native applications. Hashes
+check retained content; they do not authenticate the person who created a manifest.
+Copy the **whole store directory**, including `schemas/`, when moving evidence.
+A snapshot manifest is an evidence reference, not a JSON Schema.
+
+ParaView also offers an explicit category bundle for tools that support relative
+JSON Schema references:
+
+```bash
+PYTHONPATH=src python3 -m schemaxis.adaptors.paraview.schema_bundle evidence/paraview-bundle
+PYTHONPATH=src python3 -m schemaxis.adaptors.paraview.schema_bundle evidence/paraview-bundle --check
+```
+
+The default is authored input; add `--expanded` at generation for expanded input.
+Choose a new output directory after declarations change. Associate the generated
+`paraview.schema.json` entry point with a whole input document. Keep every bundle
+member alongside it when copying the bundle. Existing `schemaxis schema` output,
+checked-in standalone schemas, Studio and capability-schema pointers keep their
+existing contracts; they do not transparently switch to this bundle.
+
+| Member | Contents and validation shape |
+| --- | --- |
+| `common.schema.json` | Shared runtime, composition, analytic and JSON definitions; a definitions library, not a whole-input validator. |
+| `readers.schema.json` | File readers without upstream input ports, reader options and readback declarations; its entry point validates **one reader node**. |
+| `filters.schema.json` | Filters, resource operations and source generators such as `sphere`; its entry point validates **one node**. |
+| `rendering.schema.json` | Presentation, images, cameras, appearances and scene settings; its entry point validates **one scene**. |
+| `writers.schema.json` | Writer options and publication variants; its entry point validates **one scene export**. |
+| `paraview.schema.json` | Full document envelope, referring to the category members. |
+| `bundle.json` | Provider, document version, flavour, entry point and hashes/byte counts for every schema member. |
+
+These are structural categories, not scientific workflow classifications. A
+reader requires no input ports and a declared constructor file option; source
+generators are grouped with filters. A file-driven operation with upstream inputs
+remains a filter. Rendering scenes may refer to writer exports; authored inline
+nodes may refer to readers or filters. Those links remain explicit and share the
+common definitions. Category validators retain their normal runtime/composition
+syntax; they cannot establish native compatibility or resolve graph references.
+
+The bundle preserves the complete standalone constraints, including the distinct
+ID requirement for authored inline nodes. Generation and `--check` inspect every
+relative reference and JSON pointer offline, including definitions not selected by
+a particular example. `--check` also rejects missing or changed member bytes.
+Validation needs a Draft 2020-12 implementation with a local resource registry or
+local-file resolver; no network retrieval is necessary. The snapshot store and
+bundle have separate manifests: the first retains exact whole-schema captures,
+while the second provides category entry points. Automatic cache invalidation,
+rewriting existing execution receipts, and deduplicating runtime archives or plans
+are outside these commands.
 
 ## Document coverage
 

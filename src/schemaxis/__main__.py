@@ -1,4 +1,4 @@
-"""python -m schemaxis describe|plan|run|verify --help"""
+"""Shared module and installed-command entry points for Schemaxis."""
 import argparse
 import json
 import sys
@@ -6,6 +6,78 @@ from pathlib import Path
 from schemaxis.core.documents import load_document
 from schemaxis.core.faults import SchemaxisError, Fault
 from .adaptors import registry
+
+
+def project_version():
+    """Read installed distribution metadata, or the uninstalled checkout's source."""
+    from importlib.metadata import PackageNotFoundError, version
+    try:
+        return version('schemaxis')
+    except PackageNotFoundError:
+        # Python 3.10 has no tomllib. Only read the project's literal version;
+        # never execute build configuration or maintain a second version string.
+        import re
+        source = Path(__file__).resolve().parents[2] / 'pyproject.toml'
+        if source.is_file():
+            project = re.search(r'(?ms)^\[project\]\s*\n(.*?)(?=^\[|\Z)', source.read_text(encoding='utf-8'))
+            found = re.search(r'''(?m)^version\s*=\s*["']([^"']+)["']\s*$''', project[1]) if project else None
+            if found:
+                return found[1]
+        raise ValueError('Schemaxis version metadata is missing; reinstall the package')
+
+
+class _VersionAction(argparse.Action):
+    """Resolve packaging metadata only when the version flag is requested."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        try:
+            value = project_version()
+        except ValueError as error:
+            parser.error(str(error))
+        print(parser.prog + ' ' + value)
+        parser.exit()
+
+
+def command_topics(parser, prefix=()):
+    """Project the actual parser's commands and summaries, including nested paths."""
+    topics = []
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            for name, child in action.choices.items():
+                summary = next((item.help for item in action._choices_actions
+                                if action.choices.get(item.dest) is child), '')
+                path = (*prefix, name)
+                topics.append({'command': ' '.join(path), 'summary': summary,
+                               'help': 'schemaxis ' + ' '.join(path) + ' --help'})
+                topics.extend(command_topics(child, path))
+    return topics
+
+
+def help_topic(parser, args):
+    """Exact command paths show argparse help; keywords share capability discovery."""
+    query = ' '.join(args.topic)
+    current = parser
+    for name in args.topic:
+        children = next((a.choices for a in current._actions
+                         if isinstance(a, argparse._SubParsersAction)), {})
+        if name not in children:
+            current = None
+            break
+        current = children[name]
+    if current is not None and not args.search:
+        current.print_help()
+        return None
+    if not query.strip():
+        parser.error('help --search needs a nonempty keyword or topic')
+    from .capabilities import CapabilityCatalogue
+    tokens = query.casefold().split()
+    commands = [topic for topic in command_topics(parser)
+                if all(token in (topic['command'] + ' ' + topic['summary']).casefold()
+                       for token in tokens)]
+    return {'query': query, 'commands': commands,
+            'capabilities': CapabilityCatalogue().search(query, scope=args.scope,
+                input_kind=args.input_kind, output_kind=args.output_kind,
+                limit=args.limit, cursor=args.cursor, max_bytes=args.max_bytes,
+                revision=args.revision)}
 
 
 def authored_input(filename, format=None):
@@ -19,8 +91,54 @@ def authored_input(filename, format=None):
 def build_parser():
     """The complete command-line parser, including admitted adaptors' ``cliOptions``."""
     from .adaptors.registry import ADAPTORS
-    parser = argparse.ArgumentParser(prog='schemaxis', description='Schemaxis declared application pipelines')
+    parser = argparse.ArgumentParser(prog='schemaxis', description='Schemaxis declared application pipelines',
+        epilog="Use 'schemaxis COMMAND --help' for command options, 'schemaxis help KEYWORDS' "
+               "to search commands and operations, or 'schemaxis capabilities browse' to explore applications.")
+    parser.add_argument('--version', action=_VersionAction, nargs=0,
+                        help="show the installed project's version and exit")
     commands = parser.add_subparsers(dest='command', required=True)
+    help_command = commands.add_parser('help', help='show command help or search commands and capability topics')
+    help_command.add_argument('topic', nargs='*', help='command path or operation keywords')
+    help_command.add_argument('--search', action='store_true', help='search even when the topic is an exact command path')
+    help_command.add_argument('--scope', default='root', help='capability scope, e.g. app/freecad or domain/geometry')
+    help_command.add_argument('--input-kind')
+    help_command.add_argument('--output-kind')
+    help_command.add_argument('--limit', type=int, default=12)
+    help_command.add_argument('--cursor')
+    help_command.add_argument('--max-bytes', type=int, default=8192)
+    help_command.add_argument('--revision')
+    storage = commands.add_parser('storage', help='inspect storage and plan portable backups, archives and restoration')
+    storage_actions = storage.add_subparsers(dest='storage_action', required=True)
+    storage_inspect = storage_actions.add_parser('inspect', help='inspect selected case storage, schema references and configured installations')
+    storage_inspect.add_argument('--root', type=Path, required=True)
+    storage_inspect.add_argument('--no-installations', action='store_true', help='omit private configured application locations')
+    storage_plan = storage_actions.add_parser('plan', help='dry-run explicit case preservation or restoration; sources are retained')
+    storage_plan.add_argument('--action', choices=('backup', 'archive', 'compress', 'restore'), required=True)
+    storage_plan.add_argument('--root', type=Path)
+    storage_plan.add_argument('--run', action='append', default=[], help='explicit case path relative to root; may be repeated')
+    storage_plan.add_argument('--destination', type=Path, required=True)
+    storage_plan.add_argument('--archive', type=Path, help='archive file or backup directory to restore')
+    storage_plan.add_argument('--older-than-days', type=float, default=0)
+    storage_plan.add_argument('--max-bytes', type=int, default=8*1024**3, help='maximum restored content bytes (default: 8 GiB)')
+    storage_plan.add_argument('--save', type=Path, help='exclusively save the reviewed plan as JSON')
+    storage_apply = storage_actions.add_parser('apply', help='apply an unchanged saved plan with its explicit confirmation digest')
+    storage_apply.add_argument('plan', type=Path)
+    storage_apply.add_argument('--confirm', required=True, help='confirmation digest from the reviewed plan')
+    policy = storage_actions.add_parser('policy', help='create opt-in interval policies and generate due plans; no worker is installed')
+    policies = policy.add_subparsers(dest='policy_action', required=True)
+    policy_create = policies.add_parser('create', help='save a plan-only named policy without starting or scheduling cleanup')
+    policy_create.add_argument('file', type=Path)
+    policy_create.add_argument('--name', required=True)
+    policy_create.add_argument('--root', type=Path, required=True)
+    policy_create.add_argument('--run', action='append', required=True)
+    policy_create.add_argument('--destination', type=Path, required=True)
+    policy_create.add_argument('--action', choices=('backup', 'archive', 'compress'), default='compress')
+    policy_create.add_argument('--every-days', type=float, required=True)
+    policy_create.add_argument('--first-due', required=True, help='ISO 8601 time with UTC offset')
+    policy_create.add_argument('--older-than-days', type=float, default=0)
+    policy_due = policies.add_parser('due', help='generate the current interval plan without applying it or updating a timer')
+    policy_due.add_argument('file', type=Path)
+    policy_due.add_argument('--now', help='explicit ISO 8601 instant for deterministic preview')
     schedule = commands.add_parser('schedule', help='durable future Schemaxis execution')
     schedule.add_argument('--workspace', type=Path, required=True, help='shared schedule store, also used by the independent worker')
     schedule_actions = schedule.add_subparsers(dest='schedule_action', required=True)
@@ -156,7 +274,11 @@ def build_parser():
     console.add_argument('--port', type=int, default=0, help='loopback viewer port (default: automatically selected)')
     console.add_argument('--command', dest='console_commands', action='append', help='execute a command and exit; may be repeated')
     for command in ('plan', 'run', 'inspect'):
-        sub = commands.add_parser(command)
+        sub = commands.add_parser(command, help={
+            'plan': 'validate and plan a declared input without starting applications',
+            'run': 'execute a declared input and retain verified evidence',
+            'inspect': 'inspect typed native data from a declared input',
+        }[command])
         sub.add_argument('input', help='JSON/YAML file or - for stdin')
         sub.add_argument('--input-format', choices=('json', 'yaml'))
         if command in ('run', 'inspect'):
@@ -180,6 +302,31 @@ def main():
     from .adaptors.registry import ADAPTORS
     parser = build_parser()
     args = parser.parse_args()
+    if args.command == 'help':
+        return help_topic(parser, args)
+    if args.command == 'storage':
+        from . import storage_management as management
+        from .storage import atomic, encoded, load
+        if args.storage_action == 'inspect':
+            return management.inspect(args.root, installations=not args.no_installations)
+        if args.storage_action == 'apply':
+            return management.apply_plan(load(args.plan.read_text()), args.confirm)
+        if args.storage_action == 'policy':
+            if args.policy_action == 'due':
+                return management.due_policy(args.file, now=args.now)
+            return management.create_policy(args.file, name=args.name, root=args.root,
+                runs=args.run, destination=args.destination, every_days=args.every_days,
+                first_due=args.first_due, older_than_days=args.older_than_days, action=args.action)
+        if args.action == 'restore' and args.archive is None:
+            parser.error('storage plan --action restore requires --archive')
+        if args.action != 'restore' and (args.root is None or not args.run):
+            parser.error('storage plan requires --root and explicit --run selections')
+        result = management.plan(args.root, args.run, action=args.action,
+            destination=args.destination, archive=args.archive,
+            older_than_days=args.older_than_days, max_bytes=args.max_bytes)
+        if args.save:
+            atomic(args.save, encoded(result), exclusive=True)
+        return result
     if args.command == 'schedule':
         from .scheduler import SchedulerStore, SchedulerRunner
         store = SchedulerStore(args.workspace)
@@ -286,7 +433,8 @@ def main():
         return catalogue.browse(args.scope, **options)
     if args.command == 'discover':
         from .adaptors.registry import discover
-        return {**discover(), 'commands': ['configure','updates','readiness','adaptor','discover','capabilities','agent','schedule','convert','coverage','query','reference','describe','schema','functions','colours','console','schemaxis','template','inspect','plan','run','verify']}
+        return {**discover(), 'commands': [topic['command'] for topic in command_topics(parser)
+                                          if ' ' not in topic['command']]}
     if args.command == 'template':
         from .workflow_templates import load_template, prepare_template
         from .storage import load

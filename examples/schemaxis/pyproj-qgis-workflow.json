@@ -1,0 +1,41 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "route",
+      "document": {
+        "version": "schemaxis.pyproj/1",
+        "operation": "routeStations",
+        "source": "/replace/with/pyproj-winnipeg-route.csv",
+        "ellipsoid": "WGS84",
+        "coordinateOrder": "lonLat",
+        "spacing_m": 1000,
+        "requirements": {
+          "totalLength_m": {
+            "maximum": 50000
+          }
+        }
+      }
+    },
+    {
+      "id": "gis",
+      "document": {
+        "version": "schemaxis.qgis/1",
+        "nodes": [
+          {
+            "id": "legs",
+            "filter": "readVector",
+            "options": {
+              "file": {
+                "$artifact": "route",
+                "index": 3
+              }
+            }
+          }
+        ],
+        "output": "legs",
+        "preview": false
+      }
+    }
+  ]
+}

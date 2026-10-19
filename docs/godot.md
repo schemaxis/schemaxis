@@ -42,6 +42,7 @@ Nodes use `id`, `filter`, optional `options`, and typed `inputs`.
 
 | Filter | Options | Inputs |
 | --- | --- | --- |
+| `transformGroup` | Local XYZ `position`, degree XYZ `rotation`, positive XYZ `scale` | Optional `parent` group |
 | `material` | RGB `colour`, `roughness`, `metallic`, all channels in `[0,1]` | None |
 | `box` | Positive XYZ `size`, XYZ `position` | `material` |
 | `sphere` | Positive `radius`, XYZ `position` | `material` |
@@ -56,8 +57,8 @@ Material inputs must reference earlier material declarations; every declared
 material must be used so it is preserved and verified. Materials are native
 `StandardMaterial3D` resources, geometry is native `MeshInstance3D`, and all
 scene nodes are owned by the saved root. Primitive meshes retain their editable
-native parameters. Geometry has position, rotation (degrees, Godot's YXZ Euler
-order) and scale, but no authored hierarchy. Coordinates are metres, Y is up,
+native parameters. Geometry has local position, rotation (degrees, Godot's YXZ Euler
+order) and scale; optional parent groups organise static assemblies (see below). Coordinates are metres, Y is up,
 and cameras look down -Z.
 Camera target must be separated from its position and not parallel to Y.
 Camera clipping requires `near < far`; visibility/framing is the author's choice.
@@ -194,3 +195,69 @@ Run the common host/native conformance recipe and inspect its scoped source-boun
 receipt; structural admission alone is not native qualification. The
 [current audit](design/adaptor-framework/AUDIT.md) records native availability and
 exact qualification limits.
+
+## Static assemblies
+
+Use `transformGroup` to name a pivot and move a static geometry assembly together.
+It creates a non-renderable native `Node3D`. Its optional `position` (XYZ metres,
+zero by default), `rotation` (XYZ degrees, zero by default) and `scale` (positive
+XYZ factors, one by default) define its transform relative to its parent.
+Every geometry operation and `transformGroup` accepts optional `inputs.parent`:
+
+```json
+{"id":"arm","filter":"transformGroup",
+ "options":{"position":[1,0,0],"rotation":[0,0,45],"scale":[1,3,1]},
+ "inputs":{"parent":"assembly"}}
+```
+
+Omit `parent` to attach to the saved scene root. Parent ids may refer forward;
+the planner orders dependencies deterministically and rejects missing groups,
+non-group parents and cycles. Materials still reference earlier declarations.
+Flat documents retain their original order and meaning. Cameras, lights and
+sprites remain at the root; camera targets and orbit controls keep their existing
+world-space interpretation. This slice does not add animation, physics, scene
+instancing or Godot's unrelated named membership groups.
+
+Transforms use Godot's intrinsic YXZ Euler convention: apply local scale, then
+Z, X and Y rotations, then translation; apply each ancestor transform afterward.
+Non-uniform ancestor scales with rotated descendants can produce shear. Both
+execution and the independent host verifier preserve the complete affine basis;
+neither approximates it by adding Euler angles or multiplying axis scales.
+Individual scales must be in `[0.001,1000]`; negative/mirrored and zero scales are
+unsupported. Hierarchies allow at most 16 parent links, world-position components
+within ±1000000 m, and world basis-column lengths within `[0.000001,10000]`.
+`DEPENDENCY_CYCLE`, `INVALID_DEPENDENCY`, `TYPE_MISMATCH` and `RESOURCE_LIMIT`
+identify the affected parent field; remove a cyclic link, use a group id, or
+reduce the nesting/accumulated transform respectively.
+
+The fresh native process recursively measures every saved node. It records its
+actual parent, scene-root owner, local and global basis, global position and
+transform inheritance. Geometry `bounds` are world AABBs formed by transforming
+the original mesh-local AABB corners. Group `bounds` are the union of descendant
+geometry world AABBs; an empty group has `null` bounds. These are bounding boxes,
+not precise oriented surface envelopes or collision geometry. All descendants
+are owned by the root after `add_child`, so `PackedScene.pack` saves them even
+when their immediate parent is another group. Native readback is checked against
+host affine composition, not only against the first native receipt. The existing
+`1e-5` absolute and relative single-precision tolerances apply.
+
+The editable [nested assembly example](../examples/schemaxis/godot-hierarchy.json)
+uses forward parents and nested rotations/non-uniform scale. Studio's **Static
+transform assembly** starter adds a pivot and two locally positioned blocks.
+The bounded qualifier below checks independently derived literal world values,
+a changed ancestor transform, empty/aggregate group bounds, the legacy flat
+scene, ten jointly forged receipt variants and live timeout/cancellation retention:
+
+```sh
+PYTHONPATH=src python3 tools/qualify_godot_hierarchy.py \
+  --executable /absolute/path/to/godot --directory evidence/godot-hierarchy
+```
+
+This slice was freshly exercised with official Godot 4.7.2 on 17 October 2026.
+Graphical interaction, animation and physics are outside this acceptance scope.
+The [completion review](../verification/2026-10-17-godot-completion.md) separates
+these new checks from prior flat-scene and preview qualification.
+Official [Node3D transforms](https://docs.godotengine.org/en/stable/classes/class_node3d.html),
+[Node ownership](https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner)
+and [PackedScene packing](https://docs.godotengine.org/en/stable/classes/class_packedscene.html#class-packedscene-method-pack)
+were reviewed for the implementation.

@@ -1,0 +1,207 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "plate": {
+      "status": "reviewed",
+      "explanation": "Choose plate for a rectangular mounting blank with positioned through-holes. Width/depth define the XY outline, height sets thickness, and optional holes remove material through both faces. Produces checked STL, generated SCAD and a geometry summary.",
+      "sources": [
+        "docs/openscad.md"
+      ]
+    },
+    "spacer": {
+      "status": "reviewed",
+      "explanation": "Choose spacer for a concentric sleeve or washer. Supply outer diameter, bore diameter and height in mm; it is centred on XY origin and extends upwards from Z=0. Polygonal walls approximate circles, so across-flats bore clearance differs from nominal diameter.",
+      "sources": [
+        "docs/openscad.md"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.openscad/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Describe one dimensioned part using plate or spacer, explicit millimetres, and a matching dimensions object. Parts are bounded polygon extrusions with no authored SCAD or arbitrary constructive tree; verified outputs support dimension studies and explicit-unit geometry exchange.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select schemaxis.openscad/1, the JSON input language version. This is distinct from the separately qualified stable native OpenSCAD 2021.01 release.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose plate for a rectangular blank with positioned through-holes, or spacer for a concentric annulus. Supply exactly the matching plate/spacer dimensions object; changing this selector alone may leave the draft incomplete.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/units": {
+          "status": "reviewed",
+          "explanation": "Declare mm explicitly for every dimension and translation. STL does not encode units, so consumers must also select millimetres; there is no implicit unit conversion.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/segments": {
+          "status": "reviewed",
+          "explanation": "Set the number of straight facets around every nominal circle:16\u2013256, divisible by four; omission uses 64. Larger counts reduce circle approximation error but increase geometry cost. Diameter spans polygon vertices; the bore across flats is diameter*cos(pi/segments).",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/translation": {
+          "status": "reviewed",
+          "explanation": "Move the entire finished part by [X,Y,Z] millimetres after construction. Omission uses [0,0,0]. Each coordinate is between -100 and 100; this changes placement without changing dimensions or local hole coordinates.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/translation/items": {
+          "status": "reviewed",
+          "explanation": "One signed millimetre offset in ordered X,Y,Z translation. A positive Z raises both end faces; offsets do not change thickness, bore clearance or volume.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/plate": {
+          "status": "reviewed",
+          "explanation": "Choose plate for a rectangular mounting blank with positioned through-holes. Width/depth define the XY outline, height sets thickness, and optional holes remove material through both faces. Produces checked STL, generated SCAD and a geometry summary. Required only with operation plate; omit spacer. Dimensions are mm and local origin is the lower-left bottom corner.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/plate/properties/width": {
+          "status": "reviewed",
+          "explanation": "Set the local X length of the rectangular plate,0.5\u2013200 mm. The left edge is X=0 before translation; ensure all nominal hole circles plus 0.5 mm edge clearance lie inside this length.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/plate/properties/depth": {
+          "status": "reviewed",
+          "explanation": "Set the local Y length of the rectangular plate,0.5\u2013200 mm. The near edge is Y=0 before translation; hole centres use this local coordinate system.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/plate/properties/height": {
+          "status": "reviewed",
+          "explanation": "Set the full Z thickness of the plate,0.5\u2013100 mm, from local Z=0. Every hole traverses this complete thickness; blind holes are unsupported.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/plate/properties/holes": {
+          "status": "reviewed",
+          "explanation": "List up to 16 circular through-holes. Omission or [] produces a plain plate. Nominal circles need at least 0.5 mm edge clearance and 0.5 mm separation, avoiding touching/intersecting boolean surfaces.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/plate/properties/holes/items": {
+          "status": "reviewed",
+          "explanation": "Place one complete through-hole by its local XY centre and nominal diameter in mm. The hole is removed before whole-part translation; repeated or overlapping holes fail rather than merge.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/plate/properties/holes/items/properties/centre": {
+          "status": "reviewed",
+          "explanation": "Set [X,Y] in mm from the plate lower-left corner before translation, for example [10,10]. The complete nominal circle plus 0.5 mm must fit inside the plate; these are not global or centred coordinates.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/plate/properties/holes/items/properties/centre/items": {
+          "status": "reviewed",
+          "explanation": "One local millimetre coordinate, X first then Y, locating a through-hole centre. Planner clearance checks constrain it further than the numeric coordinate range.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/plate/properties/holes/items/properties/diameter": {
+          "status": "reviewed",
+          "explanation": "Set nominal hole diameter across opposite polygon vertices,0.5\u2013200 mm. The actual across-flats opening is smaller by cos(pi/segments); there is no automatic shaft-fit allowance. Shrink or move a hole to restore edge/separation clearance.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/spacer": {
+          "status": "reviewed",
+          "explanation": "Choose spacer for a concentric sleeve or washer. Supply outer diameter, bore diameter and height in mm; it is centred on XY origin and extends upwards from Z=0. Polygonal walls approximate circles, so across-flats bore clearance differs from nominal diameter. Required only with operation spacer; omit plate. The nominal radial wall must be at least 0.5 mm.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/spacer/properties/outerDiameter": {
+          "status": "reviewed",
+          "explanation": "Set the outside nominal diameter across opposite polygon vertices,0.5\u2013200 mm. It must exceed bore diameter by at least 1 mm. The outside across-flats diameter is slightly smaller than nominal.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/spacer/properties/boreDiameter": {
+          "status": "reviewed",
+          "explanation": "Set the inside nominal through-bore diameter across polygon vertices,0.5\u2013200 mm. Actual bore across flats is diameter*cos(pi/segments); choose fit clearance explicitly. Outer minus bore diameter must be at least 1 mm.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/properties/spacer/properties/height": {
+          "status": "reviewed",
+          "explanation": "Set spacer axial length,0.5\u2013100 mm, from local Z=0. The concentric bore traverses the entire length. This is geometry only, with no stiffness or strength inference.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "The plate branch requires operation plate and the matching dimensions object. The other part dimensions object is excluded so the native construction intention is unambiguous.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose plate for a rectangular mounting blank with positioned through-holes. Width/depth define the XY outline, height sets thickness, and optional holes remove material through both faces. Produces checked STL, generated SCAD and a geometry summary.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/oneOf/0/not": {
+          "status": "reviewed",
+          "explanation": "Omit the other part dimensions object when choosing plate; keep exactly one shape recipe per document.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "The spacer branch requires operation spacer and the matching dimensions object. The other part dimensions object is excluded so the native construction intention is unambiguous.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose spacer for a concentric sleeve or washer. Supply outer diameter, bore diameter and height in mm; it is centred on XY origin and extends upwards from Z=0. Polygonal walls approximate circles, so across-flats bore clearance differs from nominal diameter.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        },
+        "/oneOf/1/not": {
+          "status": "reviewed",
+          "explanation": "Omit the other part dimensions object when choosing spacer; keep exactly one shape recipe per document.",
+          "sources": [
+            "docs/openscad.md"
+          ]
+        }
+      }
+    }
+  }
+}

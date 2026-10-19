@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.numpy/1"
+    },
+    "operation": {
+      "const": "principalComponents"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "rowKey": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "unit"
+      ]
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "scale": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "unit"
+        ]
+      },
+      "minItems": 2,
+      "maxItems": 32
+    },
+    "scaling": {
+      "enum": [
+        "none",
+        "standardise",
+        "declared"
+      ]
+    },
+    "retention": {
+      "type": "object",
+      "properties": {
+        "components": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "minimumExplainedVariance": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "enum": [
+        "components",
+        "subspace"
+      ],
+      "default": "components"
+    },
+    "loadingTolerance": {
+      "type": "number",
+      "minimum": 1e-09,
+      "maximum": 0.01,
+      "default": 1e-06
+    },
+    "requirements": {
+      "type": "object",
+      "properties": {
+        "minimumExplainedVariance": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "reconstructionRMS": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "channel": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "maximum": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1e+100
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "channel",
+              "maximum"
+            ]
+          },
+          "maxItems": 32
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "source",
+    "channels",
+    "scaling",
+    "retention"
+  ]
+}

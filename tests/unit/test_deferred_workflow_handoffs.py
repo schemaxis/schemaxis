@@ -42,6 +42,9 @@ def fixture_receipt(directory, expected):
 def fixture_run(document, directory, *args, suffix='.step', kind='cad'):
     directory.mkdir()
     atomic_json(directory/'authored.json', document)
+    # The real retained-input hook replays this input-free CAD producer's plan.
+    # Keep that check active even though native execution and receipts are fixtures.
+    atomic_json(directory/'plan.json', registry.plan(document))
     artifact = directory/('result' + suffix)
     artifact.write_text('fixture publication; no native execution')
     atomic_json(directory/'verification.json', {'artifacts': [{'file': str(artifact), 'kind': kind}]})

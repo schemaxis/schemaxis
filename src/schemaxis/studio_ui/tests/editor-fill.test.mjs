@@ -45,6 +45,34 @@ test('field input validates declared primitive, vector, colour, bounds and path 
   assert.match(checkField('mesh.txt', {type: 'path', extensions: ['.vtu']}), /ending/);
 });
 
+test('placeholder text bounds count Unicode code points with inclusive limits', () => {
+  const bounded = {type: 'string', minLength: 2, maxLength: 3};
+  for (const accepted of ['ab', 'abc', '😀🚀', '😀🚀🛰', 'e\u0301', 'e\u0301x']) {
+    assert.equal(checkField(accepted, bounded), '', JSON.stringify(accepted));
+  }
+  assert.equal(checkField('a', bounded), 'Use at least 2 characters.');
+  assert.equal(checkField('😀', bounded), 'Use at least 2 characters.', 'one astral character is one code point');
+  assert.equal(checkField('abcd', bounded), 'Use at most 3 characters.');
+  assert.equal(checkField('😀🚀🛰🛸', bounded), 'Use at most 3 characters.', 'four astral characters exceed three');
+  assert.equal(checkField('e\u0301x', bounded), '', 'a combining mark counts as its own code point');
+  assert.equal(checkField('e\u0301xy', bounded), 'Use at most 3 characters.', 'four code points exceed three');
+  // Empty text: rejected only where a minimum applies; id/path types still demand a value.
+  assert.equal(checkField('', {type: 'string'}), '');
+  assert.equal(checkField('', {type: 'string', maxLength: 0}), '');
+  assert.equal(checkField('', {type: 'string', minLength: 0}), '');
+  assert.equal(checkField('', {type: 'string', minLength: 1}), 'Use at least 1 characters.');
+  assert.equal(checkField('😀', {type: 'string', maxLength: 0}), 'Use at most 0 characters.');
+  assert.equal(checkField('', {type: 'path', minLength: 0}), 'Enter a value.');
+  // Other checks keep their precedence and behaviour.
+  assert.equal(checkField('😀😀', {type: 'string', maxLength: 2, pattern: '^x'}), 'This text does not match the required pattern.');
+  assert.equal(checkField('😀', {type: 'string', values: ['x'], maxLength: 5}), 'Choose a listed value.');
+  assert.equal(checkField(5, {type: 'string', maxLength: 1}), 'Enter text.');
+  assert.equal(checkField('😀😀😀', {type: 'string', maxLength: 3}), '', 'regression: UTF-16 counting rejected this');
+  assert.equal(checkField('😀😀', {type: 'string', minLength: 4}), 'Use at least 4 characters.', 'regression: UTF-16 counting accepted this');
+  assert.equal(checkField('😀'.repeat(40), {type: 'string', maxLength: 40}), '');
+  assert.equal(checkField('😀'.repeat(41), {type: 'string', maxLength: 40}), 'Use at most 40 characters.');
+});
+
 test('choices use enum, kinds, axes, observations and recent values', () => {
   const value = {nodes: [{id: 'mesh'}, {id: 'picture'}], axes: [{name: 'sweep'}]};
   assert.deepEqual(fieldChoices({type: 'nodeRef', acceptsKinds: ['geometry']}, value,

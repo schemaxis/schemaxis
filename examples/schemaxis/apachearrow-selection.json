@@ -1,0 +1,60 @@
+{
+  "version": "schemaxis.apachearrow/1",
+  "operation": "prepareTable",
+  "source": "/replace/with/measurements.csv",
+  "columns": [
+    {
+      "name": "id",
+      "type": "int64",
+      "nullable": false
+    },
+    {
+      "name": "small",
+      "type": "int32",
+      "nullable": false
+    },
+    {
+      "name": "reading",
+      "type": "float64",
+      "nullable": true
+    },
+    {
+      "name": "enabled",
+      "type": "bool",
+      "nullable": true
+    },
+    {
+      "name": "label",
+      "type": "utf8",
+      "nullable": true
+    },
+    {
+      "name": "observed",
+      "type": "timestamp_us_utc",
+      "nullable": true
+    }
+  ],
+  "where": [
+    {
+      "column": "enabled",
+      "test": "eq",
+      "value": "true"
+    }
+  ],
+  "select": [
+    {
+      "column": "label",
+      "name": "label",
+      "fillNull": "unlabelled"
+    },
+    {
+      "column": "small",
+      "name": "batch",
+      "cast": "int64"
+    },
+    {
+      "column": "observed",
+      "name": "observed"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "report",
+      "document": {
+        "version": "schemaxis.sqlite/1",
+        "operation": "summarise",
+        "tables": [
+          {
+            "name": "departments",
+            "source": "/replace/with/departments.json",
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "region",
+                "type": "TEXT",
+                "nullable": true
+              }
+            ],
+            "primaryKey": "id"
+          },
+          {
+            "name": "sales",
+            "source": "/replace/with/sales.json",
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "department",
+                "type": "INTEGER",
+                "nullable": true
+              },
+              {
+                "name": "amount",
+                "type": "INTEGER",
+                "nullable": true
+              }
+            ],
+            "primaryKey": "id",
+            "foreignKeys": [
+              {
+                "column": "department",
+                "table": "departments",
+                "target": "id"
+              }
+            ]
+          }
+        ],
+        "from": "sales",
+        "join": {
+          "table": "departments",
+          "local": "department",
+          "remote": "id"
+        },
+        "where": {
+          "column": "sales.id",
+          "minimum": 1
+        },
+        "groupBy": [
+          "departments.region"
+        ],
+        "sum": "sales.amount"
+      }
+    },
+    {
+      "id": "qualified",
+      "document": {
+        "version": "schemaxis.sqlite/1",
+        "operation": "summarise",
+        "tables": [
+          {
+            "name": "departments",
+            "source": "/replace/with/departments.json",
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "region",
+                "type": "TEXT",
+                "nullable": true
+              }
+            ],
+            "primaryKey": "id"
+          },
+          {
+            "name": "sales",
+            "source": "/replace/with/sales.json",
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "department",
+                "type": "INTEGER",
+                "nullable": true
+              },
+              {
+                "name": "amount",
+                "type": "INTEGER",
+                "nullable": true
+              }
+            ],
+            "primaryKey": "id",
+            "foreignKeys": [
+              {
+                "column": "department",
+                "table": "departments",
+                "target": "id"
+              }
+            ]
+          }
+        ],
+        "from": "sales",
+        "join": {
+          "table": "departments",
+          "local": "department",
+          "remote": "id"
+        },
+        "where": {
+          "column": "sales.amount",
+          "minimum": {
+            "$value": "report",
+            "artifact": 1,
+            "path": "/rows/3/2"
+          }
+        },
+        "groupBy": [
+          "departments.region"
+        ],
+        "sum": "sales.amount"
+      }
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.apachearrow/1"
+    },
+    "operation": {
+      "const": "prepareTable"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "type": {
+            "enum": [
+              "bool",
+              "int32",
+              "int64",
+              "float64",
+              "utf8",
+              "timestamp_us_utc"
+            ]
+          },
+          "nullable": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "where": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "column": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "test": {
+            "enum": [
+              "eq",
+              "ne",
+              "lt",
+              "le",
+              "gt",
+              "ge",
+              "isNull",
+              "isValid"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 4096
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "column",
+          "test"
+        ]
+      },
+      "maxItems": 8,
+      "default": []
+    },
+    "select": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "column": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "cast": {
+            "enum": [
+              "int64"
+            ]
+          },
+          "fillNull": {
+            "type": "string",
+            "maxLength": 4096
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "column",
+          "name"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 32
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "source",
+    "columns",
+    "select"
+  ]
+}

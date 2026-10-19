@@ -115,6 +115,42 @@
           "purpose": "Clip 100 m point buffers to a 50 x 50 m study rectangle, leaving one 2500 square-metre square with the original name attribute."
         }
       ]
+    },
+    "selectAttributes": {
+      "status": "reviewed",
+      "explanation": "Select features using conjunctive literal typed attribute tests and explicit minimum/maximum count requirements; retain geometry, CRS and original fields. Declare minFeatures/maxFeatures to detect an unexpected selection. No geometry or CRS conversion occurs.",
+      "sources": [
+        "docs/qgis.md#attribute-selection-and-grouped-summaries",
+        "src/schemaxis/adaptors/qgis/attributes.py",
+        "https://api.qgis.org/api/classQgsFeature.html"
+      ],
+      "pitfalls": [
+        "Null is distinct from zero and from an empty string. Storage fid is regenerated; use a stable semantic string ID field."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/qgis-attributes.json",
+          "purpose": "Select assets scoring at least twenty and summarise regional electrical load in kW."
+        }
+      ]
+    },
+    "summariseAttributes": {
+      "status": "reviewed",
+      "explanation": "Publish a typed group summary table and CSV with sorted member IDs, explicit units and numeric null handling while passing the input vector through unchanged. Each summary publishes a CSV, a typed JSON table and a separate editable GeoPackage no-geometry table reopened from the saved QGIS project. The vector output remains suitable for downstream geometry operations.",
+      "sources": [
+        "docs/qgis.md#attribute-selection-and-grouped-summaries",
+        "src/schemaxis/adaptors/qgis/attributes.py",
+        "https://api.qgis.org/api/classQgsFeature.html"
+      ],
+      "pitfalls": [
+        "Null is distinct from zero and from an empty string. Storage fid is regenerated; use a stable semantic string ID field."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/qgis-attributes.json",
+          "purpose": "Select assets scoring at least twenty and summarise regional electrical load in kW."
+        }
+      ]
     }
   },
   "routes": {
@@ -1131,6 +1167,294 @@
             "src/schemaxis/adaptors/qgis/adaptor.py:76-78",
             "docs/schema-guide.md",
             "guidance:/$defs/json"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5": {
+          "status": "reviewed",
+          "explanation": "Select features using conjunctive literal typed attribute tests and explicit minimum/maximum count requirements; retain geometry, CRS and original fields. Declare minFeatures/maxFeatures to detect an unexpected selection. No geometry or CRS conversion occurs.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique unitless graph node identifier. Later nodes reference this name; it does not rename or replace source feature IDs.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Select the named closed attribute operation. It accepts declared options only; authored expressions, SQL and Python are outside this contract.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options": {
+          "status": "reviewed",
+          "explanation": "Attribute intent and requirements. Names refer exactly to existing semantic fields; fid is a storage identifier and cannot be selected as an identity or analytical field.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/idField": {
+          "status": "reviewed",
+          "explanation": "Existing semantic field containing unique nonempty nonnull string feature IDs. IDs are unitless and copied verbatim into sorted memberIds. Duplicate, numeric, empty or missing IDs fail rather than regenerating them.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/predicates": {
+          "status": "reviewed",
+          "explanation": "One to sixteen typed field tests combined with AND. Every nonnull value in every referenced input field must match its declared type before filtering, even for features another test would exclude.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/predicates/items": {
+          "status": "reviewed",
+          "explanation": "One literal field test. Nulls pass only isNull; isNotNull excludes them, and all ordinary comparisons including ne return false on null. No string-to-number or Boolean-to-number coercion.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/predicates/items/properties/field": {
+          "status": "reviewed",
+          "explanation": "Exact existing field name for this test. Values retain their source units; the comparison literal must use those same units. Missing fields and fid fail explicitly.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/predicates/items/properties/type": {
+          "status": "reviewed",
+          "explanation": "Expected nonnull field type: number accepts finite integer/real values but excludes Boolean; string is exact Unicode text; boolean is true/false. Null remains allowed. A mismatched value anywhere in the input field fails.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/predicates/items/properties/comparison": {
+          "status": "reviewed",
+          "explanation": "eq/ne compare literal values without coercion. gt/ge/lt/le order numeric values only, with strict/inclusive boundaries as named. isNull/isNotNull omit value. Every comparison other than isNull excludes null values.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/predicates/items/properties/value": {
+          "status": "reviewed",
+          "explanation": "Required literal for eq/ne/gt/ge/lt/le; its type must match type and its units must match the source field. Omit for isNull/isNotNull. A numeric-looking string is still a string.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/predicates/items/properties/value/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Required literal for eq/ne/gt/ge/lt/le; its type must match type and its units must match the source field. Omit for isNull/isNotNull. A numeric-looking string is still a string. This alternative is a number literal.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/predicates/items/properties/value/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Required literal for eq/ne/gt/ge/lt/le; its type must match type and its units must match the source field. Omit for isNull/isNotNull. A numeric-looking string is still a string. This alternative is a string literal.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/predicates/items/properties/value/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "Required literal for eq/ne/gt/ge/lt/le; its type must match type and its units must match the source field. Omit for isNull/isNotNull. A numeric-looking string is still a string. This alternative is a boolean literal.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/minFeatures": {
+          "status": "reviewed",
+          "explanation": "Minimum selected feature count, inclusive, in features; defaults to 1. Empty vector outputs remain unsupported. Set it to the independently expected lower bound so missing data fails clearly.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/maxFeatures": {
+          "status": "reviewed",
+          "explanation": "Maximum selected feature count, inclusive, in features; defaults to 10000. It must be at least minFeatures. Use an exact equal lower/upper requirement when feature membership count is known.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "Declare the earlier input vector node. Selection preserves each surviving full geometry/attribute row; summary emits side tables and keeps this vector unchanged.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "Earlier reader or vector-operation node ID, unitless. The graph is ordered: forward references and cycles are rejected. No implicit CRS conversion occurs.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6": {
+          "status": "reviewed",
+          "explanation": "Publish a typed group summary table and CSV with sorted member IDs, explicit units and numeric null handling while passing the input vector through unchanged. Each summary publishes a CSV, a typed JSON table and a separate editable GeoPackage no-geometry table reopened from the saved QGIS project. The vector output remains suitable for downstream geometry operations.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique unitless graph node identifier. Later nodes reference this name; it does not rename or replace source feature IDs.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Select the named closed attribute operation. It accepts declared options only; authored expressions, SQL and Python are outside this contract.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options": {
+          "status": "reviewed",
+          "explanation": "Attribute intent and requirements. Names refer exactly to existing semantic fields; fid is a storage identifier and cannot be selected as an identity or analytical field.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/idField": {
+          "status": "reviewed",
+          "explanation": "Existing semantic field containing unique nonempty nonnull string feature IDs. IDs are unitless and copied verbatim into sorted memberIds. Duplicate, numeric, empty or missing IDs fail rather than regenerating them.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/groupBy": {
+          "status": "reviewed",
+          "explanation": "Exact existing string field used as the group key; null is one explicit group, distinct from the empty string. Groups sort null first, then Unicode string order. Numeric or Boolean grouping is outside this bounded slice.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/aggregates": {
+          "status": "reviewed",
+          "explanation": "One to sixteen named output columns. Counts include or exclude null as explicitly selected; sum/mean ignore null numeric values and yield null for an all-null group. Units are annotations you declare; no conversion occurs.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/aggregates/items": {
+          "status": "reviewed",
+          "explanation": "One named statistic column. count counts all member features and omits field; nonNullCount, sum and mean require a numeric source field. Declare units features for either count, or the source quantity units for sum/mean.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/aggregates/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Unique output column name, unitless: ASCII letter followed by up to 62 ASCII letters, digits or underscores. Names compare case-insensitively and cannot be fid, group, groupIsNull or memberIds.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/aggregates/items/properties/statistic": {
+          "status": "reviewed",
+          "explanation": "count counts every feature, including null numeric values; nonNullCount counts nonnull numeric values. sum uses deterministic compensated summation, and mean divides that sum by nonNullCount. All-null sum/mean is null; overflow fails. Sum/mean outputs use IEEE binary64; large integers and nonrepresentable decimal quantities can round. They are not exact decimal accounting totals.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/aggregates/items/properties/field": {
+          "status": "reviewed",
+          "explanation": "Exact existing finite numeric or null source field for nonNullCount/sum/mean. Omit for count. Boolean is not numeric. Values are aggregated in sorted feature-ID order, with no unit conversion.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/options/properties/aggregates/items/properties/units": {
+          "status": "reviewed",
+          "explanation": "Required output-unit annotation: features for count/nonNullCount, or the source units for sum/mean (for example kW). Dimensionless quantities can use unitless. Units are copied into typed JSON/publication metadata and are not inferred from field names.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "Declare the earlier input vector node. Selection preserves each surviving full geometry/attribute row; summary emits side tables and keeps this vector unchanged.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/6/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "explanation": "Earlier reader or vector-operation node ID, unitless. The graph is ordered: forward references and cycles are rejected. No implicit CRS conversion occurs.",
+          "sources": [
+            "docs/qgis.md#attribute-selection-and-grouped-summaries",
+            "src/schemaxis/adaptors/qgis/attributes.py",
+            "https://api.qgis.org/api/classQgsFeature.html"
           ]
         }
       }

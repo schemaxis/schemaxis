@@ -11,11 +11,13 @@
     "verification/2026-09-20-media-geospatial.json",
     "verification/2026-10-10-ffmpeg-deliverables.md",
     "verification/2026-10-10-ffmpeg-whole-frame.md",
-    "verification/2026-10-10-ffmpeg-bound-readback.md"
+    "verification/2026-10-10-ffmpeg-bound-readback.md",
+    "verification/2026-10-17-ffmpeg-completion.md"
   ],
-  "scope": "Qualified exact upstream FFmpeg 9.0.2 release, private optimised gcc13 minimal build with libx264, FFV1 and raw RGB plus the required PNG-independent encode/decode and Matroska/MP4 formats, without assembly or network; target release archive signature verified. H.264 and FFV1 version1 whole-frame RGB, timed sprite sheet, nine nonuniform image shapes, native stage input bindings, media requirements and offline rejection verified. Retained FFmpeg6.1.1 compatibility passes; no exhaustive codec/API coverage.",
+  "scope": "Qualified exact upstream FFmpeg 9.0.2 release, private optimised gcc13 minimal build with libx264, FFV1 and raw RGB plus the required PNG-independent encode/decode and Matroska/MP4 formats, without assembly or network; target release archive signature verified. H.264 and FFV1 version1 whole-frame RGB, timed sprite sheet, nine nonuniform image shapes, native stage input bindings, media requirements and offline rejection verified. Retained FFmpeg6.1.1 compatibility passes; no exhaustive codec/API coverage. Existing-video ingestion qualified on exact 9.0.2: silent single-stream MP4/H264 yuv420p and Matroska/FFV1 bgr0, full source cadence/metadata checks, exclusive presentation-frame selection/retiming, native default MP4 edit-list case and bound source probe/decode. Independent per-frame RGB checks include 72-frame 128x72 source clips and changed ranges/rates/inputs; no general editing, audio, rotation, fractional-rate or colour-management qualification.",
   "acceptance": [
     "Run tools/qualify_media_geospatial.py with target FFmpeg and FFprobe; require video decode, frame-count and dimensions verification.",
-    "Run tools/qualify_ffmpeg_deliverable.py and the native adaptor conformance kit on the exact target release; require all nine shape full-RGB readbacks, H.264/sheet acceptance, unmet intent gates and replaced encoded video with refreshed ordinary publication metadata rejection."
+    "Run tools/qualify_ffmpeg_deliverable.py and the native adaptor conformance kit on the exact target release; require all nine shape full-RGB readbacks, H.264/sheet acceptance, unmet intent gates and replaced encoded video with refreshed ordinary publication metadata rejection.",
+    "Run tools/qualify_ffmpeg_video.py with target FFmpeg/FFprobe; require every source and selected output frame independently compared, long clip baseline/variant, H264 input/output, actual MP4 edit-list presentation, source retention/reuse, dishonest receipt/binding/selection and timeout probes."
   ]
 }

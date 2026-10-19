@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[circle](#circle), [frame](#frame), [layer](#layer), [palette](#palette), [pixel](#pixel), [rect](#rect), [sprite](#sprite), [tag](#tag)
+[circle](#circle), [frame](#frame), [importImage](#importimage), [layer](#layer), [palette](#palette), [pixel](#pixel), [rect](#rect), [sprite](#sprite), [tag](#tag)
 
 ## circle
 
@@ -53,6 +53,32 @@ Native binding: `Sprite:newEmptyFrame`. Output kind: `["sprite"]`.
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
 | `durationMS` | Display time of the new frame in milliseconds (1 to 65535), saved in sprite.aseprite and listed in sheet.json. Unequal durations let one frame hold longer than others. | `{"type":"integer","minimum":1,"maximum":65535}` | `100` |
+
+
+## importImage
+
+Place captured PNG artwork into an existing named layer and frame at integer canvas coordinates. Choose this to turn prepared raster assets into editable cels while retaining procedural drawing and animation tags. The declared image rectangle replaces existing pixels in that cel, including transparent pixels which erase; transparent top-layer pixels reveal lower layers in the flattened preview. Captures, reopened cels and both PNG publications are independently checked sample by sample.
+
+Common mistakes and assumptions:
+
+- Only metadata-free, noninterlaced RGBA8 PNG with alpha 0 or 255 is supported. Strip profiles/metadata; no scaling, clipping, colour conversion, arbitrary paths in Lua or authored scripts.
+- Plan checks declared dimensions and placement; execution checks actual captured PNG dimensions and samples. Original source paths are never opened by the native worker.
+
+Native binding: `Image{fromFile}; Sprite:newCel; Cel.image`. Output kind: `["sprite"]`.
+
+| Input port | Multiplicity | Required | Kind |
+| --- | --- | --- | --- |
+| `sprite` | one node | yes | `sprite` |
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `source` | Absolute local .png file path to capture before native execution. Required; no default. The source must be a regular file within 2 MiB and contain only IHDR/IDAT/IEND, RGBA8 samples, no interlace and binary alpha. The capture keeps original bytes and SHA-256; transparent hidden RGB is discarded for sample comparisons. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `layer` | Existing layer name receiving the pixels. Required; case sensitive. Create the named layer earlier; opaque pixels on later layers cover lower artwork in the preview. | `{"type":"string","minLength":1,"maxLength":64}` | **required** |
+| `frame` | One-based existing animation frame receiving the cel pixels. Omitted means 1; a frame node must precede an import into any later frame. Importing creates an absent cel but never a frame. | `{"type":"integer","minimum":1,"maximum":32}` | `1` |
+| `x` | Zero-based canvas column of the image left edge, in pixels, increasing rightward. Required; x+width must fit the canvas. No clipping or negative placement. | `{"type":"integer","minimum":0,"maximum":255}` | **required** |
+| `y` | Zero-based canvas row of the image top edge, in pixels, increasing downward. Required; y+height must fit the canvas. No clipping or negative placement. | `{"type":"integer","minimum":0,"maximum":255}` | **required** |
+| `width` | Required source image width in pixels, 1 to 256. The captured PNG must have this exact width; this is a dimension assertion, never a resize instruction. | `{"type":"integer","minimum":1,"maximum":256}` | **required** |
+| `height` | Required source image height in pixels, 1 to 256. The captured PNG must have this exact height; this is a dimension assertion, never a resize instruction. | `{"type":"integer","minimum":1,"maximum":256}` | **required** |
 
 
 ## layer

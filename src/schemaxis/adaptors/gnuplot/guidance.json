@@ -1,0 +1,281 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "plot": {
+      "status": "reviewed",
+      "explanation": "Create a scientific plot from captured numeric CSV columns, explicit units, named series and linear/log10 axis ranges. Publish SVG, PNG, source capture and an editable trusted script. Optional symmetric y uncertainty draws measured intervals. Independent SVG coordinate and decoded PNG pixel checks compare actual native output with captured values. Fixed styles and connected samples only; no arbitrary commands, expressions, fits or unit conversion.",
+      "pitfalls": [
+        "Replace the absolute CSV placeholder and match the exact declared header order.",
+        "Choose increasing x values, explicit inclusive ranges and matching column/axis units.",
+        "For log10, every sample and uncertainty endpoint must be positive.",
+        "Overlapping series may obscure one another and fail independent pixel identification; choose distinguishable data/colours."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/gnuplot-calibration.json",
+          "purpose": "Measured calibration with absolute symmetric uncertainty."
+        },
+        {
+          "reference": "examples/schemaxis/gnuplot-logarithmic.json",
+          "purpose": "Positive log10 samples with uncertainty intervals."
+        }
+      ],
+      "sources": [
+        "docs/gnuplot.md",
+        "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.gnuplot/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A scientific plot document maps numeric CSV columns with declared units to connected samples and optional symmetric y error bars. Both SVG and PNG are published and independently inspected. No fitting or unit conversion is implicit.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Plot document contract identifier schemaxis.gnuplot/1, independent of the Gnuplot executable release.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose plot to publish SVG and PNG together with captured CSV and an editable generated Gnuplot script.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/title": {
+          "status": "reviewed",
+          "explanation": "Required visible plot title, at most 80 plain ASCII characters. Use letters, numbers, spaces and ._()+/-. Begin with a letter or number; quotes, backticks, percent and enhanced text are excluded.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Absolute path to a regular local .csv file, at most 1 MiB. Replace the starter placeholder. Exact header order must match columns; every cell must be a finite ASCII number without whitespace. Source bytes are captured and hashed before execution; changing bytes invalidates reuse.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/columns": {
+          "status": "reviewed",
+          "explanation": "Ordered definitions of 2\u201312 numeric CSV columns. The first CSV row must contain exactly these distinct names in this order. Include a unit for every column; use 1 for dimensionless values.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/columns/items": {
+          "status": "reviewed",
+          "explanation": "One named CSV column and its declared unit. Column order defines the native using index, so changing this order requires the CSV header/data to change with it.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/columns/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Required distinct ASCII identifier: begin with a letter, then letters, numbers or underscores, at most 40 characters. This must exactly match the CSV header and series role mapping. Display labels are authored separately.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/columns/items/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Required unit label such as s, V, mm or 1. Use consistent spelling: mapped x columns must exactly equal xAxis.unit; y and uncertainty columns must equal yAxis.unit. Units are asserted, not converted or dimensionally inferred.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/series": {
+          "status": "reviewed",
+          "explanation": "Ordered 1\u20134 connected numeric series. Every label and colour must be distinct. Each series maps an increasing x column and a y column, with optional absolute symmetric y uncertainty. Multiple series may share columns.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/series/items": {
+          "status": "reviewed",
+          "explanation": "One labelled connected series drawn with circular samples. Array order is legend and drawing order. Crossings and coincident samples can obscure pixels; independent raster verification may reject ambiguous overdraw.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/series/items/properties/label": {
+          "status": "reviewed",
+          "explanation": "Required distinct legend text, using the same safe ASCII alphabet as title. It identifies the series, while units belong to mapped columns and axes.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/series/items/properties/x": {
+          "status": "reviewed",
+          "explanation": "Name of the declared column supplying horizontal coordinates. Values must increase strictly across CSV rows and fit xAxis.range. Unit must equal xAxis.unit; log10 values must be positive.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/series/items/properties/y": {
+          "status": "reviewed",
+          "explanation": "Name of the declared column supplying vertical central values. All samples and optional uncertainty endpoints must fit yAxis.range and remain positive on log10 axes. Unit must equal yAxis.unit.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/series/items/properties/error": {
+          "status": "reviewed",
+          "explanation": "Optional name of the column supplying nonnegative absolute symmetric y uncertainty, in yAxis.unit. A value dy draws endpoints y-dy and y+dy; omission draws only connected samples. This is an asserted interval, not a confidence level or fitted uncertainty.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ],
+          "defaultMeaning": "Omission draws connected samples without error bars."
+        },
+        "/properties/series/items/properties/colour": {
+          "status": "reviewed",
+          "explanation": "Series colour: red, blue, green or purple, default red. Choose a distinct colour for every series so independent raster checks can identify its samples and connecting segments.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ],
+          "defaultMeaning": "Omission selects red; other series must select distinct colours."
+        },
+        "/properties/xAxis": {
+          "status": "reviewed",
+          "explanation": "Horizontal axis definition with a label, declared unit, explicit range and optional scale. Its unit must match every mapped x column. The plot occupies 15\u201395 percent of the image width.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/xAxis/properties/label": {
+          "status": "reviewed",
+          "explanation": "Required plain ASCII axis name, at most 80 characters. The renderer appends the declared unit in parentheses. Choose a physical quantity such as Time or Reading; no enhanced text is interpreted.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/xAxis/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Required unit label appended to the visible axis name. It must exactly match mapped column units. Use 1 for dimensionless data. No automatic scaling, prefix conversion or dimensional analysis is performed.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/xAxis/properties/range": {
+          "status": "reviewed",
+          "explanation": "Required [minimum, maximum] bounds in this axis unit. Use increasing finite values with separation exceeding 1e-10 relative to their magnitude. All mapped samples and uncertainty endpoints must lie inside; log10 bounds must both be positive. No autoscaling or clipping is allowed.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/xAxis/properties/range/items": {
+          "status": "reviewed",
+          "explanation": "One finite numeric range endpoint in this axis unit, with magnitude at most 1e100. The first endpoint is the minimum and the second the maximum. Distinct increasing bounds are mandatory.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/xAxis/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Coordinate transform: linear by default, or log10 for a base-10 logarithmic axis. Log10 requires positive range bounds, samples and uncertainty endpoints. Error bars retain y-dy/y+dy meaning before this transform; log spacing is therefore asymmetric.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ],
+          "defaultMeaning": "Omission selects linear coordinates."
+        },
+        "/properties/yAxis": {
+          "status": "reviewed",
+          "explanation": "Vertical axis definition with a label, declared unit, explicit range and optional scale. Its unit must match every y and uncertainty column. The plot occupies 20\u201390 percent of image height measured upward from the bottom.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/yAxis/properties/label": {
+          "status": "reviewed",
+          "explanation": "Required plain ASCII axis name, at most 80 characters. The renderer appends the declared unit in parentheses. Choose a physical quantity such as Time or Reading; no enhanced text is interpreted.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/yAxis/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Required unit label appended to the visible axis name. It must exactly match mapped column units. Use 1 for dimensionless data. No automatic scaling, prefix conversion or dimensional analysis is performed.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/yAxis/properties/range": {
+          "status": "reviewed",
+          "explanation": "Required [minimum, maximum] bounds in this axis unit. Use increasing finite values with separation exceeding 1e-10 relative to their magnitude. All mapped samples and uncertainty endpoints must lie inside; log10 bounds must both be positive. No autoscaling or clipping is allowed.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/yAxis/properties/range/items": {
+          "status": "reviewed",
+          "explanation": "One finite numeric range endpoint in this axis unit, with magnitude at most 1e100. The first endpoint is the minimum and the second the maximum. Distinct increasing bounds are mandatory.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/yAxis/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Coordinate transform: linear by default, or log10 for a base-10 logarithmic axis. Log10 requires positive range bounds, samples and uncertainty endpoints. Error bars retain y-dy/y+dy meaning before this transform; log spacing is therefore asymmetric.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ],
+          "defaultMeaning": "Omission selects linear coordinates."
+        },
+        "/properties/width": {
+          "status": "reviewed",
+          "explanation": "Image width in pixels, 640\u20131600, default 800. Both native SVG viewport and PNG dimensions use this value; fixed screen margins determine the data plot width.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ],
+          "defaultMeaning": "Omission selects 800 pixels."
+        },
+        "/properties/height": {
+          "status": "reviewed",
+          "explanation": "Image height in pixels, 480\u20131200, default 600. Both outputs use this value; fixed margins leave room for title, axes and legend. No physical print size or DPI contract is implied.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ],
+          "defaultMeaning": "Omission selects 600 pixels."
+        }
+      }
+    }
+  }
+}

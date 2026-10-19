@@ -1,7 +1,9 @@
 # Schemaxis capabilities in detail
 
 Schemaxis describes repeatable ParaView, Blender, FreeCAD, Godot, Aseprite, FFmpeg,
-Inkscape, Shotcut, QGIS, Gmsh, CalculiX, Cantera, ngspice, Octave, R and LibreOffice Calc pipelines
+Inkscape, Shotcut, QGIS, Gmsh, CalculiX, Cantera, ngspice, Octave, R, LibreOffice Calc,
+KiCad, ImageJ, PrusaSlicer, Pandoc, Gnuplot, SQLite, MuPDF, ImageMagick, SoX,
+Graphviz, meshio, GDAL, OpenSCAD, Apache Arrow and QPDF workflows
 in JSON or optional YAML, executes them
 in native application processes, and retains plans, editable artifacts and verification
 evidence. It is David Gaden's independently developed project with bounded application adaptors.
@@ -40,8 +42,10 @@ It also supports named-boundary sizing, independently measured mesh quality and
 bounded refinement under explicit acceptance requirements, using the shared
 [feedback controller](feedback-studies.md). Each attempt retains its inputs,
 measurements and decisions; only an accepted mesh is published to later operations.
-[Cantera thermochemistry](cantera.md) adds verified ideal-gas properties and
-TP/HP equilibrium tables, with a Calc workbook handoff.
+[Cantera thermochemistry](cantera.md) adds verified ideal-gas properties,
+TP/HP equilibrium tables and closed adiabatic h2o2 reactor histories with an
+independently integrated reference. Verified numeric tables have a Calc handoff,
+including both reactor models.
 [ngspice circuits](ngspice.md) adds independently checked DC networks, AC RLC
 frequency responses and first-order RC transients, with shared authoring and a Calc handoff.
 Named sampled requirements report worst voltage/gain conditions and signed margins;
@@ -50,6 +54,48 @@ an unmet requirement blocks downstream publication without claiming continuous-e
 refinements, beam-theory agreement and named serviceability requirements.
 [R regression](r.md) checks numeric linear fits against an independent QR
 solve, reopens saved native models, and assesses finite training/held-out limits.
+Optional classical coefficient inference and interval requirements include explicit
+error assumptions and independent distribution checks.
+[KiCad boards](kicad.md) support two-layer board inspection, DRC and Excellon drill
+exports with bounded independent geometry checks.
+[ImageJ particles](imagej.md) support calibrated grayscale thresholding, independent
+component/measurement checks and a Calc handoff.
+[PrusaSlicer fabrication](prusaslicer.md) slices a closed STL with declared units and
+printer/material settings, then independently replays G-code. It does not control a printer.
+[Pandoc reports](pandoc.md) publish declared headings, paragraphs, text tables and
+captured PNG figures as standalone HTML and editable DOCX, checked through
+independent document inspection and fresh native DOCX readback.
+[Gnuplot charts](gnuplot.md) turn declared CSV series into SVG and PNG with
+linear/log axes and symmetric error bars, checked against independent geometry
+and raster samples. [SQLite summaries](sqlite.md) import typed related tables,
+enforce keys and publish ordered grouped integer totals with independent database
+inspection. [Apache Arrow tables](apachearrow.md) prepare explicitly typed nullable
+CSV as Parquet and a readable report, with filtering, column selection, renaming,
+integer widening and null replacement. An independent host reader checks every
+published value, null and type, including exact 64-bit identifiers and UTC
+microsecond timestamps. [MuPDF review](mupdf.md) captures PDF pages as ordered PNG/text with
+explicit density and rotation. [QPDF assembly](qpdf.md) selects, reorders, repeats and
+rotates pages from captured PDFs, then checks the published bytes against their sources
+with fresh QPDF and MuPDF observations at 36 dpi. Its narrow supported envelope and
+document-level losses are explicit; it makes no sanitisation claim. The assembled PDF
+can feed a MuPDF review. [ImageMagick preparation](imagemagick.md) crops,
+magnifies and rotates bounded PNGs with exact encoded-sample alpha handling and
+optional indexed comparison sheets.
+[SoX audio](sox.md) assembles frame-based PCM16 excerpts with explicit gain and
+linear fades, checked sample by sample. [Graphviz layouts](graphviz.md) turn named
+directed graphs into editable DOT, SVG and checked geometry, with explicit cycle
+and orientation policies. [meshio interchange](meshio.md) converts supported ASCII
+VTU/VTK triangle and tetra meshes with declared coordinate units, preserving
+ordered topology and scalar/vector point and cell arrays.
+[GDAL windows](gdal.md) extract bounded GeoTIFF regions and resize by explicit
+nearest sampling while checking every pixel, affine coordinates, CRS, band units
+and nodata. [OpenSCAD parts](openscad.md) construct millimetre mounting plates and
+annular spacers, publishing editable SCAD and STL checked against independent
+polygon boundaries, topology and volume. Circle approximation is explicit.
+[Godot assemblies](godot.md) support named transform groups and nested geometry,
+with checked local and world transforms, ownership and aggregate bounds.
+[Aseprite image input](aseprite.md) captures bounded PNGs into selected animation
+cels, with explicit replacement semantics and independent pixel checks.
 [Calc requirements](calc.md) enforce named cell bounds and weighted
 reconciliations in both XLSX and reopened ODS. The
 [beam-to-workbook example](beam-workbook.md) connects structural observations
@@ -92,6 +138,8 @@ Cantera `schemaxis.cantera/1`, ngspice `schemaxis.ngspice/1`,
 FFmpeg `schemaxis.ffmpeg/1`, Inkscape `schemaxis.inkscape/1`, Shotcut `schemaxis.shotcut/1`,
 QGIS `schemaxis.qgis/1`, experimental Premiere `schemaxis.premiere/1`,
 Octave `schemaxis.octave/1`, R `schemaxis.r/1`, Calc `schemaxis.calc/1`,
+KiCad `schemaxis.kicad/1`, ImageJ `schemaxis.imagej/1`, PrusaSlicer `schemaxis.prusaslicer/1`,
+Pandoc `schemaxis.pandoc/1`, Apache Arrow `schemaxis.apachearrow/1`, QPDF `schemaxis.qpdf/1`,
 and the cross-operation envelope `schemaxis.workflow/1`. See the
 [version and field table](json-input.md#1-basic-structure) before choosing a
 template; file handoff kinds remain explicitly scoped per route.
@@ -113,11 +161,14 @@ Host Python 3.10+ needs no third-party runtime package. Historical native qualif
 ParaView 5.13.3 `pvbatch`, Blender 5.2.2, FreeCAD 1.1.x, Godot 4.x or
 Aseprite 1.3.x, FFmpeg/FFprobe or a configured QGIS Python runtime, depending on
 the adaptor. Bounded numerical and structural qualification uses Octave 11.3.0,
-R 4.6.1, Calc 26.8.1.1 and CalculiX 2.23. Godot's optional PNG preview additionally
+R 4.6.1, Calc 26.8.1.1 and CalculiX 2.23. The newer bounded integrations use
+KiCad 10.0.7, ImageJ 1.54t on OpenJDK 21 and PrusaSlicer 2.9.6.
+Godot's optional PNG preview additionally
 needs a graphical display. Pass the selected runtime with `--paraview-root`,
 `--blender`, `--freecad`, `--godot`, `--aseprite`, `--ffmpeg`,
 `--qgis`, `--gmsh`, `--calculix`, `--cantera`, `--ngspice`, `--octave`,
-`--r` or `--calc`.
+`--r`, `--calc`, `--kicad`, `--imagej` or `--prusaslicer`.
+ImageJ also needs its core JAR through `--imagej-jar` or private `imagejJar` configuration.
 Configure the `inkscape` and `shotcut` executable locations for workflows;
 their standalone runs also accept the generic `--executable` override.
 The experimental Premiere panel uses the separate `--premiere-bridge` folder option.
@@ -532,9 +583,15 @@ reopens all three in a fresh process. The mounting bracket and flanged pipe exam
 continue through ParaView to Blender with explicit coordinate and unit conversion.
 See [examples, commands and verification](freecad-examples.md).
 
+[Sketch-based mechanical parts](freecad-part-design.md) use constrained XY sketches,
+one native Body, a first Pad and through-all Pockets. Persistent named dimensions
+drive sketch and Pad sizes, so the saved model remains editable after reopening.
+Finite variants retain that feature history; live editing and scalar design studies
+with persistent parameters are outside this increment.
+
 ### Expanded CAD and mesh workflows
 
-FreeCAD exposes 18 feature operations including polygon and constrained
+FreeCAD exposes 21 feature operations including Body, Pad, Pocket, polygon and constrained
 rectangle/circle sketches, extrusion, revolution, loft, list unions, fillet/chamfer, solid intersection
 and STEP input. Its separate assembly document supports linked parts and fixed
 joint trees. Blender exposes 37 operations,

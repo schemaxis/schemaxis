@@ -115,7 +115,8 @@ class StudioApplication(ConsoleApplication):
 
     def author(self, value):
         if value.get('action') == 'validate_source':
-            return self.validate_source({key: value[key] for key in ('provider', 'source', 'format') if key in value})
+            return self.validate_source({key: value[key] for key in
+                ('provider', 'source', 'format', 'document', 'revision', 'operation') if key in value})
         # Focusing and editing are one transaction. Another tab cannot change
         # the active document between the revision check and mutation.
         with self.job_lock:
@@ -259,16 +260,22 @@ class StudioApplication(ConsoleApplication):
                     self.refresh_snapshot()
 
     def validate_source(self, value):
-        keys(value, ('provider', 'source', 'format'), 'validate')
+        from .studio_validation import CONTEXT_FIELDS, operation_validator
+        keys(value, ('provider', 'source', 'format', *CONTEXT_FIELDS), 'validate')
         provider, source = value.get('provider'), value.get('source')
         if provider not in CONSOLE_TYPES:
             fail('UNKNOWN_PROVIDER', 'choose a registered adaptor or workflow type', 'provider')
         if not isinstance(source, str) or len(source.encode('utf-8')) > authoring.LIMIT:
             fail('INVALID_DOCUMENT', 'source must be text of at most one MiB', 'source')
         with self.lock:
+            validation = None
+            check = lambda candidate: self.session._validate(candidate, provider)
+            if any(key in value for key in CONTEXT_FIELDS):
+                check, validation = operation_validator(self.session, value, provider)
             document, diagnostics = authoring.analyse(
-                source, lambda candidate: self.session._validate(candidate, provider), value.get('format', 'json'))
-        return {'valid': not diagnostics, 'diagnostics': diagnostics}
+                source, check, value.get('format', 'json'))
+        return {'valid': not diagnostics, 'diagnostics': diagnostics,
+                **({'validation': validation} if validation is not None else {})}
 
     # Discovery -----------------------------------------------------------
 

@@ -55,7 +55,8 @@ FRAMEWORK_DOCUMENTS = frozenset('schemaxis.' + stem for stem in (
     'workflow', 'workflow-design', 'workflow-template', 'workflow-values', 'study', 'plan', 'reference',
     'resource', 'views', 'agent', 'feedback', 'observation', 'output-naming', 'capabilities', 'readiness',
     'artifact-metadata', 'adaptor-delivery', 'adaptor-execution', 'adaptor-qualification',
-    'studio-adaptor', 'studio-guidance', 'studio-settings'))
+    'studio-adaptor', 'studio-guidance', 'studio-settings', 'schema-snapshot', 'schema-bundle',
+    'schema-index', 'storage-policy', 'storage-plan', 'storage-bundle'))
 # Options that the run, inspect and console parsers define themselves.
 FRAMEWORK_FLAGS = frozenset({'-h', '--help', '--input-format', '--output-directory', '--executable',
                              '--timeout', '--resume', '--node', '--visit', '--provider', '--workspace',
@@ -500,6 +501,8 @@ def run(document, directory, *, locations=None, timeout=300, **legacy_locations)
 def verify(directory, document=None):
     from pathlib import Path
     directory = Path(directory)
+    from schemaxis.schema_snapshots import verify_run
+    verify_run(directory)
     document = json.loads((directory/'authored.json').read_text()) if document is None else document
     _, route = resolve(document, legacy=True)
     from schemaxis.adaptor_runtime import is_common, verify as verify_common
@@ -517,6 +520,8 @@ def verify(directory, document=None):
 def _verify_native(directory, document):
     from pathlib import Path
     directory = Path(directory)
+    from schemaxis.schema_snapshots import verify_run
+    verify_run(directory)
     if json.loads((directory/'authored.json').read_text()) != document:
         fail('VERIFICATION_FAILED', 'native input differs from the resolved visit', str(directory))
     hook = route_hook(document, 'verifyAttempt', legacy=True)

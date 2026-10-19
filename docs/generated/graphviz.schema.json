@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.graphviz/1"
+    },
+    "operation": {
+      "const": "layout"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label"
+        ]
+      },
+      "minItems": 2,
+      "maxItems": 200
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "target"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 500
+    },
+    "rankDirection": {
+      "enum": [
+        "TB",
+        "LR"
+      ],
+      "default": "TB"
+    },
+    "graphPolicy": {
+      "enum": [
+        "dag",
+        "cyclic"
+      ],
+      "default": "dag"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "nodes",
+    "edges"
+  ]
+}

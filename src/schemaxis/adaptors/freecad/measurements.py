@@ -33,7 +33,8 @@ def native_observations(doc, prepared, objects=None):
     from .native import snapshot
     requested=prepared.get('measurements',[])
     if objects is None:
-        objects={node['id']:doc.getObject('N'+str(i)) for i,node in enumerate(prepared['nodes'])}
+        from .operations import output_names
+        objects={identity:doc.getObject(name) for identity,name in output_names(prepared).items()}
     result={};edge_count=0
     for item in requested:
         identity=item['node']

@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[equilibrate](#equilibrate), [gas](#gas), [thermoSweep](#thermosweep)
+[equilibrate](#equilibrate), [gas](#gas), [reactorHistory](#reactorhistory), [thermoSweep](#thermosweep)
 
 ## equilibrate
 
@@ -34,7 +34,7 @@ Native binding: `cantera.ThermoPhase.equilibrate`. Output kind: `["table"]`.
 
 ## gas
 
-Defines the starting gas state for the table node: a pressure in pascals and a hydrogen/oxygen/inert mixture drawn from the ten species of Cantera's h2o2.yaml ideal-gas phase ohmech. It produces no table itself; it is always the first of the two nodes, and the thermoSweep or equilibrate node that follows evaluates it at each requested temperature. Amounts are proportions on the chosen mole or mass basis and are normalised, so they need not sum to one. Choose another tool when the mixture contains carbon, NOx or condensed phases; this mechanism cannot represent them.
+Defines the starting gas state for the second node: a pressure in pascals and a hydrogen/oxygen/inert mixture drawn from the ten species of Cantera's h2o2.yaml ideal-gas phase ohmech. It produces no table itself; it is always the first of the two nodes, and the thermoSweep or equilibrate node that follows evaluates it at each requested temperature, while a reactorHistory node uses it as the reactor state at time zero. Amounts are proportions on the chosen mole or mass basis and are normalised, so they need not sum to one. Choose another tool when the mixture contains carbon, NOx or condensed phases; this mechanism cannot represent them.
 
 Common mistakes and assumptions:
 
@@ -48,9 +48,37 @@ Inputs: none.
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `pressure` | Absolute pressure of the gas, applied at every temperature in the table and held constant by both TP and HP equilibrium. For an ideal gas, density scales in proportion to pressure; at equilibrium, higher pressure suppresses dissociation (less H, O and OH at a given temperature). | `{"type":"number","minimum":1000,"maximum":10000000}` | `101325` |
+| `pressure` | Absolute pressure of the gas, applied at every temperature in the table and held constant by both TP and HP equilibrium. For reactorHistory it is the initial pressure: a constantPressure reactor keeps it, while a constantVolume reactor's pressure rises as heat is released. For an ideal gas, density scales in proportion to pressure; at equilibrium, higher pressure suppresses dissociation (less H, O and OH at a given temperature). | `{"type":"number","minimum":1000,"maximum":10000000}` | `101325` |
 | `basis` | Whether the composition amounts are mole (number) proportions or mass proportions. With mole, Schemaxis sets the state with Cantera's TPX; with mass, with TPY, so the same numbers describe a different mixture. Choose mole for stoichiometric recipes such as H2 2, O2 1; choose mass when the mixture is specified by weight. The table always reports both mole fractions (X_) and mass fractions (Y_). | `{"type":"enum","values":["mole","mass"]}` | `"mole"` |
-| `composition` | The initial mixture as a list of species with relative amounts on the chosen basis. Amounts are normalised to fractions summing to one, so H2 2, O2 1 and H2 0.667, O2 0.333 describe the same gas; species not listed start at zero. Which elements are present (H, O, N, Ar) determines which species equilibrate may form. | `{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","properties":{"species":{"type":"enum","values":["H2","H","O","O2","OH","H2O","HO2","H2O2","AR","N2"],"required":true},"amount":{"type":"number","minimum":0,"maximum":1000000.0,"required":true}}}}` | **required** |
+| `composition` | The initial mixture as a list of species with relative amounts on the chosen basis. Amounts are normalised to fractions summing to one, so H2 2, O2 1 and H2 0.667, O2 0.333 describe the same gas; species not listed start at zero. Which elements are present (H, O, N, Ar) determines which species equilibrate or reactorHistory may form. | `{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","properties":{"species":{"type":"enum","values":["H2","H","O","O2","OH","H2O","HO2","H2O2","AR","N2"],"required":true},"amount":{"type":"number","minimum":0,"maximum":1000000.0,"required":true}}}}` | **required** |
+
+
+## reactorHistory
+
+Integrates one closed, adiabatic, homogeneous ideal-gas reactor in time from the gas node state at the chosen initial temperature, using Cantera's IdealGasConstPressureReactor (pressure held) or IdealGasReactor (volume held) in a ReactorNet with the 29-reaction h2o2 mechanism. It publishes results.csv with one row per requested sample time (time, temperature, pressure, density, energies, heat capacities, mole and mass fractions) and chemistry-summary.json with the reactor model, solver settings read back from Cantera, the ignition delay by the declared temperature-rise criterion, conservation residuals and the verification tolerances. Choose it to see how fast a hydrogen mixture reacts, for example an ignition delay or the approach to adiabatic equilibrium; choose equilibrate when only the final equilibrium state matters.
+
+Common mistakes and assumptions:
+
+- The reactor is adiabatic and closed: no heat loss, walls, inflow, mixing or transport. Real shock tubes and engines differ, so the ignition delay is a property of this model, not a measurement.
+- The ignition delay is defined only by ignitionTemperatureRise (first time T reaches initial T plus the rise, interpolated linearly between native integrator steps); other definitions, such as the peak of OH or of dT/dt, can give different values.
+- Samples are not interpolated between rows: put enough sample times around the expected ignition to see the temperature rise, and note that the CSV alone does not show the shape between samples.
+- Verification integrates the same mechanism independently in host Python; this checks the native result against the stated model, not the model against experiments.
+
+Native binding: `cantera.ReactorNet`. Output kind: `["table"]`.
+
+| Input port | Multiplicity | Required | Kind |
+| --- | --- | --- | --- |
+| `input` | one node | yes | `gas` |
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `model` | constantPressure uses Cantera's IdealGasConstPressureReactor: pressure stays at the gas node value, the volume expands as the gas heats, and specific enthalpy is conserved. constantVolume uses IdealGasReactor: the 1 m3 volume and the density stay fixed, pressure rises with heat release, and specific internal energy is conserved. Both are closed and adiabatic. | `{"type":"enum","values":["constantPressure","constantVolume"]}` | `"constantPressure"` |
+| `temperature` | Temperature of the gas at time zero; the gas node supplies the initial pressure and composition. The response is very sensitive to it: with this mechanism, stoichiometric hydrogen/air at 101325 Pa at constant pressure reaches a 400 K rise after about 0.3 ms from 1000 K, 9 ms from 950 K and 0.24 s from 900 K, and not within 1 s from 850 K or below. | `{"type":"number","minimum":300,"maximum":3500}` | `1000` |
+| `times` | The instants at which the reactor state is recorded, one CSV row each, in strictly increasing order from 0 to at most 1 s. Cantera chooses its own internal steps; it advances exactly to each listed time. Include 0 to record the initial state. The last time also ends the ignition search. | `{"type":"array","minItems":2,"maxItems":100,"items":{"type":"number","minimum":0,"maximum":1}}` | `[0,0.0001,0.0002,0.0003,0.0004,0.0005,0.001]` |
+| `relativeTolerance` | Relative error tolerance assigned to Cantera's ReactorNet.rtol for its CVODES integrator and read back before integration. Smaller values give more accurate histories at the cost of more steps. | `{"type":"number","minimum":1e-12,"maximum":1e-08}` | `1e-09` |
+| `absoluteTolerance` | Absolute error tolerance assigned to Cantera's ReactorNet.atol and read back. It mainly controls the accuracy of tiny radical mass fractions during the induction period, which decide when ignition happens. | `{"type":"number","minimum":1e-20,"maximum":1e-12}` | `1e-15` |
+| `maxSteps` | Maximum number of internal CVODES steps Cantera may take before reaching the next sample time (ReactorNet.max_steps); it bounds the work of each interval and is read back. The separate ignition pass is also bounded to 200000 steps in total. | `{"type":"integer","minimum":100,"maximum":100000}` | `20000` |
+| `ignitionTemperatureRise` | Defines the reported ignition delay: the first time the reactor temperature reaches the initial temperature plus this rise, interpolated linearly in time between consecutive native integrator steps. The same rule is applied to the independent host integration, and the two delays must agree within 1%. The delay is null if the threshold is not reached by the last sample time. | `{"type":"number","minimum":10,"maximum":1000}` | `400` |
 
 
 ## thermoSweep

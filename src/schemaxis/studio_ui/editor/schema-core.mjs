@@ -249,6 +249,20 @@ function matchesArray(context, schema, instance) {
   return true;
 }
 
+/** JSON Schema counts Unicode code points, rather than UTF-16 code units. */
+export function stringLength(value) {
+  let length = 0;
+  for (const character of value) length += 1;
+  return length;
+}
+
+function matchesString(schema, value) {
+  if (schema.minLength === undefined && schema.maxLength === undefined) return true;
+  const length = stringLength(value);
+  return !(schema.minLength !== undefined && length < schema.minLength)
+    && !(schema.maxLength !== undefined && length > schema.maxLength);
+}
+
 function matchesNumber(schema, value) {
   if (schema.minimum !== undefined && value < schema.minimum) {
     return false;
@@ -286,6 +300,9 @@ export function matches(context, schema, instance) {
     return false;
   }
   if (typeof instance === 'number' && !matchesNumber(schema, instance)) {
+    return false;
+  }
+  if (typeof instance === 'string' && !matchesString(schema, instance)) {
     return false;
   }
   if (isObject(instance) && !matchesObject(context, schema, instance)) {

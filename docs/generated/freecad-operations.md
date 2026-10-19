@@ -8,11 +8,26 @@ See [CAD and mesh workflows](../cad-and-mesh-workflows.md) for native and tessel
 
 ## Index
 
-[box](#box), [chamfer](#chamfer), [circle](#circle), [common](#common), [cone](#cone), [cut](#cut), [cylinder](#cylinder), [extrude](#extrude), [fillet](#fillet), [fuse](#fuse), [loft](#loft), [multiFuse](#multifuse), [polygon](#polygon), [readSTEP](#readstep), [rectangle](#rectangle), [revolve](#revolve), [sphere](#sphere), [torus](#torus)
+[body](#body), [box](#box), [chamfer](#chamfer), [circle](#circle), [common](#common), [cone](#cone), [cut](#cut), [cylinder](#cylinder), [extrude](#extrude), [fillet](#fillet), [fuse](#fuse), [importSTEP](#importstep), [loft](#loft), [multiFuse](#multifuse), [pad](#pad), [pocket](#pocket), [polygon](#polygon), [readSTEP](#readstep), [rectangle](#rectangle), [revolve](#revolve), [sphere](#sphere), [torus](#torus)
+
+## body
+
+Create the native PartDesign container for one mechanical part and its feature history.
+
+Common mistakes and assumptions:
+
+- A Body is a container, not a solid output. This slice supports one Body at the world origin, one first Pad and a linear Pocket chain.
+
+Native binding: `PartDesign::Body`. Output kind: `["body"]`.
+
+Inputs: none.
+
+Options: none.
+
 
 ## box
 
-Creates a native Part::Box: an axis-aligned rectangular solid whose minimum corner sits at origin and which extends length along +X, width along +Y and height along +Z, in millimetres. Choose it for plates, stock blanks and rectangular cut tools. It has no rotation option; for a block in another orientation extrude a rectangle or polygon along the required direction. Schemaxis always assigns all four settings (defaults: a 10 mm cube at the world origin), and the feature stays editable in the published FCStd.
+Creates a native Part::Box: an axis-aligned rectangular solid whose minimum corner sits at origin and which extends length along +X, width along +Y and height along +Z, in millimetres. Choose it for plates, stock blanks and rectangular cut tools. It has no rotation option; for a block in another orientation extrude a rectangle or polygon along the required direction. Schemaxis always assigns all four settings (defaults: a 10 mm cube at the world origin), and the feature stays editable in the published FCStd. In batch parts, parameters plus drive can retain supported length relationships in a native VarSet instead of materialising only the current number.
 
 Common mistakes and assumptions:
 
@@ -56,7 +71,7 @@ Native binding: `Part::Chamfer`. Output kind: `["solid"]`.
 
 ## circle
 
-Creates a circular sketch profile centred on origin in the XY, XZ or YZ plane, built as a fully constrained Sketcher sketch with a constraint named radius. Choose it as a section for loft (for example two circles of different radii for a tapered duct) or to extrude a round bar along any direction; for a plain cylinder, cylinder needs no profile node.
+Creates a circular sketch profile centred on origin in the XY, XZ or YZ plane, built as a fully constrained Sketcher sketch with a constraint named radius. Choose it as a section for loft (for example two circles of different radii for a tapered duct) or to extrude a round bar along any direction; for a plain cylinder, cylinder needs no profile node. Optional inputs.body places this sketch in an origin-based PartDesign Body for Pad/Pocket history. Named dimensions can use persistent parameters and drive in batch runs. Optional centre gives signed [x,y] coordinates and named centreX/centreY constraints instead of coincidence at the origin.
 
 Common mistakes and assumptions:
 
@@ -65,13 +80,16 @@ Common mistakes and assumptions:
 
 Native binding: `Sketcher::SketchObject`. Output kind: `["profile"]`.
 
-Inputs: none.
+| Input port | Multiplicity | Required | Kind |
+| --- | --- | --- | --- |
+| `body` | one node | no | `body` |
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
 | `radius` | Radius of the circle in millimetres, stored as the sketch constraint named radius. | `{"type":"number","minimum":0,"exclusiveMinimum":true,"maximum":100000}` | `5` |
 | `plane` | World plane containing the circle; its normal is +Z on XY, along −Y on XZ and +X on YZ. Pick the plane perpendicular to the direction you will extrude along or loft through. | `{"type":"enum","values":["XY","XZ","YZ"]}` | `"XY"` |
 | `origin` | World coordinates [x, y, z] of the circle's centre. For loft sections, offset successive circles along the plane normal (for example origin [0, 0, 30] for the upper section on XY). | `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `centre` | Signed local sketch coordinates [x, y] in mm, each within +/-100000. Supplying centre creates named centreX/centreY constraints, including zero or negative values; omitting it keeps the centred coincidence constraint. Coordinate drivers are not exposed. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":2,"maxItems":2}` | omitted |
 
 
 ## common
@@ -138,7 +156,7 @@ Options: none.
 
 ## cylinder
 
-Creates a native Part::Cylinder whose base circle is centred at origin and which extends height along axis. Choose it for pins, bosses and round bars, and above all as the tool for a round hole in cut. Unlike circle + extrude it needs no separate profile node; the axis may point in any direction.
+Creates a native Part::Cylinder whose base circle is centred at origin and which extends height along axis. Choose it for pins, bosses and round bars, and above all as the tool for a round hole in cut. Unlike circle + extrude it needs no separate profile node; the axis may point in any direction. In batch parts, parameters plus drive can retain supported length relationships in a native VarSet instead of materialising only the current number.
 
 Common mistakes and assumptions:
 
@@ -160,7 +178,7 @@ Inputs: none.
 
 ## extrude
 
-Sweeps a closed profile (polygon, rectangle or circle) a fixed length along a direction to make a prism-like solid (native Part::Extrusion with Solid enabled, a custom direction, one-sided, no taper). The solid stays linked to its profile, so editing the sketch in FreeCAD updates it. A direction that is not perpendicular to the profile gives an oblique prism. Use revolve for solids of revolution and loft to change section along the way.
+Sweeps a closed profile (polygon, rectangle or circle) a fixed length along a direction to make a prism-like solid (native Part::Extrusion with Solid enabled, a custom direction, one-sided, no taper). The solid stays linked to its profile, so editing the sketch in FreeCAD updates it. A direction that is not perpendicular to the profile gives an oblique prism. Use revolve for solids of revolution and loft to change section along the way. In batch parts, parameters plus drive can retain supported length relationships in a native VarSet instead of materialising only the current number.
 
 Common mistakes and assumptions:
 
@@ -221,6 +239,31 @@ Native binding: `Part::Fuse`. Output kind: `["solid"]`.
 Options: none.
 
 
+## importSTEP
+
+Bring one external STEP solid (for example a supplier part) into the model with explicit units, axis orientation and placement, check it against facts you declare from its drawing or datasheet, optionally merge coplanar faces, and continue with ordinary cuts, fillets, measurements and checked STEP, STL and FCStd publications.
+
+Common mistakes and assumptions:
+
+- Imported geometry has no sketches, parameters or feature history; edit it by placement or later features.
+- Declared facts are checked on the exact solid; they are not a guarantee of identity or orientation for symmetric parts.
+- Live preview does not support importSTEP; use a batch run.
+- Runs made before hardened export verification report RERUN_REQUIRED instead of verified.
+
+Native binding: `Part::Feature`. Output kind: `["solid"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `file` | Path of a plain ISO 10303-21 STEP file (AP203, AP214 or AP242) holding exactly one solid, or a workflow artifact reference to a verified STEP publication. A relative path resolves against the directory planning runs in, and that resolved path is recorded. Planning reads at most 32 MiB, 100000 entities and 2000 oriented edges per loop; the run keeps a byte-identical copy and saved verification uses only that copy. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `units` | The length unit the STEP file itself assigns to its shape: mm, cm, m or inch. It asserts what the file means and never rescales it; FreeCAD converts the assigned unit to millimetres. A different assigned unit fails with UNIT_MISMATCH, and a file with no assigned length unit fails with UNDECLARED_UNIT because units are never guessed. | `{"type":"enum","values":["mm","cm","m","inch"]}` | **required** |
+| `orientation` | Which signed file axes become the part +Z and +X; +Y completes a right-handed frame. The default keeps the file axes. A Y-up export is mapped with z "+Y" and x "+X". A reflection cannot be expressed, so orientation never changes handedness. | `{"type":"object","properties":{"z":{"type":"enum","values":["+X","-X","+Y","-Y","+Z","-Z"],"default":"+Z"},"x":{"type":"enum","values":["+X","-X","+Y","-Y","+Z","-Z"]}}}` | `{"z":"+Z"}` |
+| `placement` | Where the oriented part is placed in the model. It is stored as the editable placement of the imported source object, so a later GUI edit moves the part and its refine output together. | `{"type":"object","properties":{"position":{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3,"default":[0,0,0]},"clocking":{"type":"number","minimum":-360,"maximum":360,"default":0}}}` | `{"position":[0,0,0],"clocking":0}` |
+| `expect` | Facts the imported part must satisfy, measured on the exact solid in the part frame: after units and orientation, before placement. Volume is required, together with a centre of mass or at least one inside and one outside point, because volume, area and bounds alone accept a mirrored or turned part. These checks verify only the declared facts; a symmetric part or poorly chosen points can still hide a mirror, a turn or a different part, and FreeCAD may silently repair a file's face orientation. | `{"type":"object","properties":{"volume":{"type":"object","required":true,"properties":{"value":{"type":"number","minimum":0,"exclusiveMinimum":true,"maximum":1000000000000000.0,"required":true},"relativeTolerance":{"type":"number","minimum":1e-09,"maximum":0.01,"default":1e-06}}},"centreOfMass":{"type":"object","properties":{"value":{"type":"array","items":{"type":"number","minimum":-1000000.0,"maximum":1000000.0},"minItems":3,"maxItems":3,"required":true},"tolerance":{"type":"number","minimum":1e-06,"maximum":1,"default":0.01}}},"bounds":{"type":"object","properties":{"value":{"type":"array","items":{"type":"number","minimum":-1000000.0,"maximum":1000000.0},"minItems":6,"maxItems":6,"required":true},"tolerance":{"type":"number","minimum":1e-06,"maximum":1,"default":0.01}}},"points":{"type":"object","properties":{"inside":{"type":"array","items":{"type":"array","items":{"type":"number","minimum":-1000000.0,"maximum":1000000.0},"minItems":3,"maxItems":3},"minItems":0,"maxItems":32,"default":[]},"outside":{"type":"array","items":{"type":"array","items":{"type":"number","minimum":-1000000.0,"maximum":1000000.0},"minItems":3,"maxItems":3},"minItems":0,"maxItems":32,"default":[]},"guard":{"type":"number","minimum":1e-06,"maximum":10,"required":true}}}}}` | **required** |
+| `refine` | Add a parametric Part::Refine output that merges coplanar and co-cylindrical faces of the import. It must keep volume and centre of mass within the declared tolerances and must not add faces, otherwise PREPARATION_CHANGED_GEOMETRY; it follows the source placement and keeps identity placement itself. No other repair or healing is performed. | `{"type":"boolean"}` | `false` |
+
+
 ## loft
 
 Builds a solid that blends through two or more closed profiles in the listed order (native Part::Loft with Solid on and Closed off), for tapered ducts, nozzles and transitions such as round-to-square. Each section must be a profile node at a distinct position, usually offset along a common normal with origin. ruled chooses straight-line or smooth surfaces between sections.
@@ -263,6 +306,46 @@ Native binding: `Part::MultiFuse`. Output kind: `["solid"]`.
 | `refine` | true applies FreeCAD's shape refinement to the union: adjoining faces that lie on the same surface are merged and the seam edges between them removed. false keeps every face fragment from the boolean. Refinement changes face and edge numbering, so index-based edges for a later fillet or chamfer must be read from the result built with the same setting. | `{"type":"boolean"}` | `true` |
 
 
+## pad
+
+Turn an owned constrained sketch into the first solid of its Body, extruded along +Z.
+
+Common mistakes and assumptions:
+
+- Requires an earlier Body and a profile owned by that Body. The first Pad has no native BaseFeature; length may use a persistent driver.
+
+Native binding: `PartDesign::Pad`. Output kind: `["solid"]`.
+
+| Input port | Multiplicity | Required | Kind |
+| --- | --- | --- | --- |
+| `body` | one node | yes | `body` |
+| `profile` | one node | yes | `profile` |
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `length` | Positive first-Pad thickness in mm along +Z, default 10 mm. Omit when drive.length supplies a persistent native relationship. | `{"type":"number","minimum":0,"exclusiveMinimum":true,"maximum":100000}` | `10` |
+
+
+## pocket
+
+Cut a through hole from the current Body tip using an unused sketch in the same Body.
+
+Common mistakes and assumptions:
+
+- The XY sketch cuts along +Z through all stock. Fixed depth and other side modes are unsupported. Select the final solid tip as output.
+
+Native binding: `PartDesign::Pocket`. Output kind: `["solid"]`.
+
+| Input port | Multiplicity | Required | Kind |
+| --- | --- | --- | --- |
+| `base` | one node | yes | `solid` |
+| `profile` | one node | yes | `profile` |
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `extent` | The supported value throughAll retains native ThroughAll intent as the stock thickness changes. Fixed length and other side/extent modes are deliberately unsupported. | `{"type":"enum","values":["throughAll"]}` | `"throughAll"` |
+
+
 ## polygon
 
 Creates a closed, straight-sided sketch profile (Sketcher::SketchObject) from ordered 2D vertices on the XY, XZ or YZ plane. It produces a profile, not a solid: feed it to extrude, revolve or loft. Choose it for L-sections, trapezoids and other outlines; use rectangle or circle for those shapes, since they are fully dimension-constrained in FreeCAD. Schemaxis closes the outline and rejects repeated vertices, zero area and self-intersection before FreeCAD runs.
@@ -286,12 +369,12 @@ Inputs: none.
 
 ## readSTEP
 
-Imports one solid from a STEP file as a static Part::Feature so that later nodes can cut, fuse, fillet or measure it, for example to drill a supplier part or to continue from a STEP published by an earlier workflow step. Schemaxis copies the file into the run directory, records its SHA-256 digest and rechecks both copies during verification. The shape has no feature history, and the file must contain exactly one valid solid.
+Imports one solid from a STEP file as a static Part::Feature so that later nodes can cut, fuse, fillet or measure it, for example to drill a supplier part or to continue from a STEP published by an earlier workflow step. Schemaxis copies the file into the run directory and records its SHA-256 digest; saved verification checks that retained copy, so a moved or exported run still verifies after the original is removed, while a new plan or resume reads the current file. The shape has no feature history, and the file must contain exactly one valid solid. For declared units, orientation, checked facts and refine, use importSTEP.
 
 Common mistakes and assumptions:
 
 - Multi-body or assembly STEP files fail with INVALID_GEOMETRY; export a single solid.
-- Schemaxis infers no units for the file; check imported bounds or volume with a measurement before relying on its scale.
+- readSTEP does not check units: FreeCAD silently applies the unit the file assigns and assumes millimetres when none is assigned. Use importSTEP with explicit units and expectations, or check bounds and volume with a measurement.
 - Live preview does not support readSTEP (UNSUPPORTED_LIVE_INPUT); use a batch run.
 - Changing the source file before verification fails with INPUT_CHANGED.
 
@@ -301,12 +384,12 @@ Inputs: none.
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `file` | Path of the STEP file to import; it must contain exactly one valid solid. A relative path resolves against the working directory of the Schemaxis process (for Studio, the folder it was launched from), not the JSON file's folder. Schemaxis copies the file into the run directory and checks that neither copy changes before verification. In a workflow, an artifact reference to an earlier verified STEP output can supply the path. | `{"type":"string","minLength":1}` | **required** |
+| `file` | Path of the STEP file to import; it must contain exactly one valid solid. A relative path resolves against the working directory of the Schemaxis process (for Studio, the folder it was launched from), not the JSON file's folder. Schemaxis copies the file into the run directory and checks that the source has not changed during capture; saved verification uses only the retained copy. In a workflow, an artifact reference to an earlier verified STEP output can supply the path. | `{"type":"string","minLength":1}` | **required** |
 
 
 ## rectangle
 
-Creates a rectangular sketch profile centred on origin in the XY, XZ or YZ plane. Schemaxis builds it as a fully constrained Sketcher sketch with constraints named width and height, so the dimensions stay editable in FreeCAD and linked extrusions follow them. It is a profile: extrude, revolve or loft it to make a solid; for an axis-aligned block from a corner, box is simpler.
+Creates a rectangular sketch profile centred on origin in the XY, XZ or YZ plane. Schemaxis builds it as a fully constrained Sketcher sketch with constraints named width and height, so the dimensions stay editable in FreeCAD and linked extrusions follow them. It is a profile: extrude, revolve or loft it to make a solid; for an axis-aligned block from a corner, box is simpler. Optional inputs.body places this sketch in an origin-based PartDesign Body for Pad/Pocket history. Named dimensions can use persistent parameters and drive in batch runs.
 
 Common mistakes and assumptions:
 
@@ -316,7 +399,9 @@ Common mistakes and assumptions:
 
 Native binding: `Sketcher::SketchObject`. Output kind: `["profile"]`.
 
-Inputs: none.
+| Input port | Multiplicity | Required | Kind |
+| --- | --- | --- | --- |
+| `body` | one node | no | `body` |
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |

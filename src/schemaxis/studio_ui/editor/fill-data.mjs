@@ -1,6 +1,7 @@
 // Durable field markers, choices and literal validation shared by the fill UI.
 import {escapeSegment, parsePointer, rangeOfPointer} from './json-pointer.mjs';
 import {documentValue} from './json-parse.mjs';
+import {stringLength} from './schema-core.mjs';
 
 export const isFill = (value) => Boolean(value && typeof value === 'object' && typeof value.$fill === 'string');
 
@@ -68,10 +69,13 @@ export function checkField(value, field) {
     return 'Choose a listed value.';
   }
   if (typeof value === 'string') {
-    if (field.minLength !== undefined && value.length < field.minLength) {
+    // Unicode code points, matching normal forms and the host; unconstrained text is not counted.
+    const bounded = field.minLength !== undefined || field.maxLength !== undefined;
+    const length = bounded ? stringLength(value) : 0;
+    if (field.minLength !== undefined && length < field.minLength) {
       return `Use at least ${field.minLength} characters.`;
     }
-    if (field.maxLength !== undefined && value.length > field.maxLength) {
+    if (field.maxLength !== undefined && length > field.maxLength) {
       return `Use at most ${field.maxLength} characters.`;
     }
     if (field.pattern && !new RegExp(field.pattern).test(value)) {

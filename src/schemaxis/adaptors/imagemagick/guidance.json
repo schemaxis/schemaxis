@@ -1,0 +1,269 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "raster": {
+      "status": "reviewed",
+      "explanation": "Run the raster preparation recipe: crop, integer magnification, quarter turns, explicit alpha and optional indexed sheet.",
+      "pitfalls": [
+        "Encoded sRGB sample arithmetic; no colour management, smoothing, scripts or visual text labels.",
+        "Only bounded RGB/RGBA8 PNG with exact independent pixel qualification."
+      ],
+      "sources": [
+        "docs/imagemagick.md"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.imagemagick/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Prepare exact PNG details for comparison or publication. Inputs become captured immutable evidence; native ImageMagick executes only this bounded recipe.",
+          "pitfalls": [
+            "Choose a supported PNG rather than authoring a command or format prefix."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the PNG preparation document contract. This identifies authored structure, not the installed ImageMagick release.",
+          "pitfalls": [
+            "Use schemaxis.imagemagick/1."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Run the raster preparation recipe: crop, integer magnification, quarter turns, explicit alpha and optional indexed sheet.",
+          "pitfalls": [
+            "Other ImageMagick operations are outside this contract."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        },
+        "/properties/images": {
+          "status": "reviewed",
+          "explanation": "List 1\u20138 images in output order. Each becomes image-NN.png and one sheet tile if a sheet is enabled. Combined input and output budgets apply.",
+          "pitfalls": [
+            "Order determines artifact index and row-major tile placement."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        },
+        "/properties/images/items": {
+          "status": "reviewed",
+          "explanation": "Describe one captured PNG and its exact pixel preparation. ID labels its metadata; filenames are generated from order.",
+          "pitfalls": [
+            "Omit crop for the whole source; scale 1 and quarterTurns 0 preserve dimensions."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        },
+        "/properties/images/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Give this view a distinct ASCII metadata identifier, beginning with a letter and using letters, numbers, hyphen or underscore.",
+          "pitfalls": [
+            "IDs are metadata, not visual labels; repeated IDs are rejected."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        },
+        "/properties/images/items/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute existing local RGB/RGBA8 non-interlaced PNG. Its bytes are captured and independently decoded before the native child; verified image artifact bindings also resolve here.",
+          "pitfalls": [
+            "No URLs, prefixes, symlinks, palette/greyscale/16-bit, APNG or ICC profiles. Changing bytes at the same path invalidates reuse."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "fileExtensions": [
+            ".png"
+          ]
+        },
+        "/properties/images/items/properties/crop": {
+          "status": "reviewed",
+          "explanation": "Select a rectangular detail measured from the top-left of the source in integer pixels. Omitting crop retains every source sample.",
+          "pitfalls": [
+            "The rectangle must lie completely inside the source; it never clips or pads automatically."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        },
+        "/properties/images/items/properties/crop/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based left edge in source pixels, increasing rightward. x=1 starts at the second source column.",
+          "pitfalls": [
+            "x plus width must not exceed source width."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "units": "integer pixels"
+        },
+        "/properties/images/items/properties/crop/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based top edge in source pixels, increasing downward. y=1 starts at the second source row.",
+          "pitfalls": [
+            "y plus height must not exceed source height."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "units": "integer pixels"
+        },
+        "/properties/images/items/properties/crop/properties/width": {
+          "status": "reviewed",
+          "explanation": "Number of source columns retained. Width 2 includes exactly two columns beginning at x.",
+          "pitfalls": [
+            "Use a positive integer; this is not the right-edge coordinate."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "units": "integer pixels"
+        },
+        "/properties/images/items/properties/crop/properties/height": {
+          "status": "reviewed",
+          "explanation": "Number of source rows retained. Height 2 includes exactly two rows beginning at y.",
+          "pitfalls": [
+            "Use a positive integer; this is not the bottom-edge coordinate."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "units": "integer pixels"
+        },
+        "/properties/images/items/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Magnify each cropped source pixel into an equal square of this integer side length. Default 1 retains sampling; 2 doubles each side.",
+          "pitfalls": [
+            "Only 1\u20138 nearest-neighbour magnification is supported; no smoothing or downsampling."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "defaultMeaning": "Omission uses 1 as described above."
+        },
+        "/properties/images/items/properties/quarterTurns": {
+          "status": "reviewed",
+          "explanation": "Rotate clockwise in quarter turns after cropping and magnification: 0 unchanged, 1 right, 2 upside-down, 3 left. Default 0.",
+          "pitfalls": [
+            "Odd values exchange width and height; arbitrary angles are unsupported."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "units": "clockwise quarter turns (unitless count)",
+          "defaultMeaning": "Omission uses 0 as described above."
+        },
+        "/properties/colourPolicy": {
+          "status": "reviewed",
+          "explanation": "require-srgb, the default, requires an sRGB chunk or standard matching gAMA+cHRM. assume-srgb also admits untagged encoded samples and records that explicit assumption.",
+          "pitfalls": [
+            "No colour conversion or profile inference occurs. Output PNGs are untagged; chain them with assume-srgb only when their interpretation is established."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "defaultMeaning": "Omission uses \"require-srgb\" as described above."
+        },
+        "/properties/alpha": {
+          "status": "reviewed",
+          "explanation": "preserve, the default, retains every RGBA sample including hidden RGB at zero alpha. flatten replaces alpha with 255 using the chosen RGB background.",
+          "pitfalls": [
+            "Flatten blends encoded sRGB channels by nearest-integer arithmetic, not linear-light compositing; alpha is discarded."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "defaultMeaning": "Omission uses \"preserve\" as described above."
+        },
+        "/properties/background": {
+          "status": "reviewed",
+          "explanation": "Choose the RGB background for flatten as three encoded sRGB byte channels [red,green,blue]. Default [255,255,255] is white.",
+          "pitfalls": [
+            "Omit it when preserving alpha; non-default unused backgrounds are rejected. It is separate from the sheet background."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "defaultMeaning": "Omission uses [255, 255, 255] as described above."
+        },
+        "/properties/background/items": {
+          "status": "reviewed",
+          "explanation": "One encoded sRGB byte channel, 0\u2013255. The enclosing order is red, green, blue; 0 is minimum and 255 maximum.",
+          "pitfalls": [
+            "No unit conversion, normalized 0\u20131 values or colour names are accepted."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        },
+        "/properties/sheet": {
+          "status": "reviewed",
+          "explanation": "Optionally publish a row-major contact sheet and JSON index. Tiles occupy equal cells based on the largest prepared dimensions. Omitting sheet publishes individual images only.",
+          "pitfalls": [
+            "Tile RGBA samples copy exactly, including transparent samples; no font labels or automatic fitting are added."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        },
+        "/properties/sheet/properties/columns": {
+          "status": "reviewed",
+          "explanation": "Number of equal cells per row, default 2. Images fill left to right, then top to bottom; remaining cells stay background.",
+          "pitfalls": [
+            "Cannot exceed image count; choose 1 explicitly for a one-image sheet."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "defaultMeaning": "Omission uses 2 as described above."
+        },
+        "/properties/sheet/properties/padding": {
+          "status": "reviewed",
+          "explanation": "Pixels of opaque background around the sheet and between cells, default 8. Zero places cells immediately adjacent.",
+          "pitfalls": [
+            "Padding increases the aggregate output pixel budget and never rescales tiles."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "units": "integer pixels",
+          "defaultMeaning": "Omission uses 8 as described above."
+        },
+        "/properties/sheet/properties/background": {
+          "status": "reviewed",
+          "explanation": "Three encoded sRGB RGB bytes for the opaque sheet canvas, default white. Gaps and unused portions of cells keep this colour.",
+          "pitfalls": [
+            "Transparent tile pixels replace the canvas with their own complete RGBA values; use alpha flatten for opaque tiles."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ],
+          "defaultMeaning": "Omission uses [255, 255, 255] as described above."
+        },
+        "/properties/sheet/properties/background/items": {
+          "status": "reviewed",
+          "explanation": "One encoded sRGB background byte, 0\u2013255, in red/green/blue order. Canvas alpha is always 255.",
+          "pitfalls": [
+            "These are encoded byte values, not normalized intensities or linear-light samples."
+          ],
+          "sources": [
+            "docs/imagemagick.md"
+          ]
+        }
+      }
+    }
+  }
+}

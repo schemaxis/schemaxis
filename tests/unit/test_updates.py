@@ -49,12 +49,20 @@ class UpstreamUpdateTests(unittest.TestCase):
             if 'godot' in url: return json.dumps({'tag_name': '4.6.0-stable'})
             raise OSError('offline')
         # A licensed runtime without a public release feed is a manual check.
-        actual = updates.adaptor_files
         with tempfile.TemporaryDirectory() as tmp, \
                 patch.dict(updates.ADAPTORS, {'manualapp': {'id': 'manualapp', 'source': 'builtin'}}), \
                 patch('schemaxis.updates.adaptor_files',
-                      side_effect=lambda app: Path(tmp) if app == 'manualapp' else actual(app)):
-            (Path(tmp)/'upstream.json').write_text(json.dumps(
+                      side_effect=lambda app: Path(tmp)/app):
+            for app, absorbed in [('aseprite', '1.3.17.2'), ('freecad', '1.1.3'),
+                                  ('godot', '4.7.2'), ('blender', '5.2.0')]:
+                target = Path(tmp)/app
+                target.mkdir()
+                target.joinpath('upstream.json').write_text(json.dumps({
+                    'policy': 'latest-stable', 'absorbedVersion': absorbed,
+                    'source': {'kind': 'github-release', 'url': 'FreeCAD' if app == 'freecad' else app},
+                    'evidence': []}))
+            (Path(tmp)/'manualapp').mkdir()
+            (Path(tmp)/'manualapp/upstream.json').write_text(json.dumps(
                 {'policy': 'latest-stable', 'absorbedVersion': None, 'source': None,
                  'manualReason': 'licensed runtime; no public release feed', 'evidence': []}))
             result = updates.report(['aseprite', 'freecad', 'godot', 'blender', 'manualapp'], reader)
@@ -69,6 +77,19 @@ class UpstreamUpdateTests(unittest.TestCase):
         large = updates.estimate('5.13.3', '6.1.1', 600)
         self.assertEqual(small['confidence'], 'low')
         self.assertEqual(large['personDays'], [2*x for x in small['personDays']])
+
+    def test_manual_letter_version_keeps_qualification_but_never_reports_current(self):
+        def unexpected_fetch(_):
+            self.fail('manual release policy must not fetch or compare numeric versions')
+        with tempfile.TemporaryDirectory() as tmp, patch('schemaxis.updates.adaptor_files', return_value=Path(tmp)):
+            (Path(tmp)/'upstream.json').write_text(json.dumps({
+                'policy': 'latest-stable', 'source': None, 'absorbedVersion': '1.54t',
+                'manualReason': 'letter-suffixed releases need manual review', 'evidence': []}))
+            result = updates.check('manualapp', unexpected_fetch)
+        self.assertEqual(result['status'], 'manual-check')
+        self.assertEqual(result['absorbedVersion'], '1.54t')
+        self.assertTrue(result['reason'])
+        self.assertNotIn('latestVersion', result)
 
     def test_prepare_writes_reviewable_tasks_without_changing_baselines(self):
         root = Path(updates.__file__).parent/'adaptors'
@@ -92,7 +113,15 @@ class UpstreamUpdateTests(unittest.TestCase):
             policy = json.loads((root/app/'upstream.json').read_text())
             self.assertEqual(policy['policy'], 'latest-stable')
             self.assertTrue(policy['acceptance'])
-            if policy['absorbedVersion']: updates.version(policy['absorbedVersion'])
+            if policy['source']:
+                if policy['absorbedVersion']: updates.version(policy['absorbedVersion'])
+            else:
+                # Manual policies retain native release labels (e.g. ImageJ
+                # 1.54t); they never claim numeric comparison or current status.
+                self.assertTrue(policy['manualReason'].strip())
+                if policy['absorbedVersion'] is not None:
+                    self.assertIsInstance(policy['absorbedVersion'], str)
+                    self.assertTrue(policy['absorbedVersion'].strip())
             for evidence in policy['evidence']:
                 self.assertFalse(Path(evidence).is_absolute())
                 self.assertTrue((root.parents[2]/evidence).is_file(), evidence)

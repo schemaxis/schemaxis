@@ -1,0 +1,226 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.meshio/1": {
+      "guide": "docs/meshio.md",
+      "context": {
+        "purpose": "Convert captured ASCII triangle/tetra meshes between VTU and legacy VTK 4.2 with explicit length units, exact ordered topology and preserved scalar/vector point/cell values. Strict subset refuses unsupported data before native mapping.",
+        "assumptions": "Declared source/target length units; positive tetra orientation and nondegenerate triangles; POSIX meshio 5.3.5 isolated Python.",
+        "constraints": "16MiB source/32MiB output; 100000 points/cells; 16 scalar/vector arrays per association. No compressed/binary/appended/DTD/metadata/solver formats.",
+        "inspection": "Independent stdlib source/output parsers compare transformed coordinates, ordered connectivity and every field tuple; separate native reopening checks consistency.",
+        "recovery": "INVALID_MESH_SOURCE needs bounded regular matching path; INVALID_MESH_CONTENT needs supported intact ASCII geometry and positive orientation; inspect native logs for runtime failures."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/meshio-convert.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/meshio-convert-variant.json"
+        },
+        {
+          "id": "invalid-units",
+          "reference": "examples/schemaxis/meshio-units-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_meshio.py"
+      ],
+      "acceptance": [
+        "tools/qualify_meshio.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified geometry handoffs and source-byte reuse identity.",
+          "references": [
+            "docs/meshio.md",
+            "tools/qualify_meshio.py"
+          ]
+        },
+        "composition": {
+          "scope": "Finite unit/format studies resolve before conversion.",
+          "references": [
+            "docs/meshio.md",
+            "tools/qualify_meshio.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/nschloe/meshio#python-library",
+          "https://pypi.org/project/meshio/5.3.5/",
+          "https://docs.vtk.org/en/latest/vtk_file_formats/vtkxml_file_format.html",
+          "https://docs.vtk.org/en/latest/vtk_file_formats/vtk_legacy_file_format.html"
+        ],
+        "lifecycle": {
+          "timeout": "Single total deadline, shared process-tree runner; POSIX AS 2 GiB / FSIZE 32 MiB / CPU 60 s native caps.",
+          "cancellation": "Shared owned subprocess cancellation and prepublication cancellation check.",
+          "logs": "Captured source/plan/config/worker; stdout/stderr/submissions and consumed-input bindings for conversion and fresh reopening.",
+          "verification": "Independent stdlib format parsers compare original mesh transformed only in XYZ against output; separate native readback; known literal fixture oracle."
+        },
+        "data": [
+          {
+            "id": "mesh-input",
+            "direction": "input",
+            "kind": "geometry",
+            "format": "ASCII VTU or legacy VTK 4.2",
+            "traits": {
+              "cells": "triangle/tetra",
+              "units": "explicit"
+            },
+            "losses": [
+              "Strict refusal of unsupported sections; no silent omissions."
+            ],
+            "scope": "Captured regular source <=16MiB."
+          },
+          {
+            "id": "mesh-output",
+            "direction": "output",
+            "kind": "geometry",
+            "format": "ASCII VTU or legacy VTK 4.2",
+            "traits": {
+              "cells": "triangle/tetra",
+              "order": "preserved"
+            },
+            "losses": [
+              "Storage dtype/formatting and cell-block boundaries may change; numeric values and flattened order checked.",
+              "Coordinate units alone change; field units are not inferred."
+            ],
+            "scope": "Verified mesh <=32MiB and labelled summary."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Bounds/counts/array names/signed tetra volumes and retained logs.",
+            "limits": "Use a compatible geometry viewer for visual inspection; no mesh editing panel."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit path/formats/units then plan; source hashes invalidate changed bytes."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified geometry handoffs and source-byte reuse identity."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Finite unit/format studies resolve before conversion."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Captured source bytes invalidate same-path changes."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editor and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Typed source/format/unit/loss-policy fields."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Strict ASCII VTU/legacy VTK 4.2 interchange with coordinate units."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Batch summary publication only; no interactive native inspection."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial local process only."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "One static mesh per conversion."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No native edit synchronization or live handles."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Exports mesh interchange artifacts; no application scene/session document."
+          }
+        },
+        "cases": [
+          {
+            "id": "millimetres-to-metres",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/meshio/mixed.vtu"
+            },
+            "scope": "Literal nonzero-origin interleaved triangle/tetra/triangle with known point/cell scalar+vector arrays; unit scaling and signed volume.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/points",
+                "expected": 5,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/tetraVolumes/0",
+                "expected": 4e-09,
+                "absolute": 1e-14,
+                "relative": 1e-12
+              }
+            ]
+          },
+          {
+            "id": "metres-to-millimetres",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/meshio/mixed.vtk"
+            },
+            "scope": "Literal nonzero-origin interleaved triangle/tetra/triangle with known point/cell scalar+vector arrays; unit scaling and signed volume.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/points",
+                "expected": 5,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/tetraVolumes/0",
+                "expected": 4.0,
+                "absolute": 1e-14,
+                "relative": 1e-12
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial closed mesh conversion route, typed fields, independent preservation and lifecycle.",
+        "review": [
+          "verification/2026-10-17-meshio-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "Batch summary publication only; no interactive native inspection.",
+          "mpi": "Serial local process only.",
+          "time-batches": "One static mesh per conversion.",
+          "live-editing": "No native edit synchronization or live handles.",
+          "native-save": "Exports mesh interchange artifacts; no application scene/session document."
+        }
+      }
+    }
+  }
+}

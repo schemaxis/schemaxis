@@ -32,3 +32,104 @@ Run `python tools/qualify_premiere.py --bridge /absolute/private-jobs --project-
 - [Host information](https://developer.adobe.com/premiere-pro/uxp/resources/recipes/host-info/), [manifest](https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/), [filesystem recipe](https://developer.adobe.com/premiere-pro/uxp/resources/recipes/filesystem-operations/), [UXP Entry.moveTo](https://developer.adobe.com/photoshop/uxp/2022/uxp-api/reference-js/modules/uxp/persistent-file-storage/storage).
 
 The MP4 example uses an Adobe-listed import format; it is human-prepared and independently inspected. It does not imply that the Shotcut Matroska/FFV1 fixture imports into Premiere. See [Adobe supported file formats](https://helpx.adobe.com/premiere/desktop/organize-media/import-files/supported-file-formats.html).
+
+## Complete named track layout
+
+`sequenceLayout` checks a complete ordered video-track inventory and named
+editorial coverage decisions. It is useful for finding a missing insert, unintended
+gap, wrong track/source placement, or an overlay that no longer intersects its
+background. It uses the same fresh-folder UXP transport as `sequenceContract`.
+The existing operation and its contiguous single-track input remain supported.
+
+Start with [the layout example](../examples/schemaxis/premiere-layout.json) or
+[the held-out variant](../examples/schemaxis/premiere-layout-variant.json), or use
+the **Premiere named track coverage** Studio starter. Replace the project/source
+paths and prepare the native sequence manually. This operation does not create
+tracks or apply the declared edits.
+
+- `tracks` is the **complete** list of 1–8 native video tracks in native index order,
+  including empty tracks. Each name is exact, nonblank and unique. Extra tracks,
+  renamed tracks or a changed order fail the contract.
+- Each track's `clips` lists all its items in timeline order. `timelineFrame` and
+  `startFrame` are zero-based inclusive timeline/source starts; `frameCount` is a
+  positive duration. All are measured at the declared integer sequence timebase.
+  The source out and timeline end are exclusive. Gaps and overlays on different
+  tracks are supported; overlap within one track is rejected. At most 128 clips
+  total and 600 timeline frames are allowed.
+- `endFrame` is the exclusive sequence end and must equal the latest clip end.
+  Empty trailing padding is not supported. Every track must be unmuted and every
+  clip enabled. Audio tracks must be empty; captions, transitions and the legacy
+  unsupported clip states are rejected. Locked tracks need no change because
+  observation is read-only.
+- Optional `requirements` contains up to 32 named coverage gates. Select distinct
+  declared track names, an inclusive `startFrame`, positive `frameCount`, and
+  `minimumActiveTracks` (default 1). Every frame in that half-open range must have
+  at least this many selected tracks occupied. Use one for union coverage or two
+  for an overlay intersection. Omission reports gaps but adds no coverage gate.
+
+The baseline has `Base` items at `[0,4)` and `[6,10)`, an `Overlay` at `[3,7)`, and
+an empty `Reserved` track. Thus Base has 8 occupied frames and gap `[4,6)`; the
+Overlay has 4 occupied frames and gaps `[0,3)`, `[7,10)`. Their union covers all
+10 frames and both are occupied at frame 3. The variant uses Overlay `[4,6)`
+(source `[1,3)`): union coverage still passes, but there is no two-track
+intersection. Adjacent clips meeting at an exclusive end produce no gap and
+never count twice on one track.
+
+The panel returns native identities and exact tick strings, without computing
+coverage or copying authored expectations into observed values. The host first
+compares every declared range and identity, then independently builds a bounded
+frame occupancy grid from the observed ticks. A boundary even one tick away from
+a frame is rejected, never rounded. The observed duration must equal both the
+source and timeline interval lengths. This rejects ordinary retiming mismatches;
+equal endpoints still do not establish unchanged intermediate time remapping.
+Fractional rates remain explicitly unsupported.
+
+Artifact 1 for this operation is `layout.json`: per-track `occupiedFrames` and
+half-open `gaps`, plus each requirement's `uncoveredFrames` and `passed` decision.
+`schemaxis verify` rebuilds this report from retained native observations and the
+authored input. Missing or changed reports fail verification. On
+`REQUIREMENT_FAILED`, the observation and failed report remain for diagnosis;
+inspect the listed frames, correct the intended requirement or manually repair
+the native timeline, then start a fresh attempt. `INVALID_LAYOUT` identifies
+an inconsistent authored range before native access.
+
+**Editorial occupancy is not visible rendered footage.** Muted/disabled tracks
+or clips are rejected rather than silently counted. Effects, opacity, masks,
+source pixels and renderer visibility are not observed. A clip may occupy an
+interval while rendering transparent or black pixels. Two matching DOM reads
+remain a best-effort observation, not an atomic snapshot or remote attestation.
+
+## Layout native qualification recipe and status
+
+On Windows/macOS, use the same independently inspected six-frame silent colour
+source as the earlier recipe. Prepare two 32×24/25 fps sequences in the saved
+project, named `Schemaxis Layout` and `Schemaxis Layout Variant`. Both have exactly
+three unmuted video tracks named `Base`, `Overlay`, `Reserved` in that order, empty
+audio tracks, and no captions/transitions/effects/retiming. Base uses source `[0,4)`
+at timeline `[0,4)` and source `[2,6)` at `[6,10)`. Baseline Overlay uses source
+`[0,4)` at `[3,7)`; variant Overlay uses source `[1,3)` at `[4,6)`. Reserved is empty.
+Confirm those intervals independently in Premiere before running:
+
+```sh
+PYTHONPATH=src python3 tools/qualify_premiere_layout.py \
+  --bridge /absolute/private-jobs --project-path /absolute/colours.prproj \
+  --source-path /absolute/colours.mp4 --output-directory /absolute/new-layout-acceptance
+```
+
+The tool prompts for each sequence and fresh job folder, checks independently
+specified literal ticks/gaps/occupancy, probes retained-report tampering, and runs
+a coverage failure against the unchanged baseline. Its report is scoped evidence,
+not automatic registration of a native qualification receipt. Native lifecycle
+qualification still requires the broader documented acceptance review.
+
+This recipe has **not run on installed Premiere**. The development host is Linux;
+an actual normal runner attempt returns `NATIVE_ENVIRONMENT_UNAVAILABLE`. Host
+schema/planning, fixed DOM doubles and report tampering tests are available, but
+cannot establish the native API behaviour. On 17 October 2026, Adobe's
+[stable application release notes](https://helpx.adobe.com/premiere/desktop/whats-new/release-notes.html)
+list 26.5.2, while the [UXP changelog](https://developer.adobe.com/premiere-pro/uxp/changelog/)
+lists API baseline 26.5.0. Release tracking now uses the application release notes
+to detect patch releases. `absorbedVersion` remains null. The mapping uses public
+[VideoTrack](https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/videotrack)
+name/index/mute/item queries and the source/timeline methods in
+[VideoClipTrackItem](https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/videocliptrackitem).

@@ -57,6 +57,34 @@ def fake_verify(target):
 
 
 class AdaptorRuntimeTests(unittest.TestCase):
+    def test_exported_workflow_value_handoffs_and_studies_use_retained_copy(self):
+        from schemaxis.schema_snapshots import export_run
+        for study in (False, True):
+            first = source_study() if study else gmsh()
+            second = gmsh()
+            # A workflow-wide study executes one synchronised producer visit in
+            # each outer state; its consumer selects that visit (index zero).
+            second['nodes'][1]['options']['size'] = {'$value': 'first', 'visit': 0,
+                                                    'artifact': 0, 'path': '/value'}
+            document = {'version': 'schemaxis.workflow/1', 'operations': [
+                {'id': 'first', 'document': first}, {'id': 'second', 'document': second}]}
+            with self.subTest(study=study), tempfile.TemporaryDirectory() as tmp, \
+                    patch('schemaxis.adaptors.gmsh.adaptor._native_run', side_effect=fake_run), \
+                    patch('schemaxis.adaptors.gmsh.adaptor._native_verify', side_effect=fake_verify):
+                base = Path(tmp); source = base/'run'
+                workflow.execute(document, source)
+                original = workflow.publication_receipt(source)
+                exported = base/'exported'; export_run(source, exported)
+                source.rename(base/'unavailable-original')
+                self.assertTrue(workflow.verify(exported)['verified'])
+                self.assertEqual(workflow.publication_receipt(exported), original)
+                again = base/'again'; export_run(exported, again)
+                exported.rename(base/'unavailable-export')
+                self.assertTrue(workflow.verify(again)['verified'])
+                producer = next(path for path in again.rglob('measurement.json') if 'first' in path.parts)
+                atomic_json(producer, {'value': 77})
+                with self.assertRaises(SchemaxisError): workflow.verify(again)
+
     def test_every_route_has_shared_inputs_without_native_imports(self):
         for version, (_, route) in registry.routes().items():
             _, _, entry = route_materials(version)
@@ -130,6 +158,27 @@ class AdaptorRuntimeTests(unittest.TestCase):
             state = target/'state-00001'
             atomic_json(state/'measurement.json', {'value': 999})
             with self.assertRaises(SchemaxisError): registry.verify(target)
+
+    def test_run_and_study_verify_shared_schema_dependencies(self):
+        from schemaxis.schema_snapshots import read
+        with tempfile.TemporaryDirectory() as tmp, patch('schemaxis.adaptors.gmsh.adaptor._native_run', side_effect=fake_run), patch('schemaxis.adaptors.gmsh.adaptor._native_verify', side_effect=fake_verify):
+            root = Path(tmp)
+            single, study = root/'single', root/'study'
+            registry.run(gmsh(), single)
+            registry.run(source_study(), study)
+            captures = [single/'schema.snapshot.json', study/'schema.snapshot.json',
+                        *sorted(study.glob('state-*/schema.snapshot.json'))]
+            self.assertEqual(len(captures), 5)
+            schemas = [read(path) for path in captures]
+            self.assertTrue(all(payload == schemas[0] for payload in schemas))
+            index = json.loads((root/'schemas/index.json').read_text())
+            self.assertEqual(len(index['objects']), 1)
+            manifest = json.loads(captures[0].read_text())
+            (root/manifest['schema']).unlink()
+            for target in (single, study):
+                with self.subTest(target=target), self.assertRaises(SchemaxisError) as caught:
+                    registry.verify(target)
+                self.assertEqual(caught.exception.fault.code, 'INVALID_SCHEMA_SNAPSHOT')
 
     def test_document_cycles_and_sync_length_mismatches(self):
         document = source_study()

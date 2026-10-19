@@ -3,14 +3,15 @@
   "operations": {
     "box": {
       "status": "reviewed",
-      "explanation": "Creates a native Part::Box: an axis-aligned rectangular solid whose minimum corner sits at origin and which extends length along +X, width along +Y and height along +Z, in millimetres. Choose it for plates, stock blanks and rectangular cut tools. It has no rotation option; for a block in another orientation extrude a rectangle or polygon along the required direction. Schemaxis always assigns all four settings (defaults: a 10 mm cube at the world origin), and the feature stays editable in the published FCStd.",
+      "explanation": "Creates a native Part::Box: an axis-aligned rectangular solid whose minimum corner sits at origin and which extends length along +X, width along +Y and height along +Z, in millimetres. Choose it for plates, stock blanks and rectangular cut tools. It has no rotation option; for a block in another orientation extrude a rectangle or polygon along the required direction. Schemaxis always assigns all four settings (defaults: a 10 mm cube at the world origin), and the feature stays editable in the published FCStd. In batch parts, parameters plus drive can retain supported length relationships in a native VarSet instead of materialising only the current number.",
       "sources": [
         "src/schemaxis/adaptors/freecad/adaptor.py:26-33",
         "src/schemaxis/adaptors/freecad/features.py:7-8",
         "src/schemaxis/adaptors/freecad/features.py:19-24",
         "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/Part_Box.md",
         "src/schemaxis/adaptors/freecad/qualification.json",
-        "src/schemaxis/adaptors/freecad/capabilities.py"
+        "src/schemaxis/adaptors/freecad/capabilities.py",
+        "docs/freecad-parameters.md"
       ],
       "examples": [
         {
@@ -41,14 +42,15 @@
     },
     "cylinder": {
       "status": "reviewed",
-      "explanation": "Creates a native Part::Cylinder whose base circle is centred at origin and which extends height along axis. Choose it for pins, bosses and round bars, and above all as the tool for a round hole in cut. Unlike circle + extrude it needs no separate profile node; the axis may point in any direction.",
+      "explanation": "Creates a native Part::Cylinder whose base circle is centred at origin and which extends height along axis. Choose it for pins, bosses and round bars, and above all as the tool for a round hole in cut. Unlike circle + extrude it needs no separate profile node; the axis may point in any direction. In batch parts, parameters plus drive can retain supported length relationships in a native VarSet instead of materialising only the current number.",
       "sources": [
         "src/schemaxis/adaptors/freecad/adaptor.py:29-30",
         "src/schemaxis/adaptors/freecad/features.py:19-26",
         "src/schemaxis/adaptors/freecad/operations.py:50-52",
         "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/Part_Cylinder.md",
         "examples/schemaxis/freecad-bracket.json",
-        "src/schemaxis/adaptors/freecad/capabilities.py"
+        "src/schemaxis/adaptors/freecad/capabilities.py",
+        "docs/freecad-parameters.md"
       ],
       "pitfalls": [
         "radius is half the hole diameter.",
@@ -197,12 +199,13 @@
     },
     "rectangle": {
       "status": "reviewed",
-      "explanation": "Creates a rectangular sketch profile centred on origin in the XY, XZ or YZ plane. Schemaxis builds it as a fully constrained Sketcher sketch with constraints named width and height, so the dimensions stay editable in FreeCAD and linked extrusions follow them. It is a profile: extrude, revolve or loft it to make a solid; for an axis-aligned block from a corner, box is simpler.",
+      "explanation": "Creates a rectangular sketch profile centred on origin in the XY, XZ or YZ plane. Schemaxis builds it as a fully constrained Sketcher sketch with constraints named width and height, so the dimensions stay editable in FreeCAD and linked extrusions follow them. It is a profile: extrude, revolve or loft it to make a solid; for an axis-aligned block from a corner, box is simpler. Optional inputs.body places this sketch in an origin-based PartDesign Body for Pad/Pocket history. Named dimensions can use persistent parameters and drive in batch runs.",
       "sources": [
         "src/schemaxis/adaptors/freecad/operations.py:16-18",
         "src/schemaxis/adaptors/freecad/sketch_features.py:12-37",
         "src/schemaxis/adaptors/freecad/features.py:33-36",
-        "src/schemaxis/adaptors/freecad/capabilities.py"
+        "src/schemaxis/adaptors/freecad/capabilities.py",
+        "docs/freecad-part-design.md"
       ],
       "pitfalls": [
         "A profile cannot be the output node.",
@@ -242,13 +245,14 @@
     },
     "circle": {
       "status": "reviewed",
-      "explanation": "Creates a circular sketch profile centred on origin in the XY, XZ or YZ plane, built as a fully constrained Sketcher sketch with a constraint named radius. Choose it as a section for loft (for example two circles of different radii for a tapered duct) or to extrude a round bar along any direction; for a plain cylinder, cylinder needs no profile node.",
+      "explanation": "Creates a circular sketch profile centred on origin in the XY, XZ or YZ plane, built as a fully constrained Sketcher sketch with a constraint named radius. Choose it as a section for loft (for example two circles of different radii for a tapered duct) or to extrude a round bar along any direction; for a plain cylinder, cylinder needs no profile node. Optional inputs.body places this sketch in an origin-based PartDesign Body for Pad/Pocket history. Named dimensions can use persistent parameters and drive in batch runs. Optional centre gives signed [x,y] coordinates and named centreX/centreY constraints instead of coincidence at the origin.",
       "sources": [
         "src/schemaxis/adaptors/freecad/operations.py:19-21",
         "src/schemaxis/adaptors/freecad/sketch_features.py:13-17",
         "src/schemaxis/adaptors/freecad/features.py:33-36",
         "examples/schemaxis/freecad-loft.json",
-        "src/schemaxis/adaptors/freecad/capabilities.py"
+        "src/schemaxis/adaptors/freecad/capabilities.py",
+        "docs/freecad-part-design.md"
       ],
       "pitfalls": [
         "A profile cannot be the output node.",
@@ -257,7 +261,7 @@
     },
     "extrude": {
       "status": "reviewed",
-      "explanation": "Sweeps a closed profile (polygon, rectangle or circle) a fixed length along a direction to make a prism-like solid (native Part::Extrusion with Solid enabled, a custom direction, one-sided, no taper). The solid stays linked to its profile, so editing the sketch in FreeCAD updates it. A direction that is not perpendicular to the profile gives an oblique prism. Use revolve for solids of revolution and loft to change section along the way.",
+      "explanation": "Sweeps a closed profile (polygon, rectangle or circle) a fixed length along a direction to make a prism-like solid (native Part::Extrusion with Solid enabled, a custom direction, one-sided, no taper). The solid stays linked to its profile, so editing the sketch in FreeCAD updates it. A direction that is not perpendicular to the profile gives an oblique prism. Use revolve for solids of revolution and loft to change section along the way. In batch parts, parameters plus drive can retain supported length relationships in a native VarSet instead of materialising only the current number.",
       "sources": [
         "src/schemaxis/adaptors/freecad/operations.py:31",
         "src/schemaxis/adaptors/freecad/operations.py:41-42",
@@ -266,7 +270,8 @@
         "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/Part_Extrude.md",
         "tools/qualify_adaptor_expansion.py:31",
         "verification/2026-09-19-adaptor-expansion.json",
-        "src/schemaxis/adaptors/freecad/capabilities.py"
+        "src/schemaxis/adaptors/freecad/capabilities.py",
+        "docs/freecad-parameters.md"
       ],
       "pitfalls": [
         "direction defaults to +Z, which lies inside XZ and YZ sketch planes; set it to the plane normal for such profiles.",
@@ -370,20 +375,22 @@
     },
     "readSTEP": {
       "status": "reviewed",
-      "explanation": "Imports one solid from a STEP file as a static Part::Feature so that later nodes can cut, fuse, fillet or measure it, for example to drill a supplier part or to continue from a STEP published by an earlier workflow step. Schemaxis copies the file into the run directory, records its SHA-256 digest and rechecks both copies during verification. The shape has no feature history, and the file must contain exactly one valid solid.",
+      "explanation": "Imports one solid from a STEP file as a static Part::Feature so that later nodes can cut, fuse, fillet or measure it, for example to drill a supplier part or to continue from a STEP published by an earlier workflow step. Schemaxis copies the file into the run directory and records its SHA-256 digest; saved verification checks that retained copy, so a moved or exported run still verifies after the original is removed, while a new plan or resume reads the current file. The shape has no feature history, and the file must contain exactly one valid solid. For declared units, orientation, checked facts and refine, use importSTEP.",
       "sources": [
-        "src/schemaxis/adaptors/freecad/operations.py:35",
+        "docs/cad-and-mesh-workflows.md",
+        "docs/freecad.md",
         "src/schemaxis/adaptors/freecad/adaptor.py:155-169",
         "src/schemaxis/adaptors/freecad/adaptor.py:216-227",
+        "src/schemaxis/adaptors/freecad/capabilities.py",
         "src/schemaxis/adaptors/freecad/features.py:57-63",
-        "src/schemaxis/adaptors/freecad/live.py:111-112",
         "src/schemaxis/adaptors/freecad/integration.py:13-16",
-        "docs/cad-and-mesh-workflows.md",
-        "src/schemaxis/adaptors/freecad/capabilities.py"
+        "src/schemaxis/adaptors/freecad/live.py:111-112",
+        "src/schemaxis/adaptors/freecad/operations.py:35",
+        "src/schemaxis/adaptors/freecad/saved_checks.py"
       ],
       "pitfalls": [
         "Multi-body or assembly STEP files fail with INVALID_GEOMETRY; export a single solid.",
-        "Schemaxis infers no units for the file; check imported bounds or volume with a measurement before relying on its scale.",
+        "readSTEP does not check units: FreeCAD silently applies the unit the file assigns and assumes millimetres when none is assigned. Use importSTEP with explicit units and expectations, or check bounds and volume with a measurement.",
         "Live preview does not support readSTEP (UNSUPPORTED_LIVE_INPUT); use a batch run.",
         "Changing the source file before verification fails with INPUT_CHANGED."
       ]
@@ -434,6 +441,76 @@
           "purpose": "Unite three overlapping boxes into one 30 × 10 × 10 mm solid."
         }
       ]
+    },
+    "body": {
+      "status": "reviewed",
+      "explanation": "Create the native PartDesign container for one mechanical part and its feature history.",
+      "sources": [
+        "schemaxis.adaptors.freecad.capabilities:catalogue",
+        "docs/freecad-part-design.md"
+      ],
+      "pitfalls": [
+        "A Body is a container, not a solid output. This slice supports one Body at the world origin, one first Pad and a linear Pocket chain."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/freecad-part-design.json",
+          "purpose": "Constrained sketch, Pad and offset through-hole with persistent dimensions."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
+    },
+    "pad": {
+      "status": "reviewed",
+      "explanation": "Turn an owned constrained sketch into the first solid of its Body, extruded along +Z.",
+      "sources": [
+        "schemaxis.adaptors.freecad.capabilities:catalogue",
+        "docs/freecad-part-design.md"
+      ],
+      "pitfalls": [
+        "Requires an earlier Body and a profile owned by that Body. The first Pad has no native BaseFeature; length may use a persistent driver."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/freecad-part-design.json",
+          "purpose": "Constrained sketch, Pad and offset through-hole with persistent dimensions."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
+    },
+    "pocket": {
+      "status": "reviewed",
+      "explanation": "Cut a through hole from the current Body tip using an unused sketch in the same Body.",
+      "sources": [
+        "schemaxis.adaptors.freecad.capabilities:catalogue",
+        "docs/freecad-part-design.md"
+      ],
+      "pitfalls": [
+        "The XY sketch cuts along +Z through all stock. Fixed depth and other side modes are unsupported. Select the final solid tip as output."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/freecad-part-design.json",
+          "purpose": "Constrained sketch, Pad and offset through-hole with persistent dimensions."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
+    },
+    "importSTEP": {
+      "status": "reviewed",
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
+      "explanation": "Bring one external STEP solid (for example a supplier part) into the model with explicit units, axis orientation and placement, check it against facts you declare from its drawing or datasheet, optionally merge coplanar faces, and continue with ordinary cuts, fillets, measurements and checked STEP, STL and FCStd publications.",
+      "sources": [
+        "docs/freecad.md",
+        "src/schemaxis/adaptors/freecad/step_import.py",
+        "src/schemaxis/adaptors/freecad/export_checks.py"
+      ],
+      "pitfalls": [
+        "Imported geometry has no sketches, parameters or feature history; edit it by placement or later features.",
+        "Declared facts are checked on the exact solid; they are not a guarantee of identity or orientation for symmetric parts.",
+        "Live preview does not support importSTEP; use a batch run.",
+        "Runs made before hardened export verification report RERUN_REQUIRED instead of verified."
+      ]
     }
   },
   "routes": {
@@ -441,7 +518,7 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A FreeCAD part document: an ordered list of CAD feature nodes (primitives, sketch profiles, sweeps, booleans, finishing and STEP import) that Schemaxis builds as a native parametric feature tree in an isolated FreeCAD 1.1.x process. The node named by output must be one valid positive-volume solid; it is published as model.step (artifact 0), model.stl (1) and model.FCStd (2), then measurements.json (3) when measurements are declared, and study-summary.json and study.html when a designStudy is present. A fresh FreeCAD process reopens and recomputes the FCStd and rereads the STEP and STL before the run counts as verified.",
+          "explanation": "A FreeCAD part document: an ordered list of CAD feature nodes (primitives, sketch profiles, sweeps, booleans, finishing and STEP import) that Schemaxis builds as a native parametric feature tree in an isolated FreeCAD 1.1.x process. The node named by output must be one valid positive-volume solid; it is published as model.step (artifact 0), model.stl (1) and model.FCStd (2), then measurements.json (3) when measurements are declared, and study-summary.json and study.html when a designStudy is present. A fresh FreeCAD process reopens and recomputes the FCStd and rereads the STEP and STL before the run counts as verified. Optional parameters and node-local drive preserve affine length relationships in batch FCStd output; see the parameter guide for native editing and verification.",
           "pitfalls": [
             "All lengths are millimetres and all angles degrees; authored values are never unit-converted.",
             "A profile (polygon, rectangle, circle) cannot be the output; extrude, revolve or loft it first.",
@@ -481,7 +558,8 @@
             "src/schemaxis/adaptors/freecad/native.py:43-79",
             "docs/cad-and-mesh-workflows.md",
             "docs/freecad-measurements.md#publications-and-value-references",
-            "docs/freecad-design-studies.md#evidence-and-downstream-use"
+            "docs/freecad-design-studies.md#evidence-and-downstream-use",
+            "docs/freecad-parameters.md"
           ]
         },
         "/properties/version": {
@@ -3134,7 +3212,7 @@
         },
         "/properties/nodes/items/oneOf/15/properties/options/properties/file": {
           "status": "reviewed",
-          "explanation": "Path of the STEP file to import; it must contain exactly one valid solid. A relative path resolves against the working directory of the Schemaxis process (for Studio, the folder it was launched from), not the JSON file's folder. Schemaxis copies the file into the run directory and checks that neither copy changes before verification. In a workflow, an artifact reference to an earlier verified STEP output can supply the path.",
+          "explanation": "Path of the STEP file to import; it must contain exactly one valid solid. A relative path resolves against the working directory of the Schemaxis process (for Studio, the folder it was launched from), not the JSON file's folder. Schemaxis copies the file into the run directory and checks that the source has not changed during capture; saved verification uses only the retained copy. In a workflow, an artifact reference to an earlier verified STEP output can supply the path.",
           "label": "STEP file",
           "defaultMeaning": "Required; there is no default file.",
           "pitfalls": [
@@ -4153,6 +4231,1058 @@
             "docs/json-input.md",
             "guidance:/$defs/json"
           ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive": {
+          "status": "reviewed",
+          "explanation": "Maps supported feature dimensions to persistent affine relationships. Omit each corresponding literal option even if it would have the same value. The relationship survives native saving/reopening and propagates when a driver changes. Other feature settings remain ordinary authored options.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/length": {
+          "status": "reviewed",
+          "explanation": "Drives the feature length in millimetres using the declared affine terms and optional offset. Omit length from options. Schemaxis checks the full independent parameter range before assigning the native expression; positive dimensions alone do not prove a later boolean will be valid.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/length/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Names 1–4 declared parameters and their dimensionless coefficients. The target length is offset plus the sum of these coefficient-times-length terms. Negative coefficients are allowed only when the target stays positive across all independent bounds. Parameter-to-parameter and feature-to-feature dependencies are not supported.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/length/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The dimensionless multiplier on this named design length. It must be finite, nonzero and at most 1000000 in magnitude. Each term must change the target by more than the verification threshold across its bounds; numerically vanishing effects are rejected. FreeCAD expression literals normalise to 15 significant digits.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "dimensionless"
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/length/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "A zero coefficient is forbidden: a declared driver must actually affect its target. Remove the term or choose a physically meaningful nonzero coefficient and a range large enough to verify the response.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/length/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Adds a constant length after the weighted driver terms. For a drill passing through stock from z=-1 mm, offset 2 mm extends it beyond both faces. Use explicit millimetres; authored input is numeric and the compiler emits the native mm suffix.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm",
+          "defaultMeaning": "Omitted offset means zero millimetres."
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/width": {
+          "status": "reviewed",
+          "explanation": "Drives the feature width in millimetres using the declared affine terms and optional offset. Omit width from options. Schemaxis checks the full independent parameter range before assigning the native expression; positive dimensions alone do not prove a later boolean will be valid.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/width/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Names 1–4 declared parameters and their dimensionless coefficients. The target length is offset plus the sum of these coefficient-times-length terms. Negative coefficients are allowed only when the target stays positive across all independent bounds. Parameter-to-parameter and feature-to-feature dependencies are not supported.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/width/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The dimensionless multiplier on this named design length. It must be finite, nonzero and at most 1000000 in magnitude. Each term must change the target by more than the verification threshold across its bounds; numerically vanishing effects are rejected. FreeCAD expression literals normalise to 15 significant digits.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "dimensionless"
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/width/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "A zero coefficient is forbidden: a declared driver must actually affect its target. Remove the term or choose a physically meaningful nonzero coefficient and a range large enough to verify the response.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/width/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Adds a constant length after the weighted driver terms. For a drill passing through stock from z=-1 mm, offset 2 mm extends it beyond both faces. Use explicit millimetres; authored input is numeric and the compiler emits the native mm suffix.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm",
+          "defaultMeaning": "Omitted offset means zero millimetres."
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/height": {
+          "status": "reviewed",
+          "explanation": "Drives the feature height in millimetres using the declared affine terms and optional offset. Omit height from options. Schemaxis checks the full independent parameter range before assigning the native expression; positive dimensions alone do not prove a later boolean will be valid.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/height/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Names 1–4 declared parameters and their dimensionless coefficients. The target length is offset plus the sum of these coefficient-times-length terms. Negative coefficients are allowed only when the target stays positive across all independent bounds. Parameter-to-parameter and feature-to-feature dependencies are not supported.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/height/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The dimensionless multiplier on this named design length. It must be finite, nonzero and at most 1000000 in magnitude. Each term must change the target by more than the verification threshold across its bounds; numerically vanishing effects are rejected. FreeCAD expression literals normalise to 15 significant digits.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "dimensionless"
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/height/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "A zero coefficient is forbidden: a declared driver must actually affect its target. Remove the term or choose a physically meaningful nonzero coefficient and a range large enough to verify the response.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/0/properties/drive/properties/height/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Adds a constant length after the weighted driver terms. For a drill passing through stock from z=-1 mm, offset 2 mm extends it beyond both faces. Use explicit millimetres; authored input is numeric and the compiler emits the native mm suffix.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm",
+          "defaultMeaning": "Omitted offset means zero millimetres."
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive": {
+          "status": "reviewed",
+          "explanation": "Maps supported feature dimensions to persistent affine relationships. Omit each corresponding literal option even if it would have the same value. The relationship survives native saving/reopening and propagates when a driver changes. Other feature settings remain ordinary authored options.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Drives the feature radius in millimetres using the declared affine terms and optional offset. Omit radius from options. Schemaxis checks the full independent parameter range before assigning the native expression; positive dimensions alone do not prove a later boolean will be valid.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/radius/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Names 1–4 declared parameters and their dimensionless coefficients. The target length is offset plus the sum of these coefficient-times-length terms. Negative coefficients are allowed only when the target stays positive across all independent bounds. Parameter-to-parameter and feature-to-feature dependencies are not supported.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/radius/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The dimensionless multiplier on this named design length. It must be finite, nonzero and at most 1000000 in magnitude. Each term must change the target by more than the verification threshold across its bounds; numerically vanishing effects are rejected. FreeCAD expression literals normalise to 15 significant digits.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "dimensionless"
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/radius/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "A zero coefficient is forbidden: a declared driver must actually affect its target. Remove the term or choose a physically meaningful nonzero coefficient and a range large enough to verify the response.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/radius/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Adds a constant length after the weighted driver terms. For a drill passing through stock from z=-1 mm, offset 2 mm extends it beyond both faces. Use explicit millimetres; authored input is numeric and the compiler emits the native mm suffix.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm",
+          "defaultMeaning": "Omitted offset means zero millimetres."
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/height": {
+          "status": "reviewed",
+          "explanation": "Drives the feature height in millimetres using the declared affine terms and optional offset. Omit height from options. Schemaxis checks the full independent parameter range before assigning the native expression; positive dimensions alone do not prove a later boolean will be valid.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/height/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Names 1–4 declared parameters and their dimensionless coefficients. The target length is offset plus the sum of these coefficient-times-length terms. Negative coefficients are allowed only when the target stays positive across all independent bounds. Parameter-to-parameter and feature-to-feature dependencies are not supported.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/height/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The dimensionless multiplier on this named design length. It must be finite, nonzero and at most 1000000 in magnitude. Each term must change the target by more than the verification threshold across its bounds; numerically vanishing effects are rejected. FreeCAD expression literals normalise to 15 significant digits.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "dimensionless"
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/height/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "A zero coefficient is forbidden: a declared driver must actually affect its target. Remove the term or choose a physically meaningful nonzero coefficient and a range large enough to verify the response.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/drive/properties/height/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Adds a constant length after the weighted driver terms. For a drill passing through stock from z=-1 mm, offset 2 mm extends it beyond both faces. Use explicit millimetres; authored input is numeric and the compiler emits the native mm suffix.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm",
+          "defaultMeaning": "Omitted offset means zero millimetres."
+        },
+        "/properties/nodes/items/oneOf/11/properties/drive": {
+          "status": "reviewed",
+          "explanation": "Maps supported feature dimensions to persistent affine relationships. Omit each corresponding literal option even if it would have the same value. The relationship survives native saving/reopening and propagates when a driver changes. Other feature settings remain ordinary authored options.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/drive/properties/length": {
+          "status": "reviewed",
+          "explanation": "Drives the feature length in millimetres using the declared affine terms and optional offset. Omit length from options. Schemaxis checks the full independent parameter range before assigning the native expression; positive dimensions alone do not prove a later boolean will be valid.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/nodes/items/oneOf/11/properties/drive/properties/length/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Names 1–4 declared parameters and their dimensionless coefficients. The target length is offset plus the sum of these coefficient-times-length terms. Negative coefficients are allowed only when the target stays positive across all independent bounds. Parameter-to-parameter and feature-to-feature dependencies are not supported.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/drive/properties/length/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The dimensionless multiplier on this named design length. It must be finite, nonzero and at most 1000000 in magnitude. Each term must change the target by more than the verification threshold across its bounds; numerically vanishing effects are rejected. FreeCAD expression literals normalise to 15 significant digits.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "dimensionless"
+        },
+        "/properties/nodes/items/oneOf/11/properties/drive/properties/length/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "A zero coefficient is forbidden: a declared driver must actually affect its target. Remove the term or choose a physically meaningful nonzero coefficient and a range large enough to verify the response.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/11/properties/drive/properties/length/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Adds a constant length after the weighted driver terms. For a drill passing through stock from z=-1 mm, offset 2 mm extends it beyond both faces. Use explicit millimetres; authored input is numeric and the compiler emits the native mm suffix.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm",
+          "defaultMeaning": "Omitted offset means zero millimetres."
+        },
+        "/properties/parameters": {
+          "status": "reviewed",
+          "explanation": "Names the 1–32 independent design lengths whose relationships must remain editable after opening the published FCStd. Each creates a typed dim_<name> property on the native Design parameters VarSet. Every name must be used by a node drive. Common expressions may initialise value for each finite batch visit; these native drivers are not available in live sessions or scalar designStudy.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/parameters/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "One named native length: kind, initial value and independent minimum/maximum bounds are required. Bounds describe the intended affine design range; they validate every driven length across that range but do not constrain later manual FreeCAD edits or guarantee boolean topology.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/kind": {
+          "status": "reviewed",
+          "explanation": "The physical quantity of this driver. Only length is supported; angles, dimensionless variables and inferred unit conversions are outside this increment.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ]
+        },
+        "/properties/parameters/additionalProperties/properties/value": {
+          "status": "reviewed",
+          "explanation": "The starting length for this run or finite analytic visit. It must lie inside the declared bounds. FreeCAD stores length properties with 16 fractional decimal places; a positive length that would become zero is rejected. Native edits do not reverse-sync this authored value.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/parameters/additionalProperties/properties/minimum": {
+          "status": "reviewed",
+          "explanation": "The strictly positive lower bound of this independent design length, smaller than maximum. Affine extrema include this endpoint; using correlated bounds to hide an invalid combination is unsupported.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/parameters/additionalProperties/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "The upper bound of this independent design length, greater than minimum and at most 100000 mm. The full independent range must keep each driven target positive and measurably responsive.",
+          "sources": [
+            "docs/freecad-parameters.md",
+            "src/schemaxis/adaptors/freecad/parameters.py",
+            "src/schemaxis/adaptors/freecad/parameters_native.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/nodes/items/oneOf/9/properties/inputs/properties/body": {
+          "status": "reviewed",
+          "explanation": "Optional earlier Body owner. Omit for the existing Part-profile route. When supplied, this fully constrained sketch attaches to that Body origin XY plane at zero offset.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive": {
+          "status": "reviewed",
+          "explanation": "Preserve supported dimension relationships as native expressions instead of supplying only their current numbers. Omit every driven dimension from options; batch runs and finite variants are supported.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/width": {
+          "status": "reviewed",
+          "explanation": "Drive the rectangle width from an affine sum of named lengths. This stays a native expression after FCStd reopening; do not also declare the same literal option.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/width/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Map one to four declared parameter names to nonzero coefficients. Their length contributions add to the offset; all independent bound corners must remain positive and at most 100000 mm.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/width/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The signed dimensionless coefficient multiplies one declared length parameter. Its full-range response must remain independently observable; zero, nonfinite and underflowing effects are rejected.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/width/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "Zero is excluded: every declared coefficient must contribute a measurable response across its driver bounds.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/width/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Constant millimetres added to the weighted native parameter lengths; defaults to zero. The native expression includes explicit mm units.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/height": {
+          "status": "reviewed",
+          "explanation": "Drive the rectangle height from an affine sum of named lengths. This stays a native expression after FCStd reopening; do not also declare the same literal option.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/height/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Map one to four declared parameter names to nonzero coefficients. Their length contributions add to the offset; all independent bound corners must remain positive and at most 100000 mm.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/height/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The signed dimensionless coefficient multiplies one declared length parameter. Its full-range response must remain independently observable; zero, nonfinite and underflowing effects are rejected.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/height/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "Zero is excluded: every declared coefficient must contribute a measurable response across its driver bounds.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/drive/properties/height/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Constant millimetres added to the weighted native parameter lengths; defaults to zero. The native expression includes explicit mm units.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/centre": {
+          "status": "reviewed",
+          "explanation": "Signed local sketch coordinates [x, y] in mm, each within +/-100000. Supplying centre creates named centreX/centreY constraints, including zero or negative values; omitting it keeps the centred coincidence constraint. Coordinate drivers are not exposed.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/options/properties/centre/items": {
+          "status": "reviewed",
+          "explanation": "Signed local sketch coordinates [x, y] in mm, each within +/-100000. Supplying centre creates named centreX/centreY constraints, including zero or negative values; omitting it keeps the centred coincidence constraint. Coordinate drivers are not exposed.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/inputs/properties/body": {
+          "status": "reviewed",
+          "explanation": "Optional earlier Body owner. Omit for the existing Part-profile route. When supplied, this fully constrained sketch attaches to that Body origin XY plane at zero offset.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/drive": {
+          "status": "reviewed",
+          "explanation": "Preserve supported dimension relationships as native expressions instead of supplying only their current numbers. Omit every driven dimension from options; batch runs and finite variants are supported.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/drive/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Drive the circle radius from an affine sum of named lengths. This stays a native expression after FCStd reopening; do not also declare the same literal option.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/drive/properties/radius/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Map one to four declared parameter names to nonzero coefficients. Their length contributions add to the offset; all independent bound corners must remain positive and at most 100000 mm.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/drive/properties/radius/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The signed dimensionless coefficient multiplies one declared length parameter. Its full-range response must remain independently observable; zero, nonfinite and underflowing effects are rejected.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/drive/properties/radius/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "Zero is excluded: every declared coefficient must contribute a measurable response across its driver bounds.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/drive/properties/radius/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Constant millimetres added to the weighted native parameter lengths; defaults to zero. The native expression includes explicit mm units.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/18": {
+          "status": "reviewed",
+          "explanation": "A native PartDesign Body groups one mechanical part, its origin planes, sketches and feature history. This slice supports one Body; choose its final solid tip as output, not the container.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/18/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique authored name for this body, used by later dependency ports and the native tree label. Changing it changes the declared feature identity.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/18/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Selects the body operation and its bounded native PartDesign contract; this is not an arbitrary native type or script.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/18/properties/options": {
+          "status": "reviewed",
+          "explanation": "No Body options in this slice: placement is identity at the world origin; add constrained XY sketches as separately named members.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/18/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "The Body is a graph root and accepts no input ports. It groups later owned sketches and features.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19": {
+          "status": "reviewed",
+          "explanation": "Create the first solid of a Body from an owned constrained sketch and a positive +Z thickness. Its native Profile is linked; BaseFeature is empty for this first feature.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique authored name for this pad, used by later dependency ports and the native tree label. Changing it changes the declared feature identity.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Selects the pad operation and its bounded native PartDesign contract; this is not an arbitrary native type or script.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/options": {
+          "status": "reviewed",
+          "explanation": "First-Pad options control positive thickness along +Z. Side, custom vector and symmetric modes are fixed by this contract.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/options/properties/length": {
+          "status": "reviewed",
+          "explanation": "Positive first-Pad thickness in mm along +Z, default 10 mm. Omit when drive.length supplies a persistent native relationship.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "Provide both the earlier Body container and a profile owned by it. The first Pad creates the initial solid; later additive Pads are outside this slice.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/inputs/properties/body": {
+          "status": "reviewed",
+          "explanation": "Required earlier Body container that owns this first Pad and its profile. This is ownership, not a solid BaseFeature link; a Body is never a solid output.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/inputs/properties/profile": {
+          "status": "reviewed",
+          "explanation": "Required earlier constrained sketch owned by this Pad's Body. It defines the section extruded along +Z.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/drive": {
+          "status": "reviewed",
+          "explanation": "Preserve supported dimension relationships as native expressions instead of supplying only their current numbers. Omit every driven dimension from options; batch runs and finite variants are supported.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/drive/properties/length": {
+          "status": "reviewed",
+          "explanation": "Drive the pad length from an affine sum of named lengths. This stays a native expression after FCStd reopening; do not also declare the same literal option.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/drive/properties/length/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Map one to four declared parameter names to nonzero coefficients. Their length contributions add to the offset; all independent bound corners must remain positive and at most 100000 mm.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/drive/properties/length/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "The signed dimensionless coefficient multiplies one declared length parameter. Its full-range response must remain independently observable; zero, nonfinite and underflowing effects are rejected.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/drive/properties/length/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "Zero is excluded: every declared coefficient must contribute a measurable response across its driver bounds.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/19/properties/drive/properties/length/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Constant millimetres added to the weighted native parameter lengths; defaults to zero. The native expression includes explicit mm units.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/20": {
+          "status": "reviewed",
+          "explanation": "Remove material through all stock from the current Body tip, using an unused owned sketch. This preserves through-hole intent when thickness changes.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/20/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique authored name for this pocket, used by later dependency ports and the native tree label. Changing it changes the declared feature identity.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/20/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Selects the pocket operation and its bounded native PartDesign contract; this is not an arbitrary native type or script.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/20/properties/options": {
+          "status": "reviewed",
+          "explanation": "Pocket options retain explicit through-all intent; the cut uses one side along +Z from an origin XY sketch.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/20/properties/options/properties/extent": {
+          "status": "reviewed",
+          "explanation": "The supported value throughAll retains native ThroughAll intent as the stock thickness changes. Fixed length and other side/extent modes are deliberately unsupported.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/20/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "Provide the current solid tip as base and an unused profile from the same Body. Native ownership and the resulting single solid are verified.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/20/properties/inputs/properties/base": {
+          "status": "reviewed",
+          "explanation": "Required current Pad or Pocket tip in the same Body. This creates the linear native BaseFeature history; branching from an older feature is rejected.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/20/properties/inputs/properties/profile": {
+          "status": "reviewed",
+          "explanation": "Required earlier unused constrained sketch in the same Body as the base. Its region removes material through all stock along +Z; each profile is consumed once.",
+          "sources": [
+            "docs/freecad-part-design.md",
+            "src/schemaxis/adaptors/freecad/part_design.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21": {
+          "status": "reviewed",
+          "explanation": "Bring one external STEP solid (for example a supplier part) into the model with explicit units, axis orientation and placement, check it against facts you declare from its drawing or datasheet, optionally merge coplanar faces, and continue with ordinary cuts, fillets, measurements and checked STEP, STL and FCStd publications.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique name of the imported part; later nodes use it as an input, and the native source object carries it as its label.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Selects the checked STEP import contract; it is not an arbitrary native importer or script.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options": {
+          "status": "reviewed",
+          "explanation": "Source file, its declared unit, how its axes map to the part, where the part is placed, the facts it must satisfy, and whether to refine faces.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Path of a plain ISO 10303-21 STEP file (AP203, AP214 or AP242) holding exactly one solid, or a workflow artifact reference to a verified STEP publication. A relative path resolves against the directory planning runs in, and that resolved path is recorded. Planning reads at most 32 MiB, 100000 entities and 2000 oriented edges per loop; the run keeps a byte-identical copy and saved verification uses only that copy.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_source.py"
+          ],
+          "pitfalls": [
+            "Assemblies, instanced or transformed representations, several solids, presentation/colour records and external references are refused before FreeCAD starts.",
+            "Changing the file after planning fails the run with INPUT_CHANGED; a new plan or resume sees the new bytes."
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/units": {
+          "status": "reviewed",
+          "explanation": "The length unit the STEP file itself assigns to its shape: mm, cm, m or inch. It asserts what the file means and never rescales it; FreeCAD converts the assigned unit to millimetres. A different assigned unit fails with UNIT_MISMATCH, and a file with no assigned length unit fails with UNDECLARED_UNIT because units are never guessed.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_source.py"
+          ],
+          "pitfalls": [
+            "Do not use units to correct a wrongly exported file; fix the export or state the unit the file declares."
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/orientation": {
+          "status": "reviewed",
+          "explanation": "Which signed file axes become the part +Z and +X; +Y completes a right-handed frame. The default keeps the file axes. A Y-up export is mapped with z \"+Y\" and x \"+X\". A reflection cannot be expressed, so orientation never changes handedness.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/orientation/properties/z": {
+          "status": "reviewed",
+          "explanation": "The file axis that becomes the part +Z (default +Z).",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/orientation/properties/x": {
+          "status": "reviewed",
+          "explanation": "The file axis that becomes the part +X. Required when z is not +Z or -Z, and it must be perpendicular to z; defaults to +X otherwise.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/placement": {
+          "status": "reviewed",
+          "explanation": "Where the oriented part is placed in the model. It is stored as the editable placement of the imported source object, so a later GUI edit moves the part and its refine output together.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/placement/properties/position": {
+          "status": "reviewed",
+          "explanation": "Translation in mm applied after orientation and clocking; each coordinate within ±100000 mm.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/placement/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate in mm.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/placement/properties/clocking": {
+          "status": "reviewed",
+          "explanation": "Rotation in degrees about the part +Z, applied after orientation and before the translation; ±360.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect": {
+          "status": "reviewed",
+          "explanation": "Facts the imported part must satisfy, measured on the exact solid in the part frame: after units and orientation, before placement. Volume is required, together with a centre of mass or at least one inside and one outside point, because volume, area and bounds alone accept a mirrored or turned part. These checks verify only the declared facts; a symmetric part or poorly chosen points can still hide a mirror, a turn or a different part, and FreeCAD may silently repair a file's face orientation.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import_native.py"
+          ],
+          "pitfalls": [
+            "Take the facts from the drawing, datasheet or an earlier verified run, never from the file being checked."
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/volume": {
+          "status": "reviewed",
+          "explanation": "Expected volume of the part with its relative tolerance; a mismatch fails with EXPECTATION_FAILED at this field.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/volume/properties/value": {
+          "status": "reviewed",
+          "explanation": "Expected volume in mm³ (positive).",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/volume/properties/relativeTolerance": {
+          "status": "reviewed",
+          "explanation": "Allowed relative volume difference, 1e-9 to 0.01 (default 1e-6).",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/centreOfMass": {
+          "status": "reviewed",
+          "explanation": "Expected uniform-density centre of mass in the part frame with an absolute tolerance. It discriminates a mirror or turn only when the centre is away from the part's symmetry planes; the run reports per-axis discriminability for its exports.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/centreOfMass/properties/value": {
+          "status": "reviewed",
+          "explanation": "Expected centre [x, y, z] in mm in the part frame.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/centreOfMass/properties/value/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate in mm.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/centreOfMass/properties/tolerance": {
+          "status": "reviewed",
+          "explanation": "Allowed distance in mm between expected and measured centres, 1e-6 to 1 (default 0.01).",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/bounds": {
+          "status": "reviewed",
+          "explanation": "Optional expected part-frame bounding box. Bounds alone cannot tell a mirrored or turned part from the intended one.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/bounds/properties/value": {
+          "status": "reviewed",
+          "explanation": "Expected [xmin, xmax, ymin, ymax, zmin, zmax] in mm, with each minimum not above its maximum.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/bounds/properties/value/items": {
+          "status": "reviewed",
+          "explanation": "One bound in mm.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/bounds/properties/tolerance": {
+          "status": "reviewed",
+          "explanation": "Allowed difference in mm for each bound, 1e-6 to 1 (default 0.01).",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/points": {
+          "status": "reviewed",
+          "explanation": "Points in the part frame that must lie inside or outside the solid, such as a web and a hole centre. Each point must be at least guard from every face: the exact distance to the boundary is measured first, and a point on or near a face is refused rather than counted as evidence.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/points/properties/inside": {
+          "status": "reviewed",
+          "explanation": "Up to 32 points that must be inside the material.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/points/properties/inside/items": {
+          "status": "reviewed",
+          "explanation": "One point [x, y, z] in mm in the part frame.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/points/properties/inside/items/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate in mm.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/points/properties/outside": {
+          "status": "reviewed",
+          "explanation": "Up to 32 points that must be outside the material, for example inside a hole.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/points/properties/outside/items": {
+          "status": "reviewed",
+          "explanation": "One point [x, y, z] in mm in the part frame.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/points/properties/outside/items/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate in mm.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/expect/properties/points/properties/guard": {
+          "status": "reviewed",
+          "explanation": "Required minimum distance in mm from each point to the part boundary, 1e-6 to 10; a closer point fails with INVALID_ARGUMENT.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/options/properties/refine": {
+          "status": "reviewed",
+          "explanation": "Add a parametric Part::Refine output that merges coplanar and co-cylindrical faces of the import. It must keep volume and centre of mass within the declared tolerances and must not add faces, otherwise PREPARATION_CHANGED_GEOMETRY; it follows the source placement and keeps identity placement itself. No other repair or healing is performed.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import_native.py"
+          ]
+        },
+        "/properties/nodes/items/oneOf/21/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "An import has no input ports; it starts a branch of the model.",
+          "sources": [
+            "docs/freecad.md",
+            "src/schemaxis/adaptors/freecad/step_import.py"
+          ]
         }
       }
     },
@@ -4160,10 +5290,10 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A FreeCAD fixed assembly: box and cylinder part definitions, linked component instances of those parts, one grounded component and a tree of fixed joints that attach components to each other's top or bottom faces. Schemaxis builds a native Assembly (App::Link components, a grounded joint and Fixed joints), runs FreeCAD's assembly solver, compares every placement with an independent analytic calculation and publishes model.FCStd; a second FreeCAD process reopens and re-solves it.",
+          "explanation": "A FreeCAD fixed assembly in one of two forms that never mix. Constructor form: box and cylinder part definitions whose components are joined at their top or bottom faces. Modelled-part form: verified PartDesign part publications (each embedded once with its editable history) whose components are joined at named mounting frames with a parent offset and clocking. Both use linked component instances, one grounded component and a tree of fixed joints. Schemaxis builds a native Assembly (App::Link components, a grounded joint and Fixed joints), runs FreeCAD's assembly solver, compares every placement with an independent analytic calculation and publishes model.FCStd; a separate FreeCAD process reopens and re-solves it.",
           "pitfalls": [
-            "Only fixed joints between top and bottom faces are supported: no moving joints, imported parts, subassemblies or interference checks.",
-            "The optional --freecad-gui run adds native joint editors and screenshots; without it the FCStd is still a solvable, editable assembly."
+            "Only fixed joints are supported: no moving joints, face selection on modelled parts, imported STEP or third-party FCStd parts, subassemblies or interference checks.",
+            "For constructor assemblies the optional --freecad-gui run adds native joint editors and screenshots; modelled-part assemblies refuse that stage (UNSUPPORTED_STAGE) because they already carry a verified first-open view state."
           ],
           "examples": [
             {
@@ -4292,10 +5422,12 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/freecad/assembly.py:45-126",
+            "docs/freecad-assemblies.md",
+            "src/schemaxis/adaptors/freecad/assembly.py",
             "src/schemaxis/adaptors/freecad/assembly.py:140-168",
+            "src/schemaxis/adaptors/freecad/assembly.py:45-126",
             "src/schemaxis/adaptors/freecad/assembly_native.py:169-218",
-            "docs/freecad-assemblies.md"
+            "src/schemaxis/adaptors/freecad/assembly_sources.py"
           ]
         },
         "/properties/version": {
@@ -4321,7 +5453,7 @@
         },
         "/properties/parts": {
           "status": "reviewed",
-          "explanation": "1 to 32 reusable shape definitions (box or cylinder). Each part becomes one native source object, and every component that uses it is an App::Link to that object, so changing a part's dimensions updates all of its instances. Every part must be used by at least one component.",
+          "explanation": "1 to 32 reusable part definitions: either box/cylinder constructors or verified PartDesign part publications with named mounts (never a mix). Each part becomes one native source (a primitive object or an embedded editable Body), and every component that uses it is an App::Link to that source, so changing the source updates all of its instances. Every part must be used by at least one component.",
           "label": "Part definitions",
           "pitfalls": [
             "An unused part fails planning with UNUSED_PART."
@@ -4350,7 +5482,7 @@
         },
         "/properties/parts/items": {
           "status": "reviewed",
-          "explanation": "One part definition: a unique id, a type (box or cylinder) and its dimensions in millimetres.",
+          "explanation": "One part definition with a unique id: either a constructor (type box or cylinder with its dimensions in millimetres) or a modelled part (source naming a verified PartDesign part publication, plus named mounts). One assembly uses one form for every part.",
           "examples": [
             {
               "id": "plate",
@@ -4360,10 +5492,33 @@
                 "width": 30,
                 "height": 5
               }
+            },
+            {
+              "id": "plate",
+              "source": {
+                "$artifact": "plate",
+                "index": 2
+              },
+              "mounts": {
+                "top": {
+                  "position": [
+                    0,
+                    0,
+                    {
+                      "terms": {
+                        "thickness": 1
+                      }
+                    }
+                  ]
+                }
+              }
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/freecad/assembly.py:55-65"
+            "docs/freecad-assemblies.md",
+            "src/schemaxis/adaptors/freecad/assembly.py",
+            "src/schemaxis/adaptors/freecad/assembly.py:55-65",
+            "src/schemaxis/adaptors/freecad/assembly_sources.py"
           ]
         },
         "/properties/parts/items/oneOf/0": {
@@ -4717,7 +5872,7 @@
         },
         "/properties/joints/items": {
           "status": "reviewed",
-          "explanation": "One fixed joint. It brings the child's chosen face centre to the parent's chosen face centre plus offset, with both connector frames sharing the same +Z, so the child also takes the parent's orientation.",
+          "explanation": "One fixed joint. Its child connector is made to coincide with its parent connector: for constructor parts the connectors are top or bottom face centres (both +Z, parent offset applied); for modelled parts they are the named mount frames, with the offset and clocking applied on the parent mount. The child therefore takes the parent's orientation unless the mounts' axes differ.",
           "examples": [
             {
               "id": "leftMount",
@@ -4735,12 +5890,33 @@
                 0,
                 0
               ]
+            },
+            {
+              "id": "baseToSpacer",
+              "type": "fixed",
+              "parent": {
+                "component": "base",
+                "mount": "top"
+              },
+              "child": {
+                "component": "spacer",
+                "mount": "bottom"
+              },
+              "offset": [
+                5,
+                0,
+                0
+              ],
+              "clocking": 90
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/freecad/assembly.py:86-111",
+            "docs/freecad-assemblies.md",
+            "src/schemaxis/adaptors/freecad/assembly.py",
             "src/schemaxis/adaptors/freecad/assembly.py:146-152",
-            "src/schemaxis/adaptors/freecad/assembly_native.py:198-206"
+            "src/schemaxis/adaptors/freecad/assembly.py:86-111",
+            "src/schemaxis/adaptors/freecad/assembly_native.py:198-206",
+            "src/schemaxis/adaptors/freecad/assembly_sources.py"
           ]
         },
         "/properties/joints/items/properties/id": {
@@ -4765,17 +5941,24 @@
         },
         "/properties/joints/items/properties/parent": {
           "status": "reviewed",
-          "explanation": "The component and face the child is attached to. The parent must be the grounded component or a component already connected to it through other joints.",
+          "explanation": "The component the child is attached to, and where: a face (top or bottom) for constructor parts, or a named mount of that component's part for modelled parts. The parent must be the grounded component or already connected to it through other joints.",
           "label": "Parent end",
           "examples": [
             {
               "component": "base",
               "face": "top"
+            },
+            {
+              "component": "base",
+              "mount": "top"
             }
           ],
           "sources": [
+            "docs/freecad-assemblies.md",
+            "src/schemaxis/adaptors/freecad/assembly.py",
+            "src/schemaxis/adaptors/freecad/assembly.py:112-121",
             "src/schemaxis/adaptors/freecad/assembly.py:93-102",
-            "src/schemaxis/adaptors/freecad/assembly.py:112-121"
+            "src/schemaxis/adaptors/freecad/assembly_sources.py"
           ]
         },
         "/properties/joints/items/properties/parent/properties/component": {
@@ -4791,7 +5974,7 @@
         },
         "/properties/joints/items/properties/parent/properties/face": {
           "status": "reviewed",
-          "explanation": "top uses the parent's planar cap at local Z = height (to stack the child above); bottom uses the cap at Z = 0 (to hang the child below). Schemaxis finds the native face from its geometry, not from FaceN numbering.",
+          "explanation": "Constructor parts only. top uses the parent's planar cap at local Z = height (to stack the child above); bottom uses the cap at Z = 0 (to hang the child below). Schemaxis finds the native face from its geometry, not from FaceN numbering.",
           "label": "Parent face",
           "examples": [
             "top"
@@ -4804,16 +5987,23 @@
         },
         "/properties/joints/items/properties/child": {
           "status": "reviewed",
-          "explanation": "The component being positioned and which of its faces meets the parent's connector.",
+          "explanation": "The component being positioned, and which of its connectors meets the parent's: a face (top or bottom) for constructor parts, or one of its part's named mounts for modelled parts.",
           "label": "Child end",
           "examples": [
             {
               "component": "lid",
               "face": "bottom"
+            },
+            {
+              "component": "spacer",
+              "mount": "bottom"
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/freecad/assembly.py:93-105"
+            "docs/freecad-assemblies.md",
+            "src/schemaxis/adaptors/freecad/assembly.py",
+            "src/schemaxis/adaptors/freecad/assembly.py:93-105",
+            "src/schemaxis/adaptors/freecad/assembly_sources.py"
           ]
         },
         "/properties/joints/items/properties/child/properties/component": {
@@ -4830,7 +6020,7 @@
         },
         "/properties/joints/items/properties/child/properties/face": {
           "status": "reviewed",
-          "explanation": "Face of the child brought to the parent's connector: bottom (Z = 0) or top (Z = height). bottom is the usual choice for stacking on a parent's top face.",
+          "explanation": "Constructor parts only. Face of the child brought to the parent's connector: bottom (Z = 0) or top (Z = height). bottom is the usual choice for stacking on a parent's top face.",
           "label": "Child face",
           "pitfalls": [
             "Faces are not flipped to oppose each other: with child face top on a parent's top face, the child extends downward into the parent."
@@ -5009,6 +6199,396 @@
             "docs/adaptor-runtime.md#inputs-and-finite-iteration",
             "docs/json-input.md",
             "guidance:/$defs/json"
+          ]
+        },
+        "/properties/parts/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Use a modelled part: a verified PartDesign part publication with named mounting frames instead of a box or cylinder constructor. The assembly embeds one editable copy of that part's whole history (parameters, sketches, Pad and Pocket); every component that uses it is an App::Link to that copy. All parts of one assembly are either constructors or modelled parts, never a mix.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "pitfalls": [
+            "Mixing constructor and modelled parts fails with UNSUPPORTED_PART.",
+            "Two part entries that name the same file still become two separate embedded copies; reuse one part entry for repeated instances."
+          ],
+          "examples": [
+            {
+              "id": "plate",
+              "source": {
+                "$artifact": "plate",
+                "index": 2
+              },
+              "mounts": {
+                "top": {
+                  "position": [
+                    0,
+                    0,
+                    {
+                      "terms": {
+                        "thickness": 1
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "label": "Modelled part"
+        },
+        "/properties/parts/items/oneOf/2/properties/id": {
+          "status": "reviewed",
+          "explanation": "Name of this part definition. Components refer to it, and FreeCAD labels the embedded Body '<id> source', its parameters '<id> parameters' and its mounts '<id>.<mount>'.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Part ID",
+          "examples": [
+            "plate"
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/source": {
+          "status": "reviewed",
+          "explanation": "The model.FCStd publication of a verified schemaxis.freecad/1 run with exactly one PartDesign Body whose solid tip is the output. In a workflow write {\"$artifact\": \"<part operation>\", \"index\": 2}; FCStd is the part route's third publication (STEP 0, STL 1, FCStd 2). Standalone, give the file path. The run's own receipts are read and rechecked, and the file is copied byte-for-byte before use.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Verified part file",
+          "pitfalls": [
+            "Symbolic links, other routes or publications, legacy Part outputs, design studies and changed bytes are refused (UNSUPPORTED_SOURCE, INPUT_CHANGED).",
+            "Changing the source after a run invalidates that run; rerun into a fresh directory."
+          ],
+          "examples": [
+            {
+              "$artifact": "plate",
+              "index": 2
+            }
+          ],
+          "fileExtensions": [
+            ".FCStd"
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts": {
+          "status": "reviewed",
+          "explanation": "Named mounting frames on this part, 1 to 16. Joints connect mounts, so a mount says where and how another part attaches. Each becomes a native PartDesign coordinate system inside the embedded Body, attached to the Body's own XY plane.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Mounts",
+          "pitfalls": [
+            "A mount ID must differ from the part's own feature names (for example outline or slab)."
+          ],
+          "examples": [
+            {
+              "top": {
+                "position": [
+                  0,
+                  0,
+                  {
+                    "terms": {
+                      "thickness": 1
+                    }
+                  }
+                ]
+              },
+              "bottom": {}
+            }
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "One mount: an origin position and two signed axes in the part's own coordinates. A fixed joint makes the child's mount frame coincide with the parent's mount frame, so choose the same +Z on both mounts to stack parts and opposite directions only when a part should be turned over.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Mount",
+          "examples": [
+            {
+              "position": [
+                0,
+                0,
+                {
+                  "terms": {
+                    "thickness": 1
+                  }
+                }
+              ],
+              "z": "+Z",
+              "x": "+X"
+            }
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/position": {
+          "status": "reviewed",
+          "explanation": "Mount origin [x, y, z] in the part's frame, in millimetres. Each entry is a number or a binding to this part's parameters, so the mount moves when the part is edited (for example a top mount at the current thickness).",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Position",
+          "units": "Millimetres (part frame)",
+          "defaultMeaning": "Schemaxis default: [0, 0, 0], the Body origin.",
+          "examples": [
+            [
+              0,
+              0,
+              {
+                "terms": {
+                  "thickness": 1
+                }
+              }
+            ]
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate of the mount origin: a fixed millimetre value or a parameter binding.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Coordinate",
+          "units": "Millimetres"
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/position/items/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "A fixed coordinate in millimetres within plus or minus 100000. It does not follow later parameter edits.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Fixed coordinate",
+          "units": "Millimetres",
+          "examples": [
+            0
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/position/items/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "A coordinate that follows this part's parameters: the sum of coefficient times parameter plus offset. It is written as a native FreeCAD expression on the mount, so editing the parameter in FreeCAD moves the mount and everything joined to it.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Parameter binding",
+          "pitfalls": [
+            "Only parameters published by this part can be used; the coordinate must stay within 100000 mm across the parameter bounds.",
+            "A coefficient whose effect across the parameter range is too small to verify fails with UNOBSERVABLE_BINDING."
+          ],
+          "examples": [
+            {
+              "terms": {
+                "width": 0.5
+              }
+            },
+            {
+              "terms": {
+                "thickness": 1
+              },
+              "offset": 2
+            }
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/position/items/oneOf/1/properties/terms": {
+          "status": "reviewed",
+          "explanation": "Parameter names of this part mapped to their coefficients, 1 to 4 terms. {\"thickness\": 0.5} places the coordinate at half the thickness.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Terms",
+          "examples": [
+            {
+              "thickness": 0.5
+            }
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/position/items/oneOf/1/properties/terms/additionalProperties": {
+          "status": "reviewed",
+          "explanation": "Coefficient multiplying the named parameter (millimetres per millimetre), nonzero and at most 1000000 in magnitude.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Coefficient",
+          "examples": [
+            1
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/position/items/oneOf/1/properties/terms/additionalProperties/not": {
+          "status": "reviewed",
+          "explanation": "A coefficient of zero is refused: it would declare a relationship that has no effect.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Nonzero coefficient"
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/position/items/oneOf/1/properties/offset": {
+          "status": "reviewed",
+          "explanation": "Constant added after the parameter terms, in millimetres.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Offset",
+          "units": "Millimetres",
+          "defaultMeaning": "Schemaxis default: 0 mm.",
+          "examples": [
+            1.5
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/z": {
+          "status": "reviewed",
+          "explanation": "Direction of the mount's +Z axis in part coordinates, one of +X, -X, +Y, -Y, +Z or -Z. Fixed joints align the child mount's +Z with the parent mount's +Z, so +Z on both stacks parts and -Z on one mount turns its part over.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Mount Z axis",
+          "defaultMeaning": "Schemaxis default: +Z.",
+          "pitfalls": [
+            "When z is not +Z or -Z, give x explicitly."
+          ],
+          "examples": [
+            "+X"
+          ]
+        },
+        "/properties/parts/items/oneOf/2/properties/mounts/additionalProperties/properties/x": {
+          "status": "reviewed",
+          "explanation": "Direction of the mount's +X axis, perpendicular to z; together with z it fixes the clocking reference and Y completes a right-handed frame.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Mount X axis",
+          "defaultMeaning": "Schemaxis default: +X (only when z is +Z or -Z).",
+          "pitfalls": [
+            "x parallel to z fails with INVALID_MOUNT."
+          ],
+          "examples": [
+            "-Z"
+          ]
+        },
+        "/properties/joints/items/properties/parent/properties/mount": {
+          "status": "reviewed",
+          "explanation": "Name of the parent part's mount that the child attaches to (modelled parts only). The joint references the native coordinate system inside the parent's embedded Body through the parent component's link.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Parent mount",
+          "pitfalls": [
+            "Use face for constructor parts and mount for modelled parts; an undeclared mount fails with UNKNOWN_MOUNT."
+          ],
+          "examples": [
+            "top"
+          ]
+        },
+        "/properties/joints/items/properties/parent/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Endpoint form for constructor parts: name a cap face and no mount.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Face endpoint"
+        },
+        "/properties/joints/items/properties/parent/oneOf/0/not": {
+          "status": "reviewed",
+          "explanation": "A face endpoint must not also name a mount.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "No mount with a face"
+        },
+        "/properties/joints/items/properties/parent/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Endpoint form for modelled parts: name a mount and no face.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Mount endpoint"
+        },
+        "/properties/joints/items/properties/parent/oneOf/1/not": {
+          "status": "reviewed",
+          "explanation": "A mount endpoint must not also name a face.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "No face with a mount"
+        },
+        "/properties/joints/items/properties/child/properties/mount": {
+          "status": "reviewed",
+          "explanation": "Name of the child part's mount that is placed onto the parent mount (modelled parts only). The child moves so that this mount frame coincides with the parent mount frame after the offset and clocking.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Child mount",
+          "examples": [
+            "bottom"
+          ]
+        },
+        "/properties/joints/items/properties/child/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Endpoint form for constructor parts: name a cap face and no mount.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Face endpoint"
+        },
+        "/properties/joints/items/properties/child/oneOf/0/not": {
+          "status": "reviewed",
+          "explanation": "A face endpoint must not also name a mount.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "No mount with a face"
+        },
+        "/properties/joints/items/properties/child/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Endpoint form for modelled parts: name a mount and no face.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Mount endpoint"
+        },
+        "/properties/joints/items/properties/child/oneOf/1/not": {
+          "status": "reviewed",
+          "explanation": "A mount endpoint must not also name a face.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "No face with a mount"
+        },
+        "/properties/joints/items/properties/clocking": {
+          "status": "reviewed",
+          "explanation": "Turn, in degrees, about the parent mount's +Z axis, applied after the offset translation, to set the child's rotation about the joint (modelled parts only). It is stored with the offset in the joint's first connector (Offset1); the FreeCAD panel's simple Rotation field edits the child connector (Offset2) instead.",
+          "sources": [
+            "src/schemaxis/adaptors/freecad/assembly_sources.py",
+            "docs/freecad-assemblies.md"
+          ],
+          "label": "Clocking",
+          "units": "Degrees about the parent mount +Z",
+          "defaultMeaning": "Schemaxis default: 0 degrees.",
+          "pitfalls": [
+            "Clocking is refused on constructor face joints.",
+            "Edits made in the FreeCAD joint panel are not copied back into the JSON."
+          ],
+          "examples": [
+            90
           ]
         }
       }

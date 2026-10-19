@@ -63,6 +63,65 @@ class SchedulerTests(unittest.TestCase):
                     self.assertTrue(execute(doc, target, resume=True)['verified'])
                     self.assertEqual(runner.call_count, count)
 
+    def test_saved_capture_verifies_without_original_but_forged_reuse_reruns(self):
+        from schemaxis.artifacts import file_digest
+        from schemaxis.publication_metadata import finalise
+        from schemaxis.schema_snapshots import export_run
+        from schemaxis import parallel
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp); source = base/'input.txt'; source.write_text('original')
+            def current(document): return {str(source): file_digest(source)}
+            def captured(target, document): return {str(source): file_digest(Path(target)/'captured.txt')}
+            def run(document, target, *args):
+                result = fake_run(document, target)
+                (target/'captured.txt').write_bytes(source.read_bytes())
+                finalise(target)
+                return result
+            with patch('schemaxis.parallel.run_native', side_effect=run) as runner, \
+                    patch('schemaxis.parallel.verify_native', side_effect=fake_verify), \
+                    patch('schemaxis.parallel.reusable_inputs', side_effect=current), \
+                    patch('schemaxis.parallel.retained_inputs', side_effect=captured):
+                target = base/'run'; doc = workflow(1)
+                result = execute(doc, target)
+                attempt = Path(result['jobs'][0]['directory'])
+                exported = base/'exported'; export_run(target, exported)
+                source.unlink()
+                self.assertTrue(verify(target)['verified'])
+                self.assertTrue(verify(exported)['verified'])
+                source.write_text('changed')
+                self.assertTrue(verify(target)['verified'])
+                # An attacker changes both the scheduler result and reusable job
+                # to claim the new input, while captured bytes still contain old data.
+                result['jobs'][0]['inputHashes'] = current(doc)
+                atomic_json(target/'result.json', result)
+                atomic_json(attempt/'job.json', result['jobs'][0])
+                with self.assertRaises(SchemaxisError): verify(target)
+                resumed = execute(doc, target, resume=True)
+                self.assertFalse(resumed['jobs'][0]['reused'])
+                self.assertEqual(runner.call_count, 2)
+                self.assertEqual(Path(resumed['jobs'][0]['directory'], 'captured.txt').read_text(), 'changed')
+                self.assertTrue(verify(target)['verified'])
+
+    def test_exported_artifact_handoff_retains_recorded_input_identity(self):
+        from schemaxis.publication_metadata import finalise
+        from schemaxis.schema_snapshots import export_run
+        doc = workflow(2); doc['operations'][1]['document']['file'] = {'$artifact': 'job0', 'index': 0}
+        def run(document, target, *args):
+            result = fake_run(document, target); finalise(target); return result
+        with tempfile.TemporaryDirectory() as tmp, patch('schemaxis.parallel.run_native', side_effect=run), \
+                patch('schemaxis.parallel.verify_native', side_effect=fake_verify), \
+                patch('schemaxis.parallel.registry.plan', return_value={}):
+            base = Path(tmp); source = base/'run'
+            result = execute(doc, source)
+            exported = base/'exported'; export_run(source, exported)
+            source.rename(base/'unavailable')
+            self.assertTrue(verify(exported)['verified'])
+            saved = json.loads((exported/'result.json').read_text())
+            self.assertEqual(saved['jobs'][1]['effective'], result['jobs'][1]['effective'])
+            saved['jobs'][1]['handoffs'][0]['file'] = '/foreign/data.vtp'
+            atomic_json(exported/'result.json', saved)
+            with self.assertRaises(SchemaxisError): verify(exported)
+
     def test_concurrency_is_real_and_output_order_is_planned(self):
         barrier = threading.Barrier(2)
         def run(doc, target, *args):
@@ -86,6 +145,7 @@ class SchedulerTests(unittest.TestCase):
             deadline = time.monotonic()+3
             while not cancellation_requested() and time.monotonic()<deadline:
                 time.sleep(.005)
+            self.assertTrue(cancellation_requested(), 'worker must observe parent cancellation')
             from schemaxis.errors import fail
             fail('RUNNER_CANCELLED', 'parent cancellation reached worker')
         def coordinate(directory):
@@ -94,12 +154,16 @@ class SchedulerTests(unittest.TestCase):
                     execute(workflow(count=1), directory)
             except SchemaxisError as error:
                 result.append(error.fault.code)
-        with tempfile.TemporaryDirectory() as tmp, patch('schemaxis.parallel.run_native', side_effect=run):
+        # Schema serialization has separate integration coverage. Keep this
+        # deadline focused on worker scheduling and cancellation propagation.
+        with tempfile.TemporaryDirectory() as tmp, patch('schemaxis.parallel.run_native', side_effect=run), patch('schemaxis.schema_snapshots.capture_run'):
             thread = threading.Thread(target=coordinate, args=(Path(tmp)/'run',))
             thread.start()
-            self.assertTrue(entered.wait(2))
-            parent.set()
-            thread.join(timeout=4)
+            try:
+                self.assertTrue(entered.wait(2))
+            finally:
+                parent.set()
+                thread.join(timeout=4)
             self.assertFalse(thread.is_alive())
             self.assertEqual(result, ['RUNNER_CANCELLED'])
             self.assertFalse(json.loads((Path(tmp)/'run/result.json').read_text())['verified'])
@@ -212,6 +276,36 @@ class SchedulerTests(unittest.TestCase):
 
 
 class InputProvenanceTests(unittest.TestCase):
+    def test_retained_hook_requires_complete_absolute_sha256_bindings(self):
+        from schemaxis.parallel import retained_inputs
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            for value in ({'relative': 'a'*64}, {'/source': 'not-a-digest'}, [], {'/source': 12}):
+                with self.subTest(value=value), patch('schemaxis.parallel.registry.route_hook', return_value=lambda *a: value):
+                    with self.assertRaises(SchemaxisError): retained_inputs(target, {'version': 'schemaxis/1'})
+            for value in (None, {}, {'/source': 'a'*64}):
+                with patch('schemaxis.parallel.registry.route_hook', return_value=lambda *a: value):
+                    self.assertEqual(retained_inputs(target, {'version': 'schemaxis/1'}), value)
+
+    def test_common_retained_inputs_merge_and_reject_conflicting_captures(self):
+        from schemaxis.parallel import retained_inputs
+        from schemaxis.adaptor_runtime import PROTOCOL
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            atomic_json(target/'result.json', {'protocol': PROTOCOL})
+            states = []
+            for index in range(2):
+                name = 'state-'+str(index).zfill(5); (target/name).mkdir()
+                states.append({'directory': name, 'document': {'version': 'schemaxis/1', 'index': index}})
+            atomic_json(target/'verification.json', {'states': states})
+            values = [{'a': 'a'*64}, {'b': 'b'*64}]
+            def hook(directory, document):
+                return {'/'+k: v for k, v in values[document['index']].items()}
+            with patch('schemaxis.parallel.registry.route_hook', return_value=hook):
+                self.assertEqual(retained_inputs(target, {}), {'/a': 'a'*64, '/b': 'b'*64})
+                values[1] = {'a': 'b'*64}
+                with self.assertRaises(SchemaxisError): retained_inputs(target, {})
+
     def test_unknown_external_readers_are_not_reused(self):
         from schemaxis.parallel import reusable_inputs
         doc = {'version': 'schemaxis/1', 'nodes': [{'id': 'mesh', 'filter': 'readSurface', 'options': {'files': ['/tmp/a.vtp']}}],

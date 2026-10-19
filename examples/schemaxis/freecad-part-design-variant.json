@@ -1,0 +1,115 @@
+{
+  "version": "schemaxis.freecad/1",
+  "parameters": {
+    "width": {
+      "kind": "length",
+      "value": 80,
+      "minimum": 60,
+      "maximum": 100
+    },
+    "thickness": {
+      "kind": "length",
+      "value": {
+        "$analytic": {
+          "type": "values",
+          "values": [
+            5,
+            20
+          ]
+        }
+      },
+      "minimum": 2,
+      "maximum": 50
+    },
+    "boreRadius": {
+      "kind": "length",
+      "value": 3,
+      "minimum": 2,
+      "maximum": 5
+    }
+  },
+  "nodes": [
+    {
+      "id": "part",
+      "filter": "body"
+    },
+    {
+      "id": "outline",
+      "filter": "rectangle",
+      "inputs": {
+        "body": "part"
+      },
+      "options": {
+        "height": 50,
+        "plane": "XY"
+      },
+      "drive": {
+        "width": {
+          "terms": {
+            "width": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "slab",
+      "filter": "pad",
+      "inputs": {
+        "body": "part",
+        "profile": "outline"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "thickness": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "bore",
+      "filter": "circle",
+      "inputs": {
+        "body": "part"
+      },
+      "options": {
+        "plane": "XY",
+        "centre": [
+          15,
+          10
+        ]
+      },
+      "drive": {
+        "radius": {
+          "terms": {
+            "boreRadius": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "finished",
+      "filter": "pocket",
+      "inputs": {
+        "base": "slab",
+        "profile": "bore"
+      },
+      "options": {
+        "extent": "throughAll"
+      }
+    }
+  ],
+  "output": "finished",
+  "measurements": [
+    {
+      "id": "volume",
+      "node": "finished",
+      "quantity": "volume"
+    },
+    {
+      "id": "height",
+      "node": "finished",
+      "quantity": "extentZ"
+    }
+  ]
+}

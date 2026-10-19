@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.prusaslicer/1"
+    },
+    "operation": {
+      "const": "sliceModel"
+    },
+    "model": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 4096,
+          "pattern": "^/[^\\u0000-\\u001f]*\\.[sS][tT][lL]$"
+        },
+        "units": {
+          "enum": [
+            "millimetre",
+            "inch"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "units"
+      ]
+    },
+    "printer": {
+      "type": "object",
+      "properties": {
+        "bedSize_mm": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 50,
+            "maximum": 1000
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "maxPrintHeight_mm": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 1000
+        },
+        "nozzleDiameter_mm": {
+          "type": "number",
+          "minimum": 0.15,
+          "maximum": 1.2
+        },
+        "gcodeFlavour": {
+          "enum": [
+            "marlin2"
+          ]
+        },
+        "maxFeedrate_mm_s": {
+          "type": "number",
+          "minimum": 20,
+          "maximum": 1000
+        },
+        "maxAcceleration_mm_s2": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 30000
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "bedSize_mm",
+        "maxPrintHeight_mm",
+        "nozzleDiameter_mm",
+        "gcodeFlavour",
+        "maxFeedrate_mm_s",
+        "maxAcceleration_mm_s2"
+      ]
+    },
+    "material": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "PLA",
+            "PETG",
+            "ABS",
+            "ASA"
+          ]
+        },
+        "filamentDiameter_mm": {
+          "type": "number",
+          "minimum": 1.0,
+          "maximum": 3.5
+        },
+        "density_g_cm3": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 3.0
+        },
+        "nozzleTemperature_C": {
+          "type": "number",
+          "minimum": 150,
+          "maximum": 320
+        },
+        "firstLayerNozzleTemperature_C": {
+          "type": "number",
+          "minimum": 150,
+          "maximum": 320
+        },
+        "bedTemperature_C": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 130
+        },
+        "firstLayerBedTemperature_C": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 130
+        },
+        "fanSpeed_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "filamentDiameter_mm",
+        "density_g_cm3",
+        "nozzleTemperature_C",
+        "firstLayerNozzleTemperature_C",
+        "bedTemperature_C",
+        "firstLayerBedTemperature_C",
+        "fanSpeed_percent"
+      ]
+    },
+    "print": {
+      "type": "object",
+      "properties": {
+        "layerHeight_mm": {
+          "type": "number",
+          "minimum": 0.04,
+          "maximum": 1.0
+        },
+        "firstLayerHeight_mm": {
+          "type": "number",
+          "minimum": 0.04,
+          "maximum": 1.0
+        },
+        "extrusionWidth_mm": {
+          "type": "number",
+          "minimum": 0.15,
+          "maximum": 2.4
+        },
+        "perimeters": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "topSolidLayers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "bottomSolidLayers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "infillDensity_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "infillPattern": {
+          "enum": [
+            "rectilinear",
+            "grid",
+            "gyroid"
+          ]
+        },
+        "perimeterSpeed_mm_s": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 500
+        },
+        "infillSpeed_mm_s": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 500
+        },
+        "firstLayerSpeed_mm_s": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 200
+        },
+        "travelSpeed_mm_s": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 1000
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "layerHeight_mm",
+        "firstLayerHeight_mm",
+        "extrusionWidth_mm",
+        "perimeters",
+        "topSolidLayers",
+        "bottomSolidLayers",
+        "infillDensity_percent",
+        "infillPattern",
+        "perimeterSpeed_mm_s",
+        "infillSpeed_mm_s",
+        "firstLayerSpeed_mm_s",
+        "travelSpeed_mm_s"
+      ]
+    },
+    "placement": {
+      "type": "object",
+      "properties": {
+        "centre_mm": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+          },
+          "quantity": {
+            "enum": [
+              "printTime_s",
+              "filamentMass_g",
+              "filamentLength_mm"
+            ]
+          },
+          "maximum": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000.0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "quantity",
+          "maximum"
+        ]
+      },
+      "maxItems": 8,
+      "default": []
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "model",
+    "printer",
+    "material",
+    "print"
+  ]
+}

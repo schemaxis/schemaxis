@@ -1,0 +1,567 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "sliceModel": {
+      "status": "reviewed",
+      "explanation": "Slices one closed STL part into layer-by-layer FFF/FDM G-code with PrusaSlicer 2.9.6, using a complete configuration rendered from the declared printer, filament and print values. Publishes model.gcode, a per-layer layers.csv, slice-summary.json with native print-time and filament estimates, and the exact config.ini. An independent replay checks layers, the extrusion envelope, temperature/fan setpoints, feedrates, filament arithmetic and kinematic time bounds, and a fresh native reload must reproduce the G-code. It never sends G-code to a printer.",
+      "sources": [
+        "docs/prusaslicer.md",
+        "src/schemaxis/adaptors/prusaslicer/adaptor.py",
+        "src/schemaxis/adaptors/prusaslicer/gcode.py"
+      ],
+      "pitfalls": [
+        "The G-code targets a generic Marlin 2 machine; it is not validated for any physical printer, firmware or material, and no print quality or safety is certified.",
+        "Only one closed STL object; no supports, brim, skirt, raft, multi-material, modifiers or mesh repair.",
+        "Estimates are PrusaSlicer model estimates under the declared machine limits, not measured print times."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/prusaslicer-pla.json",
+          "purpose": "PLA on a 0.4 mm nozzle with 20% grid infill."
+        },
+        {
+          "reference": "examples/schemaxis/prusaslicer-petg.json",
+          "purpose": "Solid PETG on a 0.6 mm nozzle with a filament mass limit."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.prusaslicer/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "One slicing request: the STL part and its units, an explicit generic FFF printer, filament and print profile, optional placement and optional limits on native estimates. Schemaxis renders every setting into a complete PrusaSlicer configuration; no presets, custom G-code or scripts can be supplied.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis slicing document; it must be \"schemaxis.prusaslicer/1\". It is not the PrusaSlicer release (the adaptor targets PrusaSlicer 2.9.6).",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            "schemaxis.prusaslicer/1"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The only operation, sliceModel: slice one closed STL into G-code and publish independently replayed evidence.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            "sliceModel"
+          ]
+        },
+        "/properties/model": {
+          "status": "reviewed",
+          "explanation": "The part to slice: an absolute STL path, the units its coordinates use, and optionally the SHA-256 of the exact bytes you intend to slice.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "pitfalls": [
+            "The STL is read when the slice runs, not when it is planned; a changed file changes the result unless sha256 is pinned."
+          ]
+        },
+        "/properties/model/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path to a binary or ASCII STL containing one closed, consistently oriented triangle mesh (each edge shared by exactly two triangles with opposite winding). The bytes are copied into the attempt directory and bound by SHA-256 before PrusaSlicer is launched. At most 16 MiB and 100000 triangles.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "fileExtensions": [
+            ".stl"
+          ],
+          "examples": [
+            "/path/to/parts/bracket.stl"
+          ],
+          "pitfalls": [
+            "Relative paths are rejected; Studio and agents may run from different working directories.",
+            "Open, inverted, duplicated or zero-area triangles are rejected with INVALID_MODEL; this adaptor never repairs meshes.",
+            "Triangle winding defines inside/outside; stored facet normals are ignored. Self-intersections are not detected."
+          ]
+        },
+        "/properties/model/properties/units": {
+          "status": "reviewed",
+          "explanation": "Units of the STL coordinates. STL files carry no unit, so state it explicitly: millimetre slices the coordinates as they are; inch scales the model by 25.4 (native --scale) before slicing. All other lengths in this document are millimetres regardless.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            "millimetre",
+            "inch"
+          ],
+          "pitfalls": [
+            "A part exported in inches but declared millimetre becomes 25.4 times too small and usually fails the minimum-footprint check."
+          ]
+        },
+        "/properties/model/properties/sha256": {
+          "status": "reviewed",
+          "explanation": "Optional 64-digit lowercase hexadecimal SHA-256 of the STL bytes. When present, a run refuses different bytes with INPUT_DIGEST_MISMATCH before launching PrusaSlicer. Omit it to slice whatever the file contains at run time; the observed digest is always recorded.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "defaultMeaning": "Omitted: the observed digest is recorded but not compared with a declared value.",
+          "examples": [
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          ]
+        },
+        "/properties/printer": {
+          "status": "reviewed",
+          "explanation": "A generic Marlin 2 fused-filament machine described only by these values: rectangular bed, maximum print height, nozzle diameter, and the feedrate and acceleration limits used by the native time estimator. It is not a vendor printer profile and nothing is sent to a machine.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "pitfalls": [
+            "Matching these numbers to a real printer does not make the G-code safe for it; review start/end G-code and limits before any physical use."
+          ]
+        },
+        "/properties/printer/properties/bedSize_mm": {
+          "status": "reviewed",
+          "explanation": "Bed width (X) and depth (Y) in millimetres, as [width, depth]; becomes native bed_shape 0x0,Wx0,WxD,0xD with the origin at the front-left corner. Every G-code move must stay inside it.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm",
+          "examples": [
+            [
+              250,
+              210
+            ]
+          ]
+        },
+        "/properties/printer/properties/bedSize_mm/items": {
+          "status": "reviewed",
+          "explanation": "One bed dimension in millimetres: the first item is X width, the second Y depth (50 to 1000 mm).",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/printer/properties/maxPrintHeight_mm": {
+          "status": "reviewed",
+          "explanation": "Maximum printable Z height in millimetres (native max_print_height). Models taller than this are rejected with MODEL_OUT_OF_BOUNDS before slicing.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm",
+          "examples": [
+            210
+          ]
+        },
+        "/properties/printer/properties/nozzleDiameter_mm": {
+          "status": "reviewed",
+          "explanation": "Nozzle orifice diameter in millimetres (native nozzle_diameter). It bounds layer heights (at most 0.8 x nozzle) and extrusion width (1 to 2 x nozzle).",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm",
+          "examples": [
+            0.4,
+            0.6
+          ]
+        },
+        "/properties/printer/properties/gcodeFlavour": {
+          "status": "reviewed",
+          "explanation": "G-code dialect (native gcode_flavor). Only marlin2 is supported and checked by the independent replay; other firmware flavours are not offered.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            "marlin2"
+          ]
+        },
+        "/properties/printer/properties/maxFeedrate_mm_s": {
+          "status": "reviewed",
+          "explanation": "Maximum X and Y axis speed in mm/s used by the native time estimator (machine_max_feedrate_x/y, with machine_limits_usage = time_estimate_only). Z and E are fixed at 12 and 120 mm/s. These limits are not emitted to the G-code and do not reduce authored speeds.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm/s",
+          "examples": [
+            200
+          ],
+          "pitfalls": [
+            "Lower values lengthen the estimate only; they do not slow the G-code."
+          ]
+        },
+        "/properties/printer/properties/maxAcceleration_mm_s2": {
+          "status": "reviewed",
+          "explanation": "Single acceleration in mm/s2 applied to every axis and to printing, retracting and travel moves in the native time estimator. The independent check brackets the native estimate between constant-speed and rest-to-rest bounds using this value.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm/s^2",
+          "examples": [
+            1500
+          ]
+        },
+        "/properties/material": {
+          "status": "reviewed",
+          "explanation": "Filament description and setpoints: polymer label, filament diameter and density, first-layer and later nozzle and bed temperatures and the part-cooling fan. The values are copied into G-code and checked for application, not for suitability.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "pitfalls": [
+            "Schemaxis does not verify that temperatures are appropriate or safe for a material, printer or enclosure."
+          ]
+        },
+        "/properties/material/properties/type": {
+          "status": "reviewed",
+          "explanation": "Polymer label written to native filament_type. It only labels the configuration; it does not select vendor settings or change slicing.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            "PLA",
+            "PETG"
+          ]
+        },
+        "/properties/material/properties/filamentDiameter_mm": {
+          "status": "reviewed",
+          "explanation": "Nominal filament diameter in millimetres (native filament_diameter), usually 1.75 or 2.85. It converts deposited volume into filament length; the replay uses it to recompute volume and mass from extruded length.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm",
+          "examples": [
+            1.75
+          ]
+        },
+        "/properties/material/properties/density_g_cm3": {
+          "status": "reviewed",
+          "explanation": "Filament density in g/cm3 (native filament_density), used only for the filament mass estimate. PLA is about 1.24 and PETG about 1.27.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "g/cm^3",
+          "examples": [
+            1.24
+          ]
+        },
+        "/properties/material/properties/nozzleTemperature_C": {
+          "status": "reviewed",
+          "explanation": "Nozzle setpoint in degrees Celsius for every layer after the first (native temperature). The replay requires every extrusion from layer 2 onward to occur at this setpoint.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "degC",
+          "examples": [
+            210
+          ]
+        },
+        "/properties/material/properties/firstLayerNozzleTemperature_C": {
+          "status": "reviewed",
+          "explanation": "Nozzle setpoint in degrees Celsius for the first layer (native first_layer_temperature). PrusaSlicer waits for it (M109) before the first extrusion.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "degC",
+          "examples": [
+            215
+          ]
+        },
+        "/properties/material/properties/bedTemperature_C": {
+          "status": "reviewed",
+          "explanation": "Bed setpoint in degrees Celsius after the first layer (native bed_temperature); 0 means an unheated bed.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "degC",
+          "examples": [
+            60
+          ]
+        },
+        "/properties/material/properties/firstLayerBedTemperature_C": {
+          "status": "reviewed",
+          "explanation": "Bed setpoint in degrees Celsius for the first layer (native first_layer_bed_temperature). When above 0, PrusaSlicer waits for it (M190) before extrusion.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "degC",
+          "examples": [
+            65
+          ]
+        },
+        "/properties/material/properties/fanSpeed_percent": {
+          "status": "reviewed",
+          "explanation": "Part-cooling fan duty in percent from layer 2 onward; the first layer is printed with the fan off. Rendered as identical minimum, maximum and bridge fan speeds so the commanded value is constant (M106 S = 255 x percent / 100).",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "percent",
+          "examples": [
+            100,
+            40
+          ]
+        },
+        "/properties/print": {
+          "status": "reviewed",
+          "explanation": "Process settings: layer heights, one extrusion width for all features, shells, sparse infill and speeds. Supports, brim, skirt, raft, ironing, variable layer height and custom G-code are always off.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ]
+        },
+        "/properties/print/properties/layerHeight_mm": {
+          "status": "reviewed",
+          "explanation": "Height of every layer after the first in millimetres (native layer_height). Must not exceed 0.8 x nozzle diameter. Layer count is approximately 1 + (model height - first layer height) / layer height.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm",
+          "examples": [
+            0.2
+          ],
+          "pitfalls": [
+            "If the model height is not a whole number of layers above the first layer, the top layer is placed within one layer height of the model top."
+          ]
+        },
+        "/properties/print/properties/firstLayerHeight_mm": {
+          "status": "reviewed",
+          "explanation": "Height of the first layer in millimetres (native first_layer_height); the first extrusion happens at exactly this Z. Must not exceed 0.8 x nozzle diameter.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm",
+          "examples": [
+            0.2
+          ]
+        },
+        "/properties/print/properties/extrusionWidth_mm": {
+          "status": "reviewed",
+          "explanation": "Extrusion line width in millimetres applied to every feature (perimeters, infill, top and first layer). The outer perimeter centreline lies half this width inside the model outline, which the replay checks. Must be 1 to 2 nozzle diameters and larger than every layer height.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm",
+          "examples": [
+            0.45
+          ]
+        },
+        "/properties/print/properties/perimeters": {
+          "status": "reviewed",
+          "explanation": "Number of perimeter loops around each layer (native perimeters, classic generator).",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            2
+          ]
+        },
+        "/properties/print/properties/topSolidLayers": {
+          "status": "reviewed",
+          "explanation": "Number of solid layers under top surfaces (native top_solid_layers; minimum thickness fixed at 0 so this count is used exactly).",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            4
+          ]
+        },
+        "/properties/print/properties/bottomSolidLayers": {
+          "status": "reviewed",
+          "explanation": "Number of solid layers above bottom surfaces (native bottom_solid_layers; minimum thickness fixed at 0).",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            3
+          ]
+        },
+        "/properties/print/properties/infillDensity_percent": {
+          "status": "reviewed",
+          "explanation": "Sparse infill density in percent (native fill_density). 100 makes the interior solid and requires the rectilinear pattern.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "percent",
+          "examples": [
+            20,
+            100
+          ]
+        },
+        "/properties/print/properties/infillPattern": {
+          "status": "reviewed",
+          "explanation": "Sparse infill pattern (native fill_pattern): rectilinear, grid or gyroid. Top and bottom solid layers always use rectilinear.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            "grid"
+          ]
+        },
+        "/properties/print/properties/perimeterSpeed_mm_s": {
+          "status": "reviewed",
+          "explanation": "Speed in mm/s for all perimeters, including small and external perimeters. Cooling slowdown can reduce it on short layers; the replay requires no extrusion above max(perimeter, infill) speed after the first layer.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm/s",
+          "examples": [
+            40
+          ]
+        },
+        "/properties/print/properties/infillSpeed_mm_s": {
+          "status": "reviewed",
+          "explanation": "Speed in mm/s for sparse, solid, top, gap-fill and bridge infill.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm/s",
+          "examples": [
+            60
+          ]
+        },
+        "/properties/print/properties/firstLayerSpeed_mm_s": {
+          "status": "reviewed",
+          "explanation": "Speed in mm/s for every extrusion on the first layer (native first_layer_speed); the replay requires no first-layer extrusion above it.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm/s",
+          "examples": [
+            20
+          ]
+        },
+        "/properties/print/properties/travelSpeed_mm_s": {
+          "status": "reviewed",
+          "explanation": "Speed in mm/s for non-extruding moves (native travel_speed); the replay requires no travel move above it.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm/s",
+          "examples": [
+            150
+          ]
+        },
+        "/properties/placement": {
+          "status": "reviewed",
+          "explanation": "Where the model sits on the bed. The model is always dropped onto the bed (minimum Z = 0) and never rotated or arranged.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "defaultMeaning": "Omitted: the model bounding box is centred on the bed centre."
+        },
+        "/properties/placement/properties/centre_mm": {
+          "status": "reviewed",
+          "explanation": "Bed point [x, y] in millimetres on which the model bounding box is centred (native --center). It must lie inside the bed, and the whole footprint must fit around it.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm",
+          "examples": [
+            [
+              125,
+              105
+            ]
+          ],
+          "defaultMeaning": "Omitted: bed centre.",
+          "pitfalls": [
+            "A centre near an edge rejects large parts with MODEL_OUT_OF_BOUNDS before slicing."
+          ]
+        },
+        "/properties/placement/properties/centre_mm/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate of the placement centre in millimetres: first X, then Y.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "units": "mm"
+        },
+        "/properties/requirements": {
+          "status": "reviewed",
+          "explanation": "Optional named upper limits on checked native estimates. A slice that exceeds any limit still publishes its verified evidence but fails with PERFORMANCE_NOT_MET, which blocks downstream consumers and reuse.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "defaultMeaning": "Omitted: no estimate limits; a verified slice succeeds."
+        },
+        "/properties/requirements/items": {
+          "status": "reviewed",
+          "explanation": "One limit: a unique lowercase name, the estimate it applies to and an inclusive maximum.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ]
+        },
+        "/properties/requirements/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Unique lowercase identifier (letters, digits, underscores) reported with the observed value and signed margin.",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            "material_budget"
+          ]
+        },
+        "/properties/requirements/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "Native estimate to limit: printTime_s (normal-mode print time in seconds), filamentMass_g (grams, from declared density) or filamentLength_mm (filament length in millimetres).",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            "filamentMass_g"
+          ]
+        },
+        "/properties/requirements/items/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Inclusive upper bound in the quantity unit (seconds, grams or millimetres).",
+          "sources": [
+            "docs/prusaslicer.md",
+            "src/schemaxis/adaptors/prusaslicer/adaptor.py"
+          ],
+          "examples": [
+            20
+          ]
+        }
+      }
+    }
+  }
+}

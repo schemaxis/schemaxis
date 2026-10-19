@@ -1,0 +1,346 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.qpdf/1": {
+      "guide": "docs/qpdf.md",
+      "context": {
+        "purpose": "Build a new PDF from selected pages of named captured PDFs in a declared order, with repeated pages and relative clockwise quarter-turn rotation. Every output page is verified against its captured source page by fresh QPDF and MuPDF observation. Use it to assemble review packets and handouts from unencrypted, annotation-free PDFs.",
+        "assumptions": "Unencrypted, structurally intact local PDFs on POSIX with QPDF 12.4.2 and MuPDF 1.28.5; selected pages inside the declared page and resource envelope.",
+        "constraints": "<=4 sources of <=16 MiB (32 MiB together) and <=500 pages each; <=200 output pages; one-based physical page numbers; physical page side <=8192 points including UserUnit; 36 dpi verification raster <=4096 pixels per side and 16,777,216 pixels over all output pages, repeats included; quarter turns only. Forms, signatures, layers, tagged structure, annotations, page actions and page transparency groups refuse. No authored scripts, passwords, URLs or page labels.",
+        "inspection": "Inspect assembly-summary.json for per-page source, rotation, geometry, raster digest and text size; verification reopens the captured sources and the published PDF with QPDF and MuPDF. The literal fixture oracle independently checks sizes, quadrant colours and text.",
+        "recovery": "INVALID_PDF_SOURCE needs an absolute bounded regular PDF; INVALID_PDF_PAGES names an undeclared source; ENCRYPTED_PDF needs an authorized unencrypted copy; PDF_REPAIRED means QPDF raised warnings while reading (INVALID_PDF_SOURCE also covers a PDF QPDF cannot read without recovery); PDF_PAGE_FEATURE_UNSUPPORTED, PDF_CATALOGUE_UNSUPPORTED, PDF_FEATURE_UNSUPPORTED and PDF_ANNOTATIONS_UNSUPPORTED name the refused feature; PDF_PIXEL_LIMIT needs fewer or smaller pages; INTERPRETER_NOT_FOUND and UNSUPPORTED_RUNTIME need QPDF 12.4.2 (--qpdf) and MuPDF 1.28.5 (--mupdf). Retained logs and result.json explain process faults."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/qpdf-assemble.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/qpdf-assemble-variant.json"
+        },
+        {
+          "id": "undeclared-source",
+          "reference": "examples/schemaxis/qpdf-pages-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_PDF_PAGES",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_qpdf.py"
+      ],
+      "acceptance": [
+        "tools/qualify_qpdf.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "The verified assembled PDF and summary run through normal workflow jobs and chain into QPDF or MuPDF; captured source digests invalidate reuse.",
+          "references": [
+            "docs/qpdf.md",
+            "tools/qualify_qpdf.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared expressions, references and finite visits resolve before PDF assembly planning.",
+          "references": [
+            "docs/qpdf.md",
+            "tools/qualify_qpdf.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://qpdf.readthedocs.io/en/stable/cli.html",
+          "https://qpdf.readthedocs.io/en/stable/json.html",
+          "https://mupdf.readthedocs.io/en/1.28.5/reference/javascript/types/PDFDocument.html",
+          "https://mupdf.readthedocs.io/en/1.28.5/reference/javascript/types/PDFObject.html",
+          "https://mupdf.readthedocs.io/en/1.28.5/reference/javascript/types/PDFPage.html",
+          "https://mupdf.readthedocs.io/en/1.28.5/reference/javascript/types/Pixmap.html",
+          "https://mupdf.readthedocs.io/en/1.28.5/reference/javascript/types/StructuredText.html"
+        ],
+        "lifecycle": {
+          "timeout": "One cumulative deadline covers every native launch of a run, including the fresh post-assembly observation; standalone verification opens its own 120-second cumulative scope and checks the remaining budget before every launch and after its final host work. POSIX AS (1 GiB QPDF, 2 GiB MuPDF), FSIZE 64 MiB and CPU 120 s caps per stage. A run timeout is at most 3600 seconds, which also bounds each visit of a finite study.",
+          "cancellation": "Every native stage runs through the shared cancellable process-tree runner, including verification; cancellation or timeout faults rather than skipping, and incomplete evidence stays inspectable.",
+          "logs": "Captured sources and digests, authored and effective plans, and the trusted launchers, commands, consumed-input bindings, native submissions, stdout and stderr of the assembly-side run stages (version checks, per-source reads, assembly), the per-page assembly summary and the receipt are retained. The observation stages (published-PDF reads and the two MuPDF observers) run in a temporary directory that is removed after the run and after every verification, so their logs and rasters are not retained. Receipt executable paths are inert provenance and are never executed.",
+          "verification": "Saved verification re-reads the captured sources and published PDF once, applies the same capture policy as a run (standard header, 16 MiB each, 32 MiB together), then reopens them with the configured QPDF and MuPDF in fresh processes: QPDF checks and bounded JSON, an allow-listed page, catalogue and trailer envelope, and exact 36 dpi raster, text and geometry comparison of each output page with its captured source page (source Rotate overridden in memory only). Retained sidecars are consistency diagnostics: plan, capture record, receipt publications and digests, the fresh summary and the retained evidence digests. Missing or wrong runtimes, timeouts and cancellation fault rather than skip."
+        },
+        "data": [
+          {
+            "id": "pdf",
+            "direction": "input",
+            "kind": "pdf",
+            "format": "PDF",
+            "traits": {
+              "encryption": "none",
+              "pages": "1-500",
+              "bytes": "<=16 MiB"
+            },
+            "losses": [
+              "Only selected pages are carried; original bytes are retained as captured provenance."
+            ],
+            "scope": "Captured local regular PDFs or verified QPDF PDF publications; native parsing establishes structure."
+          },
+          {
+            "id": "assembled-pdf",
+            "direction": "output",
+            "kind": "pdf",
+            "format": "PDF",
+            "traits": {
+              "pages": "1-200",
+              "labels": "removed",
+              "encryption": "none"
+            },
+            "losses": [
+              "The output is a new document made only from the selected pages. Document information, XMP metadata, outlines, named destinations, open actions, document JavaScript, viewer preferences and attachments are discarded; page labels are always removed. This is a recorded loss, not sanitisation.",
+              "Sources with forms or signatures, optional-content layers, tagged structure, output intents, encryption, annotations on selected pages, or page actions, transitions, beads or page metadata are refused rather than altered.",
+              "Page content, fonts, images and graphics are carried unchanged; rotation is a relative clockwise quarter turn; MediaBox, CropBox, local optional boxes and UserUnit are preserved.",
+              "Verification is bounded: exact 36 dpi raster, text and geometry agreement between each output page and its captured source page, plus QPDF structural checks. Not full semantic equivalence, accessibility, colour management or conformance validation.",
+              "Not a PDF sanitiser or malware boundary; content-stream operators and font or image semantics are not scanned. A successful verification is not a signature or historical attestation."
+            ],
+            "scope": "One new PDF whose pages are the selected source pages in the authored order."
+          },
+          {
+            "id": "assembly-summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "content": "per-page identity map"
+            },
+            "losses": [
+              "A bounded appearance, text and geometry record at 36 dpi; not a copy of page content."
+            ],
+            "scope": "Per-page source identity, rotation, geometry, raster digest and text size, regenerated and compared by verification."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect the per-page assembly summary.",
+            "limits": "No embedded PDF viewer; the published PDF opens in an external viewer."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit source paths, the ordered page list and rotations, plan fresh and verify. Same-path byte changes invalidate workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "The verified PDF publication runs through workflow jobs and hands off to QPDF or MuPDF."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native-inspection hook; the per-page summary is a publication."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared expressions, references and finite visits resolve before PDF assembly planning."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial local subprocess only."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Captured source bytes participate in reuse identity, including same-path changes."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "PDF pages are explicit ordered selections, not temporal datasets."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing, undo and validation support the closed assembly document."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared forms expose named source paths and ordered page lists with rotation."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No live application connection or native edit synchronization."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The route publishes a new assembled PDF; no application document is saved or edited."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Only page assembly into a new PDF is supported; no document-format conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "ordered-assembly",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/sources/0/path": "examples/schemaxis/fixtures/qpdf/cover.pdf",
+              "/sources/1/path": "examples/schemaxis/fixtures/qpdf/report.pdf"
+            },
+            "scope": "Hand-built literal PDFs: a fractional A4 cover and a four-page report with an inherited MediaBox and Rotate, a negative-origin cropped page, an own-rotation override and a UserUnit=2 page. Each page has distinct quadrant colours and text. tools/qualify_qpdf.py independently renders the published PDF and checks sizes, quadrant colours and text against constants known by construction. Reorder with a repeated page and one rotated repeat.",
+            "checks": [
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pageCount",
+                "expected": 5,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/0/pixels/0",
+                "expected": 298,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/0/pixels/1",
+                "expected": 421,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/1/pixels/0",
+                "expected": 72,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/2/pixels/0",
+                "expected": 150,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/2/pixels/1",
+                "expected": 100,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/3/rotation",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/4/rotation",
+                "expected": 90,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "capture.json",
+                "format": "json",
+                "pointer": "/sources/0/bytes",
+                "expected": 891,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "capture.json",
+                "format": "json",
+                "pointer": "/sources/1/bytes",
+                "expected": 2042,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "reversed-rotated",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/sources/0/path": "examples/schemaxis/fixtures/qpdf/cover.pdf",
+              "/sources/1/path": "examples/schemaxis/fixtures/qpdf/report.pdf"
+            },
+            "scope": "Hand-built literal PDFs: a fractional A4 cover and a four-page report with an inherited MediaBox and Rotate, a negative-origin cropped page, an own-rotation override and a UserUnit=2 page. Each page has distinct quadrant colours and text. tools/qualify_qpdf.py independently renders the published PDF and checks sizes, quadrant colours and text against constants known by construction. Reverse order with each repeat of one page turned differently.",
+            "checks": [
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pageCount",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/0/pixels/0",
+                "expected": 100,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/0/rotation",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/2/rotation",
+                "expected": 270,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/3/pixels/0",
+                "expected": 421,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "assembly-summary.json",
+                "format": "json",
+                "pointer": "/pages/3/pixels/1",
+                "expected": 298,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial bounded PDF page-assembly route, fields, publications and lifecycle.",
+        "review": [
+          "verification/2026-10-17-qpdf-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native-inspection hook; the per-page summary is a publication.",
+          "mpi": "Serial local subprocess only.",
+          "time-batches": "PDF pages are explicit ordered selections, not temporal datasets.",
+          "live-editing": "No live application connection or native edit synchronization.",
+          "native-save": "The route publishes a new assembled PDF; no application document is saved or edited.",
+          "conversion": "Only page assembly into a new PDF is supported; no document-format conversion."
+        }
+      }
+    }
+  }
+}

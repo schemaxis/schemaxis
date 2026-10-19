@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import re
 import shutil
+import sqlite3
+import stat
 import time
 from schemaxis.core.declarations import validate_arguments
 from schemaxis.core.faults import SchemaxisError
@@ -13,6 +15,7 @@ from schemaxis.artifacts import atomic_json, file_digest
 from schemaxis.errors import fail, keys
 from schemaxis.dispatch import cancellation_requested
 from schemaxis.native_command import execute
+from . import attributes
 
 PATH={'type':'string','minLength':1,'maxLength':4096,'required':True}
 CRS={'type':'string','minLength':8,'maxLength':11,'required':True}
@@ -27,6 +30,10 @@ DECLARATIONS={op:{'native':native,'kinds':['geospatialVector'],
             'segments':{'type':'integer','minimum':4,'maximum':64,'default':16}}),
         ('clip','QgsGeometry.intersection',{'bounds':{'type':'array','items':{'type':'number','minimum':-1e9,'maximum':1e9},
             'minItems':4,'maxItems':4,'required':True}})]}
+DECLARATIONS.update({op: {'native': 'QgsFeature.attribute' if op == 'selectAttributes' else 'QgsVectorDataProvider.addFeatures',
+    'kinds': ['geospatialVector', 'table'] if op == 'summariseAttributes' else ['geospatialVector'],
+    'inputs': {'input': {'required': True, 'kind': 'geospatialVector'}},
+    'options': {key: {'value': value} for key, value in options.items()}} for op, options in attributes.OPTIONS.items()})
 MAX_INPUT=64*1024*1024
 
 
@@ -47,6 +54,9 @@ def plan(document):
         if not isinstance(op,str) or op not in DECLARATIONS:fail('UNKNOWN_FILTER','unsupported vector operation',identity)
         decl=DECLARATIONS[op]
         options=validate_arguments({k:v['value'] for k,v in decl['options'].items()},node.get('options',{}),location=identity+'.options')
+        if op in attributes.OPTIONS:
+            try: attributes.validate_options(op, options, identity + '.options')
+            except attributes.ContractError as error: fail(error.code, str(error), error.location)
         inputs=node.get('inputs',{});keys(inputs,tuple(decl['inputs']),identity+'.inputs')
         if set(inputs)!=set(decl['inputs']) or any(not isinstance(v,str) or v not in seen for v in inputs.values()):
             fail('INVALID_DEPENDENCY','inputs must reference earlier vector nodes',identity)
@@ -80,7 +90,15 @@ def schema():
 
 def reusableInputs(document):
     paths=[n['options']['file'] for n in plan(document)['nodes'] if n['filter']=='readVector']
+    total=0
     for path in paths:
+        if Path(path).suffix.lower() not in ('.geojson','.gpkg'):
+            fail('UNSUPPORTED_RESOURCE','only single-file GeoJSON and GeoPackage inputs are supported',path)
+        try: info=Path(path).stat()
+        except OSError as error: fail('RESOURCE_NOT_FOUND',str(error),path)
+        if not stat.S_ISREG(info.st_mode):fail('INVALID_RESOURCE','vector input must be a regular file',path)
+        total+=info.st_size
+        if total>MAX_INPUT:fail('RESOURCE_LIMIT','vector input budget exceeds 64 MiB',path)
         if any(Path(path+s).exists() for s in ('-wal','-shm','-journal')):
             fail('UNSUPPORTED_RESOURCE','close/checkpoint the GeoPackage before reading it',path)
     try:
@@ -97,14 +115,32 @@ def resources(document,spec,identity):
 def manifest(directory,prepared):
     files=[('result.gpkg','geospatialVector'),('project.qgz','project')]
     if prepared['preview']:files.append(('preview.png','image'))
+    summaries=[node['id'] for node in prepared['nodes'] if node['filter']=='summariseAttributes']
+    files += [('summary-'+identity+extension,kind) for identity in summaries
+              for extension,kind in (('.csv','table'),('.json','text'),('.gpkg','table'))]
     observed = json.loads((directory/'reopened.json').read_text())['snapshot']
     preview = json.loads((directory/'built.json').read_text()).get('previewSpatial')
-    return [{'file':str(directory/name),'kind':kind,'sha256':file_digest(directory/name),
-             'features': observed['count'],
-             'spatial': preview if kind == 'image' and preview else {'state': 'known', 'frame': 'CRS', 'crs': observed['crs'],
-                         'extent': observed['bounds'], 'extentOrder':['xmin','ymin','xmax','ymax'], 'dimensions': 2,
-                         'scope': 'dataset extent; map preview viewport may include padding',
-                         'units': 'CRS-defined; no Cartesian 3D transform asserted'}} for name,kind in files]
+    result=[]
+    for name,kind in files:
+        record={'file':str(directory/name),'kind':kind,'sha256':file_digest(directory/name)}
+        if name.startswith('summary-'):
+            table=json.loads((directory/(name.rsplit('.',1)[0]+'.json')).read_text())
+            record.update(rows=len(table['rows']),columns=table['columns'])
+        else:
+            record.update(features=observed['count'],spatial=preview if kind=='image' and preview else {
+                'state':'known','frame':'CRS','crs':observed['crs'],'extent':observed['bounds'],
+                'extentOrder':['xmin','ymin','xmax','ymax'],'dimensions':2,
+                'scope':'dataset extent; map preview viewport may include padding',
+                'units':'CRS-defined; no Cartesian 3D transform asserted'})
+        result.append(record)
+    return result
+
+
+def evidence_files(prepared):
+    names=['built.json','reopened.json','sources.json','worker.py']
+    if any(node['filter'] in attributes.OPTIONS for node in prepared['nodes']):
+        names += ['attribute_contract.py','attribute_worker.py']
+    return names
 
 
 def run(document,directory,*,executable=None,timeout=300):
@@ -133,6 +169,9 @@ def run(document,directory,*,executable=None,timeout=300):
             sources[node['id']]={'file':str(path),'retained':target,'sha256':source_hashes[str(path)]}
         atomic_json(directory/'sources.json',sources)
         shutil.copyfile(Path(__file__).with_name('native_worker.py'),directory/'worker.py')
+        if any(node['filter'] in attributes.OPTIONS for node in prepared['nodes']):
+            for source,target in (('attributes.py','attribute_contract.py'),('attribute_worker.py','attribute_worker.py')):
+                shutil.copyfile(Path(__file__).with_name(source),directory/target)
         deadline=time.monotonic()+timeout
         for stage in ('build','reopen'):
             try:
@@ -141,10 +180,10 @@ def run(document,directory,*,executable=None,timeout=300):
             except SchemaxisError:
                 if (directory/'native-fault.json').is_file():
                     fault=json.loads((directory/'native-fault.json').read_text())
-                    fail(fault['code'],fault['message'])
+                    fail(fault['code'],fault['message'],fault.get('location',''))
                 raise
         receipt={'artifacts':manifest(directory,prepared),'evidence':{n:file_digest(directory/n) for n in
-            ('built.json','reopened.json','sources.json','worker.py')}}
+            evidence_files(prepared)}}
         atomic_json(directory/'verification.json',receipt)
         result=verify(directory,require_result=False)
         if cancellation_requested():fail('RUNNER_CANCELLED','GIS publication cancelled')
@@ -179,6 +218,8 @@ def verify(directory, require_result=True):
         required=['result.gpkg','project.qgz','authored.json','plan.json','result.json','verification.json',
                   'built.json','reopened.json','sources.json','worker.py']
         if prepared['preview']:required.append('preview.png')
+        required += [name for name in evidence_files(prepared) if name not in required]
+        required += ['summary-'+node['id']+extension for node in prepared['nodes'] if node['filter']=='summariseAttributes' for extension in ('.csv','.json','.gpkg')]
         required += [record['retained'] for record in sources.values()]
         for name in required:
             path=directory/name
@@ -188,17 +229,20 @@ def verify(directory, require_result=True):
         check(built['plan']==prepared and reopened['plan']==prepared,'native plan differs')
         check(built['snapshot']==reopened['snapshot'] and built['runtime']==reopened['runtime'],'native vector round trip differs')
         check(reopened.get('projectReopened')is True,'project did not reopen')
+        if any(node['filter'] in attributes.OPTIONS for node in prepared['nodes']):
+            from .attribute_evidence import verify as verify_attributes
+            verify_attributes(directory,prepared,sources,built,reopened)
         snap=reopened['snapshot']
         check(0<snap['count']<=prepared['limits']['features'] and len(snap['features'])==snap['count'],'invalid feature count')
         check(re.fullmatch(r'EPSG:[1-9][0-9]{2,5}',snap['crs'])is not None,'missing CRS authority')
         check(receipt=={'artifacts':manifest(directory,prepared),'evidence':{n:file_digest(directory/n) for n in
-            ('built.json','reopened.json','sources.json','worker.py')}},'artifact/evidence digests differ')
+            evidence_files(prepared)}},'artifact/evidence digests differ')
         if prepared['preview']:
             from schemaxis.png import read as read_png
             w,h,pixels=read_png(directory/'preview.png')
             check((w,h)==(640,480) and len(set(pixels[i:i+4] for i in range(0,len(pixels),4)))>1,'map preview is blank or wrong size')
         return {'verified':True,'artifacts':len(receipt['artifacts']),'features':snap['count'],'crs':snap['crs'],'runtime':reopened['runtime']}
-    except (OSError,ValueError,KeyError,TypeError) as error:fail('VERIFICATION_FAILED','missing or invalid GIS evidence: '+str(error))
+    except (OSError,ValueError,KeyError,TypeError,sqlite3.Error) as error:fail('VERIFICATION_FAILED','missing or invalid GIS evidence: '+str(error))
 
 
 # Shared authored-input, analytic-visit and verification boundary.

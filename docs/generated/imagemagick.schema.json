@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.imagemagick/1"
+    },
+    "operation": {
+      "const": "raster"
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "crop": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4096
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4096
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y",
+              "width",
+              "height"
+            ]
+          },
+          "scale": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8,
+            "default": 1
+          },
+          "quarterTurns": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3,
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "colourPolicy": {
+      "enum": [
+        "require-srgb",
+        "assume-srgb"
+      ],
+      "default": "require-srgb"
+    },
+    "alpha": {
+      "enum": [
+        "preserve",
+        "flatten"
+      ],
+      "default": "preserve"
+    },
+    "background": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "default": [
+        255,
+        255,
+        255
+      ]
+    },
+    "sheet": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8,
+          "default": 2
+        },
+        "padding": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64,
+          "default": 8
+        },
+        "background": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "default": [
+            255,
+            255,
+            255
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "images"
+  ]
+}

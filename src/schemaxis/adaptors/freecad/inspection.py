@@ -1,4 +1,5 @@
 """Native CAD topology inspection for explicit edge selection and diagnostics."""
+import copy
 import json
 from pathlib import Path
 from schemaxis.core.runners import Interpreter
@@ -26,8 +27,19 @@ def inspect(document,node,directory,*,executable=None,timeout=300,visit=0):
         for source in nodes[identity]['inputs'].values():
             for dependency in source if isinstance(source,list) else [source]:collect(dependency)
     collect(node)
-    reduced={'version':'schemaxis.freecad/1','units':'mm','nodes':[n for n in prepared['nodes'] if n['id'] in needed],
+    # Planned import facts are recomputed from the authored options when the pruned document is planned.
+    reduced={'version':'schemaxis.freecad/1','units':'mm','nodes':[{k:v for k,v in n.items() if k not in ('source','frame')}
+                                                                   for n in prepared['nodes'] if n['id'] in needed],
              'output':node,'linearDeflection':prepared['linearDeflection']}
+    # Resolved options contain driven current values. Restore the authored
+    # binding boundary when planning the pruned document, retaining only drivers
+    # used by this dependency closure.
+    if 'parameters' in prepared:
+        reduced['nodes']=copy.deepcopy(reduced['nodes']);used=set()
+        for item in reduced['nodes']:
+            for option,binding in item.get('drive',{}).items():
+                item['options'].pop(option,None);used.update(binding['terms'])
+        if used:reduced['parameters']={key:copy.deepcopy(prepared['parameters'][key]) for key in sorted(used)}
     run(reduced,directory,executable=executable,timeout=timeout)
     directory=Path(directory).absolute()
     atomic_json(directory/'inspection-request.json',{'node':node,'authored':document,'visit':visit})
@@ -49,7 +61,8 @@ def inspect_native(directory):
     directory=Path(directory)
     prepared=json.loads((directory/'plan.json').read_text())
     doc=App.openDocument(str(directory/'model.FCStd'))
-    obj=next(o for o in doc.Objects if o.Label==prepared['output'])
+    from .operations import output_names
+    obj=doc.getObject(output_names(prepared)[prepared['output']])
     shape=obj.Shape
     if len(shape.Edges)>10000 or len(shape.Faces)>10000:fail('RESOURCE_BUDGET_EXCEEDED','CAD topology inspection exceeds 10000 edges/faces')
     from .selections import native_edges

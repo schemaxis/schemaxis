@@ -1,0 +1,414 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.kicad/1": {
+      "guide": "docs/kicad.md",
+      "context": {
+        "purpose": "Inspect an existing saved KiCad board, run KiCad's own design rule check, and export Excellon drill files, with each conclusion independently checked against the board geometry.",
+        "assumptions": "A saved two-copper-layer .kicad_pcb in KiCad 8.0-10.0 format, with optional sibling .kicad_pro/.kicad_dru of the same name. Lengths are millimetres; KiCad board coordinates are y-down. kicad-cli runs isolated from global configuration and library tables on captured copies.",
+        "constraints": "Board at most 4 MiB, 2000 tracks/arcs/vias and 2000 holes; only through vias from F.Cu to B.Cu; no oval/offset/backdrilled holes or footprint-owned Edge.Cuts. Drill export needs front-side drilled footprints. No board authoring, zone refill, schematic parity, Gerber/STEP/position outputs or drill maps.",
+        "inspection": "Review board-summary.json: host counts, outline, minimum width/drill/clearance and the native statistics cross-check; for DRC the native findings by type, ignored checks, host predictions and the authored-maximum assessment; for drill export every hit matched by position, diameter and plating.",
+        "recovery": "UNSUPPORTED_BOARD names the unsupported structure; edit the board in KiCad or choose a supported board. DRC_VIOLATIONS retains the native report and summary; fix the board or raise a maximum only with a recorded justification. VERIFICATION_FAILED means a native report disagreed with the host reader; retain the run and report it. Configure KiCad 10.0 kicad-cli for INTERPRETER_NOT_FOUND/UNSUPPORTED_RUNTIME."
+      },
+      "examples": [
+        {
+          "id": "inspect",
+          "reference": "examples/schemaxis/kicad-inspect.json"
+        },
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/kicad-drc.json"
+        },
+        {
+          "id": "drill",
+          "reference": "examples/schemaxis/kicad-drill.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/kicad-drill-variant.json"
+        },
+        {
+          "id": "relative-board",
+          "reference": "examples/schemaxis/kicad-relative-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_RESOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "negative-maximum",
+          "reference": "examples/schemaxis/kicad-gate-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_kicad_admission.py"
+      ],
+      "acceptance": [
+        "tools/qualify_kicad.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified board-summary, native DRC report and drill publications with digests; no downstream consumer is declared.",
+          "references": [
+            "docs/kicad.md",
+            "tools/qualify_kicad.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure values and explicit finite visits; each visit captures its own board inputs.",
+          "references": [
+            "docs/kicad.md"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://docs.kicad.org/10.0/en/cli/cli.html",
+          "https://dev-docs.kicad.org/en/file-formats/sexpr-pcb/",
+          "https://schemas.kicad.org/drc.v1.json",
+          "https://docs.kicad.org/10.0/en/pcbnew/pcbnew.html"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers version, statistics, DRC and drill stages plus final independent verification; each stage receives the remaining budget and the shared supervisor stops the process tree.",
+          "cancellation": "Owned process cancellation covers each native stage; cancellation is checked again before successful publication.",
+          "logs": "Retain authored/effective plans, captured board/project copies and source digests, isolated native home, per-stage stdout/stderr/submissions, runtime identity, native statistics/DRC/drill outputs, summary and failed/success results.",
+          "verification": "An independent dependency-free s-expression reader recomputes counts, outline, holes, track widths and gaps; native statistics must agree, DRC JSON is structurally validated against the observed runtime and its clearance/unconnected findings compared with host predictions where modelled; every Excellon hit is matched to a board hole within half a written digit. Retained inputs are re-hashed after every native stage."
+        },
+        "data": [
+          {
+            "id": "board",
+            "direction": "input",
+            "kind": "pcb",
+            "format": "KiCad .kicad_pcb s-expression (8.0-10.0) with optional .kicad_pro/.kicad_dru",
+            "traits": {
+              "copperLayers": 2,
+              "vias": "through only",
+              "units": "mm"
+            },
+            "losses": [
+              "Global library tables, schematic, zone refill and 3D models are not used."
+            ],
+            "scope": "Saved existing board read-only; captured copy is checked for mutation."
+          },
+          {
+            "id": "board-summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "units": "mm",
+              "frame": "KiCad board y-down"
+            },
+            "losses": [
+              "Host predictions cover only straight-track/through-via clearance and simple pad connectivity; other DRC rules are native-only."
+            ],
+            "scope": "Host facts, native cross-checks, DRC assessment and drill matching."
+          },
+          {
+            "id": "drc-report",
+            "direction": "output",
+            "kind": "text",
+            "format": "KiCad DRC JSON v1",
+            "traits": {
+              "units": "mm",
+              "severities": [
+                "error",
+                "warning",
+                "exclusion"
+              ]
+            },
+            "losses": [
+              "Item UUIDs refer to the captured board copy."
+            ],
+            "scope": "Native findings, unconnected items and ignored checks."
+          },
+          {
+            "id": "drill",
+            "direction": "output",
+            "kind": "drill",
+            "format": "Excellon decimal, absolute origin, mm or inch",
+            "traits": {
+              "frame": "y-up board origin",
+              "holes": "round only"
+            },
+            "losses": [
+              "No slots, drill maps, job file or Gerber layers; tool numbering is KiCad's."
+            ],
+            "scope": "Plated/non-plated round holes on F.Cu-B.Cu."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Read board-summary.json, the native DRC report and Excellon files as text with their cross-check results.",
+            "limits": "No board rendering, layer viewer or interactive marker navigation."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the board path, DRC maximums or drill options in the JSON document; plan, run and verify a fresh directory. Unchanged verified inputs are reused."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified board summaries, native DRC reports and drill files are workflow publications with digests; no downstream adaptor consumes them yet and acceptedArtifacts is empty."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Board inspection is a batch operation (inspectBoard); there is no live native inspection hook."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure values and explicit finite analytic visits; each visit captures and checks its own board inputs."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "kicad-cli runs serially in one process; MPI is not applicable."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Board and sibling .kicad_pro/.kicad_dru digests bind reuse; DRC_VIOLATIONS and failed checks are never reused as success."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "Boards have no time dimension."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared durable document source editing and undo for the small JSON request; the board itself is not authored."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer edits for board path, maximum DRC counts, drill units and plating split."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No live KiCad session; board editing stays in KiCad."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The adaptor never saves, upgrades or refills the board; captured copies are checked for mutation after each native stage."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No format conversion operation; drill export is a fabrication output, not a board conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline-inventory",
+            "example": "inspect",
+            "edits": [],
+            "resources": {
+              "/board": "examples/schemaxis/fixtures/kicad/tiny-board.kicad_pcb"
+            },
+            "scope": "Original 30 x 20 mm board: J1 (2 PTH, 1.0 mm), R1 (2 SMD), H1/H2 (3.2 mm NPTH), two 0.3 mm vias. Closest different-net tracks end 1.9 mm apart with 0.25 mm widths: 1.65 mm.",
+            "checks": [
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/counts/footprints",
+                "expected": 4
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/counts/holes",
+                "expected": 6
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/counts/pads/npth",
+                "expected": 2
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/outline/width_mm",
+                "expected": 30,
+                "absolute": 1e-06,
+                "relative": 0
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/outline/height_mm",
+                "expected": 20,
+                "absolute": 1e-06,
+                "relative": 0
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/minimumTrackClearance_mm",
+                "expected": 1.65,
+                "absolute": 1e-06,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "baseline-drc",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/board": "examples/schemaxis/fixtures/kicad/tiny-board.kicad_pcb"
+            },
+            "scope": "Every net is routed by construction and all gaps exceed the 0.2 mm Default clearance; library checks are ignored by the fixture project. Expect zero findings and confirmed host predictions.",
+            "checks": [
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drc/errors",
+                "expected": 0
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drc/warnings",
+                "expected": 0
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drc/unconnected",
+                "expected": 0
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drc/crossCheck/clearance",
+                "expected": "confirmed"
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drc/crossCheck/unconnected",
+                "expected": "confirmed"
+              }
+            ]
+          },
+          {
+            "id": "baseline-drill",
+            "example": "drill",
+            "edits": [],
+            "resources": {
+              "/board": "examples/schemaxis/fixtures/kicad/tiny-board.kicad_pcb"
+            },
+            "scope": "Six round holes: four plated (two 1.0 mm pads, two 0.3 mm vias) and two 3.2 mm non-plated, in separate millimetre PTH/NPTH files.",
+            "checks": [
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drill/holes",
+                "expected": 6
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drill/plated",
+                "expected": 4
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drill/nonPlated",
+                "expected": 2
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drill/files",
+                "expected": [
+                  "board-PTH.drl",
+                  "board-NPTH.drl"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "variant-drill",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/board": "examples/schemaxis/fixtures/kicad/tiny-variant.kicad_pcb"
+            },
+            "scope": "Original 40 x 25 mm variant: J1 rotated 270 degrees with 3 PTH, two 0.8/0.4 mm vias for SIG and one for VCC, H1/H2 3.2 mm and H3 2.2 mm NPTH; one merged inch drill file. Closest gap is the VCC stub end to the 0.4 mm GND track: 1.9-0.15-0.2 = 1.55 mm.",
+            "checks": [
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drill/holes",
+                "expected": 9
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drill/plated",
+                "expected": 6
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drill/nonPlated",
+                "expected": 3
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/drill/files",
+                "expected": [
+                  "board.drl"
+                ]
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/outline/width_mm",
+                "expected": 40,
+                "absolute": 1e-06,
+                "relative": 0
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/outline/height_mm",
+                "expected": 25,
+                "absolute": 1e-06,
+                "relative": 0
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/counts/footprints",
+                "expected": 6
+              },
+              {
+                "file": "board-summary.json",
+                "format": "json",
+                "pointer": "/board/minimumTrackClearance_mm",
+                "expected": 1.55,
+                "absolute": 1e-06,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "New adaptor schemaxis.kicad/1: inspectBoard, designRuleCheck and drillExport, all fields, guidance, search cases, Studio starters, docs/kicad.md, examples, fixtures, host tests and KiCad 10.0.7 native acceptance.",
+        "review": [
+          "verification/2026-10-16-kicad-completion.md"
+        ],
+        "notApplicable": {
+          "mpi": "kicad-cli runs serially in one process; MPI is not applicable.",
+          "time-batches": "Boards have no time dimension."
+        }
+      }
+    }
+  }
+}

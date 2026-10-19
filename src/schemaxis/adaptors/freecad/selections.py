@@ -99,7 +99,8 @@ def resolve(selector, edges, location='$'):
 
 def native_evidence(doc, prepared):
     records = {}
-    objects = {n['id']: doc.getObject('N'+str(i)) for i,n in enumerate(prepared['nodes'])}
+    from .operations import output_names
+    objects = {identity: doc.getObject(name) for identity, name in output_names(prepared).items()}
     for node in prepared['nodes']:
         if node['filter'] not in ('fillet','chamfer') or not isinstance(node['options']['edges'], dict): continue
         edges = native_edges(objects[node['inputs']['base']].Shape)

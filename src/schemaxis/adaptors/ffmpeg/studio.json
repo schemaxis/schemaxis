@@ -26,7 +26,7 @@
     },
     {
       "id": "sources",
-      "title": "Frames & sprite sheets",
+      "title": "Images & existing video",
       "icon": "layers"
     }
   ],
@@ -242,6 +242,73 @@
         }
       ],
       "requires": "Requires the PNG frame at its declared absolute path."
+    },
+    {
+      "id": "trim-video",
+      "title": "Trim an existing video",
+      "category": "sources",
+      "icon": "layers",
+      "description": "Replace source with a bounded presentation-frame range; output fps retimes without dropping frames.",
+      "fields": {
+        "file": {
+          "label": "Source video",
+          "type": "path",
+          "required": true,
+          "default": "/data/source.mkv",
+          "extensions": [
+            "mkv",
+            "mp4"
+          ]
+        },
+        "start": {
+          "label": "First frame index (inclusive)",
+          "type": "integer",
+          "required": true,
+          "default": 1,
+          "minimum": 0,
+          "maximum": 599
+        },
+        "end": {
+          "label": "End frame index (exclusive)",
+          "type": "integer",
+          "required": true,
+          "default": 4,
+          "minimum": 1,
+          "maximum": 600
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ffmpeg/1",
+              "nodes": [
+                {
+                  "id": "clip",
+                  "filter": "encodeVideo",
+                  "options": {
+                    "file": {
+                      "$fill": "file"
+                    },
+                    "startFrame": {
+                      "$fill": "start"
+                    },
+                    "endFrame": {
+                      "$fill": "end"
+                    },
+                    "fps": 12,
+                    "codec": "ffv1",
+                    "threads": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Supported silent video with uniform integer-rate presentation timestamps."
     }
   ],
   "templates": [
@@ -289,6 +356,41 @@
         }
       },
       "requires": "Requires the declared source images and, for sheets, matching Aseprite JSON at run time."
+    },
+    {
+      "id": "video-range",
+      "title": "Existing video frame range",
+      "description": "Trim presentation frames with inclusive start/exclusive end, then retime at 12 fps into exact FFV1 RGB.",
+      "file": "studio/templates/video-range.json",
+      "fields": {
+        "file": {
+          "label": "Source video",
+          "type": "path",
+          "required": true,
+          "default": "/data/source.mkv",
+          "extensions": [
+            "mkv",
+            "mp4"
+          ]
+        },
+        "start": {
+          "label": "First frame index (inclusive)",
+          "type": "integer",
+          "required": true,
+          "default": 1,
+          "minimum": 0,
+          "maximum": 599
+        },
+        "end": {
+          "label": "End frame index (exclusive)",
+          "type": "integer",
+          "required": true,
+          "default": 4,
+          "minimum": 1,
+          "maximum": 600
+        }
+      },
+      "requires": "Supported silent constant-rate MP4/H264 or MKV/FFV1; whole source <=600 frames and32 MiB."
     }
   ],
   "viewers": [

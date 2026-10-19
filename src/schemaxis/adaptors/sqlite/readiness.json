@@ -1,0 +1,349 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.sqlite/1": {
+      "guide": "docs/sqlite.md",
+      "context": {
+        "purpose": "Import typed related tables and publish an exact grouped relational summary plus a fresh database.",
+        "assumptions": "SQLite 3.54.1 CLI; local JSON row arrays, printable ASCII text, exact bounded integers, parent tables before children.",
+        "constraints": "1\u20134 tables, 0\u20132048 rows/table, 1\u201312 columns, 1\u20133 group fields; one declared FK inner join, integer >= filter and SUM/COUNT. No authored SQL, existing databases, network or extensions.",
+        "inspection": "Compare raw query.stdout, summary.json/CSV and schema.sql; the verifier checks every native table row and literal nested-loop join/group semantics through an independent standard-library reopen.",
+        "recovery": "INVALID_TABLE_KEY: choose an earlier primary key with the same declared type. INVALID_TABLE_QUERY: choose qualified active columns and a declared FK join. INVALID_TABLE_DATA: fix exact column membership, null/type/key violations. INTERPRETER_NOT_FOUND: configure sqlite3."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/sqlite-sales.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/sqlite-sales-variant.json"
+        },
+        {
+          "id": "empty",
+          "reference": "examples/schemaxis/sqlite-empty.json"
+        },
+        {
+          "id": "single",
+          "reference": "examples/schemaxis/sqlite-single-table.json"
+        },
+        {
+          "id": "bad-key",
+          "reference": "examples/schemaxis/sqlite-key-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_TABLE_QUERY",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_sqlite.py"
+      ],
+      "acceptance": [
+        "tools/qualify_sqlite.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified numeric JSON values can feed downstream declared workflow fields; database and CSV artifacts remain explicit publications.",
+          "references": [
+            "docs/sqlite.md",
+            "tools/qualify_sqlite.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared references, closed expressions and finite visits resolve to the same literal typed contract.",
+          "references": [
+            "docs/sqlite.md",
+            "tools/qualify_sqlite.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://www.sqlite.org/cli.html",
+          "https://www.sqlite.org/stricttables.html",
+          "https://www.sqlite.org/lang_select.html",
+          "https://www.sqlite.org/lang_aggfunc.html",
+          "https://www.sqlite.org/foreignkeys.html",
+          "https://www.sqlite.org/pragma.html"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers CLI version/import/readonly-query and final verification; per-process CPU 30s, address space 512MiB and file 16MiB caps.",
+          "cancellation": "Shared owned-process group cancellation; check cancellation before publication. Failed runs retain explicit failed status.",
+          "logs": "Retain authored/effective plans, immutable table captures, source digests, generated SQL/schema, exact CLI launchers/input hashes/command submissions/stdout/stderr and output membership.",
+          "verification": "Independent literal row-by-row nested-loop join, filter and group oracle; read-only immutable stdlib database reopen compares every typed row and exact schema, integrity and foreign keys. Raw readonly native query JSON must match oracle; CSV null token is explicit."
+        },
+        "data": [
+          {
+            "id": "tables",
+            "direction": "input",
+            "kind": "file",
+            "format": "JSON row-object arrays",
+            "traits": {
+              "types": [
+                "INTEGER",
+                "TEXT",
+                "null"
+              ]
+            },
+            "losses": [
+              "Only bounded local JSON row arrays with INTEGER/TEXT cells; no floats, dates, blobs, expressions, arbitrary SQL or existing database inputs.",
+              "One inner join from the base table through a declared foreign key to a unique primary key; no left join or many-to-many expansion.",
+              "Filter is integer >=; grouping uses binary collation with null first; sum ignores null and is null for all-null groups; count includes every surviving row.",
+              "Integers are exact in [-1000000000,1000000000]; text is printable ASCII (at most 256 characters), excluding the reserved CSV null token \\N.",
+              "CSV represents null as \\N; empty strings stay empty. JSON/database preserve integer, text and null types; no units or decimal arithmetic are inferred."
+            ],
+            "scope": "Each regular local source at most 1MiB and 2048 rows; all columns and keys declared."
+          },
+          {
+            "id": "database",
+            "direction": "output",
+            "kind": "file",
+            "format": "SQLite 3 STRICT database",
+            "traits": {
+              "keys": "declared primary and foreign keys"
+            },
+            "losses": [
+              "No views, triggers, existing database editing or external resources."
+            ],
+            "scope": "Fresh database publication independently reopened read-only."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON columns/rows and CSV",
+            "traits": {
+              "integers": "exact",
+              "null": "JSON null or CSV \\N"
+            },
+            "losses": [
+              "No units, decimal arithmetic or null/empty-string conflation."
+            ],
+            "scope": "Artifact index 1 is typed JSON; g0\u2026g2 follow groupBy, then row_count and total."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "View summary.json, summary.csv and schema.sql.",
+            "limits": "Database binary inspection is verification, not an interactive session."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Every table source byte digest participates in reuse identity; a same-path source edit invalidates reuse."
+        },
+        "features": {
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This serial fresh-database summary route does not implement native-inspection; edit declared inputs and execute a new verified run."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This serial fresh-database summary route does not implement mpi; edit declared inputs and execute a new verified run."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This serial fresh-database summary route does not implement time-batches; edit declared inputs and execute a new verified run."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This serial fresh-database summary route does not implement live-editing; edit declared inputs and execute a new verified run."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This serial fresh-database summary route does not implement conversion; edit declared inputs and execute a new verified run."
+          },
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified numeric JSON values can feed downstream declared workflow fields; database and CSV artifacts remain explicit publications."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared references, closed expressions and finite visits resolve to the same literal typed contract."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Every table source byte digest participates in reuse identity; a same-path source edit invalidates reuse."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit table sources and declarations through shared JSON authoring and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Edit join, minimum filter, grouping and sum fields through nested shared forms."
+          },
+          "native-save": {
+            "status": "supported",
+            "scope": "Publish a fresh independently reopened SQLite STRICT database with checked rows, schema and key constraints."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/tables/0/source": "examples/schemaxis/fixtures/sqlite/departments.json",
+              "/tables/1/source": "examples/schemaxis/fixtures/sqlite/sales.json"
+            },
+            "scope": "Observe native CLI query rows and independently reopen fresh database; exact literal rows include null, empty string, zero, signed sums and inner-join omission.",
+            "checks": [
+              {
+                "file": "summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    null,
+                    1,
+                    null
+                  ],
+                  [
+                    "",
+                    1,
+                    0
+                  ],
+                  [
+                    "North",
+                    3,
+                    300
+                  ],
+                  [
+                    "South",
+                    1,
+                    -30
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/tables/0/source": "examples/schemaxis/fixtures/sqlite/departments.json",
+              "/tables/1/source": "examples/schemaxis/fixtures/sqlite/sales.json"
+            },
+            "scope": "Observe native CLI query rows and independently reopen fresh database; exact literal rows include null, empty string, zero, signed sums and inner-join omission.",
+            "checks": [
+              {
+                "file": "summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    null,
+                    1,
+                    null
+                  ],
+                  [
+                    "",
+                    1,
+                    0
+                  ],
+                  [
+                    "North",
+                    1,
+                    200
+                  ],
+                  [
+                    "South",
+                    1,
+                    -30
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "empty",
+            "example": "empty",
+            "edits": [],
+            "resources": {
+              "/tables/0/source": "examples/schemaxis/fixtures/sqlite/departments.json",
+              "/tables/1/source": "examples/schemaxis/fixtures/sqlite/sales.json"
+            },
+            "scope": "Observe native CLI query rows and independently reopen fresh database; exact literal rows include null, empty string, zero, signed sums and inner-join omission.",
+            "checks": [
+              {
+                "file": "summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "single",
+            "example": "single",
+            "edits": [],
+            "resources": {
+              "/tables/0/source": "examples/schemaxis/fixtures/sqlite/departments.json",
+              "/tables/1/source": "examples/schemaxis/fixtures/sqlite/sales.json"
+            },
+            "scope": "Observe native CLI query rows and independently reopen fresh database; exact literal rows include null, empty string, zero, signed sums and inner-join omission.",
+            "checks": [
+              {
+                "file": "summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    null,
+                    1,
+                    50
+                  ],
+                  [
+                    1,
+                    3,
+                    300
+                  ],
+                  [
+                    2,
+                    1,
+                    -30
+                  ],
+                  [
+                    3,
+                    1,
+                    0
+                  ],
+                  [
+                    4,
+                    1,
+                    null
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial summarise route including every nested field, native typed imports, keys, join/filter/group semantics and exact exports.",
+        "review": [
+          "verification/2026-10-17-sqlite-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "This serial fresh-database summary route does not implement native-inspection; edit declared inputs and execute a new verified run.",
+          "mpi": "This serial fresh-database summary route does not implement mpi; edit declared inputs and execute a new verified run.",
+          "time-batches": "This serial fresh-database summary route does not implement time-batches; edit declared inputs and execute a new verified run.",
+          "live-editing": "This serial fresh-database summary route does not implement live-editing; edit declared inputs and execute a new verified run.",
+          "conversion": "This serial fresh-database summary route does not implement conversion; edit declared inputs and execute a new verified run."
+        }
+      }
+    }
+  }
+}

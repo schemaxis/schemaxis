@@ -190,6 +190,48 @@ class CompletionTests(unittest.TestCase):
                     generator.build(check=True)
                 self.assertIn('Stale supplied help', str(error.exception))
 
+    def test_receipt_updates_do_not_invalidate_help_or_source_identity(self):
+        import importlib.util
+        from schemaxis.adaptor_delivery import source_digest
+        spec = importlib.util.spec_from_file_location('receipt_help_generator', ROOT/'tools/generate_studio_help.py')
+        generator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(generator)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package = root/'src/schemaxis'
+            adaptor = package/'adaptors/paraview'
+            adaptor.mkdir(parents=True)
+            receipt = adaptor/'qualification.json'
+            receipt.write_text('{"sourceDigest":"before","recordedAt":"earlier"}')
+            example = root/'examples/example.json'
+            example.parent.mkdir()
+            example.write_text('{"value":42}')
+            docs = root/'docs'
+            docs.mkdir()
+            for name in ('studio-guide', 'paraview-guide', 'dollar-reference', 'workflow-authoring', 'workflow-design', 'paraview-operation-reference'):
+                (docs/(name+'.md')).write_text('# ' + name + '\n')
+            (docs/'studio-guide.md').write_text(
+                '# Studio\n\n[Receipt](../src/schemaxis/adaptors/paraview/qualification.json)\n'
+                '[Example](../examples/example.json)\n')
+            dest = package/'studio_ui/help'
+            dest.mkdir(parents=True)
+            with patch.object(generator, 'ROOT', root), patch.object(generator, 'DEST', dest), \
+                    patch('schemaxis.adaptor_delivery.files', return_value=package):
+                generator.build()
+                before = {p.name: p.read_bytes() for p in dest.glob('*.json')}
+                identity = source_digest('paraview')
+                sources = {entry['source'] for entry in json.loads((dest/'index.json').read_text())['entries']}
+                self.assertIn('examples/example.json', sources)
+                self.assertNotIn('src/schemaxis/adaptors/paraview/qualification.json', sources)
+                receipt.write_text('{"sourceDigest":"after","recordedAt":"later"}')
+                generator.build(check=True)
+                self.assertEqual(before, {p.name: p.read_bytes() for p in dest.glob('*.json')})
+                self.assertEqual(identity, source_digest('paraview'))
+                receipt.unlink()
+                with self.assertRaises(SystemExit) as caught:
+                    generator.build(check=True)
+                self.assertIn('qualification.json is missing', str(caught.exception))
+
     def test_placeholder_prose_is_pending_and_type_text_is_not_proof_of_review(self):
         validate_record({'status': 'pending', 'question': 'What are these units?'})
         with self.assertRaises(ValueError):

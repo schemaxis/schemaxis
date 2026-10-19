@@ -1,8 +1,8 @@
 # Schemaxis
 
 **Declared, repeatable pipelines across engineering and creative desktop
-applications, for people and AI agents, with retained evidence that each result
-is correct.**
+applications, for people and AI agents, with retained evidence used to check
+each result.**
 
 <p align="center">
   <img src="docs/assets/readme-coupe-blender.png" width="560"
@@ -33,7 +33,7 @@ minor versions; migration notes are in the [changelog](CHANGELOG.md).
 ## Why
 
 - **One language across applications.** A single declared document format,
-  with schemas, editor completion and planning, across 17 applications.
+  with schemas, editor completion and planning, across the registered applications.
 - **Native results, not imitations.** Every step runs in the application's own
   runtime: pvbatch, Blender in the background, FreeCAD, Gmsh Python, ngspice and
   so on. You get the files those applications would make.
@@ -98,12 +98,20 @@ schemaxis console --workspace .schemaxis/studio --web
 | Area | Applications |
 | --- | --- |
 | CFD and data post-processing | ParaView (serial and MPI pvbatch, OpenFOAM-format cases) |
-| CAD, meshing and structures | FreeCAD, Gmsh, CalculiX |
+| CAD, meshing and structures | FreeCAD, Gmsh, CalculiX, meshio (bounded VTU/VTK interchange), OpenSCAD (dimensioned plates and spacers) |
 | Numerical analysis | GNU Octave, R, Cantera, ngspice |
+| PCB inspection | KiCad |
+| Fabrication | PrusaSlicer |
+| Scientific imaging | ImageJ, ImageMagick (bounded PNG preparation and comparison sheets) |
 | Spreadsheets | LibreOffice Calc (ODS and XLSX) |
+| Reports | Pandoc (structured reports to HTML and DOCX) |
+| Data and plots | SQLite (typed relational summaries), Apache Arrow (typed nullable CSV to verified Parquet), Gnuplot (CSV plots with checked geometry) |
+| PDF assembly and review | QPDF (selected pages, order, repeats and quarter turns), MuPDF (ordered page images, text and geometry) |
 | 3D, games and pixel art | Blender, Godot, Aseprite |
 | Diagrams, video and media | Inkscape, FFmpeg, Shotcut, Adobe Premiere Pro (experimental, read-only) |
-| Geospatial | QGIS |
+| Directed graph layout | Graphviz (checked DOT/SVG layout) |
+| Audio | SoX (PCM16 excerpts, gain, fades and concatenation) |
+| Geospatial | QGIS, GDAL (checked raster windows and nearest grid resizing) |
 
 Each adaptor declares its bounded scope, so it is explicit about what it does
 *not* do. Run `schemaxis discover` for the details, or see the
@@ -116,10 +124,14 @@ packages: see "External adaptor packages" in the
 - [Getting started](docs/getting-started.md) and the [user guide](docs/user-guide.md)
 - [JSON input reference](docs/json-input.md), [YAML authoring](docs/yaml.md) and the [schema guide](docs/schema-guide.md)
 - [Studio](docs/visual-console.md) and [console commands](docs/console.md)
+- [CLI and topic help](docs/cli-discovery.md), [headless operation](docs/headless.md),
+  [shared schemas](docs/schema-storage.md) and [storage inspection/backups](docs/storage-management.md)
 - [Guide for AI agents](docs/ai-guide.md) and the [agent service](docs/agent-service.md)
 - [CFD post-processing with ParaView](docs/cfd-guide.md)
 - [Workflow benchmarks and reproducibility](docs/benchmarks.md), and [release evidence](docs/release-evidence.md)
 - [Capabilities in detail](docs/capabilities.md) and the [quick reference](docs/quick-reference.md)
+- [Checked FreeCAD imports and exports](docs/freecad.md), [parametric parts](docs/freecad-part-design.md)
+  and [fixed assemblies](docs/freecad-assemblies.md)
 - [Developer guide](docs/developer-guide.md) and [adaptor development](docs/adaptor-development.md)
 
 ## Platform support

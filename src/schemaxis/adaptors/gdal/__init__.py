@@ -1,0 +1,1 @@
+"""GDAL raster-window adaptor."""

@@ -150,3 +150,22 @@ class AssemblyContractTests(unittest.TestCase):
             (directory/'model.FCStd').write_text('changed')
             with self.assertRaises(SchemaxisError):
                 verify(directory)
+
+    def test_literal_native_recipe_preserves_the_original_demo_and_variant(self):
+        root=Path(__file__).resolve().parents[2]
+        bundle=json.loads((root/'src/schemaxis/adaptors/freecad/readiness.json').read_text())
+        route=bundle['routes']['schemaxis.freecad.assembly/1']
+        entries={e['id']:e for e in route['examples']}
+        self.assertEqual(entries['fixed-assembly']['reference'],'examples/schemaxis/freecad-assembly.json')
+        original=json.loads((root/entries['fixed-assembly']['reference']).read_text())
+        literal=entries['fixed-assembly-literal-qualification']['document']
+        self.assertNotIn('dimensions',literal)
+        self.assertNotIn('$document',json.dumps(literal))
+        self.assertEqual(plan(literal),plan(original))
+        changed=copy.deepcopy(literal);changed['parts'][0]['options']['height']=7
+        original['dimensions']['plateThickness']=7
+        self.assertEqual(plan(changed),plan(original))
+        baseline,variant=route['development']['cases']
+        self.assertEqual(baseline['example'],'fixed-assembly-literal-qualification')
+        self.assertEqual(variant['example'],baseline['example'])
+        self.assertEqual(variant['edits'],[{'op':'replace','path':'/parts/0/options/height','value':7}])

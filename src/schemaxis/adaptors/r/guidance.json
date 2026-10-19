@@ -3,11 +3,11 @@
   "operations": {
     "linearRegression": {
       "status": "reviewed",
-      "explanation": "Fits an ordinary least-squares linear model (response = intercept + sum of coefficient x predictor) to 1 to 8 numeric predictors with R's stats::lm, then reopens the saved model in a fresh R process and checks every coefficient, prediction and residual against an independent calculation. It publishes coefficients.csv, training.csv, heldout.csv (when held-out rows are given) and regression-summary.json. Choose it for calibration curves or simple explanatory fits whose error limits you can state in advance.",
+      "explanation": "Fits an ordinary least-squares linear model (response = intercept + sum of coefficient x predictor) to 1 to 8 numeric predictors with R's stats::lm, then reopens the saved model in a fresh R process and checks every coefficient, prediction and residual against an independent calculation. It publishes coefficients.csv, training.csv, heldout.csv (when held-out rows are given), regression-summary.json and, with optional inference, inference.csv containing standard errors, t statistics, p-values and confidence intervals. Choose it for calibration curves or simple explanatory fits whose error or coefficient limits you can state in advance.",
       "pitfalls": [
-        "There must be more training rows than coefficients, and the predictors must not be (nearly) linearly dependent; otherwise RANK_DEFICIENT_DATA or ILL_CONDITIONED_DATA.",
+        "There must be more training rows than coefficients, and the predictors must not be (nearly) linearly dependent; otherwise INSUFFICIENT_DATA, RANK_DEFICIENT_DATA or ILL_CONDITIONED_DATA.",
         "Only additive numeric terms: no categorical variables, interactions, polynomials or custom formulas.",
-        "No confidence intervals, hypothesis tests or causal claims; held-out errors describe only the rows you supplied.",
+        "Optional inference assumes independent, constant-variance, normal errors; an exact fit has no residual variance (NO_RESIDUAL_VARIANCE). No causal claims; held-out errors describe only the rows you supplied.",
         "A correct fit that misses a declared requirement fails with FIT_REQUIREMENT_NOT_MET and is not passed to later workflow steps."
       ],
       "examples": [
@@ -18,6 +18,10 @@
         {
           "reference": "examples/schemaxis/r-regression-variant.json",
           "purpose": "Change the known slope to3 while retaining the same training/held-out error budget."
+        },
+        {
+          "reference": "examples/schemaxis/r-inference.json",
+          "purpose": "Closed-form 95% slope interval with two residual degrees of freedom, required inside [1.5, 2.5] V/degC."
         }
       ],
       "sources": [
@@ -202,7 +206,7 @@
         },
         "/properties/requirements/items": {
           "status": "reference",
-          "explanation": "One named finite requirement; choose an aggregate error maximum or a signed prediction bound at one declared sample.",
+          "explanation": "One named requirement: an aggregate error maximum, a signed prediction bound at one declared sample, or (with inference) bounds on a coefficient confidence interval.",
           "sources": [
             "docs/r.md"
           ]
@@ -321,6 +325,141 @@
           "sources": [
             "docs/r.md",
             "src/schemaxis/adaptors/r/adaptor.py:24-94"
+          ]
+        },
+        "/properties/inference": {
+          "status": "reviewed",
+          "explanation": "Optional classical inference for the fitted coefficients. When present, regression-summary.json gains standard errors, t statistics, two-sided p-values and confidence intervals for every coefficient, the residual standard error, R-squared, adjusted R-squared and the overall F test, and inference.csv is published last. These quantities are valid only if the additive linear mean is right and the errors are independent, constant-variance and normally distributed; they describe uncertainty in the coefficients, not the spread of future observations.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ],
+          "defaultMeaning": "Omitted: no inference is computed and the published artifacts are unchanged. An empty object {} uses a 0.95 confidence level.",
+          "pitfalls": [
+            "An exact or synthetic fit (all residuals zero or at roundoff level) has no residual variance and fails with NO_RESIDUAL_VARIANCE; remove inference or use genuinely measured data.",
+            "With few residual degrees of freedom (training rows minus coefficients) intervals are wide; for two degrees of freedom the 95% critical value is about 4.30.",
+            "p-values are per coefficient and unadjusted for multiple comparisons; a small p-value does not show causality or that the model is adequate.",
+            "Confidence intervals for coefficients are not prediction intervals for new readings."
+          ],
+          "examples": [
+            {
+              "level": 0.95
+            }
+          ]
+        },
+        "/properties/inference/properties/level": {
+          "status": "reviewed",
+          "explanation": "Two-sided confidence level for every coefficient interval, as a fraction between 0.5 and 0.999. Each interval is estimate plus or minus the Student-t critical value with the residual degrees of freedom times the standard error (stats::confint for lm). The F test and p-values do not depend on it.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ],
+          "units": "Unitless probability (fraction, not percent).",
+          "defaultMeaning": "0.95 when inference is given without a level.",
+          "pitfalls": [
+            "Enter 0.95, not 95.",
+            "A higher level gives wider intervals; it does not make the fit more accurate.",
+            "For a coefficientInterval requirement, each bound is a one-sided test at (1 - level)/2, so level 0.90 corresponds to two one-sided 5% tests."
+          ],
+          "examples": [
+            0.95,
+            0.9,
+            0.99
+          ]
+        },
+        "/properties/requirements/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Coefficient interval requirement: the confidence interval of one named coefficient, at the declared inference level, must lie inside inclusive bounds. Use it to require that a calibration slope or offset is both close enough to a target and estimated precisely enough; a point estimate inside the bounds is not sufficient if the interval crosses them. Requires inference and uses only the training fit.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ],
+          "examples": [
+            {
+              "name": "slope_interval",
+              "scope": "training",
+              "metric": "coefficientInterval",
+              "term": "temperature",
+              "minimum": 1.5,
+              "maximum": 2.5
+            }
+          ]
+        },
+        "/properties/requirements/items/oneOf/2/properties/name": {
+          "status": "reviewed",
+          "explanation": "Unique lowercase requirement identifier, up to 64 characters, used in the explained acceptance report.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ]
+        },
+        "/properties/requirements/items/oneOf/2/properties/scope": {
+          "status": "reviewed",
+          "explanation": "Must be training: coefficient intervals come from the training residuals. Held-out rows never enter the interval calculation.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ],
+          "pitfalls": [
+            "heldout is rejected with INVALID_REQUIREMENT rather than silently changed."
+          ]
+        },
+        "/properties/requirements/items/oneOf/2/properties/metric": {
+          "status": "reviewed",
+          "explanation": "coefficientInterval: compare the lower and upper confidence limits of the selected coefficient with the declared bounds, instead of an error or prediction value.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ]
+        },
+        "/properties/requirements/items/oneOf/2/properties/term": {
+          "status": "reviewed",
+          "explanation": "Coefficient to test: intercept (only when the intercept is enabled) or one declared predictor name. Bounds use that coefficient's units: response units for the intercept, response unit per predictor unit for a slope (for example V/degC).",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ],
+          "pitfalls": [
+            "intercept is unavailable when intercept is false.",
+            "The name must match a declared predictor exactly; it is not an R expression."
+          ],
+          "examples": [
+            "temperature",
+            "intercept"
+          ]
+        },
+        "/properties/requirements/items/oneOf/2/properties/minimum": {
+          "status": "reviewed",
+          "explanation": "Inclusive bound on the lower confidence limit, in the coefficient's units. The margin is lower limit minus minimum; a negative margin is unmet.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ],
+          "units": "Coefficient units: response unit for the intercept, response/predictor unit for a slope."
+        },
+        "/properties/requirements/items/oneOf/2/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Inclusive bound on the upper confidence limit, in the coefficient's units. The margin is maximum minus upper limit; a negative margin is unmet. Give both bounds for an equivalence-style check, or one for a one-sided limit.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ],
+          "units": "Coefficient units: response unit for the intercept, response/predictor unit for a slope."
+        },
+        "/properties/requirements/items/oneOf/2/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Lower-bound form: minimum is given, so the lower confidence limit must be at least that value; maximum may also be given.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
+          ]
+        },
+        "/properties/requirements/items/oneOf/2/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Upper-bound form: maximum is given, so the upper confidence limit must not exceed that value; minimum may also be given.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py"
           ]
         }
       }

@@ -250,6 +250,15 @@ class GuidanceToolTests(unittest.TestCase):
 
 
 class SharedDocumentGuidanceTests(unittest.TestCase):
+    def test_workflow_choice_guidance_matches_route_after_provider_insertion(self):
+        from schemaxis.schema_authoring import WORKFLOW_VERSIONS
+        from schemaxis.studio_guidance import load
+        records = load('workflow')['routes']['schemaxis.workflow/1']['fields']
+        for index, version in enumerate(WORKFLOW_VERSIONS):
+            address = '/properties/operations/items/properties/document/oneOf/' + str(index)
+            with self.subTest(version=version):
+                self.assertIn('(route ' + version + ')', records[address]['explanation'])
+
     def test_shared_documents_inventory_their_own_envelope_only(self):
         from schemaxis.studio_guidance import SHARED, shared_fields, audit_shared
         for version in SHARED:

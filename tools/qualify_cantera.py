@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cantera native kit, numeric workbook handoff and public/human reuse acceptance."""
+"""Cantera native kit, numeric workbook handoffs and public/human reuse acceptance."""
 import argparse
 import copy
 import json
@@ -40,7 +40,11 @@ def public_loop(directory,report):
             assert client.call('verify',job_id=job['id'])['value']['verified']
             resources = client.call('observe',job_id=job['id'],section='resources')['value']
             table = next(r for r in resources if Path(r['file']).name == 'results.csv')
-            observed = client.call('inspect_resource',resource_id=table['id'])['value']
+            summary = next(r for r in resources if Path(r['file']).name == 'chemistry-summary.json')
+            observed = client.call('inspect_resource',resource_id=table['id'],max_bytes=65536)['value']
+            def summary_value(pointer):
+                return client.call('inspect_resource',resource_id=summary['id'],pointer=pointer)['value']
+            run_draft.summary = summary_value
             return planned,[[float(v) for v in row] for row in observed['rows']]
         for case in cases:
             example = next(e for e in materials['examples'] if e['id'] == case['example'])
@@ -49,8 +53,11 @@ def public_loop(directory,report):
                 draft = client.call('patch_draft',document_id=draft['document'],expected_revision=draft['revision'],edits=case['edits'])
             planned,rows = run_draft(draft,revision); revision = planned['revision']
             for check in case['checks']:
-                _,_,r,c = check['pointer'].split('/')
-                assert math.isclose(rows[int(r)][int(c)],check['expected'],rel_tol=check.get('relative',0),abs_tol=check.get('absolute',0))
+                if check['file'] == 'chemistry-summary.json':
+                    value = run_draft.summary(check['pointer'])
+                else:
+                    _,_,r,c = check['pointer'].split('/'); value = rows[int(r)][int(c)]
+                assert math.isclose(value,check['expected'],rel_tol=check.get('relative',0),abs_tol=check.get('absolute',0)),(case['id'],check,value)
             report['publicCases'].append({'case':case['id'],'rows':len(rows),'temperature_K':[r[1] for r in rows]})
         invalid = next(e for e in materials['examples'] if e.get('expect') == 'invalid')
         rejected = client.request('plan',task_id=task['id'],expected_revision=revision,document=example_document(invalid,ROOT))
@@ -116,6 +123,27 @@ def main():
         finally:
             path.write_bytes(saved);verification.write_bytes(original_verification)
         assert registry.verify(target)['verified']
+        # A verified reactor history crosses the same numeric-table handoff.
+        reactor=json.loads((ROOT/'examples/schemaxis/cantera-reactor.json').read_text())
+        for model in ('constantPressure','constantVolume'):
+            doc=copy.deepcopy(original);doc['operations'][0]['document']=copy.deepcopy(reactor)
+            doc['operations'][0]['document']['nodes'][1]['options']['model']=model
+            target=directory/('reactor-handoff-'+model)
+            result=workflow.execute(doc,target,locations=locations(),timeout=300)
+            assert workflow.verify(target)['verified']
+            jobs={j['operation']:j for j in result['jobs']}
+            table=read_csv(Path(jobs['chemistry']['directory'])/'results.csv')
+            workbook=read_csv(Path(jobs['workbook']['directory'])/'data.csv')
+            assert close(table,workbook) and table['columns'][0] == 'time_s'
+            times=reactor['nodes'][1]['options']['times']
+            assert [row[0] for row in table['rows']] == times
+            density=table['rows'][0][3]
+            for row in table['rows']:
+                if model == 'constantPressure': assert math.isclose(row[2],101325,rel_tol=1e-10)
+                else: assert math.isclose(row[3],density,rel_tol=1e-10)
+            resumed=workflow.execute(doc,target,locations=locations(),timeout=300,resume=True)
+            assert all(j['reused'] for j in resumed['jobs'])
+            report['workflows'].append({'reactor':model,'rows':len(table['rows']),'finalTemperature_K':table['rows'][-1][1],'allReused':True})
         public_loop(directory/'public',report)
         report['verified']=True
     finally:

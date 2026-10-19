@@ -23,6 +23,9 @@ def qualify(directory, executable, gui_executable):
     document = json.loads(Path('examples/schemaxis/freecad-assembly.json').read_text())
     result = run(document, directory/'qualified', executable=executable, gui_executable=gui_executable)
     target = directory/'qualified'
+    # The common runtime retains a single analytic visit in state-00000.
+    if (target/'state-00000').is_dir() and not (target/'built.json').exists():
+        target = target/'state-00000'
     runner = SubprocessRunner(Interpreter('freecad', executable), target, timeout=60)
     for stage in ('edit_probe', 'edit_reopen'):
         source = ('import sys\nsys.path.insert(0,'+repr(str(target/'runtime.zip'))+')\n'
@@ -55,8 +58,10 @@ def qualify(directory, executable, gui_executable):
         assert (target/'assembly.png').read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
         assert json.loads((target/'gui.json').read_text())['nativeJointEditors'] is True
         assert json.loads((target/'gui-reopened.json').read_text())['nativeJointEditors'] is True
-    receipt = {'qualified': True, 'version': document['version'], 'runtime': result['runtime'],
-        'nativeAssemblyType': native['assemblyType'], 'components': result['components'], 'fixedJoints': result['joints'],
+    # The common single-visit aggregate omits native identity; the receipt has it.
+    verified = verify(target)
+    receipt = {'qualified': True, 'version': document['version'], 'runtime': native['runtime'],
+        'nativeAssemblyType': native['assemblyType'], 'components': verified['components'], 'fixedJoints': verified['joints'],
         'sharedLinks': shared, 'solverReturnCode': native['solver']['returnCode'],
         'displacedAndRestored': native['solver']['displacedComponents'], 'analyticPlacementsVerified': True,
         'freshReopenPid': native['pid'], 'editPid': edited['pid'], 'editReopenPid': reopened['pid'],

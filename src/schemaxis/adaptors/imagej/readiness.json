@@ -1,0 +1,812 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.imagej/1": {
+      "guide": "docs/imagej.md",
+      "context": {
+        "purpose": "Threshold one calibrated 8/16-bit grayscale image with headless ImageJ 1.54 and publish verified per-particle measurements (pixel count, area, centroid, bounding box and raw intensity mean/min/max) in declared physical units, ready for Calc or a later R analysis.",
+        "assumptions": "ImageJ 1.54 ij.jar (latest release 1.54t qualified) run by a Java 11+ runtime with the jdk.compiler module; a fixed Java source program uses public ImageJ classes headlessly with isolated preferences. Declared pixel width/height and unit replace any calibration stored in the file. Thresholds are inclusive raw stored intensities.",
+        "constraints": "One .pgm (P5, maxval 255 or 65535) or uncompressed single-IFD BlackIsZero 8/16-bit unsigned .tif/.tiff, at most 2048 px per side, 1048576 px and 16 MiB; no colour, stacks, ROI, density calibration or inverted LUT. Manual inclusive threshold only; full-range thresholds are rejected. Eight or four connectivity; four requires includeHoles. Size filter is converted to inclusive whole-pixel counts. At least one and at most 4096 particles. Units nm, um, mm, cm or m; pixel size 1e-6..1e6 per side. No arbitrary macros, scripts, plugins or Fiji launcher.",
+        "inspection": "particles.csv has one row per particle in ImageJ raster order with unit-bearing column names. particle-summary.json retains image digest/format/bit depth, calibration and coordinate convention, threshold, connectivity, filters, rejected counts, totals and area fraction. count-mask.pgm, native tables and readbacks remain as evidence.",
+        "recovery": "INVALID_THRESHOLD: order the bounds and stay within the image bit depth; do not select every pixel. UNSUPPORTED_OPTION: four connectivity needs includeHoles true. INVALID_SIZE_FILTER: widen the area window to contain a whole pixel count. NO_PARTICLES: inspect thresholdPixels and rejected counts, then adjust threshold or filters. INVALID_IMAGE/UNSUPPORTED_IMAGE: convert to a supported plain grayscale PGM/TIFF. INTERPRETER_NOT_FOUND: configure Java (imagej) and ij.jar (imagejJar). UNSUPPORTED_RUNTIME: use ImageJ 1.54 and Java 11+. VERIFICATION_FAILED: keep the run directory and start a fresh attempt."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/imagej-particles.json"
+        },
+        {
+          "id": "filled",
+          "reference": "examples/schemaxis/imagej-particles-filled.json"
+        },
+        {
+          "id": "sixteen-bit",
+          "reference": "examples/schemaxis/imagej-particles-16bit.json"
+        },
+        {
+          "id": "four-without-holes",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "analyzeParticles",
+            "image": "/replace-with-your-input/particles-8bit.pgm",
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 0.5,
+              "unit": "um"
+            },
+            "threshold": {
+              "lower": 100,
+              "upper": 255
+            },
+            "connectivity": "four",
+            "includeHoles": false,
+            "excludeEdges": false,
+            "minimumArea": 0
+          },
+          "expect": "invalid",
+          "fault": "UNSUPPORTED_OPTION",
+          "schemaValid": true
+        },
+        {
+          "id": "inverted-threshold",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "analyzeParticles",
+            "image": "/replace-with-your-input/particles-8bit.pgm",
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 0.5,
+              "unit": "um"
+            },
+            "threshold": {
+              "lower": 200,
+              "upper": 100
+            },
+            "connectivity": "eight",
+            "includeHoles": false,
+            "excludeEdges": false,
+            "minimumArea": 0
+          },
+          "expect": "invalid",
+          "fault": "INVALID_THRESHOLD",
+          "schemaValid": true
+        },
+        {
+          "id": "relative-image",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "analyzeParticles",
+            "image": "particles-8bit.pgm",
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 0.5,
+              "unit": "um"
+            },
+            "threshold": {
+              "lower": 100,
+              "upper": 255
+            },
+            "connectivity": "eight",
+            "includeHoles": false,
+            "excludeEdges": false,
+            "minimumArea": 0
+          },
+          "expect": "invalid",
+          "fault": "INVALID_RESOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "png-image",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "analyzeParticles",
+            "image": "/replace-with-your-input/particles.png",
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 0.5,
+              "unit": "um"
+            },
+            "threshold": {
+              "lower": 100,
+              "upper": 255
+            },
+            "connectivity": "eight",
+            "includeHoles": false,
+            "excludeEdges": false,
+            "minimumArea": 0
+          },
+          "expect": "invalid",
+          "fault": "UNSUPPORTED_IMAGE",
+          "schemaValid": true
+        },
+        {
+          "id": "empty-size-window",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "analyzeParticles",
+            "image": "/replace-with-your-input/particles-8bit.pgm",
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 0.5,
+              "unit": "um"
+            },
+            "threshold": {
+              "lower": 100,
+              "upper": 255
+            },
+            "connectivity": "eight",
+            "includeHoles": false,
+            "excludeEdges": false,
+            "minimumArea": 10,
+            "maximumArea": 5
+          },
+          "expect": "invalid",
+          "fault": "INVALID_SIZE_FILTER",
+          "schemaValid": true
+        },
+        {
+          "id": "authored-macro",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "analyzeParticles",
+            "image": "/replace-with-your-input/particles-8bit.pgm",
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 0.5,
+              "unit": "um"
+            },
+            "threshold": {
+              "lower": 100,
+              "upper": 255
+            },
+            "connectivity": "eight",
+            "includeHoles": false,
+            "excludeEdges": false,
+            "minimumArea": 0,
+            "macro": "run(\"Analyze Particles...\");"
+          },
+          "expect": "invalid",
+          "fault": "UNKNOWN_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_imagej_admission.py"
+      ],
+      "acceptance": [
+        "tools/qualify_imagej.py",
+        "tools/qualify_imagej_fixtures.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified particle table into Calc (readCSV) with preserved unit-bearing column names; keep the summary for calibration and threshold provenance.",
+          "references": [
+            "docs/imagej.md",
+            "examples/schemaxis/imagej-to-calc.json",
+            "tools/qualify_imagej.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://imagej.net/ij/developer/api/ij/ij/plugin/filter/ParticleAnalyzer.html",
+          "https://imagej.net/ij/developer/api/ij/ij/measure/Calibration.html",
+          "https://imagej.net/ij/developer/api/ij/ij/process/ImageStatistics.html",
+          "https://imagej.net/ij/developer/api/ij/ij/plugin/PGM_Reader.html",
+          "https://imagej.net/ij/developer/api/ij/ij/io/Opener.html",
+          "https://imagej.net/ij/docs/menus/analyze.html",
+          "https://imagej.net/ij/download.html",
+          "https://openjdk.org/jeps/330"
+        ],
+        "lifecycle": {
+          "timeout": "One deadline covers Java identification, the analyse stage and the fresh reopen stage; the shared kit watchdog bounds the whole attempt and a final deadline check bounds host verification.",
+          "cancellation": "Shared owned-process cancellation with checks before each native stage and before publication; no resident ImageJ process.",
+          "logs": "Retain authored/effective plans, the copied input image, fixed Java program, runtime record, java -version output, both stage submissions/stdout/stderr, native readbacks, native and reopened tables, count mask, publications and failure results.",
+          "verification": "An independent dependency-free PGM/TIFF decoder and connected-component model (raster order, inclusive threshold, 8/4 connectivity, enclosed-hole fill, bounding-box edge exclusion, whole-pixel size window) predicts every particle. Native ParticleAnalyzer rows, every count-mask label and a fresh-process ImageStatistics re-measurement of each label must match within 1e-12 relative. Native readback confirms ImageJ version, decoded dimensions/depth/plane count, consumed input digest, declared calibration and unit, threshold and analyser options. Publications and evidence are digest-bound and the summary is recomputed."
+        },
+        "data": [
+          {
+            "id": "image",
+            "direction": "input",
+            "kind": "image",
+            "format": "PGM (P5) or uncompressed baseline TIFF",
+            "traits": {
+              "channels": 1,
+              "bitDepth": "8 or 16 unsigned",
+              "calibration": "declared, not read from file"
+            },
+            "losses": [
+              "File calibration, display range, LUT and metadata are not used; only raw stored intensities."
+            ],
+            "scope": "One grayscale plane up to 2048 px per side and 1048576 px."
+          },
+          {
+            "id": "particles",
+            "direction": "output",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "units": "declared length unit in column names; areas in unit^2; intensities raw",
+              "rows": "1-4096 particles in raster order"
+            },
+            "losses": [
+              "Per-particle scalar measurements only; no outlines, perimeter, shape descriptors or pixel lists.",
+              "CSV alone omits threshold, connectivity and image provenance; keep the summary."
+            ],
+            "scope": "Particle label, pixel count, calibrated area, centroid and bounds, raw mean/min/max."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "provenance": "image SHA-256, ImageJ and Java versions",
+              "units": "declared"
+            },
+            "losses": [
+              "Totals and fractions describe this image and threshold only; no statistical inference or segmentation-quality claim."
+            ],
+            "scope": "Calibration and coordinate convention, threshold, connectivity, filters, rejected counts, totals and area fraction."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "Inspect per-particle measurements with unit-bearing columns.",
+            "limits": "At most 4096 rows; no overlay of outlines on the image."
+          },
+          {
+            "panel": "text",
+            "scope": "Review calibration, threshold, connectivity, filters, rejected counts and totals in the summary.",
+            "limits": "Bounded JSON; the count mask is retained evidence, not an interactive viewer."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the shared JSON source or property pointers for image path, calibration, threshold, connectivity and filters; plan a fresh revision, execute, inspect and verify."
+        },
+        "features": {
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This bounded batch particle route does not implement native-inspection."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This bounded batch particle route does not implement mpi."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This bounded batch particle route does not implement time-batches."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This bounded batch particle route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This bounded batch particle route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This bounded batch particle route does not implement conversion."
+          },
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified particle table into Calc (readCSV) with preserved unit-bearing column names; keep the summary for calibration and threshold provenance."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The input image digest and authored settings identify an attempt; a changed image file prevents reuse."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared durable document JSON editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON pointer edits for image path, calibration, threshold and filters."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline-8bit",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/image": "examples/schemaxis/fixtures/imagej/particles-8bit.pgm"
+            },
+            "scope": "Synthetic 64x48 8-bit target, threshold [100,255], 8-connected, 0.5 um square pixels. Eight particles of 20, 60, 64, 1, 72, 108, 4 and 18 pixels (347 px = 86.75 um^2). The ring excludes its 6x6 hole and the 2x2 island inside it is a separate particle; corner-touching 3x3 squares form one 18-pixel particle. Centroids are pixel-centre means; the L shape is ((588/72)+0.5, (1956/72)+0.5)*0.5 um.",
+            "checks": [
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/particleCount",
+                "expected": 8,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/totalPixels",
+                "expected": 347,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/totalArea",
+                "expected": 86.75,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/4",
+                "expected": [
+                  5,
+                  72,
+                  18,
+                  4.333333333333333,
+                  13.833333333333334,
+                  2,
+                  12,
+                  6,
+                  5,
+                  220,
+                  220,
+                  220
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/5",
+                "expected": [
+                  6,
+                  108,
+                  27,
+                  23,
+                  16,
+                  20,
+                  13,
+                  6,
+                  6,
+                  160,
+                  160,
+                  160
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/6",
+                "expected": [
+                  7,
+                  4,
+                  1,
+                  23,
+                  16,
+                  22.5,
+                  15.5,
+                  1,
+                  1,
+                  230,
+                  230,
+                  230
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/7",
+                "expected": [
+                  8,
+                  18,
+                  4.5,
+                  13.5,
+                  19.5,
+                  12,
+                  18,
+                  3,
+                  3,
+                  240,
+                  240,
+                  240
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              }
+            ]
+          },
+          {
+            "id": "filled-edges-size",
+            "example": "filled",
+            "edits": [],
+            "resources": {
+              "/image": "examples/schemaxis/fixtures/imagej/particles-8bit.pgm"
+            },
+            "scope": "includeHoles fills the ring (144 px) and absorbs the island: mean (108*160+32*20+4*230)/144 = 130.8333 with min 20 and max 230. excludeEdges drops the border block and minimumArea 0.5 um^2 (2 px) drops the single-pixel speck: five particles, 358 px = 89.5 um^2.",
+            "checks": [
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/particleCount",
+                "expected": 5,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/rejected",
+                "expected": {
+                  "edge": 1,
+                  "size": 1
+                },
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/sizeFilter/minimumPixels",
+                "expected": 2,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/totalArea",
+                "expected": 89.5,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/3",
+                "expected": [
+                  4,
+                  144,
+                  36,
+                  23,
+                  16,
+                  20,
+                  13,
+                  6,
+                  6,
+                  130.83333333333334,
+                  20,
+                  230
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              }
+            ]
+          },
+          {
+            "id": "four-connected",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/connectivity",
+                "value": "four"
+              },
+              {
+                "op": "replace",
+                "path": "/includeHoles",
+                "value": true
+              }
+            ],
+            "resources": {
+              "/image": "examples/schemaxis/fixtures/imagej/particles-8bit.pgm"
+            },
+            "scope": "4-connectivity separates the corner-touching squares into two 9-pixel particles and fills the ring (ImageJ requires holes for 4-connected tracing): 20+60+64+1+72+144+9+9 = 379 px = 94.75 um^2.",
+            "checks": [
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/particleCount",
+                "expected": 8,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/totalArea",
+                "expected": 94.75,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/6",
+                "expected": [
+                  7,
+                  9,
+                  2.25,
+                  12.75,
+                  18.75,
+                  12,
+                  18,
+                  1.5,
+                  1.5,
+                  240,
+                  240,
+                  240
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/7",
+                "expected": [
+                  8,
+                  9,
+                  2.25,
+                  14.25,
+                  20.25,
+                  13.5,
+                  19.5,
+                  1.5,
+                  1.5,
+                  240,
+                  240,
+                  240
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              }
+            ]
+          },
+          {
+            "id": "inclusive-threshold-boundary",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/threshold/lower",
+                "value": 180
+              }
+            ],
+            "resources": {
+              "/image": "examples/schemaxis/fixtures/imagej/particles-8bit.pgm"
+            },
+            "scope": "Lower bound 180 is inclusive, so the square of intensity exactly 180 stays. The ring (160) and speck (150) drop out and the 230 island becomes its own particle: 20+60+64+72+4+18 = 238 px = 59.5 um^2.",
+            "checks": [
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/particleCount",
+                "expected": 6,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/totalArea",
+                "expected": 59.5,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/2",
+                "expected": [
+                  3,
+                  64,
+                  16,
+                  17,
+                  5,
+                  15,
+                  3,
+                  4,
+                  4,
+                  180,
+                  180,
+                  180
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/4",
+                "expected": [
+                  5,
+                  4,
+                  1,
+                  23,
+                  16,
+                  22.5,
+                  15.5,
+                  1,
+                  1,
+                  230,
+                  230,
+                  230
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              }
+            ]
+          },
+          {
+            "id": "anisotropic-millimetres",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/calibration",
+                "value": {
+                  "pixelWidth": 0.25,
+                  "pixelHeight": 0.5,
+                  "unit": "mm"
+                }
+              }
+            ],
+            "resources": {
+              "/image": "examples/schemaxis/fixtures/imagej/particles-8bit.pgm"
+            },
+            "scope": "Rectangular 0.25 x 0.5 mm pixels: area = pixels*0.125 mm^2 (347 px = 43.375 mm^2); x quantities scale by 0.25 and y by 0.5. Column names carry the mm unit.",
+            "checks": [
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/totalArea",
+                "expected": 43.375,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/calibration/areaUnit",
+                "expected": "mm^2",
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/columns/2",
+                "expected": "area_mm2",
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/4",
+                "expected": [
+                  5,
+                  72,
+                  9,
+                  2.1666666666666665,
+                  13.833333333333334,
+                  1,
+                  12,
+                  3,
+                  5,
+                  220,
+                  220,
+                  220
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              }
+            ]
+          },
+          {
+            "id": "sixteen-bit-boundary",
+            "example": "sixteen-bit",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/threshold/lower",
+                "value": 18000
+              }
+            ],
+            "resources": {
+              "/image": "examples/schemaxis/fixtures/imagej/particles-16bit.tif"
+            },
+            "scope": "Big-endian two-strip 16-bit TIFF with intensities 100x the 8-bit target. Lower 18000 is inclusive and above the 8-bit range: six particles, 59.5 um^2, square mean 18000.",
+            "checks": [
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/image/bitDepth",
+                "expected": 16,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/image/byteOrder",
+                "expected": "big",
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/particleCount",
+                "expected": 6,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particle-summary.json",
+                "format": "json",
+                "pointer": "/totalArea",
+                "expected": 59.5,
+                "absolute": 1e-12,
+                "relative": 1e-12
+              },
+              {
+                "file": "particles.csv",
+                "format": "csv",
+                "pointer": "/rows/2",
+                "expected": [
+                  3,
+                  64,
+                  16,
+                  17,
+                  5,
+                  15,
+                  3,
+                  4,
+                  4,
+                  18000,
+                  18000,
+                  18000
+                ],
+                "absolute": 1e-12,
+                "relative": 1e-12
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "New schemaxis.imagej/1 route: analyzeParticles operation and every field (image, calibration, threshold, connectivity, includeHoles, excludeEdges, minimumArea, maximumArea); guidance, discovery cases, Studio starters, Help, maintenance metadata and native acceptance on synthetic calibration targets.",
+        "review": [
+          "verification/2026-10-16-imagej-completion.md"
+        ],
+        "notApplicable": {}
+      }
+    }
+  }
+}

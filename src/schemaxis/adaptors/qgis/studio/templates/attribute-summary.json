@@ -1,0 +1,72 @@
+{
+  "version": "schemaxis.qgis/1",
+  "nodes": [
+    {
+      "id": "assets",
+      "filter": "readVector",
+      "options": {
+        "file": {
+          "$fill": "file"
+        }
+      }
+    },
+    {
+      "id": "eligible",
+      "filter": "selectAttributes",
+      "inputs": {
+        "input": "assets"
+      },
+      "options": {
+        "idField": "asset_id",
+        "predicates": [
+          {
+            "field": "score",
+            "type": "number",
+            "comparison": "ge",
+            "value": 20
+          }
+        ],
+        "minFeatures": 6,
+        "maxFeatures": 6
+      }
+    },
+    {
+      "id": "regional_load",
+      "filter": "summariseAttributes",
+      "inputs": {
+        "input": "eligible"
+      },
+      "options": {
+        "idField": "asset_id",
+        "groupBy": "region",
+        "aggregates": [
+          {
+            "name": "assets",
+            "statistic": "count",
+            "units": "features"
+          },
+          {
+            "name": "valid_loads",
+            "statistic": "nonNullCount",
+            "field": "load_kw",
+            "units": "features"
+          },
+          {
+            "name": "total_kw",
+            "statistic": "sum",
+            "field": "load_kw",
+            "units": "kW"
+          },
+          {
+            "name": "mean_kw",
+            "statistic": "mean",
+            "field": "load_kw",
+            "units": "kW"
+          }
+        ]
+      }
+    }
+  ],
+  "output": "regional_load",
+  "preview": true
+}

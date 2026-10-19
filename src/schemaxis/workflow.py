@@ -1,7 +1,9 @@
 """Operation handoff through verified durable artifacts, with optional scheduling."""
 import copy
 import json
+from dataclasses import replace
 from pathlib import Path
+from .core.faults import SchemaxisError
 from .errors import fail, keys
 from .artifacts import atomic_json
 from .adaptors import registry
@@ -74,6 +76,16 @@ def scheduled(document, operations):
 
 
 def execute(document, directory, *, roots=None, blender=None, freecad=None, timeout=300, resume=False, locations=None):
+    from .configuration import location_context
+    roots, locations = copy.deepcopy(roots), copy.deepcopy(locations)
+    overrides = {'roots': roots, 'blender': blender, 'freecad': freecad,
+                 **{key: value for key, value in (locations or {}).items() if value is not None}}
+    with location_context(overrides):
+        return _execute(document, directory, roots=roots, blender=blender, freecad=freecad,
+                        timeout=timeout, resume=resume, locations=locations)
+
+
+def _execute(document, directory, *, roots, blender, freecad, timeout, resume, locations):
     from .unfilled import reject_unfilled
     reject_unfilled(document)
     if study_required(document):
@@ -90,6 +102,8 @@ def execute(document, directory, *, roots=None, blender=None, freecad=None, time
         from .parallel import execute as parallel_execute
         return parallel_execute(document, directory, roots=roots, blender=blender, freecad=freecad, timeout=timeout, resume=resume, locations=locations)
     directory = prepare_run_directory(directory, document)
+    from .schema_snapshots import capture_run
+    capture_run(directory, document)
     results, handoffs = [], []
     status = {'status': 'incomplete', 'verified': False, 'operations': results, 'handoffs': handoffs}
     atomic_json(directory / 'result.json', status)
@@ -104,7 +118,9 @@ def execute(document, directory, *, roots=None, blender=None, freecad=None, time
                     source = value['$artifact']
                     previous = directory / source
                     from .parallel import verify_native
-                    receipt = verify_native(previous, json.loads((previous/'authored.json').read_text()))
+                    from .dispatch import execution_deadline
+                    with execution_deadline(timeout):
+                        receipt = verify_native(previous, json.loads((previous/'authored.json').read_text()))
                     index = value['index']
                     if index >= len(receipt['artifacts']):
                         fail('INVALID_SELECTION', 'artifact index exceeds output count', source, index=index)
@@ -144,7 +160,14 @@ def inspect_plan(document):
     operations = validate(document)
     result = []
     for operation in operations:
-        entry = {'id': operation['id'], 'provisionalPlan': provisional_plan(operation['document'])}
+        try:
+            plan = provisional_plan(operation['document'])
+        except SchemaxisError as error:
+            # Keep adaptor-relative coordinates, with their operation of origin.
+            # Two operations can contain nodes with exactly the same identity.
+            raise SchemaxisError(replace(error.fault, observed={
+                **error.fault.to_dict()['observed'], 'workflowOperation': operation['id']})) from error
+        entry = {'id': operation['id'], 'provisionalPlan': plan}
         if registry.resolve(operation['document'], legacy=True)[1].get('graph'):
             entry['artifactReferences'] = list(dependencies(operation['document']))
         result.append(entry)
@@ -174,6 +197,8 @@ def provisional_plan(document):
 
 def verify(directory):
     directory = Path(directory).resolve()
+    from .schema_snapshots import verify_run
+    verify_run(directory)
     from .adaptor_runtime import is_common, verify as verify_study
     if is_common(directory):
         return verify_study(directory, json.loads((directory/'authored.json').read_text()), {},
@@ -249,8 +274,12 @@ def publication_receipt(directory):
     """Aggregate only publications already checked by whole-workflow verification."""
     directory = Path(directory)
     verify(directory)
+    from .adaptor_runtime import is_common
+    if is_common(directory):
+        return {'artifacts': json.loads((directory/'verification.json').read_text())['artifacts']}
     saved = json.loads((directory/'result.json').read_text())
-    targets = ([Path(job['directory']) for job in saved['jobs']] if saved.get('executionVersion') == 2
+    from .run_paths import owned_path
+    targets = ([owned_path(directory, job['directory'], kind='directory') for job in saved['jobs']] if saved.get('executionVersion') == 2
                else [directory/op['id'] for op in saved['operations']])
     return {'artifacts': [artifact for target in targets
                           for artifact in json.loads((target/'verification.json').read_text())['artifacts']]}

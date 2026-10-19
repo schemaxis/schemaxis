@@ -4,6 +4,8 @@ Published artifacts now carry a versioned `<filename>.metadata.json` companion.
 `publication-metadata.json` commits the ordered membership and companion hashes
 for an execution. Companions do not consume workflow artifact indices. Native
 receipts retain their existing shapes and independent scientific verification.
+The name `publication-metadata.json` is reserved for this shared manifest in every
+run and nested run directory; unrelated files with that name are refused.
 
 The `schemaxis.artifact-metadata/1` contract contains the artifact basename,
 kind and SHA-256; byte size; observed dimensions/counts when available; and a

@@ -3,8 +3,10 @@
 The contract uses box/cylinder part definitions, App::Link component instances,
 exactly one grounded component and an acyclic, connected fixed-joint tree.
 Named top/bottom planar faces and parent-frame offsets keep placement analytics
-independent of the native solver. No authored source, native property reflection,
-arbitrary FCStd loading, motion, collision analysis or dynamics is exposed.
+independent of the native solver. Alternatively every part may name a verified
+phase-one Body publication with named mounts (see assembly_sources); the two
+forms never mix. No authored source, native property reflection, arbitrary
+FCStd loading, motion, collision analysis or dynamics is exposed.
 """
 import copy
 import hashlib
@@ -50,6 +52,9 @@ def plan(document):
         fail('UNSUPPORTED_VERSION', 'expected '+VERSION)
     if document.get('units', 'mm') != 'mm':
         fail('UNSUPPORTED_UNITS', 'Assembly dimensions are millimetres')
+    from . import assembly_sources
+    if assembly_sources.is_sourced(document):
+        return assembly_sources.plan(document)
     parts, components, joints = [], [], []
     part_ids, component_ids, joint_ids = set(), set(), set()
     for item in _array(document.get('parts'), 1, MAX_COMPONENTS, '$.parts'):
@@ -170,15 +175,31 @@ def analytic(prepared):
 
 def schema():
     from schemaxis.schema import object_schema, argument_schema, DRAFT, json_value_schema
+    from .assembly_sources import AXES, CLOCKING, MAX_MOUNTS
+    from .parameters import NAME_PATTERN
     identity = {'type': 'string', 'pattern': '^[A-Za-z][A-Za-z0-9_-]*$'}
-    endpoint = object_schema({'component': identity, 'face': {'enum': ['top', 'bottom']}}, ['component', 'face'])
+    # Constructor parts name a cap face; sourced parts name a mount. Exactly one is present.
+    endpoint = object_schema({'component': identity, 'face': {'enum': ['top', 'bottom']}, 'mount': identity}, ['component'])
+    endpoint['oneOf'] = [{'required': ['face'], 'not': {'required': ['mount']}}, {'required': ['mount'], 'not': {'required': ['face']}}]
     part_types = [object_schema({'id': identity, 'type': {'const': kind},
                   'options': object_schema({k: argument_schema(v) for k, v in options.items()}, [])}, ['id', 'type'])
                   for kind, options in PART_OPTIONS.items()]
+    binding = object_schema({'terms': {'type': 'object', 'minProperties': 1, 'maxProperties': 4, 'propertyNames': {'pattern': NAME_PATTERN},
+                                       'additionalProperties': {'type': 'number', 'minimum': -1000000, 'maximum': 1000000, 'not': {'const': 0}}},
+                             'offset': {'type': 'number', 'minimum': -1000000, 'maximum': 1000000, 'default': 0}}, ['terms'])
+    coordinate = {'oneOf': [{'type': 'number', 'minimum': -100000, 'maximum': 100000}, binding]}
+    mount = object_schema({'position': {'type': 'array', 'items': coordinate, 'minItems': 3, 'maxItems': 3, 'default': [0, 0, 0]},
+                           'z': {'enum': list(AXES), 'default': '+Z'}, 'x': {'enum': list(AXES), 'default': '+X'}}, [])
+    sourced = object_schema({'id': identity, 'source': {'type': 'string', 'minLength': 1, 'maxLength': 4096},
+        'mounts': {'type': 'object', 'minProperties': 1, 'maxProperties': MAX_MOUNTS, 'propertyNames': identity,
+                   'additionalProperties': mount}}, ['id', 'source', 'mounts'])
+    sourced['title'] = 'Modelled part'
+    part_types.append(sourced)
     component = object_schema({'id': identity, 'part': identity, 'position': argument_schema(VECTOR),
                                'rotation': argument_schema(ANGLE)}, ['id', 'part'])
     joint = object_schema({'id': identity, 'type': {'const': 'fixed'}, 'parent': endpoint,
-                           'child': endpoint, 'offset': argument_schema(VECTOR)}, ['id', 'type', 'parent', 'child'])
+                           'child': endpoint, 'offset': argument_schema(VECTOR), 'clocking': argument_schema(CLOCKING)},
+                          ['id', 'type', 'parent', 'child'])
     return {'$schema': DRAFT, '$defs': {'json': json_value_schema()}, **object_schema({'version': {'const': VERSION}, 'units': {'const': 'mm'},
         'parts': {'type': 'array', 'items': {'oneOf': part_types}, 'minItems': 1, 'maxItems': MAX_COMPONENTS},
         'components': {'type': 'array', 'items': component, 'minItems': 2, 'maxItems': MAX_COMPONENTS},
@@ -228,6 +249,10 @@ def gui_stage(executable, directory, timeout, *, stage='gui_finish'):
 
 def run(document, directory, *, executable=None, timeout=120, gui_executable=None):
     prepared = plan(document)
+    if prepared.get('sourced'):
+        from . import assembly_sources
+        return assembly_sources.run(document, prepared, directory, executable=executable, timeout=timeout,
+                                    gui_executable=gui_executable)
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
         fail('INVALID_EXECUTION', 'Assembly timeout must be finite and positive')
     executable = executable or os.environ.get('FREECAD_CMD')
@@ -270,6 +295,9 @@ def run(document, directory, *, executable=None, timeout=120, gui_executable=Non
 def _verify(directory, require_result=True):
     directory = Path(directory).absolute()
     prepared = plan(json.loads((directory/'authored.json').read_text()))
+    if prepared.get('sourced'):
+        from . import assembly_sources
+        return assembly_sources.verify(directory, require_result=require_result)
     def require(condition, message):
         if not condition:
             fail('VERIFICATION_FAILED', message, str(directory))
@@ -343,8 +371,11 @@ def verify(directory, require_result=True):
 
 
 def reusableInputs(document):
-    """The bounded assembly contract has no external input files."""
-    plan(document)
+    """Constructor assemblies have no input files; sourced parts are digested."""
+    prepared = plan(document)
+    if prepared.get('sourced'):
+        from .assembly_sources import reusable_inputs
+        return reusable_inputs(prepared)
     return {}
 
 

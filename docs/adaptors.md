@@ -159,6 +159,7 @@ Only provide hooks whose behaviour differs from the common defaults.
 | `provisionalResources(document, execution, operation_id)` | Optional host-only reservation check for documents that still contain producer references. Return only known `threads` defaults and minimum `gpus`; omit unknown requirements. Never fabricate input files or launch native code. |
 | `validateExecution(document)` | Validate a requested multi-rank pipeline; absent means MPI is unsupported. |
 | `reusableInputs(document)` | Return `{absolute_path: digest}` for complete input provenance, or `None` to disable reuse. Default is `None`. |
+| `retainedInputs(directory, document)` | Optional saved-input provenance: after successful native verification, return `{original_absolute_path: sha256}` bound to the verified retained capture and effective document, or `None` when complete captured provenance is unavailable. Never read the original inputs or trust an unchecked `job.json`. Its keys and digests must equal the `reusableInputs` map captured at execution time. Fresh execution/reuse still checks current inputs. Common studies aggregate their verified child maps. |
 | `validateHandoff(producer, consumer, operation_id)` | Additional producer-specific restrictions before execution. |
 | `verify(directory)` | Override the module's verification entry point. |
 | `verifyAttempt(directory, expected_document)` | Additional attempt-evidence checks; otherwise the ordinary verifier is used. |
@@ -174,6 +175,10 @@ an `artifacts` array containing absolute file paths, kinds and digests. Verifica
 must detect missing, changed or mismatched results. Successful process exit or file
 existence alone does not establish correctness. The scheduler rechecks authored
 inputs, handoff evidence, resources and adaptor verification before reuse.
+
+`publication-metadata.json` is reserved for the shared publication manifest in
+every run and nested run directory. Adaptors must not use that name for their own
+artifacts or unrelated data. See the [output metadata contract](output-metadata.md).
 
 Producer-dependent documents defer their complete input and resource validation
 until the producer receipts are verified. `provisionalResources` can still derive

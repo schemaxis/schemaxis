@@ -1,0 +1,50 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "page",
+      "document": {
+        "version": "schemaxis.mupdf/1",
+        "operation": "review",
+        "source": "/replace/with/review.pdf",
+        "pages": [
+          1
+        ],
+        "dpi": 72,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "hold",
+      "document": {
+        "version": "schemaxis.ffmpeg/1",
+        "nodes": [
+          {
+            "id": "video",
+            "filter": "encodeFrames",
+            "options": {
+              "files": [
+                {
+                  "$artifact": "page",
+                  "index": 0
+                },
+                {
+                  "$artifact": "page",
+                  "index": 0
+                }
+              ],
+              "fps": 2,
+              "codec": "ffv1",
+              "threads": 1
+            }
+          }
+        ],
+        "deliverable": {
+          "frames": 2,
+          "durationSeconds": 1,
+          "maxMeanRGBError": 0
+        }
+      }
+    }
+  ]
+}

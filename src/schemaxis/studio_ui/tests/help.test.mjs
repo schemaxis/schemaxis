@@ -5,6 +5,18 @@ import {blocks, cells, contextTopic, diagram, searchTopics, slug, decodePage} fr
 
 const index = JSON.parse(await readFile(new URL('../help/index.json', import.meta.url)));
 
+test('Help prose matches word prefixes without unrelated embedded words', () => {
+  const entries = [
+    {title: 'rect', search: 'replaces a rectangle through image pixels'},
+    {title: 'importImage', search: 'place image artwork into an existing cel'},
+    {title: 'pvClip', search: 'cliptype clipping planes $document values'},
+  ];
+  assert.deepEqual(searchTopics(entries, 'place image').map(item => item.title), ['importImage']);
+  assert.deepEqual(searchTopics(entries, 'clip').map(item => item.title), ['pvClip']);
+  assert.deepEqual(searchTopics(entries, '$document').map(item => item.title), ['pvClip']);
+  assert.deepEqual(searchTopics(entries, '[image]'), []);
+});
+
 test('packaged help searches native options and dollar syntax, and resolves adaptor context', () => {
   assert.equal(index.entries.filter((entry) => entry.provider === 'paraview' && entry.operation).length, 645);
   assert.equal(searchTopics(index.entries, 'pvClip')[0].title, 'pvClip');
@@ -12,7 +24,11 @@ test('packaged help searches native options and dollar syntax, and resolves adap
   assert.ok(searchTopics(index.entries, '$document').some((entry) => entry.id === index.shared));
   assert.equal(contextTopic(index, {provider: 'paraview', operation: 'slice'}).title, 'slice');
   assert.equal(contextTopic(index, {provider: 'freecad', operation: 'box'}).title, 'box');
-  assert.equal(contextTopic(index, {provider: 'freecad'}).source, 'docs/cad-and-mesh-workflows.md');
+  // The accepted primary FreeCAD guide is declared by studio.json helpGuide and the route's readiness guide.
+  assert.equal(contextTopic(index, {provider: 'freecad'}).source, 'docs/freecad-part-design.md');
+  assert.equal(contextTopic(index, {provider: 'freecad'}).id, index.guides.freecad);
+  // The broader CAD and mesh workflow guide stays packaged as a searchable topic, but is no longer the default.
+  assert.ok(index.entries.some((entry) => entry.source === 'docs/cad-and-mesh-workflows.md'));
   assert.equal(contextTopic(index, {provider: 'workflow'}).source, 'docs/workflow-authoring.md');
   assert.equal(contextTopic(index, {provider: 'paraview'}).id, index.paraview);
   assert.equal(searchTopics(index.entries, 'no-match-here-491631').length, 0);

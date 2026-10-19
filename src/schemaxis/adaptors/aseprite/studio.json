@@ -1352,6 +1352,130 @@
       ],
       "complexity": "composite",
       "requires": "Start from a 32\u00d732 or larger canvas with a base layer; animation recipe expects one existing frame."
+    },
+    {
+      "id": "import-png",
+      "title": "Import PNG artwork",
+      "category": "drawing",
+      "description": "Replace a rectangle in an existing named cel with captured binary-alpha PNG pixels.",
+      "fields": {
+        "id": {
+          "label": "Operation ID",
+          "type": "id",
+          "required": true,
+          "default": "artwork"
+        },
+        "sourceNode": {
+          "label": "Immediately preceding sprite node",
+          "type": "nodeRef",
+          "required": true,
+          "acceptsKinds": [
+            "sprite"
+          ],
+          "default": "canvas"
+        },
+        "source": {
+          "label": "Absolute PNG file path",
+          "type": "string",
+          "required": true,
+          "default": "/path/to/badge.png"
+        },
+        "layer": {
+          "label": "Existing layer",
+          "type": "string",
+          "required": true,
+          "default": "base"
+        },
+        "frame": {
+          "label": "Existing frame (one-based)",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 32,
+          "default": 1
+        },
+        "x": {
+          "label": "Left column (pixels)",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 255,
+          "default": 0
+        },
+        "y": {
+          "label": "Top row (pixels)",
+          "type": "integer",
+          "required": true,
+          "minimum": 0,
+          "maximum": 255,
+          "default": 0
+        },
+        "width": {
+          "label": "PNG width (pixels)",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 256,
+          "default": 3
+        },
+        "height": {
+          "label": "PNG height (pixels)",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "maximum": 256,
+          "default": 2
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "importImage",
+              "inputs": {
+                "sprite": {
+                  "$fill": "sourceNode"
+                }
+              },
+              "options": {
+                "source": {
+                  "$fill": "source"
+                },
+                "layer": {
+                  "$fill": "layer"
+                },
+                "frame": {
+                  "$fill": "frame"
+                },
+                "x": {
+                  "$fill": "x"
+                },
+                "y": {
+                  "$fill": "y"
+                },
+                "width": {
+                  "$fill": "width"
+                },
+                "height": {
+                  "$fill": "height"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ]
     }
   ],
   "viewers": [

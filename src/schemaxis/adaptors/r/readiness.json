@@ -4,11 +4,11 @@
     "schemaxis.r/1": {
       "guide": "docs/r.md",
       "context": {
-        "purpose": "Fit a small numeric calibration or explanatory model and decide whether actual finite training/held-out fit/prediction results meet named requirements.",
-        "assumptions": "Unweighted additive numeric ordinary least squares. Rows use declared predictor order followed by observed response, with plain unit labels. Fixed native symbols and vanilla Rscript; fresh RDS replay, independent QR verification.",
-        "constraints": "One to eight predictors, four to 512 training rows and optional one to 512 separate held-out rows. Training rows exceed coefficient count; full rank and actual scaled rectangular infinity-norm condition at most1e6. No categorical/missing values, arbitrary formulas/scripts/models, weights, interactions, confidence intervals or inference/generalisation guarantee.",
-        "inspection": "Review coefficients with original predictor/response units in regression-summary.json, actual training/held-out residuals in CSV and each signed requirement margin/worst sampled condition. Native comparison uses relative1e-10 plus128*ULP(max training response magnitude)*max(1,scaled condition), recorded explicitly; acceptance does not certify below that fidelity limit.",
-        "recovery": "RANK_DEFICIENT_DATA/ILL_CONDITIONED_DATA/INSUFFICIENT_DATA need independent predictors and a supported design. INVALID_REQUIREMENT needs valid scopes/indices/bounds. FIT_REQUIREMENT_NOT_MET retains valid fit evidence and needs review of data/model or justified requirements then a fresh attempt. Configure qualified Rscript for INTERPRETER_NOT_FOUND; retain logs for native faults."
+        "purpose": "Fit a small numeric calibration or explanatory model, optionally quantify classical coefficient uncertainty, and decide whether actual finite training/held-out fit/prediction results and coefficient intervals meet named requirements.",
+        "assumptions": "Unweighted additive numeric ordinary least squares. Rows use declared predictor order followed by observed response, with plain unit labels. Fixed native symbols and vanilla Rscript; fresh RDS replay, independent QR verification. Optional inference assumes a correct additive mean, independent constant-variance normal errors and fixed predictors.",
+        "constraints": "One to eight predictors, four to 512 training rows and optional one to 512 separate held-out rows. Training rows exceed coefficient count; full rank and actual scaled rectangular infinity-norm condition at most1e6. Inference level 0.5 to 0.999 and residual scatter at least 1e6 times the comparison roundoff allowance. No categorical/missing values, arbitrary formulas/scripts/models, weights, interactions, prediction intervals, multiplicity adjustment or generalisation guarantee.",
+        "inspection": "Review coefficients with original predictor/response units in regression-summary.json, actual training/held-out residuals in CSV and each signed requirement margin/worst sampled condition. With inference, review standard errors, t, p, intervals, residual degrees of freedom, R-squared basis and stated assumptions in the summary and inference.csv. Native comparison uses relative1e-10 plus128*ULP(max training response magnitude)*max(1,scaled condition); inference uses 1e-4 relative with propagated p-value intervals and exact level/df readback.",
+        "recovery": "RANK_DEFICIENT_DATA/ILL_CONDITIONED_DATA/INSUFFICIENT_DATA need independent predictors and a supported design. NO_RESIDUAL_VARIANCE means an exact or roundoff-level fit: remove inference or use measured data with scatter. UNSUPPORTED_INFERENCE needs a rescaled response. INVALID_REQUIREMENT needs valid scopes/indices/terms/bounds and inference for coefficient intervals. FIT_REQUIREMENT_NOT_MET retains valid fit evidence and needs review of data/model or justified requirements then a fresh attempt. Configure qualified Rscript for INTERPRETER_NOT_FOUND; retain logs for native faults."
       },
       "examples": [
         {
@@ -33,10 +33,26 @@
         {
           "id": "eight-predictors",
           "reference": "examples/schemaxis/r-eight-predictors.json"
+        },
+        {
+          "id": "inference",
+          "reference": "examples/schemaxis/r-inference.json"
+        },
+        {
+          "id": "inference-variant",
+          "reference": "examples/schemaxis/r-inference-variant.json"
+        },
+        {
+          "id": "inference-exact-fit",
+          "reference": "examples/schemaxis/r-inference-exact-invalid.json",
+          "expect": "invalid",
+          "fault": "NO_RESIDUAL_VARIANCE",
+          "schemaValid": true
         }
       ],
       "conformance": [
-        "tests/unit/test_r_admission.py"
+        "tests/unit/test_r_admission.py",
+        "tests/unit/test_r_inference.py"
       ],
       "acceptance": [
         "tools/qualify_r.py"
@@ -61,13 +77,15 @@
         "api": [
           "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/lm.html",
           "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/predict.lm.html",
-          "https://stat.ethz.ch/R-manual/R-devel/library/base/html/readRDS.html"
+          "https://stat.ethz.ch/R-manual/R-devel/library/base/html/readRDS.html",
+          "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/summary.lm.html",
+          "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/confint.html"
         ],
         "lifecycle": {
           "timeout": "One total deadline covers fit, saved-model reopen and final independent CPU verification; shared native kit has a separate bounded watchdog.",
           "cancellation": "Owned process cancellation covers native stages; cancellation is checked again before successful publication.",
-          "logs": "Retain authored/effective plans, canonical numeric inputs, fixed native worker, launcher/input bindings, model.rds, native tables/runtime records, stage stdout/stderr/submissions and failed/success results.",
-          "verification": "Independent column-scaled Householder QR reconstructs coefficients/predictions/residuals; actual rectangular infinity-norm condition from QR unit-vector solves gates unsupported designs. Compare native model rank/df, fit values and fresh-process RDS replay; recompute finite requirements from checked native values. Launcher/source/model bindings reject stale readback even with refreshed ordinary hashes. Retained regular descriptor reads are nonblocking and bounded8MiB."
+          "logs": "Retain authored/effective plans, canonical numeric inputs, fixed native worker, launcher/input bindings, model.rds, native tables, optional native inference/statistics tables, runtime records, stage stdout/stderr/submissions and failed/success results.",
+          "verification": "Independent column-scaled Householder QR reconstructs coefficients/predictions/residuals; actual rectangular infinity-norm condition from QR unit-vector solves gates unsupported designs. Compare native model rank/df, fit values and fresh-process RDS replay; recompute finite requirements from checked native values. Launcher/source/model bindings reject stale readback even with refreshed ordinary hashes. Retained regular descriptor reads are nonblocking and bounded8MiB. Optional inference compares native summary.lm/confint/pf values with QR-derived standard errors and standard-library Student-t/F tails, exact level/df readback and fit/reopen equality."
         },
         "data": [
           {
@@ -94,9 +112,24 @@
               "model": "additive numeric OLS"
             },
             "losses": [
-              "No causal inference, confidence intervals, p-values or continuous/future prediction proof."
+              "No causal inference, prediction intervals, multiplicity adjustment or continuous/future prediction proof; optional coefficient inference holds only under the stated error assumptions."
             ],
-            "scope": "Named coefficients/unit descriptors, numerical conditioning/rank, actual native fit metrics and explicit acceptance."
+            "scope": "Named coefficients/unit descriptors, numerical conditioning/rank, actual native fit metrics, optional classical inference with assumptions, and explicit acceptance."
+          },
+          {
+            "id": "inference-table",
+            "direction": "output",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "columns": "numeric",
+              "rows": "at most9"
+            },
+            "losses": [
+              "Coefficient names, units, confidence level and assumptions require the accompanying summary.",
+              "Valid only under independent, constant-variance, normal errors and a correct additive mean."
+            ],
+            "scope": "Optional per-coefficient estimate, standard error, t statistic, two-sided p-value and confidence limits, appended after the summary."
           }
         ],
         "inspection": [
@@ -107,7 +140,7 @@
           },
           {
             "panel": "text",
-            "scope": "Review declared units, coefficients, measured metrics, signed bound margins and numerical fidelity limits.",
+            "scope": "Review declared units, coefficients, measured metrics, optional coefficient inference and assumptions, signed bound margins and numerical fidelity limits.",
             "limits": "RDS remains native evidence, not imported or cross-machine interchange."
           }
         ],
@@ -306,8 +339,182 @@
                 "relative": 1e-10
               }
             ]
+          },
+          {
+            "id": "calibration-slope-interval",
+            "example": "inference",
+            "edits": [],
+            "scope": "Closed-form two-df inference: slope SE sqrt(.005), t 20*sqrt(2), p 2/(s(s+t)) with s=sqrt(802), 95% critical value .95*sqrt(2/.0975), R-squared 400/401 and F 800; slope interval inside [1.5, 2.5].",
+            "checks": [
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/coefficients/1/standardError",
+                "expected": 0.07071067811865475,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/coefficients/1/tStatistic",
+                "expected": 28.284271247461902,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/coefficients/1/pValue",
+                "expected": 0.0012476611221553253,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/criticalValue",
+                "expected": 4.302652729749464,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/coefficients/1/lower",
+                "expected": 1.6957565077703345,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/coefficients/1/upper",
+                "expected": 2.3042434922296655,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/residualStandardError/value",
+                "expected": 0.22360679774997896,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/rSquared",
+                "expected": 0.9975062344139651,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/adjustedRSquared",
+                "expected": 0.9962593516209476,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/fTest/statistic",
+                "expected": 800,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/fTest/pValue",
+                "expected": 0.0012476611221553253,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "eight-point-ninety-percent",
+            "example": "inference-variant",
+            "edits": [],
+            "scope": "Eight orthogonal residuals of 0.1 V with six df: sigma sqrt(.08/6), slope SE sigma/sqrt(168), intercept SE sigma/sqrt(8), R-squared 1512/1512.08, F 113400; tabulated t(0.95, 6) = 1.943180.",
+            "checks": [
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/coefficients/1/estimate",
+                "expected": 3,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/coefficients/1/standardError",
+                "expected": 0.008908708063747479,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/coefficients/0/standardError",
+                "expected": 0.040824829046386304,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/residualStandardError/value",
+                "expected": 0.11547005383792516,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/rSquared",
+                "expected": 0.9999470927464156,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/fTest/statistic",
+                "expected": 113400,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/inference/criticalValue",
+                "expected": 1.94318,
+                "absolute": 1e-05,
+                "relative": 1e-05
+              }
+            ]
           }
         ]
+      },
+      "completion": {
+        "scope": "Opt-in classical coefficient inference (inference.level), coefficientInterval requirements, NO_RESIDUAL_VARIANCE/UNSUPPORTED_INFERENCE guards, appended inference.csv publication, plus route-level Studio library, discovery metadata and search cases. Covers these changes; existing regression/Calc behaviour is re-run but not re-reviewed beyond its regression evidence.",
+        "review": [
+          "verification/2026-10-16-r-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "Batch fits keep no live native model browser; users inspect verified summary/CSV publications, and RDS is replay evidence only.",
+          "mpi": "At most 512 rows and 9 coefficients fit in one single-threaded vanilla Rscript process; distributed execution adds no capability.",
+          "time-batches": "Rows are a static table of declared observations with no time axis to batch.",
+          "live-editing": "Every revision is planned and fitted in a fresh vanilla Rscript process; no persistent native session exists to edit.",
+          "native-save": "model.rds is retained native replay evidence, deliberately not offered as an exported or imported model.",
+          "conversion": "Inputs are inline numeric rows and outputs are numeric CSV/JSON publications; there is no format conversion to offer."
+        }
       }
     }
   }

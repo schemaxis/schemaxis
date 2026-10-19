@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.openscad/1"
+    },
+    "operation": {
+      "enum": [
+        "plate",
+        "spacer"
+      ]
+    },
+    "units": {
+      "enum": [
+        "mm"
+      ]
+    },
+    "segments": {
+      "type": "integer",
+      "minimum": 16,
+      "maximum": 256,
+      "default": 64
+    },
+    "translation": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": -100,
+        "maximum": 100
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "default": [
+        0,
+        0,
+        0
+      ]
+    },
+    "plate": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 200
+        },
+        "depth": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 200
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 100
+        },
+        "holes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "centre": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -100,
+                  "maximum": 200
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "diameter": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 200
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "centre",
+              "diameter"
+            ]
+          },
+          "maxItems": 16,
+          "default": []
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "width",
+        "depth",
+        "height"
+      ]
+    },
+    "spacer": {
+      "type": "object",
+      "properties": {
+        "outerDiameter": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 200
+        },
+        "boreDiameter": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 200
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 100
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "outerDiameter",
+        "boreDiameter",
+        "height"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "units"
+  ],
+  "oneOf": [
+    {
+      "properties": {
+        "operation": {
+          "const": "plate"
+        }
+      },
+      "required": [
+        "plate"
+      ],
+      "not": {
+        "required": [
+          "spacer"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "operation": {
+          "const": "spacer"
+        }
+      },
+      "required": [
+        "spacer"
+      ],
+      "not": {
+        "required": [
+          "plate"
+        ]
+      }
+    }
+  ]
+}

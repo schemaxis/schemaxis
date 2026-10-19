@@ -36,10 +36,10 @@ class AuthoredSchemaTests(unittest.TestCase):
     def setUpClass(cls):
         cls.schemas = {v: version_schema(v, authored=True) for v in VERSIONS}
         cls.validators = {v: Validator(s) for v, s in cls.schemas.items()}
-        cls.invalid_fixture_faults = {ROOT / example['reference']: example['fault']
+        cls.invalid_fixtures = {ROOT / example['reference']: example
             for version in registry.routes()
             for example in route_materials(version)[2].get('examples', [])
-            if example.get('expect') == 'invalid' and example.get('schemaValid') is False and 'reference' in example}
+            if example.get('expect') == 'invalid' and 'reference' in example}
 
     def valid(self, document):
         self.assertTrue(self.validators[document['version']].is_valid(document), document)
@@ -72,10 +72,11 @@ class AuthoredSchemaTests(unittest.TestCase):
             with self.subTest(path=str(path.relative_to(ROOT))):
                 if path == ROOT / 'examples/schemaxis/extensions/pipeline.json':
                     self.invalid(document)
-                elif path in self.invalid_fixture_faults:
-                    self.invalid(document)
+                elif path in self.invalid_fixtures:
+                    example = self.invalid_fixtures[path]
+                    (self.invalid if example.get('schemaValid') is False else self.valid)(document)
                     with self.assertRaises(SchemaxisError) as caught: registry.plan(document)
-                    self.assertEqual(caught.exception.fault.code, self.invalid_fixture_faults[path])
+                    self.assertEqual(caught.exception.fault.code, example['fault'])
                 else:
                     self.valid(document)
                 checked += 1
@@ -105,15 +106,17 @@ class AuthoredSchemaTests(unittest.TestCase):
             if not isinstance(document, dict) or document.get('version') not in VERSIONS or path.parent.name == 'extensions':
                 continue
             with self.subTest(path=str(path.relative_to(ROOT))):
-                if path in self.invalid_fixture_faults:
-                    self.invalid(document)
+                if path in self.invalid_fixtures:
+                    example = self.invalid_fixtures[path]
+                    schema_invalid = example.get('schemaValid') is False
+                    (self.invalid if schema_invalid else self.valid)(document)
                     with self.assertRaises(SchemaxisError) as caught: registry.plan(document)
-                    self.assertEqual(caught.exception.fault.code, self.invalid_fixture_faults[path])
+                    self.assertEqual(caught.exception.fault.code, example['fault'])
                     try: expanded = expand_input(document)
                     except SchemaxisError as error:
-                        self.assertEqual(error.fault.code, self.invalid_fixture_faults[path])
+                        self.assertEqual(error.fault.code, example['fault'])
                     else:
-                        self.assertFalse(validators[document['version']].is_valid(expanded))
+                        self.assertEqual(validators[document['version']].is_valid(expanded), not schema_invalid)
                     continue
                 expanded = expand_input(document)
                 if expanded['version'] == 'schemaxis.study/1':

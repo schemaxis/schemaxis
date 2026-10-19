@@ -1,19 +1,22 @@
 """Bounded dependency scheduler with verified, immutable retry attempts."""
 import copy
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+from contextvars import copy_context
 import fcntl
 import json
 import math
 import os
 from pathlib import Path
+import re
 import threading
 import time
 from .artifacts import atomic_json
 from .adaptors import registry
-from .dispatch import allocation, cancellation_token
+from .dispatch import allocation, cancellation_token, execution_deadline
 from .jobs import Cancellation
 from .errors import fail, keys
 from .storage import prepare_run_directory
+from .run_paths import owned_path
 
 
 def integer(value, name, minimum=1):
@@ -153,8 +156,43 @@ def reusable_inputs(document):
     return result
 
 
-def resolve(pipeline, completed):
+def retained_inputs(directory, document):
+    """Read capture bindings only after successful native/whole-study verification.
+
+    A missing hook is deliberately conservative: old providers still need their
+    original inputs when saved scheduler provenance is checked.
+    """
+    from .adaptor_runtime import is_common
+    if is_common(directory):
+        receipt = json.loads((Path(directory)/'verification.json').read_text())
+        maps = [retained_inputs(owned_path(directory, state['directory'], kind='directory'), state['document'])
+                for state in receipt['states']]
+    else:
+        hook = registry.route_hook(document, 'retainedInputs', legacy=True)
+        if hook is None:
+            return None
+        maps = [hook(Path(directory), document)]
+    result = {}
+    for hashes in maps:
+        if hashes is None:
+            return None
+        if not isinstance(hashes, dict):
+            fail('VERIFICATION_FAILED', 'retained input provenance must be a complete path/digest map')
+        for path, digest in hashes.items():
+            if (not isinstance(path, str) or not Path(path).is_absolute()
+                    or not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest)):
+                fail('VERIFICATION_FAILED', 'retained input provenance contains an invalid path or SHA256')
+            if path in result and result[path] != digest:
+                fail('VERIFICATION_FAILED', 'study captured conflicting source bytes', path)
+            result[path] = digest
+    return result
+
+
+def resolve(pipeline, completed, *, directory=None):
     handoffs = []
+    def target_for(outcome):
+        return (owned_path(directory, outcome['directory'], kind='directory')
+                if directory is not None else Path(outcome['directory']))
     def visit(value):
         if isinstance(value, list):
             return [visit(item) for item in value]
@@ -164,14 +202,18 @@ def resolve(pipeline, completed):
         if output_reference(value):
             source = value['$value']
             choices = []
+            owners = []
             for outcome in completed[source]:
-                receipt = verify_native(outcome['directory'], outcome['effective'])
-                if is_common(outcome['directory']):
+                target = target_for(outcome)
+                receipt = verify_native(target, outcome['effective'])
+                if is_common(target):
                     for state in receipt['states']:
-                        target = Path(outcome['directory'])/state['directory']
-                        choices.append(json.loads((target/'verification.json').read_text()))
+                        child = owned_path(target, state['directory'], kind='directory')
+                        choices.append(json.loads((child/'verification.json').read_text()))
+                        owners.append(child)
                 else:
                     choices.append(receipt)
+                    owners.append(target)
             if len(choices) != 1 and 'visit' not in value:
                 fail('AMBIGUOUS_VALUE', 'select an explicit producer visit', source, visits=len(choices))
             index = value.get('visit', 0)
@@ -183,7 +225,7 @@ def resolve(pipeline, completed):
                 if type(artifact_index) is not int or not 0 <= artifact_index < len(data['artifacts']):
                     fail('INVALID_SELECTION', 'producer artifact is absent', source)
                 artifact = data['artifacts'][artifact_index]
-                filename = Path(artifact['file'])
+                filename = owned_path(owners[index], artifact['file'])
                 with filename.open('rb') as stream: payload = stream.read(8*1024*1024+1)
                 if len(payload) > 8*1024*1024:
                     fail('RESOURCE_LIMIT', 'value publication exceeds 8 MiB', source)
@@ -208,7 +250,7 @@ def resolve(pipeline, completed):
             source, index = value['$artifact'], value['index']
             artifacts = []
             for outcome in completed[source]:
-                receipt = verify_native(outcome['directory'], outcome['effective'])
+                receipt = verify_native(target_for(outcome), outcome['effective'])
                 artifacts.extend(receipt['artifacts'])
             if index >= len(artifacts):
                 fail('INVALID_SELECTION', 'artifact index exceeds output count', source)
@@ -228,6 +270,19 @@ def run_native(document, directory, roots=None, blender=None, timeout=300, freec
 
 
 def execute(document, directory, *, roots=None, blender=None, freecad=None, timeout=300, resume=False, locations=None):
+    from .configuration import location_context, locations as configured_locations
+    roots, locations = copy.deepcopy(roots), copy.deepcopy(locations)
+    overrides = {'roots': roots, 'blender': blender, 'freecad': freecad,
+                 **{key: value for key, value in (locations or {}).items() if value is not None}}
+    with location_context(overrides):
+        resolved_locations = configured_locations()
+        return _execute_configured(document, directory, roots=roots, blender=blender, freecad=freecad,
+                                   timeout=timeout, resume=resume, locations=locations,
+                                   resolved_locations=resolved_locations)
+
+
+def _execute_configured(document, directory, *, roots, blender, freecad, timeout, resume,
+                        locations, resolved_locations):
     operations, budget, jobs = work_items(document)
     directory = Path(directory).expanduser().absolute()
     if resume:
@@ -235,15 +290,22 @@ def execute(document, directory, *, roots=None, blender=None, freecad=None, time
             fail('RESUME_MISMATCH', 'resume requires the unchanged authored workflow', str(directory))
     else:
         directory = prepare_run_directory(directory, document)
+    from .schema_snapshots import capture_run, verify_run
+    if resume:
+        verify_run(directory)
+    else:
+        capture_run(directory, document)
     with (directory/'.coordinator.lock').open('a') as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             fail('WORKFLOW_BUSY', 'another coordinator owns this output directory', str(directory))
-        return _execute(document, directory, operations, budget, jobs, roots, blender, timeout, resume, freecad, locations)
+        return _execute(document, directory, operations, budget, jobs, roots, blender, timeout,
+                        resume, freecad, locations, resolved_locations)
 
 
-def _execute(document, directory, operations, budget, jobs, roots, blender, timeout, resume, freecad, locations):
+def _execute(document, directory, operations, budget, jobs, roots, blender, timeout, resume, freecad,
+             locations, resolved_locations):
     started = time.monotonic()
     cancel = Cancellation(parent=cancellation_token())
     outcomes, completed, running = {}, {}, {}
@@ -261,13 +323,17 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
         atomic_json(directory/'result.json', status)
 
     def worker(job, effective, handoffs, target):
+        from .configuration import location_context
         stamp = time.time()
         input_hashes = reusable_inputs(effective)
-        with allocation(job['resources'], cancel):
+        with location_context(resolved_locations), allocation(job['resources'], cancel), execution_deadline(timeout):
             result = run_native(effective, target, roots, blender, timeout, freecad, **({"locations": locations} if locations is not None else {}))
-        verify_started = time.monotonic()
-        verify_native(target, effective)
-        verification_seconds = time.monotonic()-verify_started
+            verify_started = time.monotonic()
+            verify_native(target, effective)
+            captured = retained_inputs(target, effective)
+            if captured is not None and captured != input_hashes:
+                fail('INPUT_CHANGED', 'captured source bytes differ from scheduled inputs', job['id'])
+            verification_seconds = time.monotonic()-verify_started
         if reusable_inputs(effective) != input_hashes:
             fail('INPUT_CHANGED', 'input files changed during execution', job['id'])
         receipt = json.loads((target/'verification.json').read_text())
@@ -298,7 +364,8 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
                         break
                     if not set(job['dependencies']) <= completed.keys():
                         continue
-                    effective, handoffs = resolve(job['document'], completed)
+                    with execution_deadline(timeout):
+                        effective, handoffs = resolve(job['document'], completed)
                     if job['dependencies']:
                         actual = requests({'id': job['operation'], 'document': effective,
                                            'execution': {k:v for k,v in job['resources'].items() if k in ('threads','ranks','memoryMB','gpus','mpiexec')}}, budget)
@@ -308,7 +375,8 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
                             # Validate limits over the complete authored time
                             # sequence, not only its smaller dispatched chunks.
                             original = next(op['document'] for op in operations if op['id'] == job['operation'])
-                            full, _ = resolve(original, completed)
+                            with execution_deadline(timeout):
+                                full, _ = resolve(original, completed)
                             registry.plan(full, legacy=True)
                         registry.plan(effective, legacy=True)
                     parent = directory/job['operation']/('batch-' + str(job['batch']))
@@ -328,7 +396,11 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
                                     continue
                                 if candidate.get('directory') != str(attempt) or candidate.get('handoffs') != handoffs:
                                     continue
-                                receipt = verify_native(attempt, effective)
+                                with execution_deadline(timeout):
+                                    receipt = verify_native(attempt, effective)
+                                    captured = retained_inputs(attempt, effective)
+                                    if captured is not None and captured != input_hashes:
+                                        continue
                                 if job['resources']['ranks'] > 1 and receipt.get('ranks') != job['resources']['ranks']:
                                     continue
                                 reused = {**candidate, 'reused': True}
@@ -339,6 +411,10 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
                                 from schemaxis.core.faults import SchemaxisError
                                 if not isinstance(error, SchemaxisError):
                                     raise
+                                if error.fault.code in ('RUNNER_CANCELLED', 'RUNNER_TIMED_OUT'):
+                                    # An interrupted check is not evidence that
+                                    # an old result needs a new native attempt.
+                                    raise
                     if reused:
                         outcomes[job['id']] = reused
                         pending.remove(job)
@@ -348,7 +424,9 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
                         continue
                     number = max([int(p.name.split('-')[-1]) for p in attempts] or [0])+1
                     target = parent/('attempt-' + str(number).zfill(4))
-                    future = pool.submit(worker, job, effective, handoffs, target)
+                    # Each worker owns a fresh Context. This also preserves an
+                    # enclosing study deadline without sharing mutable state.
+                    future = pool.submit(copy_context().run, worker, job, effective, handoffs, target)
                     running[future] = job
                     pending.remove(job)
                     save()
@@ -399,6 +477,8 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
 
 def verify(directory):
     directory = Path(directory).absolute()
+    from .schema_snapshots import verify_run
+    verify_run(directory)
     document = json.loads((directory/'authored.json').read_text())
     operations, budget, jobs = work_items(document)
     saved = json.loads((directory/'result.json').read_text())
@@ -413,16 +493,20 @@ def verify(directory):
     for job, outcome in zip(jobs, outcomes):
         if outcome.get('status') != 'succeeded' or any(outcome.get(key) != job[key] for key in job):
             fail('VERIFICATION_FAILED', 'job identity or allocation differs', job['id'])
-        effective, handoffs = resolve(job['document'], completed)
-        target = Path(outcome['directory'])
+        effective, handoffs = resolve(job['document'], completed, directory=directory)
+        target = owned_path(directory, outcome['directory'], kind='directory')
         parent = directory/job['operation']/('batch-'+str(job['batch']))
-        if target.parent != parent or not target.name.startswith('attempt-') or target.resolve().parent != parent.resolve():
+        if target.parent != parent or not re.fullmatch('attempt-[0-9]+', target.name) or target.resolve().parent != parent.resolve():
             fail('VERIFICATION_FAILED', 'attempt escaped its job directory', job['id'])
         if outcome.get('effective') != effective or outcome.get('handoffs') != handoffs:
             fail('VERIFICATION_FAILED', 'job handoff differs', job['id'])
-        if outcome.get('inputHashes') is not None and reusable_inputs(effective) != outcome['inputHashes']:
-            fail('VERIFICATION_FAILED', 'job source input changed', job['id'])
         receipt = verify_native(target, effective)
+        captured = retained_inputs(target, effective)
+        if captured is not None:
+            if captured != outcome.get('inputHashes'):
+                fail('VERIFICATION_FAILED', 'job input hashes differ from verified retained inputs', job['id'])
+        elif outcome.get('inputHashes') is not None and reusable_inputs(effective) != outcome['inputHashes']:
+            fail('VERIFICATION_FAILED', 'job source input changed', job['id'])
         if job['resources']['ranks'] > 1 and receipt.get('ranks') != job['resources']['ranks']:
             fail('VERIFICATION_FAILED', 'MPI rank evidence differs', job['id'])
         aggregate.extend(receipt['artifacts'])

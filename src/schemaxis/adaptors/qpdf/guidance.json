@@ -1,0 +1,112 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "assemble": {
+      "status": "reviewed",
+      "explanation": "Build a new PDF from selected pages of one to four named PDFs. Choose the pages in the order you want them, repeat a page by listing it again, and turn any listed page clockwise by a quarter turn. Each PDF is captured before execution; after assembly the captured sources and the published PDF are reopened with QPDF and MuPDF and every output page must match its source page exactly in a 36 dpi raster, its text and its geometry. This is bounded page assembly, not a sanitiser or editor: document-level data such as bookmarks, links on selected pages, metadata and page labels is discarded or refused, and sources with forms, signatures, layers, tagged structure or encryption are refused.",
+      "pitfalls": [
+        "Page numbers are the one-based physical position in the PDF, not the printed page label.",
+        "Rotation is added to the page's own rotation; it does not set an absolute orientation.",
+        "Bookmarks, named destinations, document information and page labels are not carried into the output.",
+        "Pages with link or other annotations or a transparency group, and PDFs with forms or layers, are refused rather than altered.",
+        "A PDF that QPDF has to repair is refused; supply an intact copy."
+      ],
+      "sources": [
+        "docs/qpdf.md"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.qpdf/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A page-assembly request: declare the source PDFs by name, then list the output pages in order. The published PDF contains exactly those pages; nothing else from the sources is kept. This does not sanitise, edit or repair PDFs.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Required document contract schemaxis.qpdf/1. It identifies the authored JSON model, independently of the configured QPDF release.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select assemble to build one new PDF from the listed pages. No other PDF operation or native command is accepted.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/sources": {
+          "status": "reviewed",
+          "explanation": "Required list of 1-4 source PDFs, each with a short name you choose and an absolute local path. Each file must be a regular, unencrypted PDF of at most 16 MiB (32 MiB together) with at most 500 pages. Every declared source must supply at least one page, and each path may be listed once; refer to a PDF by name from as many pages as you like.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/sources/items": {
+          "status": "reviewed",
+          "explanation": "One named source PDF. The name is how pages refer to it; the path says where to capture it from. The bytes are captured before execution and their digests decide workflow reuse.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/sources/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Required short name used by pages[].source: 1-24 characters, starting with a lowercase letter, then lowercase letters, digits or hyphens. Names must be distinct, for example cover or body-2.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/sources/items/properties/path": {
+          "status": "reviewed",
+          "explanation": "Required absolute local path ending in .pdf. It is captured as an immutable regular-file snapshot before native parsing. Relative paths, URLs, a symbolic link as the file itself, encrypted or damaged PDFs and files over 16 MiB are rejected. In a workflow it may be a verified PDF produced by an earlier QPDF operation.",
+          "sources": [
+            "docs/qpdf.md"
+          ],
+          "fileExtensions": [
+            ".pdf"
+          ]
+        },
+        "/properties/pages": {
+          "status": "reviewed",
+          "explanation": "Required ordered list of 1-200 output pages. The output order is the list order. List a page again to repeat it; each repeat is an independent page and may carry its own rotation. The 36 dpi verification raster must fit 4096 pixels per side and 16,777,216 pixels over all output pages including repeats, so large pages limit how many fit; physical page sides must be at most 8192 points including UserUnit.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/pages/items": {
+          "status": "reviewed",
+          "explanation": "One output page: which source, which of its pages, and an optional extra clockwise turn. The page is taken unchanged from the source apart from the rotation.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/pages/items/properties/source": {
+          "status": "reviewed",
+          "explanation": "Required name of a source declared in sources. It must exist; a name that is not declared is rejected before any application runs.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/pages/items/properties/page": {
+          "status": "reviewed",
+          "explanation": "Required one-based physical position of the page inside that PDF, from 1 to 500; it is not the printed page label. It must not exceed the source's actual page count, which is checked against the captured file.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        },
+        "/properties/pages/items/properties/rotate": {
+          "status": "reviewed",
+          "explanation": "Extra clockwise rotation in degrees: 0, 90, 180 or 270; omission selects 0. It is added to the page's existing effective rotation (inherited or its own), so 90 on a page that is already turned 270 gives an upright page. A 90 or 270 turn exchanges the displayed width and height. Boxes and UserUnit are preserved.",
+          "sources": [
+            "docs/qpdf.md"
+          ]
+        }
+      }
+    }
+  }
+}

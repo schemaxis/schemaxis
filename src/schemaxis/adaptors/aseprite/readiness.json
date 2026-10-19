@@ -4,9 +4,9 @@
     "schemaxis.aseprite/1": {
       "guide": "docs/aseprite.md",
       "context": {
-        "purpose": "Author bounded editable RGBA pixel sprites, layers, timed frames and tags, then publish native sprites, previews and sheet metadata.",
+        "purpose": "Author bounded editable RGBA pixel sprites, layers, timed frames and tags, then publish native sprites, previews and sheet metadata. Import captured RGBA8 PNG artwork into editable cels with exact pixel placement.",
         "assumptions": "Aseprite 1.3.x batch Lua API; integer pixel coordinates, explicit RGBA bytes and millisecond frame durations. Layer and frame identifiers must already exist.",
-        "constraints": "No arbitrary Lua or general sprite import. Canvas/frame/palette limits apply. Flattened previews and sheets lose editable layer structure; the native sprite retains it.",
+        "constraints": "Only captured metadata-free RGBA8 noninterlaced PNG imports, binary alpha and complete in-canvas replacement. No arbitrary Lua, general formats, scaling, clipping or blending. Canvas/frame/palette limits apply; flattened PNGs lose editable layers.",
         "inspection": "Inspect PNG pixels and sheet rectangles/durations alongside native layer/frame readback. Use image and retained text evidence; no native live editing hook.",
         "recovery": "Correct selection, layer/frame and out-of-canvas faults before execution. Configure a real batch-capable Aseprite executable; preserve native logs and rerun in a fresh directory."
       },
@@ -54,15 +54,28 @@
           "expect": "invalid",
           "fault": "INVALID_SELECTION",
           "schemaValid": true
+        },
+        {
+          "id": "import-artwork",
+          "reference": "examples/schemaxis/aseprite-import.json"
+        },
+        {
+          "id": "import-clipping-invalid",
+          "reference": "examples/schemaxis/aseprite-import-clipping-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_DRAW",
+          "schemaValid": true
         }
       ],
       "conformance": [
         "tests/unit/test_schemaxis_aseprite.py",
-        "tests/unit/test_adaptor_migration.py"
+        "tests/unit/test_adaptor_migration.py",
+        "tests/unit/test_aseprite_import.py"
       ],
       "acceptance": [
         "tools/qualify_adaptor_migration.py",
-        "tools/qualify_aseprite.py"
+        "tools/qualify_aseprite.py",
+        "tools/qualify_aseprite_import.py"
       ],
       "profiles": {
         "workflow": {
@@ -82,7 +95,10 @@
       },
       "development": {
         "api": [
-          "https://aseprite.org/api/"
+          "https://aseprite.org/api/",
+          "https://www.aseprite.org/api/image",
+          "https://www.aseprite.org/api/cel",
+          "https://www.aseprite.org/api/sprite"
         ],
         "lifecycle": {
           "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
@@ -91,6 +107,21 @@
           "verification": "An independent host raster model checks native reopened layers, frame durations, RGBA pixels, sheet metadata and all publication hashes."
         },
         "data": [
+          {
+            "id": "input-png",
+            "direction": "input",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "colour": "unprofiled RGBA8",
+              "alpha": "binary 0 or 255",
+              "placement": "exact integer pixel replacement"
+            },
+            "losses": [
+              "Hidden RGB behind alpha zero is normalised; original captured bytes are retained."
+            ],
+            "scope": "One regular captured PNG per declared importImage placement, exact declared dimensions; no profile/ancillary chunks, interlace, scaling or clipping."
+          },
           {
             "id": "output-0",
             "direction": "output",
@@ -271,8 +302,97 @@
                 "expected": "0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff0000ffff"
               }
             ]
+          },
+          {
+            "id": "import-baseline",
+            "example": "import-artwork",
+            "edits": [],
+            "resources": {
+              "/nodes/4/options/source": "examples/schemaxis/fixtures/aseprite/badge.png",
+              "/nodes/6/options/source": "examples/schemaxis/fixtures/aseprite/badge.png"
+            },
+            "scope": "Exact imported 3x2 binary-alpha artwork samples and transparent erasure over earlier white, lower background compositing, two placements and later procedural pixel. Variant changes source colours/alpha, placement and second duration. Independent literal expected grids, not copied from native results.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/cels/1/0",
+                "expected": "00000000000000000000000000000000000000000000000000000000ff0000ff0000000000ff00ff0000000000000000000000000000ffffffff00ff000000000000000000000000000000000000000000000000000000000000000000000000"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/pixels",
+                "expected": "142850ff142850ff142850ff142850ff142850ff142850ff142850ffff0000ff142850ff00ff00ff142850ff142850ff142850ff0000ffffffff00ff142850ff142850ff142850ff142850ff142850ff142850ff142850ff142850ff142850ff"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/durationsMS/1",
+                "expected": 160
+              }
+            ]
+          },
+          {
+            "id": "import-variant",
+            "example": "import-artwork",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/4/options/x",
+                "value": 0
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/6/options/x",
+                "value": 0
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/5/options/durationMS",
+                "value": 240
+              }
+            ],
+            "resources": {
+              "/nodes/4/options/source": "examples/schemaxis/fixtures/aseprite/badge-variant.png",
+              "/nodes/6/options/source": "examples/schemaxis/fixtures/aseprite/badge-variant.png"
+            },
+            "scope": "Exact imported 3x2 binary-alpha artwork samples and transparent erasure over earlier white, lower background compositing, two placements and later procedural pixel. Variant changes source colours/alpha, placement and second duration. Independent literal expected grids, not copied from native results. The shifted import preserves earlier white pixels in column 3 outside its new rectangle.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/cels/1/0",
+                "expected": "000000000000000000000000000000000000000000000000ff00ffff00ffffff00000000ffffffff000000000000000000000000ffffffffff8000ffffffffff0000000000000000000000000000000000000000000000000000000000000000"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/preview/pixels",
+                "expected": "142850ff142850ff142850ff142850ff142850ff142850ffff00ffff00ffffff142850ffffffffff142850ff142850ff142850ffffffffffff8000ffffffffff142850ff142850ff142850ff142850ff142850ff142850ff142850ff142850ff"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/durationsMS/1",
+                "expected": 240
+              }
+            ]
           }
         ]
+      },
+      "completion": {
+        "scope": "Captured importImage node and fields, PNG decoding/capture/fingerprints, cel replacement and independent source/cel/publication verification; existing procedural regression.",
+        "review": [
+          "verification/2026-10-17-aseprite-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "This route does not implement native-inspection; use its documented batch/source workflow.",
+          "mpi": "This route does not implement mpi; use its documented batch/source workflow.",
+          "time-batches": "This route does not implement time-batches; use its documented batch/source workflow.",
+          "live-editing": "This route does not implement live-editing; use its documented batch/source workflow.",
+          "conversion": "This route does not implement conversion; use its documented batch/source workflow."
+        }
       }
     }
   }

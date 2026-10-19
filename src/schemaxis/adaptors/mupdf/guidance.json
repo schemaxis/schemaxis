@@ -1,0 +1,82 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "review": {
+      "status": "reviewed",
+      "explanation": "Review selected PDF pages in a declared order as PNG images, extracted UTF-8 text and crop/rotation metadata. Use this for bounded archival previews and document review. The PDF is captured before execution; fresh native reopening checks every raster and text output. MuPDF renders effective CropBox View appearances with inherited rotation, followed by the requested clockwise quarter turn. Text follows native content order; OCR and arbitrary document editing are outside this route.",
+      "pitfalls": [
+        "PDF text extraction is not OCR or a reading-order guarantee.",
+        "Passive rendering does not establish that the source PDF is safe to open in other software.",
+        "Page numbers are one-based and must be unique."
+      ],
+      "sources": [
+        "docs/mupdf.md"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.mupdf/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A passive local PDF review request: select unique ordered pages and a raster density, then inspect PNG, extracted text and source-bound page metadata. This does not sanitize or rewrite the PDF.",
+          "sources": [
+            "docs/mupdf.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Required document contract schemaxis.mupdf/1. This identifies the authored JSON model, independently of the configured MuPDF release.",
+          "sources": [
+            "docs/mupdf.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select review to publish ordered page PNGs, extracted text and crop/rotation metadata. No other PDF transformation or native command is accepted.",
+          "sources": [
+            "docs/mupdf.md"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Required absolute local .pdf path, captured as an immutable regular-file snapshot before native parsing. Relative paths, URLs, symlinks at the file leaf, encrypted PDFs and files over 16 MiB are rejected. Reuse identity includes the captured source bytes.",
+          "sources": [
+            "docs/mupdf.md"
+          ],
+          "fileExtensions": [
+            ".pdf"
+          ]
+        },
+        "/properties/pages": {
+          "status": "reviewed",
+          "explanation": "Required ordered list of 1–16 distinct one-based page numbers. For example [2,1,3] reviews page 2 first. Numbers must exist in the native document of at most 128 total pages; selection does not alter the original PDF.",
+          "sources": [
+            "docs/mupdf.md"
+          ]
+        },
+        "/properties/pages/items": {
+          "status": "reviewed",
+          "explanation": "One one-based PDF page number in output order, from 1 to 128. Duplicate page selections are rejected; the whole document may have fewer pages, checked before rendering.",
+          "sources": [
+            "docs/mupdf.md"
+          ]
+        },
+        "/properties/dpi": {
+          "status": "reviewed",
+          "explanation": "Raster pixels per inch, 36–300; omission selects 72, where a PDF point is one pixel before UserUnit. Doubling density doubles each image dimension and approximately quadruples pixels. Reduce density or selection when the 4096-pixel dimension or 16,777,216 combined-pixel bound is exceeded. PNG density tags are set to the requested DPI and rounded to whole pixels per metre.",
+          "sources": [
+            "docs/mupdf.md"
+          ]
+        },
+        "/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "Additional clockwise output rotation in degrees: 0,90,180 or270; omission selects 0. Applied after the PDF effective crop/inherited rotation. A 90/270 turn exchanges output width and height; extracted text content/order is unchanged.",
+          "sources": [
+            "docs/mupdf.md"
+          ]
+        }
+      }
+    }
+  }
+}

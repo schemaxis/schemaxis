@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[buffer](#buffer), [centroid](#centroid), [clip](#clip), [readVector](#readvector), [reproject](#reproject)
+[buffer](#buffer), [centroid](#centroid), [clip](#clip), [readVector](#readvector), [reproject](#reproject), [selectAttributes](#selectattributes), [summariseAttributes](#summariseattributes)
 
 ## buffer
 
@@ -107,3 +107,46 @@ Native binding: `QgsCoordinateTransform`. Output kind: `["geospatialVector"]`.
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
 | `crs` | Target coordinate reference system as an EPSG authority identifier, written EPSG: followed by a 3-6 digit code (for example EPSG:4326 for WGS 84 latitude/longitude, or EPSG:32633 for WGS 84 / UTM zone 33N). The output geometry, and every later clip bound and buffer distance, are expressed in this CRS. A projected CRS with metre units is needed for buffer, and any projected CRS for centroid. | `{"type":"string","minLength":8,"maxLength":11}` | **required** |
+
+
+## selectAttributes
+
+Select features using conjunctive literal typed attribute tests and explicit minimum/maximum count requirements; retain geometry, CRS and original fields. Declare minFeatures/maxFeatures to detect an unexpected selection. No geometry or CRS conversion occurs.
+
+Common mistakes and assumptions:
+
+- Null is distinct from zero and from an empty string. Storage fid is regenerated; use a stable semantic string ID field.
+
+Native binding: `QgsFeature.attribute`. Output kind: `["geospatialVector"]`.
+
+| Input port | Multiplicity | Required | Kind |
+| --- | --- | --- | --- |
+| `input` | one node | yes | `geospatialVector` |
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `idField` | Existing semantic field containing unique nonempty nonnull string feature IDs. IDs are unitless and copied verbatim into sorted memberIds. Duplicate, numeric, empty or missing IDs fail rather than regenerating them. | `{"type":"string","minLength":1,"maxLength":128}` | **required** |
+| `predicates` | One to sixteen typed field tests combined with AND. Every nonnull value in every referenced input field must match its declared type before filtering, even for features another test would exclude. | `{"type":"array","items":{"type":"object","properties":{"field":{"type":"string","minLength":1,"maxLength":128,"required":true},"type":{"type":"enum","values":["number","string","boolean"],"required":true},"comparison":{"type":"enum","values":["eq","ne","gt","ge","lt","le","isNull","isNotNull"],"required":true},"value":{"type":"union","options":[{"type":"number"},{"type":"string","maxLength":4096},{"type":"boolean"}]}}},"minItems":1,"maxItems":16}` | **required** |
+| `minFeatures` | Minimum selected feature count, inclusive, in features; defaults to 1. Empty vector outputs remain unsupported. Set it to the independently expected lower bound so missing data fails clearly. | `{"type":"integer","minimum":1,"maximum":10000}` | `1` |
+| `maxFeatures` | Maximum selected feature count, inclusive, in features; defaults to 10000. It must be at least minFeatures. Use an exact equal lower/upper requirement when feature membership count is known. | `{"type":"integer","minimum":1,"maximum":10000}` | `10000` |
+
+
+## summariseAttributes
+
+Publish a typed group summary table and CSV with sorted member IDs, explicit units and numeric null handling while passing the input vector through unchanged. Each summary publishes a CSV, a typed JSON table and a separate editable GeoPackage no-geometry table reopened from the saved QGIS project. The vector output remains suitable for downstream geometry operations.
+
+Common mistakes and assumptions:
+
+- Null is distinct from zero and from an empty string. Storage fid is regenerated; use a stable semantic string ID field.
+
+Native binding: `QgsVectorDataProvider.addFeatures`. Output kind: `["geospatialVector","table"]`.
+
+| Input port | Multiplicity | Required | Kind |
+| --- | --- | --- | --- |
+| `input` | one node | yes | `geospatialVector` |
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `idField` | Existing semantic field containing unique nonempty nonnull string feature IDs. IDs are unitless and copied verbatim into sorted memberIds. Duplicate, numeric, empty or missing IDs fail rather than regenerating them. | `{"type":"string","minLength":1,"maxLength":128}` | **required** |
+| `groupBy` | Exact existing string field used as the group key; null is one explicit group, distinct from the empty string. Groups sort null first, then Unicode string order. Numeric or Boolean grouping is outside this bounded slice. | `{"type":"string","minLength":1,"maxLength":128}` | **required** |
+| `aggregates` | One to sixteen named output columns. Counts include or exclude null as explicitly selected; sum/mean ignore null numeric values and yield null for an all-null group. Units are annotations you declare; no conversion occurs. | `{"type":"array","items":{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":128,"required":true},"statistic":{"type":"enum","values":["count","nonNullCount","sum","mean"],"required":true},"field":{"type":"string","minLength":1,"maxLength":128},"units":{"type":"string","minLength":1,"maxLength":128,"required":true}}},"minItems":1,"maxItems":16}` | **required** |

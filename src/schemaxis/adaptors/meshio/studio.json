@@ -1,0 +1,97 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.meshio/1",
+    "operation": "convert",
+    "source": "/replace/with/mixed.vtu",
+    "sourceFormat": "vtu",
+    "targetFormat": "vtk",
+    "sourceUnits": "mm",
+    "targetUnits": "m",
+    "lossPolicy": "strict"
+  },
+  "categories": [
+    {
+      "id": "interchange",
+      "title": "Mesh interchange",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "convert",
+      "title": "Millimetre mesh to metre VTK",
+      "description": "Preserve ordered topology and scalar/vector arrays; replace source path.",
+      "document": {
+        "version": "schemaxis.meshio/1",
+        "operation": "convert",
+        "source": {
+          "$fill": "source"
+        },
+        "sourceFormat": "vtu",
+        "targetFormat": "vtk",
+        "sourceUnits": "mm",
+        "targetUnits": "m",
+        "lossPolicy": "strict"
+      },
+      "fields": {
+        "source": {
+          "label": "Source mesh",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "vtu"
+          ],
+          "acceptsKinds": [
+            "geometry"
+          ],
+          "description": "Choose a regular ASCII vtu source with the declared coordinate units."
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/mixed.vtu"
+      },
+      "requires": "Configure an isolated Python interpreter with meshio 5.3.5 and NumPy; select a bounded supported source mesh."
+    },
+    {
+      "id": "reverse",
+      "title": "Metre VTK to millimetre VTU",
+      "description": "Reverse ASCII format and coordinate units without scaling field values.",
+      "document": {
+        "version": "schemaxis.meshio/1",
+        "operation": "convert",
+        "source": {
+          "$fill": "source"
+        },
+        "sourceFormat": "vtk",
+        "targetFormat": "vtu",
+        "sourceUnits": "m",
+        "targetUnits": "mm",
+        "lossPolicy": "strict"
+      },
+      "fields": {
+        "source": {
+          "label": "Source mesh",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "vtk"
+          ],
+          "acceptsKinds": [
+            "geometry"
+          ],
+          "description": "Choose a regular ASCII vtk source with the declared coordinate units."
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/mixed.vtk"
+      },
+      "requires": "Configure an isolated Python interpreter with meshio 5.3.5 and NumPy; select a bounded supported source mesh."
+    }
+  ],
+  "viewers": [
+    "text"
+  ],
+  "helpGuide": "docs/meshio.md"
+}

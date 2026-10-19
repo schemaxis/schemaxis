@@ -1,0 +1,188 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.numpy/1",
+    "operation": "principalComponents",
+    "source": "/replace/with/numpy-sensors.csv",
+    "rowKey": {
+      "name": "time",
+      "unit": "s"
+    },
+    "channels": [
+      {
+        "name": "ch1",
+        "unit": "mV"
+      },
+      {
+        "name": "ch2",
+        "unit": "mV"
+      },
+      {
+        "name": "ch3",
+        "unit": "mV"
+      },
+      {
+        "name": "ch4",
+        "unit": "mV"
+      }
+    ],
+    "scaling": "none",
+    "retention": {
+      "components": 2
+    },
+    "output": "components",
+    "requirements": {
+      "minimumExplainedVariance": 0.9,
+      "reconstructionRMS": [
+        {
+          "channel": "ch1",
+          "maximum": 0.6
+        }
+      ]
+    }
+  },
+  "categories": [
+    {
+      "id": "analysis",
+      "title": "Multichannel analysis",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "covariance",
+      "title": "Covariance PCA of same-unit channels",
+      "description": "Centre four millivolt channels, keep two components and require 90 % explained variance and a channel RMS bound. Replace the CSV path.",
+      "document": {
+        "version": "schemaxis.numpy/1",
+        "operation": "principalComponents",
+        "source": {
+          "$fill": "source"
+        },
+        "rowKey": {
+          "name": "time",
+          "unit": "s"
+        },
+        "channels": [
+          {
+            "name": "ch1",
+            "unit": "mV"
+          },
+          {
+            "name": "ch2",
+            "unit": "mV"
+          },
+          {
+            "name": "ch3",
+            "unit": "mV"
+          },
+          {
+            "name": "ch4",
+            "unit": "mV"
+          }
+        ],
+        "scaling": "none",
+        "retention": {
+          "components": 2
+        },
+        "output": "components",
+        "requirements": {
+          "minimumExplainedVariance": 0.9,
+          "reconstructionRMS": [
+            {
+              "channel": "ch1",
+              "maximum": 0.6
+            }
+          ]
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/numpy-sensors.csv"
+      },
+      "fields": {
+        "source": {
+          "label": "Numeric CSV source",
+          "type": "path",
+          "required": true,
+          "description": "Absolute local ASCII CSV whose header equals the row key and channels; plain decimal cells only.",
+          "extensions": [
+            "csv"
+          ],
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "requires": "Configure an isolated Python with NumPy 2.5.4 linked to OpenBLAS 0.3.34 and select a bounded numeric CSV."
+    },
+    {
+      "id": "correlation-subspace",
+      "title": "Correlation PCA with retained subspace",
+      "description": "Standardise channels and publish the projector onto the retained subspace, which stays valid when eigenvalues repeat.",
+      "document": {
+        "version": "schemaxis.numpy/1",
+        "operation": "principalComponents",
+        "source": {
+          "$fill": "source"
+        },
+        "rowKey": {
+          "name": "time",
+          "unit": "s"
+        },
+        "channels": [
+          {
+            "name": "ch1",
+            "unit": "mV"
+          },
+          {
+            "name": "ch2",
+            "unit": "mV"
+          },
+          {
+            "name": "ch3",
+            "unit": "mV"
+          },
+          {
+            "name": "ch4",
+            "unit": "mV"
+          }
+        ],
+        "scaling": "standardise",
+        "retention": {
+          "components": 2
+        },
+        "output": "subspace",
+        "requirements": {
+          "reconstructionRMS": [
+            {
+              "channel": "ch3",
+              "maximum": 0.6
+            }
+          ]
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/numpy-sensors.csv"
+      },
+      "fields": {
+        "source": {
+          "label": "Numeric CSV source",
+          "type": "path",
+          "required": true,
+          "description": "Absolute local ASCII CSV whose header equals the row key and channels; plain decimal cells only.",
+          "extensions": [
+            "csv"
+          ],
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "requires": "Configure an isolated Python with NumPy 2.5.4 linked to OpenBLAS 0.3.34 and select a bounded numeric CSV."
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

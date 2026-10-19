@@ -48,6 +48,10 @@ DECLARATIONS = {
     'tag': declaration('Sprite:newTag', {'name': NAME, 'fromFrame': integer(1, 32),
         'toFrame': integer(1, 32), 'direction': {'type': 'enum',
         'values': ['forward', 'reverse', 'pingPong', 'pingPongReverse'], 'default': 'forward'}}),
+    'importImage': declaration('Image{fromFile}; Sprite:newCel; Cel.image', {
+        'source': {'type': 'string', 'minLength': 1, 'maxLength': 4096, 'required': True},
+        'layer': NAME, 'frame': integer(1, 32, 1), 'x': integer(0, 255), 'y': integer(0, 255),
+        'width': integer(1, 256), 'height': integer(1, 256)}),
 }
 del DECLARATIONS['palette']['options']['colours']['value']['default']
 FILES = ('sprite.aseprite', 'preview.png', 'sheet.png', 'sheet.json')
@@ -61,7 +65,7 @@ def plan(document):
     if not isinstance(nodes, list) or not 1 <= len(nodes) <= 256:
         fail('INVALID_DOCUMENT', 'provide 1 to 256 nodes', '$.nodes')
     prepared, seen, layers, tags = [], set(), [], set()
-    frames, width, height = 1, 0, 0
+    frames, width, height, imported_pixels = 1, 0, 0, 0
     for index, node in enumerate(nodes):
         loc = f'$.nodes[{index}]'
         keys(node, ('id', 'filter', 'options', 'inputs'), loc)
@@ -98,7 +102,14 @@ def plan(document):
             if options['name'] in tags or not options['fromFrame'] <= options['toFrame'] <= frames:
                 fail('INVALID_TAG', 'use unique tags with an existing ordered frame range', loc)
             tags.add(options['name'])
-        elif op in ('pixel', 'rect', 'circle'):
+        elif op in ('pixel', 'rect', 'circle', 'importImage'):
+            if op == 'importImage':
+                source = options['source']
+                if not Path(source).is_absolute() or Path(source).suffix.lower() != '.png' or any(ord(c) < 32 or ord(c) == 127 for c in source):
+                    fail('INVALID_RESOURCE', 'source must be an absolute local .png path without control characters', loc+'.options.source')
+                imported_pixels += options['width']*options['height']
+                if imported_pixels > 1048576:
+                    fail('RESOURCE_LIMIT', 'limit imported image samples to 1048576 pixels', loc+'.options')
             x, y = options['x'], options['y']
             radius = options.get('radius', 0)
             if (options['layer'] not in layers or options['frame'] > frames or
@@ -142,7 +153,7 @@ def schema():
         'output': NAME}, ['version', 'nodes', 'output'])}
 
 
-def expected(prepared):
+def expected(prepared, images=None):
     """Independent integer raster oracle; never reads native-generated pixels."""
     first = prepared['nodes'][0]['options']
     w, h = first['width'], first['height']
@@ -159,6 +170,14 @@ def expected(prepared):
             for layer in layers: cells[layer, len(durations)] = bytearray(w*h*4)
         elif op == 'palette': colours = o['colours']
         elif op == 'tag': tags[o['name']] = {k: o[k] for k in ('fromFrame', 'toFrame', 'direction')}
+        elif op == 'importImage':
+            if images is None or node['id'] not in images:
+                fail('VERIFICATION_FAILED', 'captured PNG samples are required for independent verification', node['id'])
+            source = bytes.fromhex(images[node['id']]['pixels'])
+            pixels = cells[o['layer'], o['frame']]
+            for y in range(o['height']):
+                start = ((o['y']+y)*w+o['x'])*4
+                pixels[start:start+o['width']*4] = source[y*o['width']*4:(y+1)*o['width']*4]
         else:
             pixels = cells[o['layer'], o['frame']]
             for y in range(h):
@@ -208,6 +227,8 @@ def run(document, directory, executable=None, timeout=60):
     source = WORKER
     (directory/'worker.lua').write_text(source)
     try:
+        from .inputs import capture
+        capture(prepared, directory)
         for stage in ('build', 'reopen'):
             args = [str(executable), '--batch', '--script-param', 'stage='+stage, '--script', str(directory/'worker.lua')]
             # The shared runner owns a Python launcher, then exec replaces that
@@ -235,7 +256,7 @@ def run(document, directory, executable=None, timeout=60):
         receipt['artifacts'] = artifact_manifest(directory)
         atomic_json(directory/'verification.json', receipt)
         result = verify(directory, require_result=False)
-        result.update(status='succeeded', sha256={f: digest(directory/f) for f in (*FILES, 'verification.json', 'worker.lua')})
+        result.update(status='succeeded', sha256={f: digest(directory/f) for f in (*FILES, 'verification.json', 'worker.lua', 'input-manifest.json')})
         atomic_json(directory/'result.json', result)
         return result
     except Exception as error:
@@ -257,7 +278,7 @@ def _verify(directory, require_result=True):
     directory = Path(directory).absolute()
     def read(filename):
         path = directory/filename
-        if path.is_symlink() or not path.is_file():
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 16*1024*1024:
             fail('VERIFICATION_FAILED', 'required regular evidence file is missing', filename)
         try:
             value = json.loads(path.read_text())
@@ -276,13 +297,33 @@ def _verify(directory, require_result=True):
         fail('VERIFICATION_FAILED', 'missing fresh-process runtime evidence')
     if receipt.get('artifacts') != artifact_manifest(directory):
         fail('VERIFICATION_FAILED', 'publication manifest differs')
-    native, preview, sheet, metadata = expected(prepared)
+    from .inputs import inspect, records
+    from .native_source import WORKER, LEGACY_PROCEDURAL_WORKER_SHA256
+    worker = directory/'worker.lua'
+    if worker.is_symlink() or not worker.is_file() or worker.stat().st_size > 65536:
+        fail('VERIFICATION_FAILED', 'missing regular trusted worker', 'worker.lua')
+    manifest = directory/'input-manifest.json'
+    legacy = (not records(prepared) and not manifest.exists() and not manifest.is_symlink()
+              and digest(worker) == LEGACY_PROCEDURAL_WORKER_SHA256)
+    images = {}
+    if not legacy:
+        images, inputs = inspect(prepared, directory)
+        if read('input-manifest.json') != {'version': 'schemaxis.aseprite.inputs/1', 'images': inputs}:
+            fail('VERIFICATION_FAILED', 'captured input manifest differs from authored input or retained PNG bytes')
+        if worker.read_text() != WORKER:
+            fail('VERIFICATION_FAILED', 'retained worker differs from trusted packaged source', 'worker.lua')
+    native, preview, sheet, metadata = expected(prepared, images)
+    from .png import decode
+    for filename, image in [('preview.png', preview), ('sheet.png', sheet)]:
+        from .inputs import source_bytes
+        if decode(source_bytes(directory/filename), source=False, location=filename) != image:
+            fail('VERIFICATION_FAILED', 'independently decoded PNG pixels differ from captured-input model', filename)
     for key, value in (('native', native), ('preview', preview), ('sheet', sheet)):
         if receipt.get(key) != value:
             fail('VERIFICATION_FAILED', 'native readback differs from independent raster model', key)
     if read('sheet.json') != metadata:
         fail('VERIFICATION_FAILED', 'spritesheet metadata differs')
-    for filename in (*FILES, 'verification.json', 'worker.lua'):
+    for filename in (*FILES, 'verification.json', 'worker.lua', *(() if legacy else ('input-manifest.json',))):
         path = directory/filename
         if path.is_symlink() or not path.is_file() or not path.stat().st_size:
             fail('VERIFICATION_FAILED', 'missing regular artifact', filename)

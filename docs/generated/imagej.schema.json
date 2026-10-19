@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.imagej/1"
+    },
+    "operation": {
+      "const": "analyzeParticles"
+    },
+    "image": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 4096
+    },
+    "calibration": {
+      "type": "object",
+      "properties": {
+        "pixelWidth": {
+          "type": "number",
+          "minimum": 1e-06,
+          "maximum": 1000000.0
+        },
+        "pixelHeight": {
+          "type": "number",
+          "minimum": 1e-06,
+          "maximum": 1000000.0
+        },
+        "unit": {
+          "enum": [
+            "nm",
+            "um",
+            "mm",
+            "cm",
+            "m"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "pixelWidth",
+        "pixelHeight",
+        "unit"
+      ]
+    },
+    "threshold": {
+      "type": "object",
+      "properties": {
+        "lower": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "upper": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "lower",
+        "upper"
+      ]
+    },
+    "connectivity": {
+      "enum": [
+        "eight",
+        "four"
+      ],
+      "default": "eight"
+    },
+    "includeHoles": {
+      "type": "boolean",
+      "default": false
+    },
+    "excludeEdges": {
+      "type": "boolean",
+      "default": false
+    },
+    "minimumArea": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1e+30,
+      "default": 0
+    },
+    "maximumArea": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1e+30
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "image",
+    "calibration",
+    "threshold"
+  ]
+}

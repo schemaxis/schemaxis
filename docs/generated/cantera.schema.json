@@ -200,6 +200,99 @@
               "filter",
               "inputs"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "reactorHistory"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "enum": [
+                      "constantPressure",
+                      "constantVolume"
+                    ],
+                    "default": "constantPressure"
+                  },
+                  "temperature": {
+                    "type": "number",
+                    "minimum": 300,
+                    "maximum": 3500,
+                    "default": 1000
+                  },
+                  "times": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "minItems": 2,
+                    "maxItems": 100,
+                    "default": [
+                      0,
+                      0.0001,
+                      0.0002,
+                      0.0003,
+                      0.0004,
+                      0.0005,
+                      0.001
+                    ]
+                  },
+                  "relativeTolerance": {
+                    "type": "number",
+                    "minimum": 1e-12,
+                    "maximum": 1e-08,
+                    "default": 1e-09
+                  },
+                  "absoluteTolerance": {
+                    "type": "number",
+                    "minimum": 1e-20,
+                    "maximum": 1e-12,
+                    "default": 1e-15
+                  },
+                  "maxSteps": {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 100000,
+                    "default": 20000
+                  },
+                  "ignitionTemperatureRise": {
+                    "type": "number",
+                    "minimum": 10,
+                    "maximum": 1000,
+                    "default": 400
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "inputs"
+            ]
           }
         ]
       }

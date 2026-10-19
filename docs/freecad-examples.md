@@ -1,13 +1,14 @@
 # FreeCAD → ParaView → Blender examples
 
 These introductory examples use `box`, `cylinder`, `cut` and `fuse`.
-The adaptor now has 18 operations; see the [expanded CAD and mesh workflows](cad-and-mesh-workflows.md). It builds a real editable FreeCAD feature tree, rather than
+The adaptor now has 21 operations; see the [expanded CAD and mesh workflows](cad-and-mesh-workflows.md). It builds a real editable FreeCAD feature tree, rather than
 exporting a picture of a CAD model. Every operation executes in its own FreeCAD
 process. Independent designs can use the existing resource-aware workflow scheduler;
 MPI and splitting a single CAD document across workers are not supported.
 
 ## Examples to open or run
 
+- [Sketch-based mechanical part](../examples/schemaxis/freecad-part-design.json): constrained sketches, an editable Body/Pad/Pocket history and named dimensions; see the [workflow guide](freecad-part-design.md).
 - [Mounting bracket input](../examples/schemaxis/freecad-bracket.json): 100 × 70 mm
   foot, 60 mm upright, 8 mm thickness, two 10 mm foot holes and two 12 mm upright holes.
 - [Flanged pipe input](../examples/schemaxis/freecad-flange.json): 70 mm flange diameter,
@@ -74,8 +75,10 @@ workflow and resume check. See the
 
 The original examples use four operations and the ParaView glTF bridge. New examples
 also support sketches, sweeps, finishing and STEP input, plus a direct Blender STL
-bridge. CAD options resolve to literal values; native Python, time visits, analytic
-axes, assemblies, FEM and manufacturing constraints remain outside this contract.
+bridge. Common expressions and finite analytic variants initialise each run.
+[Named native parameters](freecad-parameters.md) preserve explicit affine length
+relationships; [fixed assemblies](freecad-assemblies.md) use a separate route.
+Arbitrary native Python, FEM and manufacturing constraints remain outside these contracts.
 `schemaxis inspect` now supports solid topology inspection for edge selection.
 
 Pure CAD jobs have no external inputs and can reuse verified attempts on resume.

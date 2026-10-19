@@ -2,12 +2,20 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {test} from 'node:test';
 import {diagnosticPointer, fieldsAt, fillPlaceholders, operationPointer, outline, parseField, placeholders,
-  snippetRequest, valueAt} from '../windows/workbench/model.mjs';
+  snippetRequest, validationRequest, valueAt} from '../windows/workbench/model.mjs';
 
 const schema = JSON.parse(await readFile(new URL('../../../../docs/generated/freecad.authored.schema.json',
   import.meta.url), 'utf8'));
 const documentValue = {version: 'schemaxis.freecad/1', units: 'mm',
   nodes: [{id: 'body', filter: 'box', options: {length: 30, width: 20, height: 10}}], output: 'body'};
+
+test('nested validation names its saved parent revision and standalone validation has no context', () => {
+  const state = {provider: 'freecad', record: {id: 'workflow-id', revision: 7}};
+  assert.deepEqual(validationRequest(state, {operation: 'assembly'}, '{}'), {
+    provider: 'freecad', source: '{}', format: 'json', document: 'workflow-id', revision: 7, operation: 'assembly'});
+  assert.deepEqual(validationRequest(state, {}, 'version: x', 'yaml'), {
+    provider: 'freecad', source: 'version: x', format: 'yaml'});
+});
 
 test('properties follow the real adaptor filter schema, including absent options', () => {
   const fields = fieldsAt(schema, documentValue, '/nodes/0/options');

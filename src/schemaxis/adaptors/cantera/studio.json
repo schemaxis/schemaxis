@@ -49,6 +49,11 @@
       "id": "studies",
       "title": "Thermodynamic studies",
       "icon": "layers"
+    },
+    {
+      "id": "reactor",
+      "title": "Reactor histories",
+      "icon": "layers"
     }
   ],
   "snippets": [
@@ -356,6 +361,53 @@
         }
       ],
       "complexity": "composite"
+    },
+    {
+      "id": "reactor-history",
+      "title": "Adiabatic reactor time history",
+      "category": "reactor",
+      "icon": "layers",
+      "description": "Replace the table operation with a closed adiabatic reactor integrated in time from the preceding gas state; keep the output ID.",
+      "fields": {
+        "reactor-history": {
+          "label": "Adiabatic reactor time history",
+          "type": "json",
+          "required": true,
+          "default": {
+            "model": "constantPressure",
+            "temperature": 1000,
+            "times": [
+              0,
+              0.0001,
+              0.0002,
+              0.0003,
+              0.0004,
+              0.0005,
+              0.001
+            ],
+            "relativeTolerance": 1e-09,
+            "absoluteTolerance": 1e-15,
+            "maxSteps": 20000,
+            "ignitionTemperatureRise": 400
+          }
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/1/filter",
+          "values": [
+            "reactorHistory"
+          ]
+        },
+        {
+          "at": "/nodes/1/options",
+          "values": [
+            {
+              "$fill": "reactor-history"
+            }
+          ]
+        }
+      ]
     }
   ],
   "templates": [
@@ -404,6 +456,40 @@
           "default": 101325,
           "minimum": 1000,
           "maximum": 10000000.0
+        }
+      }
+    },
+    {
+      "id": "reactor-ignition",
+      "title": "Hydrogen/air ignition history",
+      "description": "Integrate a closed adiabatic stoichiometric H2/air reactor at constant pressure or volume and sample its temperature, pressure and composition from 0 to 20 ms; reports the ignition delay by the declared 400 K temperature-rise criterion.",
+      "file": "studio/templates/reactor-ignition.json",
+      "fields": {
+        "pressure": {
+          "label": "Initial pressure in pascals",
+          "type": "number",
+          "required": true,
+          "default": 101325,
+          "minimum": 1000,
+          "maximum": 10000000.0
+        },
+        "temperature": {
+          "label": "Initial temperature in kelvin",
+          "type": "number",
+          "required": true,
+          "default": 1000,
+          "minimum": 300,
+          "maximum": 3500
+        },
+        "model": {
+          "label": "Reactor held at",
+          "type": "enum",
+          "required": true,
+          "default": "constantPressure",
+          "values": [
+            "constantPressure",
+            "constantVolume"
+          ]
         }
       }
     }

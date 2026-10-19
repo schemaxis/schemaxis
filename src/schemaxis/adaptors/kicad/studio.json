@@ -1,0 +1,256 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.kicad/1",
+    "operation": "designRuleCheck",
+    "board": "/replace-with-your-input/board.kicad_pcb",
+    "maximumErrors": 0,
+    "maximumWarnings": 0,
+    "maximumUnconnected": 0
+  },
+  "categories": [
+    {
+      "id": "checks",
+      "title": "Board checks",
+      "icon": "layers",
+      "description": "Inspect a saved board and run KiCad design rules."
+    },
+    {
+      "id": "fabrication",
+      "title": "Fabrication outputs",
+      "icon": "layers",
+      "description": "Verified manufacturing files from a passing board."
+    }
+  ],
+  "snippets": [
+    {
+      "id": "inspect-board",
+      "title": "Inspect a board",
+      "category": "checks",
+      "icon": "layers",
+      "complexity": "composite",
+      "description": "Replace the request with a board inventory: footprints, pads, vias, holes and outline, confirmed against KiCad's statistics.",
+      "fields": {
+        "board": {
+          "label": "Board file (.kicad_pcb)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "kicad_pcb"
+          ],
+          "description": "Absolute path to a saved KiCad board. A sibling .kicad_pro and .kicad_dru with the same name are captured with it."
+        }
+      },
+      "testValues": {
+        "board": "/replace-with-your-input/tiny-board.kicad_pcb"
+      },
+      "requires": "Requires a saved .kicad_pcb (KiCad 8.0-10.0, two copper layers) and a configured KiCad 10.0 kicad-cli when running.",
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.kicad/1",
+              "operation": "inspectBoard",
+              "board": {
+                "$fill": "board"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "check-board",
+      "title": "Design rule check",
+      "category": "checks",
+      "icon": "layers",
+      "complexity": "composite",
+      "description": "Replace the request with a KiCad DRC that accepts no errors or unconnected items and the chosen number of warnings.",
+      "fields": {
+        "board": {
+          "label": "Board file (.kicad_pcb)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "kicad_pcb"
+          ],
+          "description": "Absolute path to a saved KiCad board. A sibling .kicad_pro and .kicad_dru with the same name are captured with it."
+        },
+        "maximumWarnings": {
+          "label": "Maximum DRC warnings",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 100000,
+          "description": "Largest acceptable number of warning-severity findings; more fails the run with DRC_VIOLATIONS."
+        }
+      },
+      "testValues": {
+        "board": "/replace-with-your-input/tiny-board.kicad_pcb"
+      },
+      "requires": "Requires a saved .kicad_pcb (KiCad 8.0-10.0, two copper layers) and a configured KiCad 10.0 kicad-cli when running.",
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.kicad/1",
+              "operation": "designRuleCheck",
+              "board": {
+                "$fill": "board"
+              },
+              "maximumErrors": 0,
+              "maximumWarnings": {
+                "$fill": "maximumWarnings"
+              },
+              "maximumUnconnected": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "export-drill",
+      "title": "Excellon drill files",
+      "category": "fabrication",
+      "icon": "layers",
+      "complexity": "composite",
+      "description": "Replace the request with a DRC-gated Excellon export: separate plated and non-plated files, every hit matched to a board hole.",
+      "fields": {
+        "board": {
+          "label": "Board file (.kicad_pcb)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "kicad_pcb"
+          ],
+          "description": "Absolute path to a saved KiCad board. A sibling .kicad_pro and .kicad_dru with the same name are captured with it."
+        },
+        "units": {
+          "label": "Drill units",
+          "type": "enum",
+          "required": true,
+          "default": "mm",
+          "values": [
+            "mm",
+            "in"
+          ]
+        }
+      },
+      "testValues": {
+        "board": "/replace-with-your-input/tiny-board.kicad_pcb"
+      },
+      "requires": "Requires a saved .kicad_pcb (KiCad 8.0-10.0, two copper layers) and a configured KiCad 10.0 kicad-cli when running.",
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.kicad/1",
+              "operation": "drillExport",
+              "board": {
+                "$fill": "board"
+              },
+              "maximumErrors": 0,
+              "maximumWarnings": 0,
+              "maximumUnconnected": 0,
+              "units": {
+                "$fill": "units"
+              },
+              "separatePlating": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": "board-inventory",
+      "title": "Board inventory",
+      "description": "Count and measure a saved KiCad board and confirm the counts against KiCad's own statistics report.",
+      "file": "studio/templates/board-inventory.json",
+      "fields": {
+        "board": {
+          "label": "Board file (.kicad_pcb)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "kicad_pcb"
+          ],
+          "description": "Absolute path to a saved KiCad board. A sibling .kicad_pro and .kicad_dru with the same name are captured with it."
+        }
+      },
+      "testValues": {
+        "board": "/replace-with-your-input/tiny-board.kicad_pcb"
+      },
+      "requires": "Requires a saved .kicad_pcb (KiCad 8.0-10.0, two copper layers) and a configured KiCad 10.0 kicad-cli when running."
+    },
+    {
+      "id": "board-check",
+      "title": "Board design rule check",
+      "description": "Run KiCad's design rule check on a saved board with zero errors and unconnected items allowed.",
+      "file": "studio/templates/board-check.json",
+      "fields": {
+        "board": {
+          "label": "Board file (.kicad_pcb)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "kicad_pcb"
+          ],
+          "description": "Absolute path to a saved KiCad board. A sibling .kicad_pro and .kicad_dru with the same name are captured with it."
+        },
+        "maximumWarnings": {
+          "label": "Maximum DRC warnings",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 100000,
+          "description": "Largest acceptable number of warning-severity findings; more fails the run with DRC_VIOLATIONS."
+        }
+      },
+      "testValues": {
+        "board": "/replace-with-your-input/tiny-board.kicad_pcb"
+      },
+      "requires": "Requires a saved .kicad_pcb (KiCad 8.0-10.0, two copper layers) and a configured KiCad 10.0 kicad-cli when running."
+    },
+    {
+      "id": "drill-package",
+      "title": "Drill files for fabrication",
+      "description": "Check the board, then export and verify Excellon drill files in the chosen units.",
+      "file": "studio/templates/drill-package.json",
+      "fields": {
+        "board": {
+          "label": "Board file (.kicad_pcb)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "kicad_pcb"
+          ],
+          "description": "Absolute path to a saved KiCad board. A sibling .kicad_pro and .kicad_dru with the same name are captured with it."
+        },
+        "units": {
+          "label": "Drill units",
+          "type": "enum",
+          "required": true,
+          "default": "mm",
+          "values": [
+            "mm",
+            "in"
+          ]
+        }
+      },
+      "testValues": {
+        "board": "/replace-with-your-input/tiny-board.kicad_pcb"
+      },
+      "requires": "Requires a saved .kicad_pcb (KiCad 8.0-10.0, two copper layers) and a configured KiCad 10.0 kicad-cli when running."
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

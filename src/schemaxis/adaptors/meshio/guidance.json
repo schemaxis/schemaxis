@@ -1,0 +1,95 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "convert": {
+      "status": "reviewed",
+      "explanation": "Convert captured triangle/tetra meshes between ASCII VTU and legacyVTK 4.2 while checking coordinate units, ordered topology and point/cell arrays independently. Use for mesh interchange where preserving field associations matters.",
+      "sources": [
+        "docs/meshio.md#contract-and-units"
+      ],
+      "pitfalls": [
+        "Only coordinates change units; scalar/vector array units are not inferred.",
+        "Strict subset refuses binary/compressed payloads and unsupported metadata instead of silently losing them."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/meshio-convert.json",
+          "purpose": "Mixed-cell millimetre VTU to metre VTK."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.meshio/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Declare one strict ASCII mesh conversion with explicit source/target length units. The route preserves ordered topology and scalar/vector point/cell values, scales coordinates alone and refuses unsupported information before native execution.",
+          "sources": [
+            "docs/meshio.md#contract-and-units"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.meshio/1 for the document contract; native meshio 5.3.5 is a separate runtime version.",
+          "sources": [
+            "docs/meshio.md#contract-and-units"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose convert to read a captured supported mesh, convert coordinate units and write the selected ASCII format. Same-format unit conversion is valid.",
+          "sources": [
+            "docs/meshio.md#contract-and-units"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Required absolute local .vtu/.vtk regular file, matching sourceFormat, at most 16 MiB. No symlinks, devices or remote fetching. Bytes are captured and hashed; same-path changes invalidate reuse.",
+          "sources": [
+            "docs/meshio.md#contract-and-units"
+          ],
+          "fileExtensions": [
+            ".vtu",
+            ".vtk"
+          ]
+        },
+        "/properties/sourceFormat": {
+          "status": "reviewed",
+          "explanation": "Required vtu or vtk. vtu means a single inline ASCII UnstructuredGrid Piece; vtk means legacy 4.2 ASCII unstructured grid with FIELD arrays. The extension must match. Binary, appended, compressed and extra metadata sections are refused.",
+          "sources": [
+            "docs/meshio.md#contract-and-units"
+          ]
+        },
+        "/properties/targetFormat": {
+          "status": "reviewed",
+          "explanation": "Required vtu or vtk ASCII output, at most 32 MiB. Select the format the downstream consumer accepts. Ordered geometry/connectivity and supported arrays are preserved; dtype, block grouping and formatting may change.",
+          "sources": [
+            "docs/meshio.md#contract-and-units"
+          ]
+        },
+        "/properties/sourceUnits": {
+          "status": "reviewed",
+          "explanation": "Required coordinate length unit: m, cm, mm, in. Declare the unit already used by source XYZ; no inference from filename or scalar/vector fields. Incorrect declarations rescale an otherwise valid mesh incorrectly.",
+          "sources": [
+            "docs/meshio.md#contract-and-units"
+          ]
+        },
+        "/properties/targetUnits": {
+          "status": "reviewed",
+          "explanation": "Required output coordinate unit: m, cm, mm, in. XYZ including origin is multiplied by source metres-per-unit divided by target metres-per-unit. mm to m is 0.001; tetra volume changes by the cube. Field values are never rescaled.",
+          "sources": [
+            "docs/meshio.md#contract-and-units"
+          ]
+        },
+        "/properties/lossPolicy": {
+          "status": "reviewed",
+          "explanation": "Required strict: reject unsupported metadata, cell types or data arrays rather than dropping them. Strict preserves declared numeric/ordering semantics; it does not preserve ASCII formatting, numeric storage dtype or meshio block boundaries.",
+          "sources": [
+            "docs/meshio.md#contract-and-units"
+          ]
+        }
+      }
+    }
+  }
+}

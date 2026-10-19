@@ -16,6 +16,14 @@ def input_property(kind, port):
 
 def configure(obj, node, objects, sources):
     kind, options = node['filter'], node['options']
+    if kind == 'importSTEP':
+        from .step_import_native import configure as configure_import
+        configure_import(obj, node, sources)
+        return
+    if kind in ('body','pad','pocket'):
+        from .part_design_native import configure as configure_body
+        configure_body(obj,node,objects)
+        return
     if kind not in ('extrude','fillet','chamfer','rectangle','circle'):
         for key, prop in DIMENSIONS.items():
             if key in options:
@@ -25,6 +33,7 @@ def configure(obj, node, objects, sources):
     if 'axis' in options and kind != 'revolve':
         obj.Placement.Rotation = App.Rotation(App.Vector(0,0,1),App.Vector(*options['axis']))
     for port,source in node['inputs'].items():
+        if port=='body':continue
         setattr(obj,input_property(kind,port),[objects[item] for item in source] if isinstance(source,list) else objects[source])
     if kind == 'loft':
         obj.Solid=True; obj.Ruled=options['ruled']; obj.Closed=False
@@ -34,6 +43,9 @@ def configure(obj, node, objects, sources):
         from .sketch_features import configure as configure_sketch
         obj.Placement.Rotation=PLANES[options['plane']]
         configure_sketch(obj,kind,options)
+        if 'body' in node['inputs']:
+            from .part_design_native import attach
+            attach(obj,objects[node['inputs']['body']])
     elif kind=='polygon':
         obj.Placement.Rotation=PLANES[options['plane']]
         points=[App.Vector(x,y,0) for x,y in options['points']]
@@ -63,8 +75,10 @@ def configure(obj, node, objects, sources):
         obj.addProperty('App::PropertyString','SourceSHA256','Schemaxis');obj.SourceSHA256=record['sha256']
 
 
-def check(obj,node,close,sources):
+def check(obj,node,close,sources,names=None):
+    """`names` maps node IDs to their output objects when an import adds a refine output."""
     kind,options=node['filter'],node['options']
+    if kind in ('body','pad','pocket'):return
     def require(condition,property):
         if not condition:fail('VERIFICATION_FAILED','native CAD feature setting differs',node['id'],property=property)
     if kind not in ('extrude','fillet','chamfer','rectangle','circle'):
@@ -75,8 +89,12 @@ def check(obj,node,close,sources):
         axis=App.Vector(*options['axis']);axis.normalize()
         require(close(list(obj.Placement.Rotation.multVec(App.Vector(0,0,1))),list(axis)),'axis')
     for port,source in node['inputs'].items():
+        if port=='body':continue
         value=getattr(obj,input_property(kind,port))
-        require(([item.Label for item in value] if isinstance(source,list) else value.Label)==source,port)
+        if names is None:
+            require(([item.Label for item in value] if isinstance(source,list) else value.Label)==source,port)
+        else:
+            require(([item.Name for item in value] if isinstance(source,list) else value.Name)==([names[item] for item in source] if isinstance(source,list) else names[source]),port)
     if kind == 'loft':
         require(obj.Solid and not obj.Closed and obj.Ruled == options['ruled'], 'loft')
     elif kind == 'multiFuse':
@@ -104,4 +122,4 @@ def check(obj,node,close,sources):
             from .selections import native_edges, resolve
             indices = resolve(indices, native_edges(obj.Base.Shape), node['id'])
         require(close([list(edge) for edge in obj.Edges],[[index,radius,radius] for index in indices]),'edges')
-    elif kind=='readSTEP':require(obj.SourceSHA256==sources[node['id']]['sha256'],'sourceDigest')
+    elif kind in ('readSTEP','importSTEP'):require(obj.SourceSHA256==sources[node['id']]['sha256'],'sourceDigest')

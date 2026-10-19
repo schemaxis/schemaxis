@@ -1,0 +1,132 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "assemble": {
+      "status": "reviewed",
+      "explanation": "Assemble PCM WAV audio excerpts with frame-accurate trim, gain and linear fade envelopes, concatenating processed clips into a verified recording.",
+      "sources": [
+        "docs/sox.md#edit-decisions-and-timing"
+      ],
+      "pitfalls": [
+        "Integer sample frames give exact half-open source selections; linear amplitude gain precedes nonoverlapping fades.",
+        "Independent PCM reopening checks each processed sample and exact concatenation; source hashes invalidate stale reuse."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/sox-assembly.json",
+          "purpose": "Join two mono recording excerpts with gains and fades."
+        },
+        {
+          "reference": "examples/schemaxis/sox-stereo.json",
+          "purpose": "Assemble two stereo takes with explicit frame envelopes."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.sox/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Declare an ordered programme of PCM16 recording excerpts. Each clip selects a half-open interval of sample frames, applies amplitude gain and optional linear edge fades, then joins the next clip without overlap. Source rate/channels must match; no resampling or implicit normalisation occurs.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.sox/1 for this bounded edit-decision input contract. This version identifies the document schema, while the native release is SoX 14.4.2.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose assemble to trim, gain and fade excerpts, then concatenate them in list order. This fixed operation publishes one PCM16 WAV and an independently checked summary. It does not mix tracks.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/properties/clips": {
+          "status": "reviewed",
+          "explanation": "List one to eight recording excerpts in playback order. Each clip is processed separately before joining, so boundaries remain exact and clips never overlap. Total output may not exceed 262144 frames; the whole-job byte/sample budget also applies.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/properties/clips/items": {
+          "status": "reviewed",
+          "explanation": "One excerpt from a recording: select source frames, scale amplitude and optionally taper its edges. Reusing the same source in multiple clips is allowed and each capture participates in the aggregate resource budget.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/properties/clips/items/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose an existing absolute local .wav path containing canonical signed PCM16 little-endian mono or stereo audio, 8000\u2013192000 Hz. Every clip must share rate/channels. The runner captures bytes and verifies the capture; the original file is not modified and later source changes invalidate workflow reuse.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "Relative paths, symlinks, devices, compressed WAV and network sources are rejected."
+          ],
+          "fileExtensions": [
+            ".wav"
+          ]
+        },
+        "/properties/clips/items/properties/startFrame": {
+          "status": "reviewed",
+          "explanation": "Zero-based source frame where the excerpt begins, default zero. A frame includes one sample for each channel. Together with frameCount it selects [startFrame,startFrame+frameCount), and 48000 frames represent one second at 48000 Hz.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "Do not multiply the frame index by the channel count."
+          ],
+          "units": "sample frames"
+        },
+        "/properties/clips/items/properties/frameCount": {
+          "status": "reviewed",
+          "explanation": "Number of sample frames to retain, required and positive. The half-open interval must fit inside the recording; the runner rejects an overrun before launching SoX. At 48000 Hz, a value of 48000 selects one second regardless of mono/stereo channels.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "units": "sample frames"
+        },
+        "/properties/clips/items/properties/gain": {
+          "status": "reviewed",
+          "explanation": "Linear amplitude multiplier between zero and four, default one. For example 0.5 halves amplitude and zero produces silence. It runs before fades and clips that would exceed [-32768,32767] PCM16 at this stage are refused.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "This is an amplitude ratio, not decibels. A later fade does not permit gain clipping."
+          ],
+          "units": "unitless amplitude ratio"
+        },
+        "/properties/clips/items/properties/fadeInFrames": {
+          "status": "reviewed",
+          "explanation": "Length of the linear fade-in in sample frames, default zero for no fade. For N>0, zero-based frame i<N receives multiplier i/N: the first stored frame is silent and full gain begins at frame N. Its length plus fadeOutFrames must not exceed frameCount.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "A one-frame fade-in silences only the first frame; envelopes apply identically to both channels."
+          ],
+          "units": "sample frames"
+        },
+        "/properties/clips/items/properties/fadeOutFrames": {
+          "status": "reviewed",
+          "explanation": "Length of the linear fade-out over the end of this excerpt in sample frames, default zero. For M>0, multiplier is (frameCount-i)/M over the last M frames. The final stored frame retains multiplier 1/M; zero lies just after the excerpt.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "A one-frame fade-out retains that frame unchanged. Fade-in and fade-out may touch but never overlap."
+          ],
+          "units": "sample frames"
+        }
+      }
+    }
+  }
+}

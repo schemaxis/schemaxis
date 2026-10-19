@@ -1,6 +1,6 @@
 # Candidate adaptors, conversion and workflow templates
 
-Updated: 2026-10-10. Status: design direction and candidate backlog.
+Updated: 2026-10-16. Status: design direction and candidate backlog.
 
 This document records the design discussion about broadening Schemaxis beyond
 its current application coverage. Candidate operations, converters and templates
@@ -21,7 +21,7 @@ different pipelines. A library or command-line utility can be a provider even
 when it has no desktop interface.
 
 Current coverage includes ParaView, Blender, FreeCAD, Godot, Aseprite, FFmpeg, Inkscape, Shotcut,
-QGIS, Gmsh, CalculiX, Cantera, ngspice, Octave, R and Calc, plus experimental
+QGIS, Gmsh, CalculiX, Cantera, ngspice, Octave, R, Calc, KiCad, ImageJ and PrusaSlicer, plus experimental
 Premiere sequence inspection. These are bounded adaptors, not complete coverage
 of the applications. See the [README](../../README.md),
 [adaptor contract](../adaptors.md) and [CFD guide](../cfd-guide.md).
@@ -43,22 +43,22 @@ does not by itself establish redistribution terms or integration readiness.
 | Meshing | [Gmsh](https://gmsh.info/doc/texinfo/) | Qualified first slice | [FreeCAD STEP → Gmsh → ParaView](../gmsh.md): one solid, linear tetrahedra, authored volume, planar face and remainder groups with verified MSH/VTU. Arbitrary/nonplanar selection, high-order meshes and solver setup remain candidates. |
 | Structural analysis | [CalculiX](https://calculix.de/) | Qualified first slice | [Rectangular elastic cantilevers](../calculix.md) with explicit SI material/load intent, separate axial/transverse refinement, native force/moment equilibrium, beam-theory and interior stress checks. [Stress tables into Calc](../beam-workbook.md) are qualified; general geometry, imported Gmsh groups and ParaView handoffs remain candidates. |
 | Circuits | [ngspice](https://ngspice.sourceforge.io/) | Qualified first slice | [Declared DC networks, AC RLC responses and first-order RC transients](../ngspice.md), independent nodal/analytic checks, named sampled voltage/gain requirements and numeric tables into Calc. KiCad import, nonlinear models, general transients and continuous/all-tolerance guarantees remain candidates. |
-| PCB design | [KiCad](https://www.kicad.org/about/kicad/) | Next | Inspect an existing board, run supported checks and export manufacturing/mechanical artifacts; investigate authoring separately. |
+| PCB design | [KiCad](https://www.kicad.org/about/kicad/) | Bounded native slice | [Inspect existing two-layer boards, run DRC and export Excellon drills](../kicad.md), with independent geometry and drill checks. Board authoring, general multilayer routing, Gerber export and circuit-simulation linkage remain candidates. |
 | Medical imaging | [3D Slicer](https://www.slicer.org/) | Near | Import a volume, apply a bounded segmentation, measure and export surfaces; connect to Blender and later meshing. Initial scope is research workflows. |
 | DICOM inspection | [Aliza](https://www.aliza-dicom-viewer.com/software/aliza-ms-dicom-viewer) | Explore | Inspect series, metadata and views. Establish supported automation, edition and price before choosing an adaptor boundary. |
-| Scientific imaging | [Fiji/ImageJ](https://imagej.net/software/fiji/) | Near | Threshold and measure particles in a calibrated image; export measurements to Calc or later R. Useful across biology and materials research. |
-| Fabrication | [PrusaSlicer](https://github.com/prusa3d/PrusaSlicer) | Near | Slice geometry with a declared printer/material profile; publish G-code and estimates. Physical printer control is a separate capability. |
+| Scientific imaging | [Fiji/ImageJ](https://imagej.net/software/fiji/) | Bounded native slice | [ImageJ thresholding and particle measurement](../imagej.md) on supported calibrated 8/16-bit grayscale images, independently checked labels and measurements, and a Calc handoff. Fiji plugins, image stacks and general segmentation remain candidates. |
+| Fabrication | [PrusaSlicer](https://github.com/prusa3d/PrusaSlicer) | Bounded native slice | [Slice a closed STL with an explicit printer/material/print profile](../prusaslicer.md), publish G-code and independently replay layers, extrusion, bounds and temperatures. Physical printer control and general profiles remain separate capabilities. |
 | Architecture and construction | [Bonsai](https://bonsaibim.org/) | Next | Inspect IFC components and quantities, then bounded model edits and drawings; investigate reuse of the Blender runtime without losing IFC semantics. |
 | System dynamics and controls | [OpenModelica](https://openmodelica.org/) | Next | Parameterise a known model, simulate and compare response curves; later introduce connected mechanical/electrical/thermal systems. |
 | Robotics | [Gazebo](https://gazebosim.org/libs/sim/) | Next | Load a declared world/robot, run a bounded scenario and inspect sensor/state outputs. |
 | Process engineering | [DWSIM](https://dwsim.org/) | Next | Parameterise a small flowsheet and publish stream/equipment results; independently check selected mass and energy balances. |
-| Reaction chemistry | [Cantera](https://cantera.org/stable/examples/python/index.html) | Qualified first slice | [Ideal-gas h2o2 thermodynamic and TP/HP equilibrium sweeps](../cantera.md), independently checked properties, composition and conservation; numeric tables into Calc. Homogeneous reactor time histories and broader mechanisms remain candidates. |
+| Reaction chemistry | [Cantera](https://cantera.org/stable/examples/python/index.html) | Bounded native slices | [Ideal-gas h2o2 thermodynamic, TP/HP equilibrium and closed adiabatic reactor histories](../cantera.md), independently checked properties, kinetics, composition, conservation and declared ignition delay. Verified numeric tables connect to Calc, including both reactor models. Broader mechanisms, flames and general reactor networks remain candidates. |
 | Sparse numerical computing | [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) | Next | Import a sparse matrix and right-hand side, solve with an explicitly selected compatible backend and publish residual diagnostics. |
 | Surveying and inspection | [CloudCompare](https://www.cloudcompare.org/presentation.html) | Next | Register scans and measure cloud-to-cloud or cloud-to-mesh distances; connect with QGIS and CAD. |
 | Technical illustration | [Inkscape](https://inkscape.org/acerca-de/) | Qualified first slice | [Named technical diagrams](../inkscape.md), editable SVG, native geometry/text-fit checks and measured PNG publication. General imported-document editing and arbitrary routing remain candidates. |
 | Video editing | [Shotcut](https://www.shotcut.org/) | Bounded native slice | [Named assets and frame-range timelines](../shotcut.md), editable MLT projects, native engine reload/render and independent decoded-frame comparisons. GUI edit roundtrips, audio, transitions and colour management remain candidates. |
 | Commercial video editing | [Adobe Premiere Pro](https://developer.adobe.com/premiere-pro/uxp/) | Native environment needed | [Experimental read-only sequence inspection](../premiere.md) and its UXP companion check declared timing, profile and clip-placement requirements. Windows/macOS native acceptance is still required; editing/export remain candidates. |
-| Statistics | [R](https://www.r-project.org/about.html) | Qualified first slice | [Bounded numeric additive regression](../r.md), independent QR checks, fresh native-model readback, named training/held-out requirements and a numeric-table handoff to Calc. Categorical terms, inference, plots and arbitrary packages/formulas remain candidates. |
+| Statistics | [R](https://www.r-project.org/about.html) | Bounded native slices | [Numeric additive regression with optional classical coefficient inference](../r.md), independent QR/distribution checks, fresh native-model readback, named training/held-out and coefficient-interval requirements, and a numeric-table handoff to Calc. Categorical terms, prediction intervals, plots and arbitrary packages/formulas remain candidates. |
 | Audio | [Audacity](https://www.audacityteam.org/) | Explore | Investigate repeatable processing and editable audio projects; complement existing FFmpeg media outputs. |
 | Molecular modelling | [Avogadro](https://avogadro.cc/) | Explore | Investigate molecule construction, inspection and exports; distinguish molecular structure from reaction/process simulation. |
 | CFD execution | OpenFOAM | Explore | Bounded case setup, meshing and solver execution before integrated ParaView publication; select and qualify a specific distribution/release when there is a concrete execution workflow. |
@@ -70,8 +70,9 @@ support reaction-focused studies, whereas the proposed DWSIM slice concerns plan
 flowsheets and equipment. Cantera's documented examples include reactor networks
 and one-dimensional flames, which provide meaningful acceptance cases.
 
-The first thermodynamic and TP/HP equilibrium slice is qualified; next consider a homogeneous
-reactor or explicitly qualified additional mechanisms. Retain mechanism files and hashes, phase/species identities, composition
+Thermodynamic and TP/HP equilibrium sweeps now have a bounded homogeneous-reactor
+extension for the same h2o2 mechanism. Additional mechanisms remain candidates.
+Retain mechanism files and hashes, phase/species identities, composition
 basis, units, initial conditions and solver tolerances. Define any ignition-delay
 criterion explicitly. Check conservation and reference cases; process completion
 alone does not validate the chemistry. Flame-speed studies can follow. Exporting
@@ -204,13 +205,13 @@ all user inputs or the validity of an underlying physical model.
 | Prepare, run and report a CFD case | Case preparation to mesh/solve to ParaView | Candidate complete chain; preparation, execution and handoff providers remain to be qualified. |
 | Predict bracket deflection | FreeCAD to Gmsh to CalculiX to ParaView | CAD → mesh → ParaView and named planar face groups are [qualified](../gmsh.md). A separate [generated rectangular beam](../calculix.md) is qualified; arbitrary brackets and CAD/Gmsh solver handoffs remain candidates. |
 | Check a beam's serviceability | [CalculiX to Calc](../beam-workbook.md) | Qualified bounded cantilever and interior stress summary; producer/consumer requirements and reuse are checked independently. |
-| Assess a numeric calibration model | [R regression and Calc](../r.md) | Qualified finite numeric linear models with independent coefficients/predictions and held-out requirements; no inference or generalisation claim. |
-| Compare a circuit response | ngspice to Calc; later KiCad project linkage | Qualified bounded DC, AC RLC and first-order RC cases with analytic checks and workbook readback; KiCad remains a candidate. |
-| Study ignition or equilibrium | Cantera to result tables to Calc; optional later R analysis | Candidate; retain mechanism and declared event/conservation checks. |
+| Assess a numeric calibration model | [R regression and Calc](../r.md) | Bounded finite numeric linear models with independent coefficients/predictions, held-out requirements and optional classical coefficient inference under explicit error assumptions; no generalisation guarantee. |
+| Compare a circuit response | ngspice to Calc; later KiCad project linkage | Qualified bounded DC, AC RLC and first-order RC cases with analytic checks and workbook readback; the KiCad-to-ngspice handoff remains a candidate. |
+| Study ignition or equilibrium | [Cantera result tables and Calc](../cantera.md) | Bounded h2o2 cases with independent thermodynamic, conservation, kinetic-history and declared ignition-event checks; thermodynamic and both reactor-model handoffs to Calc. Later R analysis remains a candidate. |
 | Solve a sparse system | Matrix Market and right-hand side to SuiteSparse to solution/diagnostics | Candidate; begin with known-solution fixtures. |
-| Measure an image batch | Fiji to tables to Calc or later R | Candidate; use calibrated fixtures with independently known measurements. |
+| Measure particles in an image | [ImageJ to particle tables and Calc](../imagej.md) | Bounded calibrated grayscale fixtures with independently checked components, measurements and workbook readback; image batches and R handoffs remain candidates. |
 | Extract a research anatomical model | 3D Slicer to surface to Blender | Candidate; retain physical coordinates and segmentation provenance. |
-| Prepare a part for printing | FreeCAD/Blender to PrusaSlicer | Candidate; bounded printer/profile and G-code verification, without physical machine control. |
+| Prepare a part for printing | [STL to PrusaSlicer](../prusaslicer.md); later direct FreeCAD/Blender handoffs | Bounded explicit units, printer/material/print profile and G-code verification, without physical machine control. Direct adaptor-to-adaptor handoffs remain candidates. |
 | Compare scanned and designed geometry | CloudCompare with reference geometry from FreeCAD | Candidate; verify registration and distance metrics on known offsets. |
 
 Do not manufacture runnable-looking JSON for unavailable operations. Candidate
@@ -230,15 +231,16 @@ Recommended sequence:
 
 1. Curate existing CFD post-processing, CAD and numerical examples into the template
    convention; inventory the conversions already available.
-2. Gmsh named planar faces, Cantera thermodynamic/TP/HP tables and ngspice
+2. Gmsh named planar faces, Cantera thermodynamic/TP/HP/reactor tables and ngspice
    linear-circuit tables, including AC inductors and RLC resonance, now have qualified
-   handoffs. Next consider a Cantera homogeneous reactor, broader circuit
+   handoffs. Next consider broader chemistry mechanisms, broader circuit
    capabilities, or extending the generated CalculiX beam to a separately qualified
    imported mesh with explicit Gmsh groups. Deliver one independently verified capability at a time.
 3. Qualify CFD case preparation and bounded execution as a separate track; keep
    any licence requirements out of unrelated workflows.
-4. Expand into 3D Slicer, Fiji and fabrication; introduce SuiteSparse when a direct
-   sparse-solve workflow justifies its backend and artifact contracts.
+4. Evaluate 3D Slicer and Fiji-specific workflows beyond the bounded ImageJ slice;
+   extend fabrication when a concrete workflow warrants it. Introduce SuiteSparse
+   when a direct sparse-solve workflow justifies its backend and artifact contracts.
 5. Reprioritise the remaining catalogue from real use and maintenance cost.
 
 This is sequencing guidance, not a commitment to implement every candidate.

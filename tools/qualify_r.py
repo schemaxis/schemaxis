@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Bounded R models, native reopen, finite requirements and Calc handoff gates."""
+"""Bounded R models, native reopen, finite requirements, coefficient inference and Calc handoff gates."""
 import argparse
 import copy
+from fractions import Fraction
 import json
 import math
 from pathlib import Path
@@ -29,6 +30,38 @@ def fault(callback,code):
         assert error.fault.code==code,error.fault.to_dict()
         return error.fault.to_dict()
     raise AssertionError('expected '+code)
+
+
+def exact_ols(rows,intercept):
+    """Exact rational normal equations; independent of the adaptor's QR and distributions."""
+    design=[[Fraction(1)]*intercept+[Fraction(v) for v in row[:-1]] for row in rows];y=[Fraction(row[-1]) for row in rows]
+    p=len(design[0]);augmented=[[sum(r[i]*r[j] for r in design) for j in range(p)]+[Fraction(int(i==k)) for k in range(p)] for i in range(p)]
+    for c in range(p):
+        pivot=next(r for r in range(c,p) if augmented[r][c]!=0);augmented[c],augmented[pivot]=augmented[pivot],augmented[c]
+        augmented[c]=[v/augmented[c][c] for v in augmented[c]]
+        for r in range(p):
+            if r!=c:augmented[r]=[a-augmented[r][c]*b for a,b in zip(augmented[r],augmented[c])]
+    inverse=[row[p:] for row in augmented];xty=[sum(r[j]*v for r,v in zip(design,y)) for j in range(p)]
+    beta=[sum(inverse[i][j]*xty[j] for j in range(p)) for i in range(p)]
+    fitted=[sum(b*v for b,v in zip(beta,r)) for r in design];rss=sum((a-b)**2 for a,b in zip(y,fitted));df=len(rows)-p
+    centre=sum(fitted)/len(fitted) if intercept else 0;mss=sum((f-centre)**2 for f in fitted)
+    return {'beta':[float(b) for b in beta],'se':[math.sqrt(inverse[j][j]*rss/df) for j in range(p)],'df':df,
+            'sigma':math.sqrt(rss/df),'rSquared':float(mss/(mss+rss)),'f':float(mss/(p-intercept)/(rss/df))}
+
+
+def check_exact(summary,rows,intercept):
+    known=exact_ols(rows,intercept);inference=summary['inference']
+    assert inference['residualDF']==known['df']
+    for item,beta,se in zip(inference['coefficients'],known['beta'],known['se']):
+        assert math.isclose(item['estimate'],beta,rel_tol=1e-9,abs_tol=1e-12),(item,beta)
+        assert math.isclose(item['standardError'],se,rel_tol=1e-9),(item,se)
+        assert math.isclose(item['tStatistic'],beta/se,rel_tol=1e-9,abs_tol=1e-9)
+        assert math.isclose((item['upper']-item['lower'])/2,inference['criticalValue']*se,rel_tol=1e-9)
+    assert math.isclose(inference['residualStandardError']['value'],known['sigma'],rel_tol=1e-9)
+    assert math.isclose(1-inference['rSquared'],1-known['rSquared'],rel_tol=1e-8)
+    assert math.isclose(inference['fTest']['statistic'],known['f'],rel_tol=1e-8)
+    return {'residualDF':known['df'],'coefficients':len(known['beta']),'maximumStandardErrorRelativeDifference':
+        max(abs(i['standardError']-se)/se for i,se in zip(inference['coefficients'],known['se']))}
 
 
 def workbook_observations(directory):
@@ -64,8 +97,8 @@ def main():
     report={'version':'schemaxis.r.qualification/1','verified':False,'sourceDigest':source_digest('r'),
         'sourceDigests':{name:source_digest(name) for name in ('r','calc')},
         'recipeSHA256':file_digest(__file__),'workflowSHA256':file_digest(ROOT/'examples/schemaxis/r-to-calc.json'),
-        'scope':'Exact recorded Rscript runtime; numeric additive OLS,1–8 predictors, declared training/held-out rows, fixed formula symbols, independent QR/condition checks, RDS fresh reopen and Calc numeric handoff. No statistical inference or future-generalisation guarantee.',
-        'accepted':{},'unmet':{},'negative':{},'workflows':{}}
+        'scope':'Exact recorded Rscript runtime; numeric additive OLS,1–8 predictors, declared training/held-out rows, fixed formula symbols, independent QR/condition checks, RDS fresh reopen, optional classical coefficient inference (summary.lm/confint/pf) checked against exact rational normal equations and closed-form t quantiles, and Calc numeric handoff. Inference holds only under independent constant-variance normal errors; no prediction intervals or future-generalisation guarantee.',
+        'accepted':{},'unmet':{},'negative':{},'workflows':{},'inference':{}}
     def refresh(directory):
         prepared=adaptor.plan(json.loads((directory/'authored.json').read_text()))
         receipt=json.loads((directory/'verification.json').read_text());receipt['artifacts']=adaptor.manifest(directory,prepared)
@@ -98,6 +131,73 @@ def main():
             replay=fault(lambda:adaptor.verify(directory,require_result=False),'FIT_REQUIREMENT_NOT_MET')
             assert json.loads((directory/'result.json').read_text())['verified'] is False
             report['unmet'][name]={'fault':failure['code'],'replay':replay['code'],'assessment':failure['observed']['assessment']}
+        # Coefficient inference: closed forms, exact normal equations, levels, scales and misses.
+        s802=math.sqrt(802);closed={'se':math.sqrt(.005),'t':20*math.sqrt(2),'p':2/(s802*(s802+20*math.sqrt(2)))}
+        directory=root/'inference';adaptor.run(example('inference'),directory,executable=args.executable,timeout=args.timeout)
+        result=adaptor.verify(directory);summary=json.loads((directory/'regression-summary.json').read_text());slope=summary['inference']['coefficients'][1]
+        assert math.isclose(slope['standardError'],closed['se'],rel_tol=1e-12) and math.isclose(slope['tStatistic'],closed['t'],rel_tol=1e-12)
+        assert math.isclose(slope['pValue'],closed['p'],rel_tol=1e-11) and math.isclose(summary['inference']['fTest']['pValue'],closed['p'],rel_tol=1e-11)
+        assert math.isclose(summary['inference']['criticalValue'],.95*math.sqrt(2/(1-.95**2)),rel_tol=1e-12)
+        assert summary['inference']['rSquaredBasis'].startswith('centred') and slope['units']=='V/degC'
+        names=[Path(a['file']).name for a in json.loads((directory/'verification.json').read_text())['artifacts']]
+        assert names==['coefficients.csv','training.csv','heldout.csv','regression-summary.json','inference.csv'],names
+        report['inference']['closed-form-calibration']={'result':result,'exact':check_exact(summary,example('inference')['training'],True),'artifacts':names}
+        variant=example('inference-variant');directory=root/'inference-variant'
+        adaptor.run(variant,directory,executable=args.executable,timeout=args.timeout);result=adaptor.verify(directory)
+        summary=json.loads((directory/'regression-summary.json').read_text())
+        assert math.isclose(summary['inference']['coefficients'][1]['standardError'],math.sqrt(.08/6/168),rel_tol=1e-12)
+        assert math.isclose(summary['inference']['fTest']['statistic'],113400,rel_tol=1e-11)
+        report['inference']['eight-point-ninety-percent']={'result':result,'exact':check_exact(summary,variant['training'],True)}
+        for level in (.5,.99,.999):
+            document=example('inference');document['requirements']=document['requirements'][:2];document['inference']['level']=level
+            directory=root/f'inference-level-{level}';adaptor.run(document,directory,executable=args.executable,timeout=args.timeout);adaptor.verify(directory)
+            native=read_csv(directory/'reopen-statistics.csv')['rows'][0];summary=json.loads((directory/'regression-summary.json').read_text())
+            assert native[0]==level and math.isclose(native[2],level*math.sqrt(2/(1-level*level)),rel_tol=1e-12),native
+            report['inference'][f'level-{level}']={'nativeLevelReadback':native[0],'criticalValue':native[2],'slopeInterval':[summary['inference']['coefficients'][1][k] for k in ('lower','upper')]}
+        origin=example('inference');origin.pop('requirements');origin.pop('heldout');origin['intercept']=False
+        origin['training']=[[1,2.1],[2,3.9],[3,5.9],[4,8.1]];directory=root/'inference-through-origin'
+        adaptor.run(origin,directory,executable=args.executable,timeout=args.timeout);adaptor.verify(directory)
+        summary=json.loads((directory/'regression-summary.json').read_text())
+        assert summary['inference']['rSquaredBasis'].startswith('uncentred') and summary['inference']['fTest']['numeratorDF']==1
+        assert math.isclose(summary['inference']['rSquared'],120/120.04,rel_tol=1e-12) and math.isclose(summary['inference']['fTest']['statistic'],9000,rel_tol=1e-11)
+        report['inference']['through-origin-uncentred']=check_exact(summary,origin['training'],False)
+        correlated=example('inference');correlated.pop('requirements');correlated.pop('heldout')
+        correlated['predictors']=[{'name':'a','unit':'K'},{'name':'b','unit':'Pa'},{'name':'c','unit':'s'}];state=20261016;rows=[]
+        for _ in range(12):
+            values=[]
+            for _ in range(4):state=(1103515245*state+12345)%2**31;values.append(round(state/2**31*4-2,3))
+            a,b,c,noise=values;b=round(.6*a+.4*b,3);rows.append([a,b*1e3,c*1e-3,round(5+2*a-.003*b*1e3+400*c*1e-3+.1*noise,6)])
+        correlated['training']=rows;directory=root/'inference-correlated-scaled'
+        adaptor.run(correlated,directory,executable=args.executable,timeout=args.timeout);adaptor.verify(directory)
+        summary=json.loads((directory/'regression-summary.json').read_text())
+        report['inference']['correlated-three-predictor-scaled']={**check_exact(summary,rows,True),'scaledInfinityCondition':summary['scaledInfinityCondition']}
+        scaled=example('inference');scaled['training']=[[x*1e8,y] for x,y in scaled['training']];scaled['heldout']=[[x*1e8,y] for x,y in scaled['heldout']]
+        scaled['requirements'][2].update(minimum=1.5e-8,maximum=2.5e-8);directory=root/'inference-scaled-predictor'
+        adaptor.run(scaled,directory,executable=args.executable,timeout=args.timeout);adaptor.verify(directory)
+        slope=json.loads((directory/'regression-summary.json').read_text())['inference']['coefficients'][1]
+        assert math.isclose(slope['standardError'],closed['se']*1e-8,rel_tol=1e-10) and math.isclose(slope['tStatistic'],closed['t'],rel_tol=1e-10)
+        report['inference']['predictor-scale-1e8']={'standardError':slope['standardError'],'tStatistic':slope['tStatistic']}
+        imprecise=example('inference');imprecise['requirements'][2].update(minimum=1.9,maximum=2.1);directory=root/'inference-imprecise-slope'
+        failure=fault(lambda:adaptor.run(imprecise,directory,executable=args.executable,timeout=args.timeout),'FIT_REQUIREMENT_NOT_MET')
+        replay=fault(lambda:adaptor.verify(directory,require_result=False),'FIT_REQUIREMENT_NOT_MET')
+        missed=[item for item in failure['observed']['assessment']['requirements'] if not item['accepted']]
+        assert [item['name'] for item in missed]==['slope_interval'] and math.isclose(missed[0]['observed']['estimate'],2,rel_tol=1e-12)
+        report['unmet']['imprecise-centred-slope']={'fault':failure['code'],'replay':replay['code'],'interval':missed[0]['observed']}
+        directory=root/'inference-exact-fit'
+        rejected=fault(lambda:adaptor.run(example('inference-exact-invalid'),directory,executable=args.executable,timeout=args.timeout),'NO_RESIDUAL_VARIANCE')
+        assert rejected['location']=='$.inference' and not directory.exists()
+        report['negative']['exactFitInference']={'code':rejected['code'],'location':rejected['location'],'nativeLaunched':False}
+        directory=root/'inference';saved={path:path.read_bytes() for path in directory.iterdir() if path.is_file()}
+        try:
+            for stage in ('fit','reopen'):
+                path=directory/(stage+'-inference.csv');lines=path.read_text().splitlines();cells=lines[2].split(',')
+                cells[4]=format(float(cells[4])*1.01,'.17g');lines[2]=','.join(cells);path.write_text('\n'.join(lines)+'\n')
+            refresh(directory);rejected=fault(lambda:adaptor.verify(directory),'VERIFICATION_FAILED')
+            assert 'pValue' in rejected['message'];report['negative']['forgedNativePValueWithRefreshedOrdinaryHashes']=rejected['code']
+        finally:
+            for path,data in saved.items():path.write_bytes(data)
+            finalise(directory)
+        assert adaptor.verify(directory)['verified']
         study=example('requirement-study');directory=root/'finite-study'
         adaptor.run(study,directory,executable=args.executable,timeout=args.timeout)
         assert adaptor.verify(directory)['verified'];report['accepted']['finite-study']=True

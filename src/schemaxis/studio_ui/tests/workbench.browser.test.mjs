@@ -17,8 +17,10 @@ async function start(session, theme) {
   await session.evaluate(`(async () => {
     const ctx = window.studio;
     const library = await ctx.api.get('/api/studio/adaptor', {id: 'freecad'});
+    const template = library.templates.find((item) => item.id === 'solid-box');
+    if (!template?.document?.version) throw new Error('Missing literal solid-box template');
     const record = await ctx.api.post('/api/documents', {action: 'new', provider: 'freecad',
-      name: 'Parametric enclosure', document: library.templates[0].document});
+      name: 'Parametric enclosure', document: template.document});
     await ctx.refresh();
     ctx.windows.open('workbench', {document: record.id});
   })()`);
@@ -111,10 +113,12 @@ test('Workbench saves a nested operation to its parent design', {timeout: 90000}
     await session.evaluate(`(async () => {
       const ctx = window.studio;
       const library = await ctx.api.get('/api/studio/adaptor', {id: 'freecad'});
+      const template = library.templates.find((item) => item.id === 'solid-box');
+      if (!template?.document?.version) throw new Error('Missing literal solid-box template');
       const record = await ctx.api.post('/api/documents', {action: 'new', provider: 'workflow-design',
         name: 'Enclosure workflow', document: {version: 'schemaxis.workflow-design/2',
           workflow: {version: 'schemaxis.workflow/1',
-            operations: [{id: 'cad', document: library.templates[0].document}]},
+            operations: [{id: 'cad', document: template.document}]},
           ports: {}, connections: [], controllers: {}, parameters: {}, outputs: {}, naming: {}, layout: {}}});
       await ctx.refresh();
       ctx.windows.open('workbench', {document: record.id, operation: 'cad'});

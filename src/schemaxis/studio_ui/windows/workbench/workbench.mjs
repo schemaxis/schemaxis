@@ -7,7 +7,7 @@ import {createJsonEditor} from '../../editor/editor.mjs';
 import {documentChooser} from '../documents.mjs';
 import {identity} from '../../shell/providers.mjs';
 import {confirmDialog} from '../../shell/dialog.mjs';
-import {outline, mapDiagnostics, operationPointer, valueAt} from './model.mjs';
+import {outline, mapDiagnostics, operationPointer, validationRequest, valueAt} from './model.mjs';
 import {createLibrary} from './library.mjs';
 import {createProperties} from './properties.mjs';
 import {createViewers, VIEWER_LABELS} from './viewers.mjs';
@@ -275,7 +275,8 @@ function createWorkbench(ctx, params, host) {
   const stopValidation = backgroundValidation(editor, async (source) => {
     const provider = store.get().provider;
     if (!provider || store.get().busy) return null;
-    const result = await ctx.api.post('/api/validate', {provider, source, format: editor.getOption('format') || 'json'});
+    const result = await ctx.api.post('/api/validate', validationRequest(store.get(), params, source,
+      editor.getOption('format') || 'json'));
     return mapDiagnostics(result.diagnostics, store.get().value);
   });
   const unsubscribeRemote = ctx.bus.on('document-changed', (record) => {

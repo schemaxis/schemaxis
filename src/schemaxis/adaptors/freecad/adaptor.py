@@ -45,10 +45,11 @@ def artifact_units(kind):
     return 'per-measurement' if kind == 'text' else 'mm'
 
 
-def plan(document, *, allow_profile=False):
+def plan(document, *, allow_profile=False, source=None):
+    """`source` supplies importSTEP bytes: the authored path by default, retained copies in saved verification."""
     from schemaxis.documents import resolve_document
     document, _ = resolve_document(copy.deepcopy(document))
-    keys(document, ('version', 'units', 'nodes', 'output', 'linearDeflection', 'dimensions', 'definitions', 'settings', 'measurements', 'designStudy'), '$')
+    keys(document, ('version', 'units', 'nodes', 'output', 'linearDeflection', 'dimensions', 'definitions', 'settings', 'measurements', 'designStudy', 'parameters'), '$')
     if document.get('version') != 'schemaxis.freecad/1':
         fail('UNSUPPORTED_VERSION', 'expected schemaxis.freecad/1')
     if document.get('units', 'mm') != 'mm':
@@ -56,9 +57,14 @@ def plan(document, *, allow_profile=False):
     nodes = document.get('nodes')
     if not isinstance(nodes, list) or not 1 <= len(nodes) <= 200:
         fail('INVALID_DOCUMENT', 'provide 1 to 200 CAD nodes')
+    from . import parameters as parameter_policy
+    parameters = parameter_policy.prepare(document['parameters']) if 'parameters' in document else None
+    if parameters is not None and 'designStudy' in document:
+        fail('UNSUPPORTED_PARAMETER_STUDY', 'Native parameters support batch variants; designStudy is not supported', '$.designStudy')
+    used_parameters, binding_count = set(), 0
     prepared, seen, kinds = [], set(), {}
     for node in nodes:
-        keys(node, ('id', 'filter', 'options', 'inputs'), '$.nodes')
+        keys(node, ('id', 'filter', 'options', 'inputs', 'drive'), '$.nodes')
         identity = name(node.get('id'), '$.nodes.id')
         if identity in seen:
             fail('DUPLICATE_NODE', 'CAD node is duplicated', identity)
@@ -66,11 +72,25 @@ def plan(document, *, allow_profile=False):
         if not isinstance(operation, str) or operation not in DECLARATIONS:
             fail('UNKNOWN_FILTER', 'unsupported CAD operation', identity)
         declaration = DECLARATIONS[operation]
-        options = validate_arguments({k: v['value'] for k, v in declaration['options'].items()}, node.get('options', {}))
+        raw_options = copy.deepcopy(node.get('options', {}))
+        drives = parameter_policy.drive(node, parameters, used_parameters) if 'drive' in node else None
+        if drives is not None:
+            binding_count += len(drives)
+            if binding_count > 128:
+                fail('INVALID_BINDING', 'Use at most 128 native length bindings', '$.nodes')
+            values = {k:v['value'] for k,v in parameters.items()}
+            for option,binding in drives.items():
+                raw_options[option] = parameter_policy.evaluate(binding, values, identity+'.drive.'+option)
+        options = validate_arguments({k: v['value'] for k, v in declaration['options'].items()}, raw_options,
+                                     **({'location': identity+'.options'} if operation == 'importSTEP' else {}))
         validate_geometry(operation, options, identity)
+        imported = None
+        if operation == 'importSTEP':
+            from .step_import import prepare as prepare_import
+            imported = prepare_import(identity, options, source)
         inputs = node.get('inputs', {})
         keys(inputs, tuple(declaration['inputs']), identity)
-        if set(inputs) != set(declaration['inputs']):
+        if not {k for k,v in declaration['inputs'].items() if v.get('required')} <= set(inputs):
             fail('INVALID_DEPENDENCY', 'CAD inputs require every declared port', identity)
         for port, value in inputs.items():
             spec = declaration['inputs'][port]
@@ -85,7 +105,13 @@ def plan(document, *, allow_profile=False):
                     fail('TYPE_MISMATCH', 'CAD input kind differs', identity, port=port, actual=kinds[source])
         kinds[identity] = declaration['kinds'][0]
         prepared.append({'id': identity, 'filter': operation, 'options': options, 'inputs': inputs})
+        if imported is not None:
+            prepared[-1].update(imported)
+        if drives is not None:
+            prepared[-1]['drive'] = drives
         seen.add(identity)
+    if parameters is not None and used_parameters != set(parameters):
+        fail('INVALID_PARAMETER', 'Every native parameter must drive at least one supported option', '$.parameters')
     output = document.get('output')
     if not isinstance(output, str) or output not in seen:
         fail('INVALID_SELECTION', 'output must name a CAD node')
@@ -95,14 +121,23 @@ def plan(document, *, allow_profile=False):
                                     {'value': document.get('linearDeflection', 0.1)})['value']
     result = {'version': 'schemaxis.freecad.plan/1', 'units': 'mm', 'nodes': prepared,
             'output': output, 'linearDeflection': deflection, 'expectedPublications': 3 if kinds[output] == 'solid' else 1}
+    if parameters is not None:
+        result['parameters'] = parameters
     if 'measurements' in document:
         from .measurements import prepare
         result['measurements'] = prepare(document['measurements'], kinds)
         result['expectedPublications'] += 1
+    if 'designStudy' in document and any(n['filter'] in ('body','pad','pocket') for n in prepared):
+        fail('UNSUPPORTED_BODY_STUDY','PartDesign supports batch variants, not scalar designStudy')
     if 'designStudy' in document:
         from .design_study import prepare
         result['designStudy'] = prepare(document['designStudy'], document, result)
         result['expectedPublications'] += 2
+    from .part_design import prepare as prepare_body
+    prepare_body(result)
+    if any(n['filter'] == 'body' for n in prepared) and any(n['filter'] == 'importSTEP' for n in prepared):
+        fail('UNSUPPORTED_SOURCE', 'importSTEP cannot share a document with a PartDesign Body; Body geometry only feeds its '
+             'own feature chain', next(n['id'] for n in prepared if n['filter'] == 'importSTEP'))
     return result
 
 
@@ -111,25 +146,28 @@ def input_schema(ports):
     return object_schema({key: ({'type': 'array', 'items': NAME,
                                 'minItems': spec['minItems'], 'maxItems': spec['maxItems'],
                                 'uniqueItems': True} if spec.get('multiple') else NAME)
-                          for key, spec in ports.items()}, list(ports))
+                          for key, spec in ports.items()}, [k for k,v in ports.items() if v.get('required')])
 
 
 def schema():
     from schemaxis.schema import object_schema, argument_schema, DRAFT, NAME, arguments_schema, json_value_schema
     from .measurements import DECLARATION as measurements
     from .design_study import ARGUMENTS as study
+    from . import parameters as parameter_policy
     alternatives = []
     for operation, definition in DECLARATIONS.items():
         options = arguments_schema({k: v['value'] for k, v in definition['options'].items()})
         alternatives.append(object_schema({'id': NAME, 'filter': {'const': operation},
             'options': options,
-            'inputs': input_schema(definition['inputs'])},
-            ['id', 'filter'] + (['inputs'] if definition['inputs'] else []) + (['options'] if options.get('required') else [])))
+            'inputs': input_schema(definition['inputs']),
+            **({'drive':parameter_policy.drive_schema(operation)} if operation in parameter_policy.TARGETS else {})},
+            ['id', 'filter'] + (['inputs'] if any(v.get('required') for v in definition['inputs'].values()) else []) + (['options'] if options.get('required') else [])))
     return {'$schema': DRAFT, '$defs': {'json': json_value_schema()}, **object_schema({'version': {'const': 'schemaxis.freecad/1'}, 'units': {'const': 'mm'},
         'nodes': {'type': 'array', 'items': {'oneOf': alternatives}, 'minItems': 1, 'maxItems': 200},
         'output': NAME, 'linearDeflection': {'type': 'number', 'minimum': 0.001, 'maximum': 1},
         'measurements': argument_schema(measurements),
         'designStudy': arguments_schema(study),
+        'parameters': parameter_policy.schema(),
         **{key: {'$ref': '#/$defs/json'} for key in ('definitions', 'dimensions', 'settings')}},
         ['version', 'nodes', 'output'])}
 
@@ -152,27 +190,16 @@ def run(document, directory, *, executable=None, timeout=300):
     atomic_json(directory/'authored.json', document)
     atomic_json(directory/'plan.json', prepared)
     atomic_json(directory/'result.json', {'status': 'incomplete', 'verified': False})
-    sources = {}
-    for node in prepared['nodes']:
-        if node['filter'] != 'readSTEP':
-            continue
-        source = Path(node['options']['file']).absolute()
-        if not source.is_file():
-            fail('RESOURCE_NOT_FOUND', 'STEP input is absent', str(source))
-        import shutil
-        local = directory/('source-'+str(len(sources))+'.step')
-        shutil.copyfile(source, local)
-        digest = file_digest(local)
-        if file_digest(source) != digest:
-            fail('INPUT_CHANGED', 'STEP input changed during capture', str(source))
-        sources[node['id']] = {'file':str(source),'retained':str(local),'sha256':digest}
-    atomic_json(directory/'sources.json', sources)
-    snapshot = runtime_archive()
-    (directory/'runtime.zip').write_bytes(snapshot)
-    runtime = Interpreter('freecad', str(Path(executable).resolve()))
-    runner = SubprocessRunner(runtime, directory, timeout=timeout, environment={'QT_QPA_PLATFORM': 'offscreen'})
     try:
+        # Capture failures leave a failed result like every later stage.
+        sources = capture(prepared, directory)
+        atomic_json(directory/'sources.json', sources)
+        snapshot = runtime_archive()
+        (directory/'runtime.zip').write_bytes(snapshot)
+        runtime = Interpreter('freecad', str(Path(executable).resolve()))
+        runner = SubprocessRunner(runtime, directory, timeout=timeout, environment={'QT_QPA_PLATFORM': 'offscreen'})
         for stage in ('build', 'reopen'):
+            if cancellation_requested(): fail('RUNNER_CANCELLED', 'CAD execution cancelled before a native stage')
             runner.timeout = deadline-time.monotonic()
             if runner.timeout <= 0: fail('RUNNER_TIMED_OUT', 'CAD execution exhausted its total timeout')
             source = (f'import sys\nsys.path.insert(0, {str(directory/"runtime.zip")!r})\n'
@@ -196,6 +223,40 @@ def run(document, directory, *, executable=None, timeout=300):
         raise error
 
 
+def capture(prepared, directory):
+    """Retain run-owned copies; importSTEP bytes must be exactly the planned bytes."""
+    import shutil
+    from .step_source import read_bounded, admit
+    sources, legacy, imports = {}, 0, 0
+    for node in prepared['nodes']:
+        if node['filter'] == 'readSTEP':
+            source = Path(node['options']['file']).absolute()
+            if not source.is_file():
+                fail('RESOURCE_NOT_FOUND', 'STEP input is absent', str(source))
+            local = directory/('source-'+str(legacy)+'.step')
+            legacy += 1
+            shutil.copyfile(source, local)
+            digest = file_digest(local)
+            if file_digest(source) != digest:
+                fail('INPUT_CHANGED', 'STEP input changed during capture', str(source))
+            sources[node['id']] = {'file':str(source),'retained':str(local),'sha256':digest}
+        elif node['filter'] == 'importSTEP':
+            planned, location = node['source'], node['id']+'.options.file'
+            data = read_bounded(planned['path'], location)
+            if hashlib.sha256(data).hexdigest() != planned['sha256']:
+                fail('INPUT_CHANGED', 'STEP input changed after planning; plan and run again', location)
+            local = directory/('import-'+str(imports)+'.step')
+            imports += 1
+            local.write_bytes(data)
+            # Rescan the retained bytes immediately before any native process can read them.
+            facts = admit(read_bounded(local, location, code='VERIFICATION_FAILED'), location)
+            if any(facts[k] != planned[k] for k in planned if k != 'path'):
+                fail('INPUT_CHANGED', 'Retained STEP copy differs from the planned source', location)
+            sources[node['id']] = {'file': planned['path'], 'retained': str(local), 'sha256': planned['sha256'],
+                                   'bytes': planned['bytes'], 'route': 'importSTEP'}
+    return sources
+
+
 def close(a, b):
     if isinstance(a, list) and isinstance(b, list):
         return len(a) == len(b) and all(close(x, y) for x, y in zip(a, b))
@@ -208,28 +269,54 @@ def _verify(directory, require_result=True):
     if 'designStudy' in document:
         from .design_study import verify as verify_study
         return verify_study(directory)
-    prepared = plan(document)
-    if json.loads((directory/'plan.json').read_text()) != prepared:
+    from .saved_checks import records, verify_sources, verify_saved_document, verify_imports, verify_exports
+    from .step_source import CapturedSources
+    from schemaxis.run_paths import owned_path
+    captured = records(directory)
+    # Replay planning from retained bytes bound to the capture record; never reopen originals.
+    prepared = plan(document, source=CapturedSources(directory, captured))
+    if json.loads(owned_path(directory, 'plan.json').read_text()) != prepared:
         fail('VERIFICATION_FAILED', 'CAD plan differs from input')
     if require_result and json.loads((directory/'result.json').read_text()).get('verified') is not True:
         fail('INCOMPLETE_EXECUTION', 'CAD job did not complete')
-    imported = [n for n in prepared['nodes'] if n['filter'] == 'readSTEP']
-    sources = json.loads((directory/'sources.json').read_text()) if (directory/'sources.json').exists() else {}
-    if set(sources) != {n['id'] for n in imported}:
-        fail('VERIFICATION_FAILED', 'STEP source membership differs')
-    for index,node in enumerate(imported):
-        source=sources[node['id']]
-        retained=directory/('source-'+str(index)+'.step')
-        if source.get('file') != str(Path(node['options']['file']).absolute()) or source.get('retained') != str(retained) or retained.resolve().parent != directory.resolve():
-            fail('VERIFICATION_FAILED', 'STEP source provenance differs')
-        if file_digest(retained) != source['sha256'] or file_digest(Path(source['file'])) != source['sha256']:
-            fail('INPUT_CHANGED', 'STEP source or retained copy changed', node['id'])
+    verify_sources(directory, prepared, captured)
     receipt = json.loads((directory/'verification.json').read_text())
     built = json.loads((directory/'built.json').read_text())
+    from .saved_checks import require_hardened
+    require_hardened(built, receipt, directory)
     if receipt.get('status') != 'succeeded' or receipt.get('units') != 'mm' or not receipt.get('freshProcess'):
         fail('VERIFICATION_FAILED', 'CAD reopening evidence is incomplete')
     if receipt.get('definition') != prepared or built.get('definition') != prepared:
         fail('VERIFICATION_FAILED', 'native CAD definition differs')
+    if 'parameters' in prepared:
+        from .parameters import verify_observation, verify_saved, saved_length
+        first, second = built.get('parameterObservations'), receipt.get('parameterObservations')
+        verify_observation(prepared, first)
+        verify_observation(prepared, second)
+        saved = verify_saved(prepared, directory/'model.FCStd')
+        for identity, parameter in prepared['parameters'].items():
+            if (first['parameters'][identity]['value'] != parameter['value']
+                    or second['parameters'][identity]['value'] != saved_length(parameter['value'])
+                    or saved['parameters'][identity]['value'] != saved_length(parameter['value'])):
+                fail('VERIFICATION_FAILED', 'Native driver differs from its exact build or serialized value', identity)
+        if any(first[key] != second[key] or saved[key] != second[key] for key in ('object','expressions')):
+            fail('VERIFICATION_FAILED', 'Native parameter relationships differ between build, saved file and reopening')
+    if 'partDesign' in prepared:
+        from .part_design import verify_observation as verify_body
+        from .part_design_saved import verify as verify_saved_body
+        first,second=built.get('partDesignObservations'),receipt.get('partDesignObservations')
+        verify_body(prepared,first);verify_body(prepared,second)
+        def structural(record):
+            value=copy.deepcopy(record)
+            for feature in value['features'].values():feature.pop('length',None)
+            for profile in value['profiles'].values():
+                for constraint in profile['constraints']:constraint.pop('value')
+            return value
+        if structural(first)!=structural(second):fail('VERIFICATION_FAILED','Body history changed after native reopening')
+        saved=verify_saved_body(prepared,directory/'model.FCStd')
+        comparable=copy.deepcopy(second)
+        for profile in comparable['profiles'].values():profile.pop('solver')
+        if structural(saved)!=structural(comparable):fail('VERIFICATION_FAILED','Saved Body history differs from native observations')
     from .selections import verify as verify_selections
     verify_selections(prepared, built.get('selections', {}), receipt.get('selections', {}))
     from .measurements import verify as verify_measurements, evaluate
@@ -245,21 +332,28 @@ def _verify(directory, require_result=True):
             if not close(observed.get(measure), built['shape'].get(measure)):
                 fail('VERIFICATION_FAILED', 'CAD export or reopening changed geometry', key, measure=measure)
     mesh = receipt.get('mesh', {})
-    if mesh.get('solid') is not True or mesh.get('facets', 0) <= 0 or not math.isclose(mesh.get('volume', -1), built['shape']['volume'], rel_tol=0.005, abs_tol=1e-5):
-        fail('VERIFICATION_FAILED', 'STL is not watertight or exceeds 0.5 percent volume tolerance')
+    if mesh.get('solid') is not True or mesh.get('facets', 0) <= 0:
+        fail('VERIFICATION_FAILED', 'STL is not watertight')
     if not close(mesh.get('bounds'), built['shape']['bounds']):
         # Chordal meshes may miss extrema by at most the requested linear deflection.
         if not isinstance(mesh.get('bounds'), list) or len(mesh['bounds']) != 6 or any(not math.isfinite(a) or abs(a-b) > prepared['linearDeflection']*1.1+1e-5 for a,b in zip(mesh['bounds'],built['shape']['bounds'])):
             fail('VERIFICATION_FAILED', 'STL bounds exceed tessellation tolerance')
+    verify_imports(prepared, built, receipt)
+    # The host volume, not native Mesh.Volume, now carries the established 0.5 % ceiling.
+    export_checks = verify_exports(directory, prepared, built, receipt)
     artifacts = receipt.get('artifacts', [])
     files = output_files(prepared)
     if len(artifacts) != len(files):
         fail('VERIFICATION_FAILED', 'CAD artifact membership differs')
     for artifact, (filename, kind) in zip(artifacts, files):
         path = directory/filename
-        if artifact.get('file') != str(path) or artifact.get('kind') != kind or artifact.get('units') != artifact_units(kind) or path.is_symlink() or path.resolve().parent != directory.resolve() or file_digest(path) != artifact.get('sha256'):
+        if (not isinstance(artifact.get('file'), str) or owned_path(directory, artifact['file']) != path or artifact.get('kind') != kind
+                or artifact.get('units') != artifact_units(kind) or path.is_symlink() or path.resolve().parent != directory.resolve()
+                or file_digest(path) != artifact.get('sha256')):
             fail('VERIFICATION_FAILED', 'CAD artifact path, units or digest differs', filename)
-    return {'verified': True, 'artifacts': len(artifacts), 'volumeMM3': receipt['native']['volume'], 'runtime': receipt['runtime']}
+    verify_saved_document(directory/'model.FCStd', prepared, captured)
+    return {'verified': True, 'artifacts': len(artifacts), 'volumeMM3': receipt['native']['volume'], 'runtime': receipt['runtime'],
+            'exportChecks': export_checks}
 
 
 def verify(directory, require_result=True):

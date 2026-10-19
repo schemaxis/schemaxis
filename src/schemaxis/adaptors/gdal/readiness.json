@@ -1,0 +1,300 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.gdal/1": {
+      "guide": "docs/gdal.md",
+      "context": {
+        "purpose": "Extract georeferenced raster windows and resize their grid with nearest-neighbour sampling while retaining explicit CRS, band units and nodata.",
+        "assumptions": "North-up PixelIsArea single-band uncompressed UInt16/Int16/finite Float32 GeoTIFF; GDAL 3.13.3 isolated Python on POSIX.",
+        "constraints": "262144 source/output pixels, 4096 per axis, 8 MiB file; EPSG:4326 longitude/latitude degrees or 3857 metres; units m, K, 1. No reprojection/bilinear/masks/overviews/extra metadata.",
+        "inspection": "Stdlib GeoTIFF parser compares every output pixel, geotransform, CRS, units and nodata to an independent centre-sampling oracle, then compares fresh GDAL reopening.",
+        "recovery": "INVALID_RASTER_CONTENT: inspect declared metadata and supported subset; RASTER_PIXEL_LIMIT: reduce dimensions; INTERPRETER_NOT_FOUND: configure isolated GDAL 3.13.3 interpreter."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/gdal-window.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/gdal-window-variant.json"
+        },
+        {
+          "id": "temperature",
+          "reference": "examples/schemaxis/gdal-temperature.json"
+        },
+        {
+          "id": "invalid-resampling",
+          "reference": "examples/schemaxis/gdal-resampling-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_gdal.py"
+      ],
+      "acceptance": [
+        "tools/qualify_gdal.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified image artifact handoffs, pixel-window chains and source-byte reuse identity.",
+          "references": [
+            "docs/gdal.md",
+            "tools/qualify_gdal.py"
+          ]
+        },
+        "composition": {
+          "scope": "Finite output grid dimension studies resolve before raster extraction.",
+          "references": [
+            "docs/gdal.md",
+            "tools/qualify_gdal.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://gdal.org/en/stable/api/python/utilities.html",
+          "https://gdal.org/en/stable/drivers/raster/gtiff.html",
+          "https://gdal.org/en/stable/tutorials/geotransforms_tut.html",
+          "https://gdal.org/en/stable/programs/gdal_translate.html"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline; shared owned process-tree runner; native AS2 GiB/CPU60 s/FSIZE16 MiB caps.",
+          "cancellation": "Shared process cancellation and final prepublication cancellation check.",
+          "logs": "Captured source, effective plan, trusted native worker, per-stage input hashes/stdout/stderr/submissions.",
+          "verification": "Independent classic TIFF/GeoKey/pixel reader plus integer centre-sampling oracle, literal fixtures and fresh isolated GDAL reopening."
+        },
+        "data": [
+          {
+            "id": "raster-input",
+            "direction": "input",
+            "kind": "image",
+            "format": "GeoTIFF",
+            "traits": {
+              "bands": 1,
+              "pixelInterpretation": "area"
+            },
+            "losses": [
+              "Strict subset rejects unknown tags/extra metadata instead of silently omitting data."
+            ],
+            "scope": "Captured regular local file <=8 MiB; 262144 pixels."
+          },
+          {
+            "id": "raster-output",
+            "direction": "output",
+            "kind": "image",
+            "format": "GeoTIFF",
+            "traits": {
+              "bands": 1,
+              "georeferenced": true
+            },
+            "losses": [
+              "Nearest downsampling drops unsampled pixels; no averaging/conservation claim.",
+              "TIFF strip layout, byte order and descriptive CRS citations may change."
+            ],
+            "scope": "Extent-preserving north-up grid and source-bound statistical summary."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "raster-summary.json CRS/units/nodata/affine corners/statistics and native logs.",
+            "limits": "Use GIS software for georeferenced display; Studio image preview may lack GeoTIFF support."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit source/window/grid after checking units; captured source hash invalidates changed bytes."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified GeoTIFF handoffs to further raster windows."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Finite grid dimension studies."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Source-byte digest invalidates same-path changes."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editor and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Typed pixel window, output dimensions, CRS/units/nodata contract."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "GeoTIFF input/output only; reprojection and alternate formats deferred."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Batch readback and published summary only; no interactive session."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial local raster extraction."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "One static raster per document."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No native synchronization or process-local handles."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Raster publication only; no application session file."
+          }
+        },
+        "cases": [
+          {
+            "id": "window",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gdal/elevation.tif"
+            },
+            "scope": "Literal negative-y geotransform/nonzero origin and Int16 nodata crop.",
+            "checks": [
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/corners",
+                "expected": [
+                  [
+                    500010,
+                    5499980
+                  ],
+                  [
+                    500050,
+                    5499920
+                  ]
+                ],
+                "absolute": 1e-09,
+                "relative": 1e-13
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/nodataCount",
+                "expected": 2,
+                "absolute": 1e-09,
+                "relative": 1e-13
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/mean",
+                "expected": 32.4,
+                "absolute": 1e-09,
+                "relative": 1e-13
+              }
+            ]
+          },
+          {
+            "id": "nearest",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gdal/elevation.tif"
+            },
+            "scope": "Non-integer4x3 to3x2 centre sampling, last row/column and nodata.",
+            "checks": [
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/nodataCount",
+                "expected": 1,
+                "absolute": 1e-09,
+                "relative": 1e-13
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/mean",
+                "expected": 30.4,
+                "absolute": 1e-09,
+                "relative": 1e-13
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/width",
+                "expected": 3,
+                "absolute": 1e-09,
+                "relative": 1e-13
+              }
+            ]
+          },
+          {
+            "id": "geographic",
+            "example": "temperature",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gdal/temperature.tif"
+            },
+            "scope": "Big-endian Float32 Kelvin values and longitude/latitude degrees grid resize.",
+            "checks": [
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/epsg",
+                "expected": 4326,
+                "absolute": 1e-09,
+                "relative": 1e-13
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/units",
+                "expected": "K",
+                "absolute": 1e-09,
+                "relative": 1e-13
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/corners",
+                "expected": [
+                  [
+                    -97.5,
+                    50.5
+                  ],
+                  [
+                    -96.9,
+                    49.5
+                  ]
+                ],
+                "absolute": 1e-09,
+                "relative": 1e-13
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial GDAL window route: typed metadata, independently verified raster sampling and isolated lifecycle.",
+        "review": [
+          "verification/2026-10-17-gdal-completion.md"
+        ],
+        "notApplicable": {
+          "conversion": "GeoTIFF input/output only; reprojection and alternate formats deferred.",
+          "native-inspection": "Batch readback and published summary only; no interactive session.",
+          "mpi": "Serial local raster extraction.",
+          "time-batches": "One static raster per document.",
+          "live-editing": "No native synchronization or process-local handles.",
+          "native-save": "Raster publication only; no application session file."
+        }
+      }
+    }
+  }
+}

@@ -10,25 +10,19 @@ from .artifacts import file_digest
 from .storage import atomic, encoded
 from .errors import fail
 from .core.faults import SchemaxisError
+from .run_paths import MANIFEST, METADATA_VERSION, owned_path, recorded_directory
 
 
 def atomic_json(path, value):
     atomic(path, encoded(value))
 
-VERSION = 'schemaxis.artifact-metadata/1'
-MANIFEST = 'publication-metadata.json'
+VERSION = METADATA_VERSION
 
 
 def _path(directory, value):
     if not isinstance(value, str):
         fail('PUBLICATION_METADATA_FAILED', 'publication requires a file path')
-    path = Path(value)
-    if not path.is_absolute():
-        # Existing receipts use both working-directory and run-relative paths.
-        path = path.absolute() if path.is_file() else directory/path
-    if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(directory):
-        fail('PUBLICATION_METADATA_FAILED', 'publication is missing, linked or outside its owned directory', str(path))
-    return path.resolve()
+    return owned_path(directory, value, fault='PUBLICATION_METADATA_FAILED').resolve()
 
 
 def _size(path):
@@ -172,6 +166,7 @@ def publish_artifacts(directory, artifacts):
     to discard; verification never repairs it or manufactures missing companions.
     """
     directory = Path(directory).resolve()
+    origin = recorded_directory(directory)
     descriptions = list(_descriptions(directory, artifacts))
     unique = {}
     for path, value in descriptions:
@@ -192,10 +187,13 @@ def publish_artifacts(directory, artifacts):
                             'metadata': companion.relative_to(directory).as_posix(),
                             'sha256': file_digest(temporary)})
         for temporary, companion in staged: atomic(companion, temporary.read_bytes())
-        atomic_json(directory/MANIFEST, {'version': VERSION, 'publications': entries})
+        manifest = {'version': VERSION, 'publications': entries}
+        if origin is not None:
+            manifest['recordedDirectory'] = str(origin)
+        atomic_json(directory/MANIFEST, manifest)
     finally:
         for temporary, _ in staged: temporary.unlink(missing_ok=True)
-    return {'version': VERSION, 'publications': entries}
+    return manifest
 
 
 def finalise(directory):

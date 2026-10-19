@@ -39,6 +39,10 @@ async function selectDesignTab(session) {
 }
 
 async function reload(session) {
+  // Saving the nested input may leave the Designer's automatic layout save in
+  // flight. Its beforeunload guard correctly blocks a reload until that settles.
+  await session.wait(`[...window.studio.windows.instances.values()]
+    .every((instance) => !instance.window.isDirty?.())`, 'all Studio windows saved before reload');
   await session.evaluate('window.__integrationOldPage = true');
   await session.send('Page.reload');
   const deadline = Date.now() + 20000;
@@ -94,7 +98,33 @@ test('Studio starter connects Designer, Workbench, template export and Case Runn
         && ${active}.store.get().record.document.workflow.operations[0].document.nodes[0].options.start === 1`,
       'nested operation saved to its parent');
       await selectDesignTab(session);
-      await reload(session);
+      // Hold a real automatic viewport save to exercise the reload race
+      // deterministically, instead of relying on HTTP/timer scheduling under load.
+      await session.evaluate(`(() => {
+        const api = window.studio.api;
+        const post = api.post;
+        api.post = (path, body) => {
+          if (path !== '/api/design' || body.action !== 'move') return post(path, body);
+          api.post = post;
+          window.__integrationSaveHeld = true;
+          return new Promise((resolve) => { window.__integrationReleaseSave = resolve; })
+            .then(() => post(path, body));
+        };
+        const designer = window.studio.windows.active().window;
+        const isDirty = designer.isDirty;
+        designer.isDirty = () => {
+          const dirty = isDirty();
+          if (window.__integrationSaveHeld && dirty) window.__integrationReloadObservedPending = true;
+          return dirty;
+        };
+      })()`);
+      await button(session, '.dz-zoombar', 'Fit');
+      await session.wait('window.__integrationSaveHeld', 'automatic Designer save held');
+      const reloading = reload(session);
+      await session.wait('window.__integrationReloadObservedPending', 'reload waits for pending Designer save');
+      assert.equal(await session.evaluate('window.__integrationOldPage === true'), false);
+      await session.evaluate('window.__integrationReleaseSave()');
+      await reloading;
       await selectDesignTab(session);
       await session.wait(`document.querySelector('.dz-bottom-tab[data-tab="source"]')`, 'restored Designer');
       await session.clickSelector('.dz-bottom-tab[data-tab="source"]');

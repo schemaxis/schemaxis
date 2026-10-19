@@ -1,6 +1,6 @@
 # Expanded FreeCAD and Blender workflows
 
-Schemaxis now exposes **18 FreeCAD operations** and **37 Blender operations**, with
+Schemaxis now exposes **22 FreeCAD operations** and **37 Blender operations**, with
 native examples that run in the installed applications. This extends the original
 four-operation CAD adaptor and 21-operation Blender adaptor; it does not claim full
 application parity. Host discovery, planning and schemas still require no native
@@ -12,10 +12,12 @@ application imports or third-party Python packages.
 | --- | --- | --- |
 | Primitives | `box`, `cylinder`, `sphere`, `cone`, `torus` | Literal dimensions in mm; explicit origin and supported axes |
 | Boolean solids | `cut`, `fuse`, `common`, `multiFuse` | Native linked features; `multiFuse` fuses 2 to 32 solids in one feature; final output must be one valid solid |
-| Profiles | `polygon`, `rectangle`, `circle` | Closed sketch on XY, XZ or YZ. `polygon`: unique vertices, no self-intersection. `rectangle` (width, height) and `circle` (radius): centred on the origin, fully constrained with the named dimensional constraints `width`, `height` and `radius` |
+| Profiles | `polygon`, `rectangle`, `circle` | Closed sketch on XY, XZ or YZ. `polygon`: unique vertices, no self-intersection. `rectangle` (width, height) and `circle` (radius and optional signed centre): fully constrained with the named dimensional constraints `width`, `height` and `radius` |
+| Sketch-based parts | `body`, `pad`, `pocket` | One origin-based Body, constrained XY rectangle/circle profiles, first Pad and linear through-all Pockets; [workflow guide](freecad-part-design.md) |
 | Sweeps | `extrude`, `revolve`, `loft` | Native extrusion/revolution linked to the profile; `loft` blends 2 to 32 profile sections (optionally ruled) into one solid |
 | Finishing | `fillet`, `chamfer` | Geometric edge predicates with exact match counts, or explicit one-based indices |
-| Import | `readSTEP` | One solid; captured immutable STEP input, digest provenance and checked reopening |
+| Legacy import | `readSTEP` | One solid; captured immutable STEP input, digest provenance and saved verification from the retained copy; no authored source-unit assertion |
+| Checked import | `importSTEP` | Declared file units and signed-axis orientation, part-frame expectations, editable placement and optional linked refinement; [scope and limits](freecad.md) |
 
 Named `dimensions`, document references and the existing pure document-resolution
 functions now work before CAD option validation. For example, use
@@ -37,8 +39,12 @@ A fresh FreeCAD process reopens and recomputes the feature tree, checks native o
 values and dependencies, and checks STEP/STL readback. CAD shape verification uses
 validity, volume, area and optimal geometric bounds. Using optimal bounds avoids
 inaccurate default bounding boxes on curved surfaces. It is not a proof of exact
-BREP topological identity. STL has the existing 0.5% volume tolerance and explicit
-linear-deflection bounds; meshing uses a tighter internal deflection to leave margin.
+BREP topological identity. The host independently checks STL signed volume, centre
+of mass, bounds and directed-edge closure. Its conditional deflection/float32 error
+estimate retains the 0.5% volume ceiling; native `Mesh.Volume` is not authoritative.
+Runs without the hardened export evidence return `RERUN_REQUIRED`; their earlier
+receipts remain historical records. See the [checked-import guide](freecad.md) for
+the supported source structures, numerical assumptions and acceptance evidence.
 
 Inspect native edges before authoring finishing operations:
 
@@ -139,3 +145,10 @@ verifies the three workflows, checks scale/orientation and mesh changes, and tes
 rejection of an excessive voxel request and an absent CAD edge. Retained logs,
 replay scripts, runtime archives and receipts identify the code that actually ran.
 See [qualification evidence](../verification/2026-09-19-adaptor-expansion.json).
+
+## Persistent part dimensions
+
+[Named native length parameters](freecad-parameters.md) drive primitive, extrusion, sketch and Pad
+dimensions across batch variants and remain editable in the published
+FCStd. They preserve explicit affine relationships, with unchanged publication
+indices. Live sessions and scalar design studies reject these drivers.

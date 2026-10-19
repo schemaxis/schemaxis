@@ -14,6 +14,7 @@ from schemaxis.core.declarations import validate_arguments
 from schemaxis.core.faults import SchemaxisError
 from schemaxis.dispatch import cancellation_requested
 from schemaxis.errors import fail, keys
+from . import layout
 
 VERSION = 'schemaxis.premiere/1'
 TICKS = 254016000000
@@ -34,6 +35,11 @@ OPTIONS = {
 DECLARATIONS = {'sequenceContract': {'native': 'Premiere read-only UXP sequence observation',
                                     'kinds': ['sequenceObservation'], 'inputs': {},
                                     'options': {key: {'value': value} for key, value in OPTIONS.items()}}}
+LAYOUT_OPTIONS = layout.options(OPTIONS)
+DECLARATIONS['sequenceLayout'] = {
+    'native': 'Premiere read-only UXP complete named video track observation',
+    'kinds': ['sequenceObservation', 'sequenceLayout'], 'inputs': {},
+    'options': {key: {'value': value} for key, value in LAYOUT_OPTIONS.items()}}
 LOSSES = ['Experimental integration: no installed Premiere native acceptance has been recorded',
           'Read-only sequence structure and source identities; source bytes, effects, colour, audio and rendered pixels are not verified',
           'Two matching observations detect observed edits but are not an atomic transaction or cryptographic proof of application execution',
@@ -45,9 +51,14 @@ def _absolute(value):
 
 
 def plan(document):
+    if document.get('operation') == 'sequenceLayout':
+        prepared = layout.plan(document, definitions=LAYOUT_OPTIONS, version=VERSION, ticks=TICKS, absolute=_absolute, losses=LOSSES)
+        if len(_encode(_request(prepared, 'f' * 32, 999999999999999))) > MAX_BYTES:
+            fail('RESOURCE_LIMIT', 'encoded layout request exceeds 1 MiB')
+        return prepared
     keys(document, ('version', 'operation', *OPTIONS), '$')
     if document.get('version') != VERSION: fail('UNSUPPORTED_VERSION', 'expected ' + VERSION)
-    if document.get('operation') != 'sequenceContract': fail('UNKNOWN_OPERATION', 'select sequenceContract')
+    if document.get('operation') != 'sequenceContract': fail('UNKNOWN_OPERATION', 'select sequenceContract or sequenceLayout')
     options = validate_arguments(OPTIONS, {k: v for k, v in document.items() if k in OPTIONS}, location='$')
     if options['fps'] not in (24, 25, 30, 50, 60): fail('INVALID_RATE', 'select integer 24, 25, 30, 50 or 60 fps', '$.fps')
     for path in [options['projectPath'], *(clip['sourcePath'] for clip in options['clips'])]:
@@ -71,7 +82,7 @@ def plan(document):
     return prepared
 
 
-def schema():
+def _contract_schema():
     from schemaxis.schema import DRAFT, argument_schema, object_schema
     properties = {k: argument_schema(v) for k, v in OPTIONS.items()}
     properties['fps']['enum'] = [24, 25, 30, 50, 60]
@@ -89,6 +100,21 @@ def schema():
     return {'$schema': DRAFT, **object_schema({'version': {'const': VERSION, 'description': 'Experimental Premiere contract version.'},
           'operation': {'const': 'sequenceContract', 'description': 'Observe the active sequence through the supplied read-only UXP panel.'},
           **properties}, ['version', 'operation', 'projectPath', 'sequenceName', 'clips'])}
+
+
+def schema():
+    from schemaxis.schema import DRAFT, argument_schema, object_schema
+    properties = {key: argument_schema(value) for key, value in LAYOUT_OPTIONS.items()}
+    properties['fps']['enum'] = [24, 25, 30, 50, 60]
+    legacy = _contract_schema()
+    return {'$schema': DRAFT, **object_schema({**legacy['properties'], **properties,
+            'operation': {'enum': ['sequenceContract', 'sequenceLayout']}},
+            ['version', 'operation', 'projectPath', 'sequenceName']),
+            'oneOf': [
+                {'properties': {'operation': {'const': 'sequenceContract'}}, 'required': ['clips'],
+                 'not': {'anyOf': [{'required': [key]} for key in ('endFrame', 'tracks', 'requirements')]}},
+                {'properties': {'operation': {'const': 'sequenceLayout'}}, 'required': ['endFrame', 'tracks'],
+                 'not': {'required': ['clips']}}]}
 
 
 def _closed(value, members, where):
@@ -113,8 +139,9 @@ def _version(value, where):
 
 
 def _observation(value, prepared):
-    _closed(value, ('runtime', 'project', 'sequence', 'track', 'clips'), 'observation')
-    runtime, project, sequence, track = (value[k] for k in ('runtime', 'project', 'sequence', 'track'))
+    is_layout = prepared['operation'] == 'sequenceLayout'
+    _closed(value, ('runtime', 'project', 'sequence', 'tracks') if is_layout else ('runtime', 'project', 'sequence', 'track', 'clips'), 'observation')
+    runtime, project, sequence = (value[k] for k in ('runtime', 'project', 'sequence'))
     _closed(runtime, ('hostName', 'hostVersion', 'uxpVersion', 'applicationPath'), 'runtime')
     if runtime['hostName'] != 'premierepro': fail('VERIFICATION_FAILED', 'response does not identify Premiere Pro')
     if _version(runtime['hostVersion'], 'hostVersion') < (26, 5, 0): fail('UNSUPPORTED_RUNTIME', 'Premiere 26.5.0 or later is required')
@@ -132,29 +159,49 @@ def _observation(value, prepared):
         if type(sequence[field]) is not int: fail('VERIFICATION_FAILED', 'native count/dimension must be an integer', field)
     expected = {'name': options['sequenceName'], 'width': options['width'], 'height': options['height'],
                 'timebaseTicks': prepared['timebaseTicks'], 'zeroPointTicks': '0', 'endTicks': prepared['endTicks'],
-                'videoTrackCount': 1, 'captionTrackCount': 0}
+                'videoTrackCount': len(prepared['tracks']) if is_layout else 1, 'captionTrackCount': 0}
     for k, expected_value in expected.items():
         if sequence[k] != expected_value: fail('CONTRACT_MISMATCH', 'native sequence differs', 'sequence.' + k)
     if not 0 <= sequence['audioTrackCount'] <= 8: fail('VERIFICATION_FAILED', 'native audio track count exceeds bound')
     for field in ('timebaseTicks', 'zeroPointTicks', 'endTicks'): _ticks(sequence[field], field)
-    _closed(track, ('index', 'name', 'muted', 'audioClipCount', 'transitionCount'), 'track')
+    if is_layout:
+        tracks = value['tracks']
+        if not isinstance(tracks, list) or len(tracks) != len(prepared['tracks']):
+            fail('CONTRACT_MISMATCH', 'complete native video track list differs')
+        for index, (track, expected_track) in enumerate(zip(tracks, prepared['tracks'])):
+            _closed(track, ('index', 'name', 'muted', 'audioClipCount', 'transitionCount', 'clips'), 'track.' + str(index))
+            if track['name'] != expected_track['name']:
+                fail('CONTRACT_MISMATCH', 'native track name/order differs', 'tracks.' + str(index) + '.name')
+            _track(track, track['clips'], expected_track['clips'], index)
+        # Independently reconstruct frame occupancy after the exact identity check.
+        layout.coverage(value, prepared['options'])
+    else:
+        _closed(value['track'], ('index', 'name', 'muted', 'audioClipCount', 'transitionCount'), 'track')
+        _track(value['track'], value['clips'], prepared['clips'], 0)
+    return value
+
+
+def _track(track, clips, expected_clips, index):
     _text(track['name'], 'track.name', 256)
-    if type(track['index']) is not int or track['index'] != 0 or track['muted'] is not False:
-        fail('CONTRACT_MISMATCH', 'sole video track must be index 0 and unmuted')
+    if type(track['index']) is not int or track['index'] != index or track['muted'] is not False:
+        fail('CONTRACT_MISMATCH', 'video tracks must have the declared order and be unmuted')
     for field in ('audioClipCount', 'transitionCount'):
-        if type(track[field]) is not int or track[field] != 0: fail('CONTRACT_MISMATCH', 'audio clips and transitions are unsupported', field)
-    clips = value['clips']
-    if not isinstance(clips, list) or len(clips) != len(prepared['clips']): fail('CONTRACT_MISMATCH', 'native clip count differs')
+        if type(track[field]) is not int or track[field] != 0:
+            fail('CONTRACT_MISMATCH', 'audio clips and transitions are unsupported', field)
+    if not isinstance(clips, list) or len(clips) != len(expected_clips):
+        fail('CONTRACT_MISMATCH', 'native clip count differs')
     flags = ('disabled', 'adjustmentLayer', 'reversed', 'offline', 'nested', 'merged', 'multicam', 'proxy')
     identities = ('name', 'projectItemId')
-    for i, (clip, expected_clip) in enumerate(zip(clips, prepared['clips'])):
+    for i, (clip, expected_clip) in enumerate(zip(clips, expected_clips)):
         _closed(clip, (*expected_clip, *identities, *flags), 'clip.' + str(i))
         for field in identities: _text(clip[field], field)
-        if any(clip[field] is not False for field in flags): fail('CONTRACT_MISMATCH', 'unsupported native clip state', str(i))
+        if any(clip[field] is not False for field in flags):
+            fail('CONTRACT_MISMATCH', 'unsupported native clip state', str(i))
         for field, expected_value in expected_clip.items():
-            if clip[field] != expected_value: fail('CONTRACT_MISMATCH', 'native clip source or range differs', str(i) + '.' + field)
-        for field in ('startTicks', 'endTicks', 'inTicks', 'outTicks', 'durationTicks'): _ticks(clip[field], field)
-    return value
+            if clip[field] != expected_value:
+                fail('CONTRACT_MISMATCH', 'native clip source or range differs', str(i) + '.' + field)
+        for field in ('startTicks', 'endTicks', 'inTicks', 'outTicks', 'durationTicks'):
+            _ticks(clip[field], field)
 
 
 def _bytes(path):
@@ -178,7 +225,7 @@ def _json(path):
 
 
 def _request(prepared, nonce, expiry):
-    return {'version': 'schemaxis.premiere.request/1', 'operation': 'sequenceContract', 'nonce': nonce,
+    return {'version': 'schemaxis.premiere.request/1', 'operation': prepared['operation'], 'nonce': nonce,
             'expiresAtMs': expiry, 'responseFile': 'response-' + nonce + '.json',
             'contract': prepared}
 
@@ -206,10 +253,20 @@ def _receipt(directory, prepared):
         fail('VERIFICATION_FAILED', 'trusted request differs from authored sequence contract')
     observation = _response(_json(directory / 'response.json'), request, request_data)
     if _json(directory / 'observation.json') != observation: fail('VERIFICATION_FAILED', 'published native observation differs')
-    return {'artifacts': [{'file': str(directory / 'observation.json'), 'kind': 'sequenceObservation',
+    receipt = {'artifacts': [{'file': str(directory / 'observation.json'), 'kind': 'sequenceObservation',
                           'format': 'Premiere UXP JSON observation', 'sha256': file_digest(directory / 'observation.json')}],
             'requestSHA256': hashlib.sha256(request_data).hexdigest(), 'responseSHA256': file_digest(directory / 'response.json'),
             'runtime': observation['runtime'], 'frames': prepared['frames'], 'losses': LOSSES}
+    if prepared['operation'] == 'sequenceLayout':
+        report = layout.coverage(observation, _json(directory / 'authored.json'))
+        if _json(directory / 'layout.json') != report:
+            fail('VERIFICATION_FAILED', 'retained editorial layout report differs from observed intervals')
+        failures = [item['name'] for item in report['requirements'] if not item['passed']]
+        if failures:
+            fail('REQUIREMENT_FAILED', 'editorial coverage failed for: ' + ', '.join(failures), '$.requirements')
+        receipt['artifacts'].append({'file': str(directory / 'layout.json'), 'kind': 'sequenceLayout',
+                                     'format': 'Schemaxis editorial layout JSON', 'sha256': file_digest(directory / 'layout.json')})
+    return receipt
 
 
 def run(document, directory, *, bridge=None, executable=None, timeout=300):
@@ -246,11 +303,13 @@ def run(document, directory, *, bridge=None, executable=None, timeout=300):
         (directory / 'response.json').write_bytes(response_data)
         observation = _response(_json(directory / 'response.json'), request, request_data)
         atomic_json(directory / 'observation.json', observation)
+        if prepared['operation'] == 'sequenceLayout':
+            atomic_json(directory / 'layout.json', layout.coverage(observation, document))
         atomic_json(directory / 'verification.json', _receipt(directory, prepared))
         verify(directory, require_result=False)
         if time.monotonic() >= deadline: fail('RUNNER_TIMED_OUT', 'Premiere observation verification exceeded the shared deadline')
         if cancellation_requested(): fail('RUNNER_CANCELLED', 'Premiere observation cancelled')
-        result = {'status': 'succeeded', 'verified': True, 'artifacts': 1, 'observation': str(directory / 'observation.json')}
+        result = {'status': 'succeeded', 'verified': True, 'artifacts': 2 if prepared['operation'] == 'sequenceLayout' else 1, 'observation': str(directory / 'observation.json')}
         atomic_json(directory / 'result.json', result)
         return result
     except Exception as error:
@@ -272,7 +331,7 @@ def verify(directory, require_result=True):
         if _json(directory / 'plan.json') != prepared: fail('VERIFICATION_FAILED', 'sequence plan differs')
         receipt = _receipt(directory, prepared)
         if _json(directory / 'verification.json') != receipt: fail('VERIFICATION_FAILED', 'native observation verification evidence differs')
-        return {'verified': True, 'artifacts': 1, 'frames': prepared['frames'], 'runtime': receipt['runtime']}
+        return {'verified': True, 'artifacts': len(receipt['artifacts']), 'frames': prepared['frames'], 'runtime': receipt['runtime']}
     except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError) as error:
         fail('VERIFICATION_FAILED', 'malformed retained observation: ' + str(error))
 

@@ -36,6 +36,7 @@ def declaration(native, kind, options, inputs=None):
 
 
 POSITION = vector([0, 0, 0])
+PARENT = {'parent': {'required': False, 'kind': 'group'}}
 MATERIAL = {'material': {'required': True, 'kind': 'material'}}
 DECLARATIONS = {
     'material': declaration('StandardMaterial3D', 'material', {
@@ -74,8 +75,12 @@ DECLARATIONS.update({
         'attenuation': number(1, 0.001, 16), 'angle': number(45, 1, 89),
         'angleAttenuation': number(1, 0.001, 16), 'shadows': {'type': 'boolean', 'default': False}}),
 })
+DECLARATIONS['transformGroup'] = declaration('Node3D', 'group', {'position': POSITION,
+    'rotation': vector([0, 0, 0], -180, 180),
+    'scale': vector([1, 1, 1], 0.001, 1000)}, PARENT)
 for definition in DECLARATIONS.values():
     if definition['kinds'] == ['geometry']:
+        definition['inputs'] = {**definition['inputs'], **PARENT}
         definition['options'].update(rotation={'value': vector([0, 0, 0], -180, 180)},
                                      scale={'value': vector([1, 1, 1], 0.001, 1000)})
 
@@ -94,6 +99,85 @@ def expected_basis(options):
     origin = transformed([0, 0, 0], options)
     return [[v-p for v, p in zip(transformed(point, options), origin)]
             for point in ([1, 0, 0], [0, 1, 0], [0, 0, 1])]
+
+
+def world_point(point, node, nodes):
+    """Compose full affine transforms, never decompose the resulting shear."""
+    point = transformed(point, node['options'])
+    parent = node.get('inputs', {}).get('parent')
+    return world_point(point, nodes[parent], nodes) if parent else point
+
+
+def world_transform(node, nodes):
+    # Use zero translations for basis columns: avoid cancellation at large origins.
+    origin = world_point([0, 0, 0], node, nodes)
+    basis = expected_basis({**node['options'], 'position': [0, 0, 0]})
+    parent = node.get('inputs', {}).get('parent')
+    while parent:
+        ancestor = nodes[parent]
+        options = {**ancestor['options'], 'position': [0, 0, 0]}
+        basis = [transformed(column, options) for column in basis]
+        parent = ancestor.get('inputs', {}).get('parent')
+    return origin, basis
+
+
+def order_hierarchy(prepared):
+    """Stable dependency traversal; flat documents retain their original order."""
+    nodes = {n['id']: n for n in prepared}
+    locations = {n['id']: f'$.nodes[{i}].inputs.parent' for i, n in enumerate(prepared)}
+    for node in prepared:
+        if 'parent' not in node['inputs']:
+            continue
+        parent = node['inputs']['parent']
+        if not isinstance(parent, str) or parent not in nodes:
+            fault('INVALID_DEPENDENCY', 'Parent must name a declared transformGroup.', locations[node['id']],
+                  'Declare the group and use its exact id, or omit parent for the scene root.')
+        if nodes[parent]['filter'] != 'transformGroup':
+            fault('TYPE_MISMATCH', 'Parent must be a transformGroup, not geometry or a resource.', locations[node['id']])
+    ordered, active, visited = [], set(), set()
+    def visit(node):
+        identity = node['id']
+        if identity in active:
+            fault('DEPENDENCY_CYCLE', 'Transform parent links form a cycle.', locations[identity],
+                  'Remove a parent link so every group eventually reaches the scene root.')
+        if identity in visited:
+            return
+        active.add(identity)
+        for source in node['inputs'].values():
+            visit(nodes[source])
+        active.remove(identity)
+        visited.add(identity)
+        ordered.append(node)
+    for node in prepared:
+        visit(node)
+    for node in ordered:
+        if 'parent' not in node['inputs']:
+            continue
+        ancestor, depth = node, 0
+        while ancestor['inputs'].get('parent'):
+            depth += 1
+            ancestor = nodes[ancestor['inputs']['parent']]
+        origin, basis = world_transform(node, nodes)
+        if depth > 16 or max(map(abs, origin)) > 1000000 or any(
+                not 0.000001 <= math.hypot(*column) <= 10000 for column in basis):
+            fault('RESOURCE_LIMIT', 'Hierarchy exceeds 16 parent links, 1000000 m world position or world basis lengths [0.000001, 10000].',
+                  locations[node['id']], 'Reduce nesting, ancestor offsets or accumulated scaling.')
+    return ordered
+
+
+def group_bounds(identity, nodes, sources):
+    bounds = []
+    for node in nodes.values():
+        if DECLARATIONS[node['filter']]['kinds'] != ['geometry']:
+            continue
+        parent = node['inputs'].get('parent')
+        while parent:
+            if parent == identity:
+                bounds.append(expected_bounds(node, sources, nodes))
+                break
+            parent = nodes[parent]['inputs'].get('parent')
+    return ([min(b[i] for b in bounds) for i in range(3)] +
+            [max(b[i] for b in bounds) for i in range(3, 6)]) if bounds else None
 
 
 def plan(document):
@@ -125,9 +209,11 @@ def plan(document):
                                      node.get('options', {}), location=location+'.options')
         inputs = node.get('inputs', {})
         keys(inputs, tuple(definition['inputs']), location+'.inputs')
-        if set(inputs) != set(definition['inputs']):
-            fault('INVALID_DEPENDENCY', 'Supply every declared input port.', location+'.inputs')
+        if not {p for p, spec in definition['inputs'].items() if spec.get('required')} <= set(inputs):
+            fault('INVALID_DEPENDENCY', 'Supply every required input port.', location+'.inputs')
         for port, source in inputs.items():
+            if port == 'parent':
+                continue  # Forward group links are validated after all names are known.
             if not isinstance(source, str) or source not in kinds:
                 fault('INVALID_DEPENDENCY', 'Inputs must refer to earlier nodes.', location+'.inputs.'+port)
             if kinds[source] != definition['inputs'][port]['kind']:
@@ -150,6 +236,7 @@ def plan(document):
         prepared.append({'id': identity, 'filter': operation, 'options': options, 'inputs': inputs})
     if list(kinds.values()).count('camera') != 1 or not any(k in ('geometry', 'image') for k in kinds.values()):
         fault('INVALID_SELECTION', 'Declare exactly one camera and at least one geometry node.')
+    prepared = order_hierarchy(prepared)
     used = {source for n in prepared for source in n['inputs'].values()}
     if any(kind == 'material' and identity not in used for identity, kind in kinds.items()):
         fault('INVALID_SELECTION', 'Every material must be used by geometry so it can be saved and verified.')
@@ -167,8 +254,8 @@ def schema():
             'id': {'type': 'string', 'pattern': '^[A-Za-z][A-Za-z0-9_]{0,63}$'}, 'filter': {'const': operation},
             'options': object_schema({k: argument_schema(v['value']) for k, v in definition['options'].items()},
                                      [k for k, v in definition['options'].items() if v['value'].get('required')]),
-            'inputs': object_schema({k: {'type': 'string'} for k in definition['inputs']}, list(definition['inputs']))},
-            ['id', 'filter'] + (['inputs'] if definition['inputs'] else []) + (['options'] if operation in ('readGLTF', 'sprite3D') else [])))
+            'inputs': object_schema({k: {'type': 'string'} for k in definition['inputs']}, [k for k, spec in definition['inputs'].items() if spec.get('required')])},
+            ['id', 'filter'] + (['inputs'] if any(s.get('required') for s in definition['inputs'].values()) else []) + (['options'] if operation in ('readGLTF', 'sprite3D') else [])))
     return {'$schema': DRAFT, **object_schema({'version': {'const': 'schemaxis.godot/1'}, 'units': {'const': 'm'},
         'preview': {'type': 'boolean', 'default': False},
         'nodes': {'type': 'array', 'minItems': 1, 'maxItems': 128, 'items': {'oneOf': alternatives}}}, ['version', 'nodes'])}
@@ -195,7 +282,7 @@ def close(a, b):
     return type(a) is type(b) and a == b
 
 
-def expected_bounds(node, sources):
+def expected_bounds(node, sources, nodes=None):
     options, operation = node['options'], node['filter']
     if operation == 'readGLTF':
         local = sources[node['id']]['bounds']
@@ -211,7 +298,7 @@ def expected_bounds(node, sources):
             size = [diameter, options.get('height', diameter), diameter]
         local = [-x/2 for x in size] + [x/2 for x in size]
     from itertools import product
-    points = [transformed(point, options) for point in product(*[(local[i], local[i+3]) for i in range(3)])]
+    points = [world_point(point, node, nodes or {}) for point in product(*[(local[i], local[i+3]) for i in range(3)])]
     return [operation(point[i] for point in points) for operation in (min, max) for i in range(3)]
 
 
@@ -262,11 +349,22 @@ def _verify(directory, require_result=True):
     check(set(observed) == {n['id'] for n in prepared['nodes'] if n['filter'] != 'material'}, 'Native scene membership differs.')
     for identity, record in observed.items():
         node = nodes[identity]; options = node['options']; operation = node['filter']
-        check(record.get('owned') is True, 'Node ownership differs: '+identity)
+        check(record.get('owned') is True and record.get('owner') == '.', 'Node ownership differs: '+identity)
+        check(record.get('parent') == node['inputs'].get('parent'), 'Node parent differs: '+identity)
+        if operation == 'transformGroup' or DECLARATIONS[operation]['kinds'] == ['geometry']:
+            origin, basis = world_transform(node, nodes)
+            check(close(record.get('worldPosition'), origin) and close(record.get('worldBasis'), basis),
+                  'Global transform differs: '+identity)
+            check(record.get('topLevel') is False, 'Transform inheritance differs: '+identity)
+        if operation == 'transformGroup':
+            check(record.get('class') == 'Node3D' and close(record.get('position'), options['position'])
+                  and close(record.get('basis'), expected_basis(options)), 'Group local transform differs: '+identity)
+            check(close(record.get('bounds'), group_bounds(identity, nodes, sources)), 'Group bounds differ: '+identity)
+            continue
         if DECLARATIONS[operation]['kinds'] == ['geometry']:
             check(record.get('class') == 'MeshInstance3D' and record.get('mesh') ==
                   ('ArrayMesh' if operation == 'readGLTF' else DECLARATIONS[operation]['native']), 'Mesh type differs: '+identity)
-            check(close(record.get('position'), options['position']) and close(record.get('bounds'), expected_bounds(node, sources)), 'Geometry bounds differ: '+identity)
+            check(close(record.get('position'), options['position']) and close(record.get('bounds'), expected_bounds(node, sources, nodes)), 'Geometry bounds differ: '+identity)
             check(close(record.get('basis'), expected_basis(options)), 'Geometry transform differs: '+identity)
             check(close(record.get('material'), nodes[node['inputs']['material']]['options']), 'Material readback differs: '+identity)
             if operation == 'readGLTF':

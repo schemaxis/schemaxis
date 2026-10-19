@@ -1,0 +1,103 @@
+{
+  "id": "qpdf",
+  "version": "schemaxis.qpdf/1",
+  "adaptor": "schemaxis.adaptors.qpdf.adaptor",
+  "declarations": "schemaxis.adaptors.qpdf.adaptor:DECLARATIONS",
+  "runtimeFamily": "12.4",
+  "execution": "Bounded PDF page assembly from captured sources with fresh QPDF and MuPDF observation of the published PDF",
+  "executables": [
+    "qpdf"
+  ],
+  "keywords": [
+    "PDF",
+    "merge",
+    "reorder",
+    "page assembly",
+    "QPDF",
+    "merge PDF",
+    "merge PDFs",
+    "combine PDF files",
+    "reorder PDF pages",
+    "rearrange PDF pages",
+    "extract PDF pages",
+    "rotate PDF pages",
+    "repeat PDF pages"
+  ],
+  "display": {
+    "name": "QPDF",
+    "mark": "Qp",
+    "colour": "#7a3b8c"
+  },
+  "capabilities": "schemaxis.adaptors.qpdf.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.qpdf/1",
+    "operation": "assemble",
+    "sources": [
+      {
+        "name": "cover",
+        "path": "/replace/with/cover.pdf"
+      },
+      {
+        "name": "report",
+        "path": "/replace/with/report.pdf"
+      }
+    ],
+    "pages": [
+      {
+        "source": "cover",
+        "page": 1
+      },
+      {
+        "source": "report",
+        "page": 3
+      },
+      {
+        "source": "report",
+        "page": 3,
+        "rotate": 90
+      }
+    ]
+  },
+  "routes": {
+    "schemaxis.qpdf/1": {
+      "module": "schemaxis.adaptors.qpdf.adaptor",
+      "schema": "schemaxis.adaptors.qpdf.adaptor:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "qpdf",
+      "acceptedArtifacts": [
+        "pdf"
+      ],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.qpdf.adaptor:query",
+        "reusableInputs": "schemaxis.adaptors.qpdf.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.qpdf.adaptor:resources"
+      },
+      "runOptions": {
+        "oracle": "mupdf"
+      }
+    }
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--qpdf",
+      "dest": "qpdf",
+      "help": "Absolute QPDF 12.4.2 executable (POSIX resource caps); verification also needs the shared --mupdf 1.28.5 mutool"
+    }
+  ]
+}

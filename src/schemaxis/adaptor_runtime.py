@@ -334,6 +334,8 @@ class AdaptorSession:
             remaining = self.deadline-time.monotonic()
             if remaining <= 0: fail('RUNNER_TIMED_OUT', 'study exhausted its total timeout')
             self.run(visit['document'], target, timeout=remaining, **self.options)
+            from .schema_snapshots import capture_run
+            capture_run(target, visit['document'])
             if time.monotonic() > self.deadline: fail('RUNNER_TIMED_OUT', 'study exhausted its total timeout')
             self.verify(target, visit['document'])
             from .publication_metadata import finalise, verify as verify_metadata
@@ -345,16 +347,65 @@ class AdaptorSession:
                       'changed': self.previous != visit['document']}
             self.previous = copy.deepcopy(visit['document'])
             return record
-        except Exception:
+        except Exception as error:
             self.failed = True
+            _mark_verification_failed(target, error)
             raise
 
     def close(self):
         self.closed = True
 
 
+def _mark_verification_failed(directory, error, key='verificationFault'):
+    """Retain native evidence but invalidate a run whose final checks failed."""
+    path = Path(directory)/'result.json'
+    if not path.is_file():
+        return
+    try:
+        status = json.loads(path.read_text())
+        if not isinstance(status, dict):
+            status = {}
+    except (ValueError, OSError):
+        status = {}
+    status.update(status='failed', verified=False, **{key: str(error)})
+    from .storage import atomic
+    atomic(path, encoded(status))
+
+
 def execute(document, directory, route, native_run, native_verify, native_plan, *, timeout=300,
             workflow=False, resume=False, **options):
+    from .configuration import location_context
+    from .core.faults import SchemaxisError
+    from .dispatch import execution_deadline
+    locations = {}
+    if not workflow:
+        from .adaptors import registry
+        try:
+            provider, _ = registry.resolve(document, legacy=True)
+        except SchemaxisError:
+            # Location scoping is derived, not validation: an unregistered
+            # direct entrypoint keeps its existing document checks below.
+            provider = None
+        if 'roots' in options:
+            locations['roots'] = options['roots']
+        elif provider is not None:
+            locations[provider] = options.get('executable')
+        locations.update({provider: options.get(option)
+                          for option, provider in route.get('runOptions', {}).items()})
+    # An invalid budget is reported by the adaptor's own validation, preserving
+    # its established fault code; only a valid budget opens a deadline scope.
+    valid = type(timeout) in (int, float) and math.isfinite(timeout) and timeout > 0
+    with location_context(locations):
+        if not valid:
+            return _execute(document, directory, route, native_run, native_verify, native_plan,
+                            timeout=timeout, workflow=workflow, resume=resume, **options)
+        with execution_deadline(timeout):
+            return _execute(document, directory, route, native_run, native_verify, native_plan,
+                            timeout=timeout, workflow=workflow, resume=resume, **options)
+
+
+def _execute(document, directory, route, native_run, native_verify, native_plan, *, timeout,
+             workflow, resume, **options):
     program = InputProgram(document, route, workflow=workflow)
     visits = list(program.visits())
     # Validate every statically known state before starting the application.
@@ -369,17 +420,17 @@ def execute(document, directory, route, native_run, native_verify, native_plan, 
                 raise
     if not program.groups and visits[0]['document'] == document:
         result = native_run(document, directory, timeout=timeout, **options)
-        native_verify(directory, document)
+        from .schema_snapshots import capture_run
         from .publication_metadata import finalise, verify as verify_metadata
+        phase = 'verificationFault'
         try:
+            capture_run(directory, document)
+            native_verify(directory, document)
+            phase = 'publicationMetadataFault'
             finalise(directory)
             verify_metadata(directory)
         except Exception as error:
-            path = Path(directory)/'result.json'
-            status = json.loads(path.read_text()) if path.is_file() else {}
-            status.update(status='failed', verified=False, publicationMetadataFault=str(error))
-            from .storage import atomic
-            atomic(path, encoded(status))
+            _mark_verification_failed(directory, error, phase)
             raise
         return result
     if resume:
@@ -388,6 +439,11 @@ def execute(document, directory, route, native_run, native_verify, native_plan, 
             fail('RESUME_MISMATCH', 'resume needs the unchanged authored study')
     else:
         directory = prepare_run_directory(directory, document)
+    from .schema_snapshots import capture_run, verify_run
+    if resume:
+        verify_run(directory)
+    else:
+        capture_run(directory, document)
     # The outer study owns its aggregate receipt while child workflows retain
     # their own attempt locks. In particular, two resumes cannot publish at once.
     import fcntl
@@ -440,6 +496,8 @@ def is_common(directory):
 
 def verify(directory, document, route, native_verify, *, workflow=False):
     directory = Path(directory)
+    from .schema_snapshots import verify_run
+    verify_run(directory)
     try:
         saved = json.loads((directory/'result.json').read_text())
         receipt = json.loads((directory/'verification.json').read_text())
@@ -525,6 +583,8 @@ def bind(namespace):
 
     @wraps(native_verify)
     def verify_prepared(directory, *args, **kwargs):
+        from .schema_snapshots import verify_run
+        verify_run(directory)
         if not is_common(directory):
             result = native_verify(directory, *args, **kwargs)
             from inspect import signature

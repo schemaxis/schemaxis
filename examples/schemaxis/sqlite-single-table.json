@@ -1,0 +1,55 @@
+{
+  "version": "schemaxis.sqlite/1",
+  "operation": "summarise",
+  "tables": [
+    {
+      "name": "departments",
+      "source": "/replace/with/departments.json",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "region",
+          "type": "TEXT",
+          "nullable": true
+        }
+      ],
+      "primaryKey": "id"
+    },
+    {
+      "name": "sales",
+      "source": "/replace/with/sales.json",
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "department",
+          "type": "INTEGER",
+          "nullable": true
+        },
+        {
+          "name": "amount",
+          "type": "INTEGER",
+          "nullable": true
+        }
+      ],
+      "primaryKey": "id",
+      "foreignKeys": [
+        {
+          "column": "department",
+          "table": "departments",
+          "target": "id"
+        }
+      ]
+    }
+  ],
+  "from": "sales",
+  "groupBy": [
+    "sales.department"
+  ],
+  "sum": "sales.amount"
+}

@@ -302,7 +302,10 @@ class AdaptorConsoleSession:
         if not path.is_absolute() or not path.exists() or (CONSOLE_TYPES[provider].get('locationKind') != 'roots' and (not path.is_file() or not os.access(path, os.X_OK))):
             fail('INTERPRETER_NOT_FOUND', 'provide an absolute executable or adaptor installation root')
         state = copy.deepcopy(self._state)
-        state['configurations'][provider] = {'provider': provider, 'executable': str(path.resolve()), 'mode': 'isolated-preview'}
+        # Keep executable symlinks, notably a virtual environment's Python.
+        # Installation roots can still use their canonical directory identity.
+        location = path.resolve() if CONSOLE_TYPES[provider].get('locationKind') == 'roots' else path
+        state['configurations'][provider] = {'provider': provider, 'executable': str(location), 'mode': 'isolated-preview'}
         self._commit(state)
         return copy.deepcopy(state['configurations'][provider])
 
@@ -622,6 +625,8 @@ class AdaptorConsoleSession:
             native = True
         else: target.mkdir(parents=True)
         atomic(target / 'authored.json', encoded(document))
+        from .schema_snapshots import capture_run
+        capture_run(target, document)
         if not native: atomic(target / 'plan.json', encoded(planned[-1] if isinstance(planned, tuple) else planned))
         checkpoint = {'id': identity, 'directory': str(target), 'document': self.active_document,
             'revision': self._record['revision'], 'documentDigest': digest(document), 'provider': self.provider, 'native': native, 'artifacts': artifacts}
@@ -641,6 +646,8 @@ class AdaptorConsoleSession:
 
     @staticmethod
     def _artifact(artifact, directory):
+        from .schema_snapshots import verify_run
+        verify_run(directory)
         path = Path(artifact.get('file', ''))
         if not path.is_absolute() or not path.resolve().is_relative_to(Path(directory).resolve()) or path.is_symlink() or not path.is_file():
             fail('VERIFICATION_FAILED', 'artifact must be a regular file within its checkpoint')

@@ -82,7 +82,16 @@ class SchemaConformanceTests(unittest.TestCase):
             provider = {'schemaxis/1':'paraview','schemaxis.blender/1':'blender','schemaxis.freecad/1':'freecad'}.get(document.get('version'))
             if provider:
                 with self.subTest(path=path.name):
-                    Draft202012Validator(export_schema(provider)).validate(expand_input(document))
+                    expanded = expand_input(document)
+                    if expanded['version'] == 'schemaxis.study/1':
+                        # A finite variant study is validated state by state.
+                        self.assertEqual(expanded['documentVersion'], document['version'])
+                        self.assertGreater(len(expanded['visits']), 1)
+                        states = [expand_input(visit['document']) for visit in expanded['visits']]
+                    else:
+                        states = [expanded]
+                    for state in states:
+                        Draft202012Validator(export_schema(provider)).validate(state)
 
     def test_invalid_literal_nodes_and_headers_are_rejected(self):
         original = {'version':'schemaxis/1', 'nodes':[{'id':'sphere','filter':'sphere'}],

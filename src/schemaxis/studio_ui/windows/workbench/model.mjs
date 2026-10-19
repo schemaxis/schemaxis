@@ -4,6 +4,12 @@ import {schemasAt} from '../../editor/schema.mjs';
 
 export const escapePointer = (part) => String(part).replaceAll('~', '~0').replaceAll('/', '~1');
 
+/** Background and explicit checks use the same saved parent revision. */
+export function validationRequest(state, params, source, format = 'json') {
+  return {provider: state.provider, source, format,
+    ...(params.operation ? {document: state.record.id, revision: state.record.revision, operation: params.operation} : {})};
+}
+
 export function diagnosticPointer(location, documentValue) {
   if (!location || location === '$') {
     return '';

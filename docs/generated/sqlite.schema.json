@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.sqlite/1"
+    },
+    "operation": {
+      "const": "summarise"
+    },
+    "tables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "type": {
+                  "enum": [
+                    "INTEGER",
+                    "TEXT"
+                  ]
+                },
+                "nullable": {
+                  "type": "boolean",
+                  "default": false
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "type"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 12
+          },
+          "primaryKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "foreignKeys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "column": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "table": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                },
+                "target": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "column",
+                "table",
+                "target"
+              ]
+            },
+            "maxItems": 4,
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "source",
+          "columns",
+          "primaryKey"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 4
+    },
+    "from": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "join": {
+      "type": "object",
+      "properties": {
+        "table": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "local": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "remote": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "table",
+        "local",
+        "remote"
+      ]
+    },
+    "where": {
+      "type": "object",
+      "properties": {
+        "column": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 81
+        },
+        "minimum": {
+          "type": "integer",
+          "minimum": -1000000000,
+          "maximum": 1000000000
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "column",
+        "minimum"
+      ]
+    },
+    "groupBy": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 81
+      },
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true
+    },
+    "sum": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 81
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "tables",
+    "from",
+    "groupBy",
+    "sum"
+  ]
+}

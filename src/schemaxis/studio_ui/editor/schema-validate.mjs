@@ -1,12 +1,12 @@
 // Light, conservative schema validation for editor squiggles. The server is
 // authoritative; this only reports problems it can attribute unambiguously:
-// type, const/enum, required, additionalProperties and numeric/array bounds.
+// type, const/enum, required, additionalProperties and numeric/array/string bounds.
 // When several anyOf/oneOf branches remain plausible it stays silent.
 
 import {escapeSegment} from './json-pointer.mjs';
 import {
   candidateBranches, contextFor, deepEqual, discriminatorOf as discriminatorIndex, evaluateIf, isMarkerInstance,
-  isMarkerSchema, isObject, matches, staticParts, typeMatches, typeOf,
+  isMarkerSchema, isObject, matches, staticParts, stringLength, typeMatches, typeOf,
 } from './schema-core.mjs';
 
 const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
@@ -97,6 +97,181 @@ function discriminatorOf(branches) {
   return key;
 }
 
+const hasKeyword = (schema, keyword) => isObject(schema) && schema[keyword] !== undefined;
+
+/**
+ * Property names a schema can accept. Deliberately a superset: the node's own `properties` plus those of every
+ * applicator child ($ref, allOf/anyOf/oneOf, then/else), so a key declared anywhere in the local tree is never
+ * treated as forbidden.
+ */
+function declaredKeys(context, schema, depth = 0, names = new Set()) {
+  if (!isObject(schema) || depth > 12) {
+    return names;
+  }
+  if (isObject(schema.properties)) {
+    Object.keys(schema.properties).forEach((key) => names.add(key));
+  }
+  if (schema.$ref !== undefined) {
+    declaredKeys(context, context.resolve(schema), depth + 1, names);
+  }
+  for (const keyword of ['allOf', 'anyOf', 'oneOf']) {
+    for (const branch of Array.isArray(schema[keyword]) ? schema[keyword] : []) {
+      declaredKeys(context, context.adopt(schema, branch), depth + 1, names);
+    }
+  }
+  for (const keyword of ['then', 'else']) {
+    declaredKeys(context, context.adopt(schema, schema[keyword]), depth + 1, names);
+  }
+  return names;
+}
+
+/**
+ * Does the schema certainly reject a field that is present in the instance because a closed object
+ * (`additionalProperties: false`, no `patternProperties`) does not declare it? Anything uncertain answers
+ * false, so a branch is only excluded when it cannot apply. `only` restricts the question to one key.
+ * (Instances carrying `$` marker keys never reach this code: `check` skips them first.)
+ */
+function forbidsPresentKey(context, schema, instance, only = null, depth = 0) {
+  if (!isObject(schema) || !isObject(instance) || depth > 12) {
+    return false;
+  }
+  const next = (child) => forbidsPresentKey(context, context.adopt(schema, child), instance, only, depth + 1);
+  if (schema.additionalProperties === false && !schema.patternProperties) {
+    const allowed = declaredKeys(context, schema);
+    for (const key of Object.keys(instance)) {
+      if (!allowed.has(key) && (only === null || key === only)) {
+        return true;
+      }
+    }
+  }
+  if (schema.$ref !== undefined && forbidsPresentKey(context, context.resolve(schema), instance, only, depth + 1)) {
+    return true;
+  }
+  if (Array.isArray(schema.allOf) && schema.allOf.some(next)) {
+    return true;
+  }
+  for (const keyword of ['anyOf', 'oneOf']) {
+    if (Array.isArray(schema[keyword])) {
+      const alternatives = schema[keyword].filter((branch) => !isMarkerSchema(context, context.adopt(schema, branch)));
+      if (alternatives.length && alternatives.every(next)) {
+        return true;
+      }
+    }
+  }
+  if (schema.if !== undefined) {
+    const result = evaluateIf(context, context.adopt(schema, schema.if), instance);
+    if (result === true) {
+      return next(schema.then);
+    }
+    if (result === false) {
+      return next(schema.else);
+    }
+    return next(schema.then) && (schema.else === false || next(schema.else));
+  }
+  return false;
+}
+
+const ANNOTATION = /^(x-|\$comment$|title$|description$)/;
+
+/** A value set a tag may take: a const, an enum, or the const-or-marker `anyOf` that generated schemas emit. */
+function isTagValueSet(schema) {
+  if (!isObject(schema) || !Object.keys(schema).every((name) => ['const', 'enum', 'anyOf'].includes(name) || ANNOTATION.test(name))) {
+    return false;
+  }
+  const valueBranch = (branch) => isObject(branch) && Object.keys(branch).length === 1 && (hasOwn(branch, 'const') || Array.isArray(branch.enum));
+  const markerBranch = (branch) => isObject(branch) && Object.keys(branch).length === 1 && branch.type === 'object';
+  if (hasOwn(schema, 'const') || Array.isArray(schema.enum)) {
+    return !hasOwn(schema, 'anyOf');
+  }
+  return Array.isArray(schema.anyOf) && schema.anyOf.some(valueBranch)
+    && schema.anyOf.every((branch) => valueBranch(branch) || markerBranch(branch));
+}
+
+/**
+ * The tag key of a pure tag condition, else null. Pure means `required` is exactly the tag key and `properties`
+ * has exactly that key with a value set, beside at most `type: "object"` and annotations. Anything else could fail
+ * for a reason other than the tag, so it must not be used to call a tag value unknown.
+ */
+function pureTagKey(condition) {
+  if (!isObject(condition) || !Array.isArray(condition.required) || condition.required.length !== 1
+    || !isObject(condition.properties)) {
+    return null;
+  }
+  const key = condition.required[0];
+  if (Object.keys(condition.properties).length !== 1 || !hasOwn(condition.properties, key)) {
+    return null;
+  }
+  for (const name of Object.keys(condition)) {
+    if (name === 'properties' || name === 'required' || ANNOTATION.test(name) || (name === 'type' && condition.type === 'object')) {
+      continue;
+    }
+    return null;
+  }
+  return isTagValueSet(condition.properties[key]) ? key : null;
+}
+
+/**
+ * A tag-like branch (`if` on one required key with properties, `else: false`) whose condition is NOT a pure tag, whose tag
+ * field is present, and whose full condition did not hold: the instance may be an invalid form of that branch, so nothing can
+ * be attributed. A branch whose condition does hold is positively selected and reports its own errors instead.
+ */
+function hasImpureTaggedBranch(context, viable, instance) {
+  return isObject(instance) && viable.some((branch) => isObject(branch) && isObject(branch.if) && branch.else === false
+    && Array.isArray(branch.if.required) && branch.if.required.length === 1 && isObject(branch.if.properties)
+    && pureTagKey(branch.if) === null && hasOwn(instance, branch.if.required[0])
+    && !selectedByCondition(context, branch, instance));
+}
+
+/** A conditional branch whose `if` is certainly satisfied by the instance (its discriminator is present and matches). */
+function selectedByCondition(context, branch, instance) {
+  return hasKeyword(branch, 'if') && evaluateIf(context, context.adopt(branch, branch.if), instance) === true;
+}
+
+/**
+ * Narrow several plausible alternatives without guessing: a positively selected conditional branch wins; otherwise
+ * branches that forbid a present field are set aside. When that would leave nothing, or several remain,
+ * the original set is kept so the caller stays silent.
+ *
+ * Precedence rule (intentional, not ambiguity handling): this only runs after no whole alternative matched the
+ * instance. A conditional branch whose condition is certainly true dominates every other plausible alternative, even an
+ * open untagged one that also admits the tag, because the instance itself declared which branch it means; the tagged
+ * branch's errors are then reported instead of staying silent. Pinned by a test in editor-alternatives-validation.
+ */
+function narrowCandidates(context, candidates, instance) {
+  let pool = candidates;
+  const selected = pool.filter((branch) => selectedByCondition(context, branch, instance));
+  if (selected.length) {
+    pool = selected;
+  }
+  if (pool.length > 1) {
+    const open = pool.filter((branch) => !forbidsPresentKey(context, branch, instance));
+    if (open.length) {
+      pool = open;
+    }
+  }
+  return pool;
+}
+
+/**
+ * Strictly tagged (if/then, else: false) alternatives beside untagged ones: the tag is present, no tagged branch
+ * accepts its value, and every untagged branch is a closed object that does not declare the tag field.
+ */
+function unknownTag(context, viable, instance) {
+  const tagged = viable.filter((branch) => isObject(branch) && branch.else === false && pureTagKey(branch.if) !== null);
+  if (!tagged.length || tagged.length === viable.length || !isObject(instance)) {
+    return null;
+  }
+  const key = pureTagKey(tagged[0].if);
+  if (tagged.some((branch) => pureTagKey(branch.if) !== key) || typeof instance[key] !== 'string') {
+    return null;
+  }
+  if (tagged.some((branch) => selectedByCondition(context, branch, instance))) {
+    return null;
+  }
+  const untagged = viable.filter((branch) => !tagged.includes(branch));
+  return untagged.every((branch) => forbidsPresentKey(context, branch, instance, key)) ? key : null;
+}
+
 class Validator {
   constructor(rootSchema, options) {
     this.context = contextFor(rootSchema);
@@ -144,6 +319,8 @@ class Validator {
     }
     if (typeof instance === 'number') {
       this.checkNumber(schema, instance, pointer);
+    } else if (typeof instance === 'string') {
+      this.checkString(schema, instance, pointer);
     } else if (Array.isArray(instance)) {
       this.checkArray(schema, instance, pointer, depth);
     } else if (isObject(instance)) {
@@ -162,6 +339,17 @@ class Validator {
       if (branch !== false) {
         this.check(adopt(branch), instance, pointer, depth + 1);
       }
+    }
+  }
+
+  checkString(schema, value, pointer) {
+    if (schema.minLength === undefined && schema.maxLength === undefined) return;
+    const length = stringLength(value);
+    if (schema.minLength !== undefined && length < schema.minLength) {
+      this.report(pointer, `Expected at least ${schema.minLength} character${schema.minLength === 1 ? '' : 's'}`);
+    }
+    if (schema.maxLength !== undefined && length > schema.maxLength) {
+      this.report(pointer, `Expected at most ${schema.maxLength} character${schema.maxLength === 1 ? '' : 's'}`);
     }
   }
 
@@ -236,7 +424,18 @@ class Validator {
     if (!viable.length || viable.some((branch) => matches(context, branch, instance))) {
       return;
     }
-    const candidates = viable.length === 1 ? viable : viable.filter((branch) => plausible(context, branch, instance));
+    if (viable.length > 1 && hasImpureTaggedBranch(context, viable, instance)) {
+      return;
+    }
+    const tag = viable.length > 1 ? unknownTag(context, viable, instance) : null;
+    if (tag !== null) {
+      this.report(`${pointer}/${escapeSegment(tag)}`, `Unknown ${tag} "${instance[tag]}"`);
+      return;
+    }
+    let candidates = viable.length === 1 ? viable : viable.filter((branch) => plausible(context, branch, instance));
+    if (candidates.length > 1) {
+      candidates = narrowCandidates(context, candidates, instance);
+    }
     if (candidates.length === 1) {
       this.check(candidates[0], instance, pointer, depth + 1);
       return;

@@ -97,12 +97,39 @@ func count_nodes(node):
         total += count_nodes(child)
     return total
 
+func descendants(node, found):
+    for child in node.get_children():
+        found.append(child)
+        descendants(child, found)
+
+func group_bounds(node):
+    var meshes = []
+    mesh_nodes(node, meshes)
+    if meshes.is_empty():
+        return null
+    var box = meshes[0].global_transform * meshes[0].get_aabb()
+    for mesh_node in meshes.slice(1):
+        box = box.merge(mesh_node.global_transform * mesh_node.get_aabb())
+    return arr(box.position) + arr(box.end)
+
 func measure(scene):
     var records = {}
-    for node in scene.get_children():
-        var record = {"class": node.get_class(), "owned": node.owner == scene}
+    var all_nodes = []
+    descendants(scene, all_nodes)
+    for node in all_nodes:
+        var record = {"class": node.get_class(), "owned": node.owner == scene,
+            "owner": str(scene.get_path_to(node.owner)) if node.owner != null else null,
+            "parent": null if node.get_parent() == scene else str(node.get_parent().name)}
+        if node is Node3D:
+            record["worldPosition"] = arr(node.global_position)
+            record["worldBasis"] = [arr(node.global_basis.x), arr(node.global_basis.y), arr(node.global_basis.z)]
+            record["topLevel"] = node.top_level
+        if node.get_class() == "Node3D":
+            record["position"] = arr(node.position)
+            record["basis"] = [arr(node.basis.x), arr(node.basis.y), arr(node.basis.z)]
+            record["bounds"] = group_bounds(node)
         if node is MeshInstance3D:
-            var box = node.transform * node.get_aabb()
+            var box = node.global_transform * node.get_aabb()
             record["bounds"] = arr(box.position) + arr(box.end)
             record["position"] = arr(node.position)
             record["mesh"] = node.mesh.get_class()
@@ -160,6 +187,7 @@ func construct():
     scene.name = "SchemaxisScene"
     root.add_child(scene)
     var materials = {}
+    var scene_nodes = {}
     for item in definition.nodes:
         var options = item.options
         var operation = item.filter
@@ -172,7 +200,12 @@ func construct():
             materials[item.id] = material
             continue
         var node
-        if operation == "camera":
+        if operation == "transformGroup":
+            node = Node3D.new()
+            node.position = vec(options.position)
+            node.rotation_degrees = vec(options.rotation)
+            node.scale = vec(options.scale)
+        elif operation == "camera":
             node = Camera3D.new()
             node.position = vec(options.position)
             node.fov = options.fov
@@ -278,8 +311,10 @@ func construct():
             node.position = vec(options.position)
             node.material_override = materials[item.inputs.material]
         node.name = item.id
-        scene.add_child(node)
+        var parent = scene_nodes[item.inputs.parent] if item.inputs.has("parent") else scene
+        parent.add_child(node)
         node.owner = scene
+        scene_nodes[item.id] = node
         if node is Camera3D:
             node.look_at(vec(options.target), Vector3.UP)
             node.current = true

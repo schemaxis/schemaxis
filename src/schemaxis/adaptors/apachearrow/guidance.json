@@ -1,0 +1,175 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "prepareTable": {
+      "status": "reviewed",
+      "explanation": "Filter, select, rename and prepare an explicitly typed nullable table as independently verified Parquet and a readable report.",
+      "sources": [
+        "docs/apachearrow.md"
+      ],
+      "pitfalls": [
+        "Keep source row order, exact wide integers, Unicode text, null masks and UTC microseconds.",
+        "Only declared int32-to-int64 widening and explicit null replacement; no arbitrary expressions or metadata."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/apachearrow-measurements.json",
+          "purpose": "Preserve typed nullable measurements."
+        },
+        {
+          "reference": "examples/schemaxis/apachearrow-selection.json",
+          "purpose": "Filter accepted rows and prepare selected columns."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.apachearrow/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Prepare one explicitly typed nullable CSV table as Parquet and a complete JSON report. Declare all source fields, then filter and select output columns. Types and missing values are explicit; no metadata, units or arbitrary expressions are inferred.",
+          "sources": [
+            "docs/apachearrow.md#csv-contract-and-types"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Required Schemaxis document contract schemaxis.apachearrow/1. This is separate from the pinned PyArrow 26.0.0 native runtime.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose prepareTable to preserve typed nullable CSV values in Parquet while applying bounded filters, projection, rename, widening and explicit null replacement.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Required absolute local regular UTF-8 .csv file, at most 8 MiB, with an exact header. File symlinks, BOM, URLs and malformed quoting are rejected. Bytes are captured for standalone verification; changed current bytes invalidate workflow reuse.",
+          "sources": [
+            "docs/apachearrow.md#csv-contract-and-types"
+          ],
+          "fileExtensions": [
+            ".csv"
+          ]
+        },
+        "/properties/columns": {
+          "status": "reviewed",
+          "explanation": "Declare every source field in CSV header order, 1\u201332 columns and at most 200000 cells/10000 rows. Names are unique. Missing/extra source cells fail even in rows later filtered out. No field metadata or units are accepted.",
+          "sources": [
+            "docs/apachearrow.md#csv-contract-and-types"
+          ]
+        },
+        "/properties/columns/items": {
+          "status": "reviewed",
+          "explanation": "One source field pairs its exact header name with an explicit type and optional nullability. The reserved cell \\N means null; an empty text cell is a distinct valid value.",
+          "sources": [
+            "docs/apachearrow.md#csv-contract-and-types"
+          ]
+        },
+        "/properties/columns/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Exact CSV header identifier: lower-case ASCII letter followed by letters,digits or underscores, at most 40 characters. Names must be unique and in header order; no expressions or inferred names.",
+          "sources": [
+            "docs/apachearrow.md#csv-contract-and-types"
+          ]
+        },
+        "/properties/columns/items/properties/type": {
+          "status": "reviewed",
+          "explanation": "Required bool,int32,int64,float64,utf8 or timestamp_us_utc. Booleans use true/false; integers are canonical signed decimal; doubles are finite binary64; text preserves Unicode; times require UTC with at most six fractional digits. No inference, locale or unit conversion.",
+          "sources": [
+            "docs/apachearrow.md#csv-contract-and-types"
+          ]
+        },
+        "/properties/columns/items/properties/nullable": {
+          "status": "reviewed",
+          "explanation": "Defaults to false. Enable only when this source column may contain the reserved \\N cell, including quoted \\N. Empty text and NA remain nonnull; empty numeric/time cells always fail. Every source row is checked.",
+          "sources": [
+            "docs/apachearrow.md#csv-contract-and-types"
+          ]
+        },
+        "/properties/where": {
+          "status": "reviewed",
+          "explanation": "Optional list of at most eight predicates, default empty (retain all rows). All predicates must pass. Filters inspect source values before selection, cast or null replacement and retain source row order.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/where/items": {
+          "status": "reviewed",
+          "explanation": "One typed condition names a source column and test. Comparisons require a lexical value string; isNull/isValid omit it. Null comparisons drop the row, including ne.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/where/items/properties/column": {
+          "status": "reviewed",
+          "explanation": "Required declared source column to test. Use the original header name, not a renamed output field. Filtering still works when that source field is omitted from the output.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/where/items/properties/test": {
+          "status": "reviewed",
+          "explanation": "Choose eq/ne for any type, lt/le/gt/ge for numeric or UTC timestamp columns, or isNull/isValid for any column. Comparisons against null do not pass. Text ordering and implicit bool-number comparison are unsupported.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/where/items/properties/value": {
+          "status": "reviewed",
+          "explanation": "Required only for comparisons and forbidden for isNull/isValid. Supply a nonnull string with the source type\u2019s exact CSV spelling, for example 9007199254740993 or true. Strings protect wide integers from JSON rounding; \\N is reserved and cannot be a literal.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/select": {
+          "status": "reviewed",
+          "explanation": "Required ordered list of 1\u201332 distinct source columns. Each maps column to a unique output name. Omitted source columns are deliberately excluded; output rows retain source order.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/select/items": {
+          "status": "reviewed",
+          "explanation": "One output field selects a source column, assigns its name and optionally widens int32 to int64 or explicitly replaces nulls. Transformations follow filtering, with widening before replacement.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/select/items/properties/column": {
+          "status": "reviewed",
+          "explanation": "Required declared source column; select each at most once. Use the original CSV header name. No arithmetic expression or duplicate projection is supported.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/select/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Required unique output identifier, lower-case ASCII letter then letters,digits or underscores, at most 40 characters. It controls the Parquet field and report column name; keep the source name when no rename is wanted.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/select/items/properties/cast": {
+          "status": "reviewed",
+          "explanation": "Optional int64 only, permitted for an int32 source. Omit to preserve the source type. Widening preserves every integer exactly; narrowing,float conversion,string parsing and timestamp conversion are unsupported.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/select/items/properties/fillNull": {
+          "status": "reviewed",
+          "explanation": "Optional nonnull lexical string, valid only on a nullable source, parsed as the output type after any widening. Replaces nulls alone and marks output nonnullable. Omit to preserve nulls; an empty string can fill text but \\N cannot. No default replacement is inferred.",
+          "sources": [
+            "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        }
+      }
+    }
+  }
+}

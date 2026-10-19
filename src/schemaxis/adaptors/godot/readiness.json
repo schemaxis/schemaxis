@@ -4,7 +4,7 @@
     "schemaxis.godot/1": {
       "guide": "docs/godot.md",
       "context": {
-        "purpose": "Create editable Godot projects and scenes from declared primitives, materials, lights, cameras and supported glTF/PNG inputs.",
+        "purpose": "Create editable Godot projects and scenes from declared primitives, materials, lights, cameras and supported glTF/PNG inputs. Named groups assemble static geometry with local transforms and verified world bounds.",
         "assumptions": "Godot 4.x; metres, explicit transforms and intrinsic YXZ Euler rotation semantics. Resources must remain with the project. Preview rendering needs an available graphics environment.",
         "constraints": "No arbitrary GDScript; only trusted generated project/orbit scripts. Bounded self-contained glTF subset. No live reverse synchronisation or universal material preservation.",
         "inspection": "Inspect fresh-process scene node membership, transforms, bounds, material/light settings and optional decoded PNG preview. Headless case acceptance does not qualify graphical rendering.",
@@ -52,15 +52,137 @@
           "expect": "invalid",
           "fault": "UNSUPPORTED_UNITS",
           "schemaValid": false
+        },
+        {
+          "id": "hierarchy",
+          "reference": "examples/schemaxis/godot-hierarchy.json"
+        },
+        {
+          "id": "cyclic-parent",
+          "document": {
+            "version": "schemaxis.godot/1",
+            "units": "m",
+            "nodes": [
+              {
+                "id": "paint",
+                "filter": "material",
+                "options": {
+                  "colour": [
+                    0.2,
+                    0.6,
+                    0.9
+                  ]
+                }
+              },
+              {
+                "id": "block",
+                "filter": "box",
+                "options": {
+                  "size": [
+                    2,
+                    2,
+                    4
+                  ],
+                  "position": [
+                    0,
+                    1,
+                    0
+                  ]
+                },
+                "inputs": {
+                  "material": "paint",
+                  "parent": "arm"
+                }
+              },
+              {
+                "id": "arm",
+                "filter": "transformGroup",
+                "options": {
+                  "position": [
+                    1,
+                    0,
+                    0
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    45
+                  ],
+                  "scale": [
+                    1,
+                    3,
+                    1
+                  ]
+                },
+                "inputs": {
+                  "parent": "assembly"
+                }
+              },
+              {
+                "id": "assembly",
+                "filter": "transformGroup",
+                "options": {
+                  "position": [
+                    10,
+                    0,
+                    0
+                  ],
+                  "rotation": [
+                    0,
+                    0,
+                    90
+                  ],
+                  "scale": [
+                    2,
+                    1,
+                    1
+                  ]
+                },
+                "inputs": {
+                  "parent": "arm"
+                }
+              },
+              {
+                "id": "empty",
+                "filter": "transformGroup"
+              },
+              {
+                "id": "view",
+                "filter": "camera",
+                "options": {
+                  "position": [
+                    15,
+                    8,
+                    20
+                  ],
+                  "target": [
+                    8,
+                    0,
+                    0
+                  ],
+                  "orbit": false
+                }
+              },
+              {
+                "id": "sun",
+                "filter": "directionalLight"
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "DEPENDENCY_CYCLE",
+          "schemaValid": true
         }
       ],
       "conformance": [
         "tests/unit/test_schemaxis_godot.py",
-        "tests/unit/test_adaptor_migration.py"
+        "tests/unit/test_adaptor_migration.py",
+        "tests/unit/test_godot_hierarchy.py"
       ],
       "acceptance": [
         "tools/qualify_adaptor_migration.py",
-        "tools/qualify_godot.py"
+        "tools/qualify_godot.py",
+        "tools/qualify_godot_hierarchy.py"
       ],
       "profiles": {
         "workflow": {
@@ -80,7 +202,9 @@
       },
       "development": {
         "api": [
-          "https://docs.godotengine.org/en/stable/classes/"
+          "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+          "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner",
+          "https://docs.godotengine.org/en/stable/classes/class_packedscene.html"
         ],
         "lifecycle": {
           "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
@@ -260,8 +384,106 @@
                 "absolute": 1e-06
               }
             ]
+          },
+          {
+            "id": "hierarchy",
+            "example": "hierarchy",
+            "edits": [],
+            "scope": "Rotated non-uniform nested static assembly; independent literal world AABB and exact parent/root ownership. Full affine induced shear is preserved.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/block/bounds",
+                "expected": [
+                  5.050252531694167,
+                  -7.899494936611665,
+                  -2,
+                  10.707106781186548,
+                  3.414213562373095,
+                  2
+                ],
+                "absolute": 1e-05
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/block/parent",
+                "expected": "arm"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/block/owner",
+                "expected": "."
+              }
+            ]
+          },
+          {
+            "id": "hierarchy-variant",
+            "example": "hierarchy",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/3/options/position",
+                "value": [
+                  20,
+                  0,
+                  0
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/3/options/scale",
+                "value": [
+                  1,
+                  2,
+                  1
+                ]
+              }
+            ],
+            "scope": "Rotated non-uniform nested static assembly; independent literal world AABB and exact parent/root ownership. Full affine induced shear is preserved.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/block/bounds",
+                "expected": [
+                  10.100505063388335,
+                  -3.9497474683058327,
+                  -2,
+                  21.414213562373096,
+                  1.7071067811865475,
+                  2
+                ],
+                "absolute": 1e-05
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/block/parent",
+                "expected": "arm"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/block/owner",
+                "expected": "."
+              }
+            ]
           }
         ]
+      },
+      "completion": {
+        "scope": "Named transformGroup static assemblies, optional geometry/group parents, local transform composition, ownership and world bounds; legacy root nodes retained.",
+        "review": [
+          "verification/2026-10-17-godot-completion.md"
+        ],
+        "notApplicable": {
+          "mpi": "Static Godot scenes run serially; no distributed execution.",
+          "time-batches": "No simulation time or animation in this bounded static assembly slice.",
+          "live-editing": "Saved project edits invalidate verification; no live reverse synchronisation."
+        }
       }
     }
   }

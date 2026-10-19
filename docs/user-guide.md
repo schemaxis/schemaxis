@@ -78,7 +78,7 @@ Installation may need the build tools declared in `pyproject.toml`. The checkout
 form with `PYTHONPATH=src` avoids that installation step. All examples below use
 `python3 -m schemaxis`; installed users can substitute `schemaxis`.
 
-Native applications are separate installations. Registered runtime families are
+Native applications are separate installations. Registered runtime families include
 ParaView 5.13.3, Blender 5.2.2, FreeCAD 1.1.x, Godot 4.x and Aseprite 1.3.x,
 plus FFmpeg/FFprobe and QGIS Python.
 Discovery reports declared requirements, not whether an installation is available.
@@ -94,6 +94,11 @@ Supply explicit absolute locations for reliable reproduction:
 | Aseprite | `--aseprite` | Separately installed Aseprite executable |
 | FFmpeg | `--ffmpeg` | Video encoder; matching `ffprobe` must be beside it |
 | QGIS | `--qgis` | Python launcher configured for the QGIS runtime |
+| KiCad | `--kicad` | `kicad-cli` executable |
+| ImageJ | `--imagej`, `--imagej-jar` | Full JDK's `java` executable and ImageJ core `ij.jar` |
+| PrusaSlicer | `--prusaslicer` | `prusa-slicer` console executable |
+
+See [installation](installation.md) for numerical, structural, workbook and other runtime setup.
 
 Replace `/absolute/path/to/...` placeholders with your installation. Run repository
 examples from the repository root. Some use relative resources; case/import

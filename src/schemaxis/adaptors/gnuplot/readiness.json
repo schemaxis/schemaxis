@@ -1,0 +1,389 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.gnuplot/1": {
+      "guide": "docs/gnuplot.md",
+      "context": {
+        "purpose": "Plot named numeric CSV series with units, explicit ranges and optional symmetric y uncertainty.",
+        "assumptions": "Finite increasing x data, matching units, bounded local CSV; fixed margins and typography.",
+        "constraints": "2\u20132048 rows, 2\u201312 columns, 1\u20134 series; linear/log10, no missing data or clipping, ASCII labels.",
+        "inspection": "Inspect raw native plot.svg/plot.png, captured.csv and trusted plot.gp. plot-summary.json records independent host inspection and is not native readback.",
+        "recovery": "INVALID_PLOT_RANGE: increasing separated positive log ranges. INVALID_LOG_DATA: positive values and uncertainty endpoints. PLOT_UNIT_MISMATCH: declare matching column/axis units. INVALID_PLOT_DATA: rectangular numeric cells/header. INTERPRETER_NOT_FOUND: configure Gnuplot."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/gnuplot-calibration.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/gnuplot-calibration-variant.json"
+        },
+        {
+          "id": "logarithmic",
+          "reference": "examples/schemaxis/gnuplot-logarithmic.json"
+        },
+        {
+          "id": "logarithmic-variant",
+          "reference": "examples/schemaxis/gnuplot-logarithmic-variant.json"
+        },
+        {
+          "id": "invalid-range",
+          "reference": "examples/schemaxis/gnuplot-range-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_PLOT_RANGE",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_gnuplot.py"
+      ],
+      "acceptance": [
+        "tools/qualify_gnuplot.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Run plotting jobs as isolated common workflow operations with independently verified outputs.",
+          "references": [
+            "docs/gnuplot.md",
+            "tools/qualify_gnuplot.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure expressions and finite studies resolve before native plotting.",
+          "references": [
+            "docs/gnuplot.md",
+            "tools/qualify_gnuplot.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html",
+          "https://gnuplot.sourceforge.net/docs_6.0/loc9562.html",
+          "https://gnuplot.sourceforge.net/docs_6.0/loc13689.html",
+          "https://gnuplot.sourceforge.net/docs_6.0/loc22928.html",
+          "https://gnuplot.sourceforge.net/docs_6.0/loc22106.html"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers native version/render and final verification; native CPU 60s, address space 512MiB, file 16MiB.",
+          "cancellation": "Shared process-group cancellation terminates the owned native process; check cancellation before publication.",
+          "logs": "Authored/effective plans, source capture/digest, trusted script, stage input hashes, launcher, command submissions/stdout/stderr, raw SVG/PNG and host inspection summary are retained.",
+          "verification": "Independent standard-library SVG geometry/labels and decoded PNG dimensions/series pixels use the captured CSV and declared axis transforms. Exact native/evidence/publication membership and trusted script/input bindings are checked."
+        },
+        "data": [
+          {
+            "id": "csv",
+            "direction": "input",
+            "kind": "file",
+            "format": "CSV",
+            "traits": {
+              "columns": "named numeric values with units"
+            },
+            "losses": [
+              "ASCII numeric cells only, no missing values/dates or automatic unit conversion."
+            ],
+            "scope": "At most 1MiB, 2048 data rows, 12 named columns captured before execution."
+          },
+          {
+            "id": "plot",
+            "direction": "output",
+            "kind": "image",
+            "format": "SVG and PNG",
+            "traits": {
+              "geometry": "connected samples and optional symmetric y uncertainty"
+            },
+            "losses": [
+              "Fixed plot design; no exact font/accessibility/raster equivalence claim."
+            ],
+            "scope": "Independent labels/geometry and series pixel checks."
+          },
+          {
+            "id": "script",
+            "direction": "output",
+            "kind": "text",
+            "format": "Gnuplot script",
+            "traits": {
+              "editable": true
+            },
+            "losses": [
+              "Externally edited script does not constitute a verified Schemaxis run."
+            ],
+            "scope": "Trusted generated plot.gp can be edited with captured.csv outside Schemaxis."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "image",
+            "scope": "View the verified SVG/PNG plot.",
+            "limits": "No live native editing or reverse synchronisation."
+          },
+          {
+            "panel": "text",
+            "scope": "Read captured.csv, trusted plot.gp and plot-summary.json.",
+            "limits": "Summary is host inspection, raw native output remains in plot.svg/plot.png."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit declared fields, plan fresh and run. Common authored references and finite visits are supported; source byte hashes invalidate stale reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Run plotting jobs as isolated common workflow operations with independently verified outputs."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "The serial batch plotting route does not implement native-inspection; its editable generated script is an output artifact, not an interactive native session."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure expressions and finite studies resolve before native plotting."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The serial batch plotting route does not implement mpi; its editable generated script is an output artifact, not an interactive native session."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Captured CSV bytes participate in reuse identity; changed source bytes invalidate reuse."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "The serial batch plotting route does not implement time-batches; its editable generated script is an output artifact, not an interactive native session."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON source editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer editing of axes, named column mappings, labels, units and series."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "The serial batch plotting route does not implement live-editing; its editable generated script is an output artifact, not an interactive native session."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The serial batch plotting route does not implement native-save; its editable generated script is an output artifact, not an interactive native session."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "The serial batch plotting route does not implement conversion; its editable generated script is an output artifact, not an interactive native session."
+          }
+        },
+        "cases": [
+          {
+            "id": "calibration",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gnuplot/calibration.csv"
+            },
+            "scope": "Independent SVG sample/line/errorbar geometry plus reconstructed PNG sample/line/error pixels against captured mapped CSV. Literal pixel coordinates use fixed plot margins and declared axis transforms; summary is adaptor-authored inspection, not raw native output.",
+            "checks": [
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/series",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/points",
+                "expected": [
+                  [
+                    120,
+                    375
+                  ],
+                  [
+                    440,
+                    270
+                  ],
+                  [
+                    760,
+                    165
+                  ]
+                ],
+                "absolute": 0.002,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "changed-series",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gnuplot/calibration-variant.csv"
+            },
+            "scope": "Independent SVG sample/line/errorbar geometry plus reconstructed PNG sample/line/error pixels against captured mapped CSV. Literal pixel coordinates use fixed plot margins and declared axis transforms; summary is adaptor-authored inspection, not raw native output.",
+            "checks": [
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/series",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/points",
+                "expected": [
+                  [
+                    120,
+                    375
+                  ],
+                  [
+                    440,
+                    165
+                  ],
+                  [
+                    760,
+                    270
+                  ]
+                ],
+                "absolute": 0.002,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "logarithmic",
+            "example": "logarithmic",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gnuplot/logarithmic.csv"
+            },
+            "scope": "Independent SVG sample/line/errorbar geometry plus reconstructed PNG sample/line/error pixels against captured mapped CSV. Literal pixel coordinates use fixed plot margins and declared axis transforms; summary is adaptor-authored inspection, not raw native output.",
+            "checks": [
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/series",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/points",
+                "expected": [
+                  [
+                    120,
+                    340
+                  ],
+                  [
+                    440,
+                    200
+                  ],
+                  [
+                    760,
+                    102.144
+                  ]
+                ],
+                "absolute": 0.002,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "changed-logarithmic",
+            "example": "logarithmic-variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gnuplot/logarithmic-variant.csv"
+            },
+            "scope": "Independent SVG sample/line/errorbar geometry plus reconstructed PNG sample/line/error pixels against captured mapped CSV. Literal pixel coordinates use fixed plot margins and declared axis transforms; summary is adaptor-authored inspection, not raw native output.",
+            "checks": [
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/series",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/points",
+                "expected": [
+                  [
+                    120,
+                    297.856
+                  ],
+                  [
+                    440,
+                    242.144
+                  ],
+                  [
+                    760,
+                    157.856
+                  ]
+                ],
+                "absolute": 0.002,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial numeric CSV plotting route, all declared fields, trusted script, independent SVG/PNG verification and source-byte reuse.",
+        "review": [
+          "verification/2026-10-17-gnuplot-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The serial batch plotting route does not implement native-inspection; its editable generated script is an output artifact, not an interactive native session.",
+          "mpi": "The serial batch plotting route does not implement mpi; its editable generated script is an output artifact, not an interactive native session.",
+          "time-batches": "The serial batch plotting route does not implement time-batches; its editable generated script is an output artifact, not an interactive native session.",
+          "live-editing": "The serial batch plotting route does not implement live-editing; its editable generated script is an output artifact, not an interactive native session.",
+          "native-save": "The serial batch plotting route does not implement native-save; its editable generated script is an output artifact, not an interactive native session.",
+          "conversion": "The serial batch plotting route does not implement conversion; its editable generated script is an output artifact, not an interactive native session."
+        }
+      }
+    }
+  }
+}

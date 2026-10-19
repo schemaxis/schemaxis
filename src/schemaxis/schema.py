@@ -222,17 +222,13 @@ def expand_input(document):
     mode = route.get('expand', 'graph' if route.get('graph') else 'identity')
     if mode == 'identity': return copy.deepcopy(document)
     if mode == 'plannedNodes':
-        from .parallel import provisional
-        # Expand defaults without consuming durable references before producers run.
-        def restore(expanded, authored):
-            if isinstance(authored, dict):
-                if '$artifact' in authored:
-                    return copy.deepcopy(authored)
-                return {key: restore(value, authored.get(key)) for key, value in expanded.items()}
-            if isinstance(authored, list):
-                return [restore(value, authored[index]) for index, value in enumerate(expanded)]
-            return expanded
-        return {**copy.deepcopy(document), 'nodes': restore(plan(provisional(document))['nodes'], document['nodes'])}
+        from .workflow import dependencies
+        # A producer's verified artifact can determine consumer validity and
+        # defaults. Retain its authored document until that input is available;
+        # a fabricated path must never enter an adaptor's literal planner.
+        if any(dependencies(document)):
+            return copy.deepcopy(document)
+        return {**copy.deepcopy(document), 'nodes': plan(document)['nodes']}
     result, _ = resolve_document(copy.deepcopy(document))
     if mode == 'composition': return result
     result = compile_objects(result)

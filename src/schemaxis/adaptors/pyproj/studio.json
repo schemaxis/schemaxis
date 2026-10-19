@@ -1,0 +1,101 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.pyproj/1",
+    "operation": "routeStations",
+    "source": "/replace/with/pyproj-winnipeg-route.csv",
+    "ellipsoid": "WGS84",
+    "coordinateOrder": "lonLat",
+    "spacing_m": 1000,
+    "requirements": {
+      "totalLength_m": {
+        "maximum": 50000
+      }
+    }
+  },
+  "categories": [
+    {
+      "id": "geodesy",
+      "title": "Routes and geodesy",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "open-route",
+      "title": "Stations along an open route",
+      "description": "Place stations every 1 km of WGS84 geodesic distance along an ordered route and require a maximum total length. Replace the CSV path.",
+      "document": {
+        "version": "schemaxis.pyproj/1",
+        "operation": "routeStations",
+        "source": {
+          "$fill": "source"
+        },
+        "ellipsoid": "WGS84",
+        "coordinateOrder": "lonLat",
+        "spacing_m": 1000,
+        "requirements": {
+          "totalLength_m": {
+            "maximum": 50000
+          }
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/pyproj-winnipeg-route.csv"
+      },
+      "fields": {
+        "source": {
+          "label": "Waypoint CSV source",
+          "type": "path",
+          "required": true,
+          "description": "Absolute local ASCII CSV with columns lon_deg,lat_deg (optionally name first) in WGS84 decimal degrees, in route order.",
+          "extensions": [
+            "csv"
+          ],
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "requires": "Configure an isolated Python with exactly pyproj 3.8.0 and PROJ 9.9.0 (--pyproj) and select a waypoint CSV."
+    },
+    {
+      "id": "closed-loop",
+      "title": "Stations around a closed loop",
+      "description": "Close the route back to its first waypoint (do not repeat it in the CSV) and station it every 2 km.",
+      "document": {
+        "version": "schemaxis.pyproj/1",
+        "operation": "routeStations",
+        "source": {
+          "$fill": "source"
+        },
+        "ellipsoid": "WGS84",
+        "coordinateOrder": "lonLat",
+        "spacing_m": 2000,
+        "closed": true
+      },
+      "testValues": {
+        "source": "/replace/with/pyproj-winnipeg-loop.csv"
+      },
+      "fields": {
+        "source": {
+          "label": "Waypoint CSV source",
+          "type": "path",
+          "required": true,
+          "description": "Absolute local ASCII CSV with columns lon_deg,lat_deg (optionally name first) in WGS84 decimal degrees, in route order.",
+          "extensions": [
+            "csv"
+          ],
+          "acceptsKinds": [
+            "table"
+          ]
+        }
+      },
+      "requires": "Configure an isolated Python with exactly pyproj 3.8.0 and PROJ 9.9.0 (--pyproj) and select a waypoint CSV."
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

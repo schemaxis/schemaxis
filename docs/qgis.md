@@ -2,7 +2,7 @@
 
 `schemaxis.qgis/1` adds host-safe declared vector GIS planning. Native QGIS runs in
 isolated Python processes; the host retains no native imports or third-party
-runtime dependencies. Select a Python executable/launcher configured for QGIS 3
+runtime dependencies. Select a Python executable/launcher configured for QGIS 3 or 4
 with `--qgis /absolute/qgis-python` or `QGIS_PYTHON`. This is not the `qgis_process`
 executable. A system QGIS Python installation can use `/usr/bin/python3` when its
 QGIS providers and data are configured correctly.
@@ -16,6 +16,10 @@ QGIS providers and data are configured correctly.
 | `buffer` | Positive `distance`, optional `segments` (4–64, default 16) | Native geometry buffer; projected CRS in metres required |
 | `clip` | `bounds: [xmin,ymin,xmax,ymax]` | Geometric intersection with a rectangle in the input layer's CRS |
 | `centroid` | None | Planar area-weighted centre of each projected polygon; attributes/CRS retained |
+
+GeoJSON without a CRS member uses its format-defined EPSG:4326 default. An explicit
+named CRS must resolve successfully and match the native provider; invalid authority
+codes fail instead of silently falling back.
 
 Every operation except the reader takes `inputs: {"input": "earlierNode"}`.
 `output` selects the node to publish. `preview` defaults to true. Operations are
@@ -123,3 +127,74 @@ The editable [parcel example](../examples/schemaxis/qgis-centroids.json) takes t
 path. Its centroid is (5,10); clipping to x=0…5 first changes it to (2.5,10). These
 literal coordinates and retained attributes are checked by native kit acceptance.
 See the [public geometry API](https://api.qgis.org/api/classQgsGeometry.html).
+
+## Attribute selection and grouped summaries
+
+`selectAttributes` keeps complete vector features whose declared predicates all
+pass. Provide an `idField` containing unique nonempty string identifiers from your
+data; QGIS storage `fid` is excluded. Each predicate declares an exact `field`,
+`type` (`number`, `string`, `boolean`), `comparison`, and a matching literal
+`value`. `eq`/`ne` work on each type; `gt`/`ge`/`lt`/`le` order numbers only.
+`isNull`/`isNotNull` omit `value`. Comparisons, including `ne`, exclude null.
+Boolean values are never treated as numbers, and strings are never parsed as
+numbers. All nonnull values in a referenced input field must match its declared
+type, including rows excluded by another predicate. Field existence, data types
+and identities are checked against captured data during native execution.
+
+Declare inclusive `minFeatures`/`maxFeatures` requirements (defaults 1/10000).
+An unexpected count produces `FEATURE_REQUIREMENT_FAILED` at the count requirement;
+missing fields, inconsistent types or invalid IDs produce `INVALID_ATTRIBUTE` at
+the responsible option. Repair the source or the field/type declaration; lowering
+an expectation requires a domain reason. Empty vector publication is unsupported.
+Selection preserves each surviving geometry, original attributes and CRS exactly.
+
+`summariseAttributes` produces **side tables** while passing its input vector
+through unchanged. Its `idField` has the same identity contract. `groupBy` is an
+existing nullable **string** field. A null key forms one group, distinct from an
+empty string. Groups sort null first, then by Unicode string order; `memberIds`
+sorts by source string ID. Every aggregate declares a unique ASCII `name`, a
+`statistic` and explicit `units`:
+
+| Statistic | `field` | Null behaviour | Units |
+| --- | --- | --- | --- |
+| `count` | Omit | Counts all group members | `features` |
+| `nonNullCount` | Numeric field | Counts nonnull values | `features` |
+| `sum` | Numeric field | Ignores null; all-null group is null | Source quantity units |
+| `mean` | Numeric field | Sum divided by nonnull count; all-null is null | Source quantity units |
+
+Numeric fields accept finite integers/reals and reject Boolean. Summation uses
+`math.fsum` in member-ID order; overflow fails. Sum/mean outputs are IEEE
+binary64: large integers and nonrepresentable decimals can round, so these are
+not exact decimal accounting totals. No unit inference or conversion
+occurs. Mean is unweighted arithmetic mean. These are attribute quantities, not
+geometry-derived area/length, spatial joins or arbitrary QGIS expressions.
+
+Each summary node publishes `summary-<node>.csv` (table),
+`summary-<node>.json` (typed columns, units, null semantics, rows and member IDs),
+and `summary-<node>.gpkg` (editable no-geometry table). The saved project contains
+these tables beside its one vector output. The original `result.gpkg` remains a
+single vector layer for workflow handoff. CSV uses UTF-8, declared column order,
+empty cells for nulls and JSON arrays for member IDs; the `groupIsNull` column
+preserves the difference between null and empty string groups. Typed JSON is the
+companion schema for CSV; generic numeric-only CSV consumers need an explicit
+supported conversion before accepting text/group/member columns.
+
+The editable [asset example](../examples/schemaxis/qgis-attributes.json),
+[strict-threshold variant](../examples/schemaxis/qgis-attributes-variant.json) and
+[rejected typed value](../examples/schemaxis/qgis-attributes-invalid.json) use the
+[small asset fixture](../examples/schemaxis/fixtures/qgis/assets.geojson). Set the
+reader path to the fixture's absolute location. Scores >=20 select b,c,e,g,h,i;
+strict >20 selects only e. Northern b/g have two members but one nonnull load,
+so count=2, nonNullCount=1, sum=mean=6 kW. The empty group h has null sum/mean;
+the null-key e and empty-string-key i remain distinct groups with 2 and 3 kW.
+These literal expectations are independent of the implementation.
+
+Fresh native project reopening checks the vector and every nonspatial table.
+Offline verification independently reads captured JSON/SQLite attributes, replays
+the closed intentions and checks CSV, typed JSON and actual GeoPackage table rows.
+This does not convert offline checks into a fresh QGIS execution. Native code uses
+[QgsFeature attribute/geometry access](https://api.qgis.org/api/classQgsFeature.html),
+[QgsFields](https://api.qgis.org/api/classQgsFields.html),
+[QgsVectorDataProvider](https://api.qgis.org/api/classQgsVectorDataProvider.html) and
+[QgsVectorFileWriter](https://api.qgis.org/api/classQgsVectorFileWriter.html).
+Host discovery and planning retain their dependency-free Python 3.10+ boundary.

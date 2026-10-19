@@ -135,6 +135,25 @@
         "Add the tag after the frame nodes it covers: toFrame may not exceed the number of frames created so far.",
         "Schemaxis's FFmpeg sheet encoding keeps tags as metadata only; they do not select or reorder video playback. It must take its sprite input from the immediately preceding node."
       ]
+    },
+    "importImage": {
+      "status": "reviewed",
+      "explanation": "Place captured PNG artwork into an existing named layer and frame at integer canvas coordinates. Choose this to turn prepared raster assets into editable cels while retaining procedural drawing and animation tags. The declared image rectangle replaces existing pixels in that cel, including transparent pixels which erase; transparent top-layer pixels reveal lower layers in the flattened preview. Captures, reopened cels and both PNG publications are independently checked sample by sample.",
+      "sources": [
+        "docs/aseprite.md#import-captured-png-artwork",
+        "https://www.aseprite.org/api/image",
+        "https://www.aseprite.org/api/cel"
+      ],
+      "pitfalls": [
+        "Only metadata-free, noninterlaced RGBA8 PNG with alpha 0 or 255 is supported. Strip profiles/metadata; no scaling, clipping, colour conversion, arbitrary paths in Lua or authored scripts.",
+        "Plan checks declared dimensions and placement; execution checks actual captured PNG dimensions and samples. Original source paths are never opened by the native worker."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/aseprite-import.json",
+          "purpose": "Two imported placements on an editable artwork layer, opaque background visible through transparent pixels, and a later procedural highlight."
+        }
+      ]
     }
   },
   "routes": {
@@ -288,7 +307,7 @@
         },
         "/properties/nodes/items/oneOf/0/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -550,7 +569,7 @@
         },
         "/properties/nodes/items/oneOf/1/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -640,7 +659,7 @@
         },
         "/properties/nodes/items/oneOf/2/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -742,7 +761,7 @@
         },
         "/properties/nodes/items/oneOf/3/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -975,7 +994,7 @@
         },
         "/properties/nodes/items/oneOf/4/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -1237,7 +1256,7 @@
         },
         "/properties/nodes/items/oneOf/5/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -1536,7 +1555,7 @@
         },
         "/properties/nodes/items/oneOf/6/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -1813,7 +1832,7 @@
         },
         "/properties/nodes/items/oneOf/7/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -1942,6 +1961,147 @@
           "sources": [
             "src/schemaxis/adaptors/aseprite/adaptor.py:112-113",
             "docs/aseprite.md#document-contract"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8": {
+          "status": "reviewed",
+          "explanation": "One PNG placement in the linear sprite editing chain; all pixels in the image rectangle replace the selected cel region.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique operation identifier; captured input records bind their PNG bytes to this identifier. Use an identifier distinct from every other node.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Select importImage to load captured PNG samples into the selected editable cel.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options": {
+          "status": "reviewed",
+          "explanation": "Required PNG source, dimensions, layer and placement; frame defaults to the first frame. There is no implicit scaling or layer/frame creation.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/source": {
+          "status": "reviewed",
+          "explanation": "Absolute local .png file path to capture before native execution. Required; no default. The source must be a regular file within 2 MiB and contain only IHDR/IDAT/IEND, RGBA8 samples, no interlace and binary alpha. The capture keeps original bytes and SHA-256; transparent hidden RGB is discarded for sample comparisons.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ],
+          "examples": [
+            "/path/to/badge.png"
+          ],
+          "fileExtensions": [
+            ".png"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/layer": {
+          "status": "reviewed",
+          "explanation": "Existing layer name receiving the pixels. Required; case sensitive. Create the named layer earlier; opaque pixels on later layers cover lower artwork in the preview.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ],
+          "examples": [
+            "art"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/frame": {
+          "status": "reviewed",
+          "explanation": "One-based existing animation frame receiving the cel pixels. Omitted means 1; a frame node must precede an import into any later frame. Importing creates an absent cel but never a frame.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ],
+          "examples": [
+            1
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based canvas column of the image left edge, in pixels, increasing rightward. Required; x+width must fit the canvas. No clipping or negative placement.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ],
+          "examples": [
+            1
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based canvas row of the image top edge, in pixels, increasing downward. Required; y+height must fit the canvas. No clipping or negative placement.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ],
+          "examples": [
+            1
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/width": {
+          "status": "reviewed",
+          "explanation": "Required source image width in pixels, 1 to 256. The captured PNG must have this exact width; this is a dimension assertion, never a resize instruction.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ],
+          "examples": [
+            3
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/options/properties/height": {
+          "status": "reviewed",
+          "explanation": "Required source image height in pixels, 1 to 256. The captured PNG must have this exact height; this is a dimension assertion, never a resize instruction.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ],
+          "examples": [
+            2
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "Connect the sprite from the immediately preceding operation; the import modifies that same editable sprite.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
+          ]
+        },
+        "/properties/nodes/items/oneOf/8/properties/inputs/properties/sprite": {
+          "status": "reviewed",
+          "explanation": "Identifier of the immediately preceding node. Other dependencies are rejected; this is a sequential mutation chain.",
+          "sources": [
+            "docs/aseprite.md#import-captured-png-artwork",
+            "https://www.aseprite.org/api/image",
+            "https://www.aseprite.org/api/cel"
           ]
         }
       }

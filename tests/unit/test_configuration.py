@@ -2,9 +2,11 @@
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
+import venv
 from unittest.mock import patch, Mock
 
 from schemaxis import configuration
@@ -29,8 +31,8 @@ class ConfigurationTests(unittest.TestCase):
             configuration.configure('blender', sys.executable)
             configuration.configure('freecad', sys.executable)
             configuration.configure('paraview', self.tmp.name)
-        self.assertEqual(configuration.locations(), {'blender': str(Path(sys.executable).resolve()),
-                         'freecad': str(Path(sys.executable).resolve()), 'roots': [self.tmp.name]})
+        self.assertEqual(configuration.locations(), {'blender': str(Path(sys.executable).absolute()),
+                         'freecad': str(Path(sys.executable).absolute()), 'roots': [self.tmp.name]})
         self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(configuration.executable('paraview'), self.tmp.name)
 
@@ -40,6 +42,26 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(configuration.locations({'blender': '/explicit'})['blender'], '/explicit')
         self.assertEqual(configuration.locations({'roots': ['/explicit-root']})['roots'], ['/explicit-root'])
         self.assertEqual(configuration.locations({'paraview': '/generic-root'})['roots'], ['/generic-root'])
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX virtual-environment executable layout')
+    def test_configured_symlink_keeps_virtual_environment_after_session_recovery(self):
+        from schemaxis.console_session import AdaptorConsoleSession
+        environment = Path(self.tmp.name)/'native-env'
+        venv.EnvBuilder(with_pip=False, symlinks=True).create(environment)
+        executable = environment/'bin/python'
+        self.assertTrue(executable.is_symlink())
+        configuration.configure('blender', executable)
+        workspace = Path(self.tmp.name)/'session'
+        for _ in range(2):
+            session = AdaptorConsoleSession(workspace, provider='blender')
+            try:
+                self.assertEqual(session.executable, str(executable))
+                observed = subprocess.run(
+                    [session.executable, '-I', '-c', 'import sys; print(sys.prefix)'],
+                    check=True, text=True, capture_output=True, timeout=10)
+                self.assertEqual(Path(observed.stdout.strip()), environment)
+            finally:
+                session.close()
 
     def test_invalid_configuration_is_a_structured_fault(self):
         for value in ({}, {'version': 2, 'locations': {}}, {'version': 1, 'locations': []},
@@ -64,6 +86,7 @@ class ConfigurationTests(unittest.TestCase):
         runner = Mock()
         with patch.object(registry, 'import_module', return_value=runner), \
                 patch.object(registry, '_verify_native'), \
+                patch('schemaxis.schema_snapshots.capture_run'), \
                 patch('schemaxis.publication_metadata.finalise'), \
                 patch('schemaxis.publication_metadata.verify'):
             registry.run({'version': 'schemaxis.freecad.assembly/1'}, 'out')
@@ -79,7 +102,7 @@ class ConfigurationTests(unittest.TestCase):
         self.write({'version': 1, 'locations': {'blender': sys.executable}})
         workspace = Path(self.tmp.name)/'console'
         with AdaptorConsoleSession(workspace, provider='blender') as session:
-            self.assertEqual(session.executable, str(Path(sys.executable).resolve()))
+            self.assertEqual(session.executable, str(Path(sys.executable).absolute()))
         self.write({'version': 1, 'locations': {'blender': '/not-installed'}})
         with AdaptorConsoleSession(workspace, provider='blender') as session:
-            self.assertEqual(session.executable, str(Path(sys.executable).resolve()))
+            self.assertEqual(session.executable, str(Path(sys.executable).absolute()))

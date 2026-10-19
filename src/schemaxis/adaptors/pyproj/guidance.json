@@ -1,0 +1,169 @@
+{
+ "version": "schemaxis.studio-guidance/1",
+ "operations": {
+  "routeStations": {
+   "status": "reviewed",
+   "explanation": "Place stations every N metres of true WGS84 geodesic distance along an ordered route of longitude/latitude waypoints, continuously across turning points. Isolated pyproj computes leg lengths, azimuths and station positions; an independent standard-library verifier re-evaluates every leg, station, consecutive step and requested endpoint gap and the host decides any requirements. Publishes labelled station and leg tables, station and route GeoJSON, a summary and a verification record.",
+   "sources": [
+    "docs/pyproj.md#what-routestations-does",
+    "docs/pyproj.md#start-with-the-winnipeg-route"
+   ],
+   "pitfalls": [
+    "Numerical agreement only: no survey, datum, measured-position, physical or regulatory accuracy is claimed.",
+    "GeoJSON segments between published vertices are straight in longitude/latitude, not geodesic.",
+    "Unmet or indeterminate requirements are retained evidence, not accepted deliverables."
+   ],
+   "examples": [
+    {
+     "reference": "examples/schemaxis/pyproj-winnipeg-route.json",
+     "purpose": "Winnipeg regional two-leg route at 1 km stations with a length limit."
+    },
+    {
+     "reference": "examples/schemaxis/pyproj-winnipeg-loop.json",
+     "purpose": "Closed triangle with closure deflection."
+    },
+    {
+     "reference": "examples/schemaxis/pyproj-equator.json",
+     "purpose": "Exact equatorial arcs a x delta-longitude."
+    }
+   ]
+  }
+ },
+ "routes": {
+  "schemaxis.pyproj/1": {
+   "fields": {
+    "": {
+     "status": "reviewed",
+     "explanation": "Station one ordered WGS84 route captured as a waypoint CSV. Declare the ellipsoid and coordinate order explicitly, choose the station spacing in metres, say whether the route closes back to its first waypoint, and optionally state length or endpoint-gap requirements. Only met requirements give an accepted deliverable.",
+     "sources": [
+      "docs/pyproj.md#what-routestations-does"
+     ]
+    },
+    "/properties/version": {
+     "status": "reviewed",
+     "explanation": "Required document contract schemaxis.pyproj/1. It is an input-format version, separate from the qualified native runtime pyproj 3.8.0 with PROJ 9.9.0.",
+     "sources": [
+      "docs/pyproj.md#runtime-public-api-and-maintenance"
+     ],
+     "label": "Document version"
+    },
+    "/properties/operation": {
+     "status": "reviewed",
+     "explanation": "Required operation routeStations: geodesic chainage stations along the declared route.",
+     "sources": [
+      "docs/pyproj.md#what-routestations-does"
+     ],
+     "label": "Operation"
+    },
+    "/properties/source": {
+     "status": "reviewed",
+     "explanation": "Required absolute path to a regular ASCII .csv of at most 1 MiB with 2-500 waypoints in route order. The header is exactly lon_deg,lat_deg or name,lon_deg,lat_deg; cells are plain decimal degrees. The bytes are captured for standalone verification, the arithmetic uses their parsed binary64 values, and changed or removed source bytes invalidate reuse.",
+     "sources": [
+      "docs/pyproj.md#waypoint-csv-and-coordinates"
+     ],
+     "label": "Waypoint CSV",
+     "pitfalls": [
+      "Latitude-first headers are refused, never guessed.",
+      "A last waypoint that repeats the first is refused; declare closed instead.",
+      "Spaces, nan, inf, separators and blank lines are refused with their line."
+     ],
+     "fileExtensions": [
+      ".csv"
+     ]
+    },
+    "/properties/ellipsoid": {
+     "status": "reviewed",
+     "explanation": "Required and must be WGS84 (a = 6378137 m, 1/f = 298.257223563). A sphere or any other ellipsoid is refused, never substituted.",
+     "sources": [
+      "docs/pyproj.md#waypoint-csv-and-coordinates"
+     ],
+     "label": "Ellipsoid",
+     "pitfalls": [
+      "Coordinates in another datum (for example NAD83) are not transformed; the datum identity is the user's responsibility."
+     ]
+    },
+    "/properties/coordinateOrder": {
+     "status": "reviewed",
+     "explanation": "Required and must be lonLat: longitude first, then latitude, in decimal degrees. Stating it prevents silent axis swaps.",
+     "sources": [
+      "docs/pyproj.md#waypoint-csv-and-coordinates"
+     ],
+     "label": "Coordinate order"
+    },
+    "/properties/spacing_m": {
+     "status": "reviewed",
+     "explanation": "Required station spacing in metres of geodesic distance, 0.1 m to 1000 km. Stations lie at chainage k x spacing_m measured from the start, continuously across waypoints; at most 10000 rows may be published.",
+     "sources": [
+      "docs/pyproj.md#chainage-stations-and-merging"
+     ],
+     "label": "Station spacing (m)",
+     "pitfalls": [
+      "A waypoint merges with a station only when the chainages are bitwise equal; one-ulp neighbours publish two rows with the same millimetre label."
+     ]
+    },
+    "/properties/closed": {
+     "status": "reviewed",
+     "explanation": "Optional, default false. When true a closing leg from the last waypoint back to the first is added and the final row repeats waypoint 1; do not repeat the first waypoint in the CSV.",
+     "sources": [
+      "docs/pyproj.md#chainage-stations-and-merging"
+     ],
+     "label": "Closed route",
+     "pitfalls": [
+      "An endpoint gap requirement is not applicable to a closed route."
+     ]
+    },
+    "/properties/requirements": {
+     "status": "reviewed",
+     "explanation": "Optional requirements decided by the host against a numerical band: met, unmet or indeterminate. Unmet or indeterminate requirements keep all evidence but fail the run as an accepted deliverable and block downstream reuse.",
+     "sources": [
+      "docs/pyproj.md#requirements-and-acceptance"
+     ],
+     "label": "Requirements"
+    },
+    "/properties/requirements/properties/totalLength_m": {
+     "status": "reviewed",
+     "explanation": "Total route length requirement in metres with minimum and/or maximum (minimum below maximum, both within 0 to 20000 km). Decided on the verified total with band sum of tau(leg) plus the summation rounding term.",
+     "sources": [
+      "docs/pyproj.md#requirements-and-acceptance"
+     ],
+     "label": "Total length (m)"
+    },
+    "/properties/requirements/properties/totalLength_m/properties/minimum": {
+     "status": "reviewed",
+     "explanation": "Smallest acceptable total length in metres, 0 to 20000 km.",
+     "sources": [
+      "docs/pyproj.md#requirements-and-acceptance"
+     ],
+     "label": "Minimum length (m)"
+    },
+    "/properties/requirements/properties/totalLength_m/properties/maximum": {
+     "status": "reviewed",
+     "explanation": "Largest acceptable total length in metres, 0 to 20000 km. A bound within the numerical band of the total is indeterminate.",
+     "sources": [
+      "docs/pyproj.md#requirements-and-acceptance"
+     ],
+     "label": "Maximum length (m)"
+    },
+    "/properties/requirements/properties/endpointGap_m": {
+     "status": "reviewed",
+     "explanation": "Open routes only: the geodesic distance from the last waypoint back to the first must not exceed maximum. The gap must lie in the qualified leg domain (<= 5000 km, no antimeridian, within the latitude band) or the run is refused with ENDPOINT_GAP_OUTSIDE_DOMAIN before any comparison. Without this requirement the gap is not computed.",
+     "sources": [
+      "docs/pyproj.md#endpoint-gap"
+     ],
+     "label": "Endpoint gap (m)",
+     "pitfalls": [
+      "Near-coincident gaps are allowed; a maximum inside tau(gap) is indeterminate."
+     ]
+    },
+    "/properties/requirements/properties/endpointGap_m/properties/maximum": {
+     "status": "reviewed",
+     "explanation": "Largest acceptable endpoint gap in metres, 0 to 5000 km.",
+     "sources": [
+      "docs/pyproj.md#endpoint-gap"
+     ],
+     "label": "Maximum gap (m)"
+    }
+   }
+  }
+ }
+}

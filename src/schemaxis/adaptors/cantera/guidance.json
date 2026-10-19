@@ -3,12 +3,12 @@
   "operations": {
     "gas": {
       "status": "reviewed",
-      "explanation": "Defines the starting gas state for the table node: a pressure in pascals and a hydrogen/oxygen/inert mixture drawn from the ten species of Cantera's h2o2.yaml ideal-gas phase ohmech. It produces no table itself; it is always the first of the two nodes, and the thermoSweep or equilibrate node that follows evaluates it at each requested temperature. Amounts are proportions on the chosen mole or mass basis and are normalised, so they need not sum to one. Choose another tool when the mixture contains carbon, NOx or condensed phases; this mechanism cannot represent them.",
+      "explanation": "Defines the starting gas state for the second node: a pressure in pascals and a hydrogen/oxygen/inert mixture drawn from the ten species of Cantera's h2o2.yaml ideal-gas phase ohmech. It produces no table itself; it is always the first of the two nodes, and the thermoSweep or equilibrate node that follows evaluates it at each requested temperature, while a reactorHistory node uses it as the reactor state at time zero. Amounts are proportions on the chosen mole or mass basis and are normalised, so they need not sum to one. Choose another tool when the mixture contains carbon, NOx or condensed phases; this mechanism cannot represent them.",
       "sources": [
         "src/schemaxis/adaptors/cantera/adaptor.py:21-28",
-        "src/schemaxis/adaptors/cantera/adaptor.py:41-43",
-        "src/schemaxis/adaptors/cantera/adaptor.py:59-69",
-        "src/schemaxis/adaptors/cantera/native.py:30-35",
+        "src/schemaxis/adaptors/cantera/adaptor.py:50-52",
+        "src/schemaxis/adaptors/cantera/adaptor.py:73-83",
+        "src/schemaxis/adaptors/cantera/native.py:main",
         "docs/cantera.md#authoring-and-units",
         "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.TPX",
         "src/schemaxis/adaptors/cantera/capabilities.py"
@@ -22,6 +22,10 @@
         {
           "reference": "examples/schemaxis/cantera-equilibrium.json",
           "purpose": "Stoichiometric hydrogen/air (H2 2, O2 1, N2 3.76 on a mole basis) at 101325 Pa."
+        },
+        {
+          "reference": "examples/schemaxis/cantera-reactor.json",
+          "purpose": "The same stoichiometric hydrogen/air mixture as the initial state of an ignition history."
         }
       ]
     },
@@ -30,8 +34,8 @@
       "explanation": "Evaluates the gas at each listed temperature with its composition and pressure frozen, publishing results.csv (one row per temperature: density, specific enthalpy, internal energy, entropy, cp, cv, mean molecular weight and the unchanged mole and mass fractions) plus chemistry-summary.json. Choose it for property tables of a non-reacting mixture, for example heat capacity of a diluent or density of a fixed fuel/air mixture; choose equilibrate when the composition should be allowed to react to chemical equilibrium. The host recomputes every property from the public NASA7 coefficients and a second Cantera process reloads the saved states before the run is accepted.",
       "sources": [
         "src/schemaxis/adaptors/cantera/adaptor.py:29",
-        "src/schemaxis/adaptors/cantera/adaptor.py:39",
-        "src/schemaxis/adaptors/cantera/native.py:25-38",
+        "src/schemaxis/adaptors/cantera/adaptor.py:48",
+        "src/schemaxis/adaptors/cantera/native.py:main",
         "src/schemaxis/adaptors/cantera/thermo.py:16-18",
         "src/schemaxis/adaptors/cantera/thermo.py:95-116",
         "docs/cantera.md#publications-and-handoff",
@@ -59,7 +63,7 @@
       "explanation": "For each listed initial temperature, sets the gas to that temperature and its pressure and then calls Cantera's ThermoPhase.equilibrate with the element-potential solver, holding either temperature and pressure (TP) or specific enthalpy and pressure (HP, adiabatic). It publishes the same results.csv columns as thermoSweep, now with the equilibrium composition and, for HP, the adiabatic final temperature, plus chemistry-summary.json with element-conservation and chemical-potential residuals. Choose it for dissociation at fixed temperature or adiabatic flame temperatures of hydrogen mixtures; choose thermoSweep for a non-reacting property table.",
       "sources": [
         "src/schemaxis/adaptors/cantera/adaptor.py:30-31",
-        "src/schemaxis/adaptors/cantera/native.py:33-38",
+        "src/schemaxis/adaptors/cantera/native.py:main",
         "src/schemaxis/adaptors/cantera/thermo.py:68-92",
         "src/schemaxis/adaptors/cantera/thermo.py:115-123",
         "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.equilibrate",
@@ -81,6 +85,36 @@
           "purpose": "Inspect adiabatic equilibrium temperatures for hydrogen/air."
         }
       ]
+    },
+    "reactorHistory": {
+      "status": "reviewed",
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
+      "explanation": "Integrates one closed, adiabatic, homogeneous ideal-gas reactor in time from the gas node state at the chosen initial temperature, using Cantera's IdealGasConstPressureReactor (pressure held) or IdealGasReactor (volume held) in a ReactorNet with the 29-reaction h2o2 mechanism. It publishes results.csv with one row per requested sample time (time, temperature, pressure, density, energies, heat capacities, mole and mass fractions) and chemistry-summary.json with the reactor model, solver settings read back from Cantera, the ignition delay by the declared temperature-rise criterion, conservation residuals and the verification tolerances. Choose it to see how fast a hydrogen mixture reacts, for example an ignition delay or the approach to adiabatic equilibrium; choose equilibrate when only the final equilibrium state matters.",
+      "pitfalls": [
+        "The reactor is adiabatic and closed: no heat loss, walls, inflow, mixing or transport. Real shock tubes and engines differ, so the ignition delay is a property of this model, not a measurement.",
+        "The ignition delay is defined only by ignitionTemperatureRise (first time T reaches initial T plus the rise, interpolated linearly between native integrator steps); other definitions, such as the peak of OH or of dT/dt, can give different values.",
+        "Samples are not interpolated between rows: put enough sample times around the expected ignition to see the temperature rise, and note that the CSV alone does not show the shape between samples.",
+        "Verification integrates the same mechanism independently in host Python; this checks the native result against the stated model, not the model against experiments."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/cantera-reactor.json",
+          "purpose": "Stoichiometric hydrogen/air at 1000 K and 101325 Pa ignites after about 0.31 ms at constant pressure and approaches adiabatic equilibrium near 2693 K by 20 ms."
+        }
+      ],
+      "sources": [
+        "src/schemaxis/adaptors/cantera/adaptor.py:32-40",
+        "src/schemaxis/adaptors/cantera/native.py:reactor",
+        "src/schemaxis/adaptors/cantera/kinetics.py:verify_history",
+        "src/schemaxis/adaptors/cantera/kinetics.py:crossing",
+        "docs/cantera.md#reactor-time-histories",
+        "https://cantera.org/stable/python/zerodim.html#cantera.IdealGasConstPressureReactor",
+        "https://cantera.org/stable/python/zerodim.html#cantera.IdealGasReactor",
+        "https://cantera.org/stable/python/zerodim.html#cantera.ReactorNet",
+        "https://cantera.org/stable/reference/reactors/ideal-gas-constant-pressure-reactor.html",
+        "https://cantera.org/stable/reference/reactors/ideal-gas-reactor.html",
+        "src/schemaxis/adaptors/cantera/capabilities.py"
+      ]
     }
   },
   "routes": {
@@ -88,9 +122,9 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A Cantera thermochemistry document: one gas node defining pressure and composition, followed by one thermoSweep or equilibrate node that evaluates it at a list of temperatures, run in an isolated Cantera 3.2.x Python process with the qualified h2o2.yaml mechanism. A successful run publishes results.csv (30 numeric columns in SI units: K, Pa, kg/m3, J/kg, J/(kg K), kg/kmol and mole and mass fractions) and chemistry-summary.json, after the host has recomputed every row from public NASA7 data and a second Cantera process has reloaded the saved states.",
+          "explanation": "A Cantera chemistry document: one gas node defining pressure and composition, followed by one thermoSweep or equilibrate node that evaluates it at a list of temperatures, or one reactorHistory node that integrates it in time in a closed adiabatic reactor. It runs in an isolated Cantera 3.2.x Python process with the qualified h2o2.yaml mechanism. A successful run publishes results.csv (30 numeric columns in SI units: K or s, Pa, kg/m3, J/kg, J/(kg K), kg/kmol and mole and mass fractions) and chemistry-summary.json, after the host has recomputed every row from public NASA7 data (and, for reactor histories, from independent kinetics) and a second Cantera process has reloaded the saved states.",
           "pitfalls": [
-            "Only the ten-species hydrogen/oxygen mechanism is available; no external mechanism files, carbon chemistry, kinetics or transport properties can be requested.",
+            "Only the ten-species, 29-reaction hydrogen/oxygen mechanism is available; no external mechanism files, carbon chemistry or transport properties can be requested, and kinetics are available only through the closed adiabatic reactorHistory node.",
             "Configure an absolute Python interpreter that has Cantera 3.2.x (--cantera or CANTERA_PYTHON), otherwise the run fails with INTERPRETER_NOT_FOUND."
           ],
           "examples": [
@@ -139,11 +173,12 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/cantera/adaptor.py:39-75",
-            "src/schemaxis/adaptors/cantera/adaptor.py:115-148",
+            "src/schemaxis/adaptors/cantera/adaptor.py:plan",
+            "src/schemaxis/adaptors/cantera/adaptor.py:run",
             "src/schemaxis/adaptors/cantera/thermo.py:16-18",
             "docs/cantera.md",
-            "examples/schemaxis/cantera-adiabatic.json"
+            "examples/schemaxis/cantera-adiabatic.json",
+            "src/schemaxis/adaptors/cantera/kinetics.py:verify_history"
           ]
         },
         "/properties/version": {
@@ -155,10 +190,10 @@
         },
         "/properties/nodes": {
           "status": "reviewed",
-          "explanation": "The calculation chain, always exactly two nodes in a fixed order: first the gas node, then a thermoSweep or equilibrate node whose inputs.input names the gas node's id. Node ids must be distinct. Any other count or order fails planning with INVALID_DOCUMENT or INVALID_DEPENDENCY.",
+          "explanation": "The calculation chain, always exactly two nodes in a fixed order: first the gas node, then a thermoSweep, equilibrate or reactorHistory node whose inputs.input names the gas node's id. Node ids must be distinct. Any other count or order fails planning with INVALID_DOCUMENT or INVALID_DEPENDENCY.",
           "label": "Nodes",
           "pitfalls": [
-            "To switch from a property table to equilibrium, change the second node's filter (and add mode) rather than adding a third node."
+            "To switch from a property table to equilibrium or a reactor history, change the second node's filter and options rather than adding a third node."
           ],
           "examples": [
             [
@@ -191,13 +226,13 @@
             ]
           ],
           "sources": [
-            "src/schemaxis/adaptors/cantera/adaptor.py:50-64",
+            "src/schemaxis/adaptors/cantera/adaptor.py:plan",
             "docs/cantera.md#authoring-and-units"
           ]
         },
         "/properties/nodes/items": {
           "status": "reviewed",
-          "explanation": "One node of the two-node chain. Its filter selects the operation: gas is valid only in the first position, and thermoSweep or equilibrate only in the second.",
+          "explanation": "One node of the two-node chain. Its filter selects the operation: gas is valid only in the first position, and thermoSweep, equilibrate or reactorHistory only in the second.",
           "examples": [
             {
               "id": "gas",
@@ -215,12 +250,12 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/cantera/adaptor.py:54-60"
+            "src/schemaxis/adaptors/cantera/adaptor.py:68-74"
           ]
         },
         "/properties/nodes/items/oneOf/0": {
           "status": "reviewed",
-          "explanation": "The gas node, which must be the first node. It fixes the pressure and the initial composition that every row of the following table starts from; it has no inputs and is never the document output.",
+          "explanation": "The gas node, which must be the first node. It fixes the pressure and the initial composition that every row of the following table starts from (for reactorHistory, the state at time zero); it has no inputs and is never the document output.",
           "examples": [
             {
               "id": "gas",
@@ -246,7 +281,7 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/cantera/adaptor.py:59-71",
+            "src/schemaxis/adaptors/cantera/adaptor.py:plan",
             "docs/cantera.md#authoring-and-units"
           ]
         },
@@ -266,10 +301,10 @@
         },
         "/properties/nodes/items/oneOf/0/properties/options": {
           "status": "reviewed",
-          "explanation": "The gas state: composition (required) decides which species can exist and therefore which elements are conserved, basis decides whether the amounts are mole or mass proportions, and pressure applies to every row. Omitted settings take the Schemaxis defaults: pressure 101325 Pa and basis mole.",
+          "explanation": "The gas state: composition (required) decides which species can exist and therefore which elements are conserved, basis decides whether the amounts are mole or mass proportions, and pressure applies to every row (for reactorHistory it is the initial pressure). Omitted settings take the Schemaxis defaults: pressure 101325 Pa and basis mole.",
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:22-28",
-            "src/schemaxis/adaptors/cantera/native.py:30-35"
+            "src/schemaxis/adaptors/cantera/native.py:main"
           ],
           "examples": [
             {
@@ -294,7 +329,7 @@
         },
         "/properties/nodes/items/oneOf/0/properties/options/properties/pressure": {
           "status": "reviewed",
-          "explanation": "Absolute pressure of the gas, applied at every temperature in the table and held constant by both TP and HP equilibrium. For an ideal gas, density scales in proportion to pressure; at equilibrium, higher pressure suppresses dissociation (less H, O and OH at a given temperature).",
+          "explanation": "Absolute pressure of the gas, applied at every temperature in the table and held constant by both TP and HP equilibrium. For reactorHistory it is the initial pressure: a constantPressure reactor keeps it, while a constantVolume reactor's pressure rises as heat is released. For an ideal gas, density scales in proportion to pressure; at equilibrium, higher pressure suppresses dissociation (less H, O and OH at a given temperature).",
           "label": "Pressure",
           "units": "Pascals (absolute)",
           "defaultMeaning": "Schemaxis default: 101325 Pa (one standard atmosphere).",
@@ -307,7 +342,7 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:23",
-            "src/schemaxis/adaptors/cantera/native.py:34-35",
+            "src/schemaxis/adaptors/cantera/native.py:main",
             "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.TPX",
             "docs/cantera.md#authoring-and-units"
           ]
@@ -325,14 +360,14 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:24",
-            "src/schemaxis/adaptors/cantera/native.py:34-35",
+            "src/schemaxis/adaptors/cantera/native.py:main",
             "src/schemaxis/adaptors/cantera/thermo.py:30-38",
             "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.TPY"
           ]
         },
         "/properties/nodes/items/oneOf/0/properties/options/properties/composition": {
           "status": "reviewed",
-          "explanation": "The initial mixture as a list of species with relative amounts on the chosen basis. Amounts are normalised to fractions summing to one, so H2 2, O2 1 and H2 0.667, O2 0.333 describe the same gas; species not listed start at zero. Which elements are present (H, O, N, Ar) determines which species equilibrate may form.",
+          "explanation": "The initial mixture as a list of species with relative amounts on the chosen basis. Amounts are normalised to fractions summing to one, so H2 2, O2 1 and H2 0.667, O2 0.333 describe the same gas; species not listed start at zero. Which elements are present (H, O, N, Ar) determines which species equilibrate or reactorHistory may form.",
           "label": "Composition",
           "defaultMeaning": "Required; there is no default.",
           "pitfalls": [
@@ -357,8 +392,8 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:25-28",
-            "src/schemaxis/adaptors/cantera/adaptor.py:65-69",
-            "src/schemaxis/adaptors/cantera/native.py:30-33",
+            "src/schemaxis/adaptors/cantera/adaptor.py:79-83",
+            "src/schemaxis/adaptors/cantera/native.py:main",
             "src/schemaxis/adaptors/cantera/thermo.py:30-38",
             "docs/cantera.md#authoring-and-units"
           ]
@@ -374,7 +409,7 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:25-28",
-            "src/schemaxis/adaptors/cantera/adaptor.py:65-67"
+            "src/schemaxis/adaptors/cantera/adaptor.py:79-81"
           ]
         },
         "/properties/nodes/items/oneOf/0/properties/options/properties/composition/items/properties/species": {
@@ -406,7 +441,7 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:28",
-            "src/schemaxis/adaptors/cantera/adaptor.py:68-69",
+            "src/schemaxis/adaptors/cantera/adaptor.py:82-83",
             "src/schemaxis/adaptors/cantera/thermo.py:30-38"
           ]
         },
@@ -438,7 +473,7 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:29",
-            "src/schemaxis/adaptors/cantera/native.py:33-38",
+            "src/schemaxis/adaptors/cantera/native.py:main",
             "docs/cantera.md#authoring-and-units"
           ]
         },
@@ -496,7 +531,7 @@
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:19-20",
             "src/schemaxis/adaptors/cantera/thermochemistry.json",
-            "src/schemaxis/adaptors/cantera/native.py:33-38",
+            "src/schemaxis/adaptors/cantera/native.py:main",
             "docs/cantera.md#authoring-and-units"
           ]
         },
@@ -526,7 +561,7 @@
             "gas"
           ],
           "sources": [
-            "src/schemaxis/adaptors/cantera/adaptor.py:62-64"
+            "src/schemaxis/adaptors/cantera/adaptor.py:76-78"
           ]
         },
         "/properties/nodes/items/oneOf/2": {
@@ -551,7 +586,7 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:30-31",
-            "src/schemaxis/adaptors/cantera/native.py:33-38",
+            "src/schemaxis/adaptors/cantera/native.py:main",
             "docs/cantera.md#authoring-and-units"
           ]
         },
@@ -574,7 +609,7 @@
           "explanation": "The starting temperatures and the equilibrium constraint. mode decides the physics: TP keeps each listed temperature, HP keeps the specific enthalpy of the starting state and solves the final temperature. Omitted settings take the Schemaxis defaults: temperatures [1000, 1500, 2000] and mode TP. Solver settings are fixed by Schemaxis (element_potential, rtol 1e-10, max_steps 2000, max_iter 200).",
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:30-31",
-            "src/schemaxis/adaptors/cantera/native.py:36-37",
+            "src/schemaxis/adaptors/cantera/native.py:main",
             "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.equilibrate"
           ],
           "examples": [
@@ -608,7 +643,7 @@
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:30",
             "src/schemaxis/adaptors/cantera/thermo.py:105-123",
-            "src/schemaxis/adaptors/cantera/native.py:33-38",
+            "src/schemaxis/adaptors/cantera/native.py:main",
             "docs/cantera.md#authoring-and-units"
           ]
         },
@@ -636,7 +671,7 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:31",
-            "src/schemaxis/adaptors/cantera/native.py:36-37",
+            "src/schemaxis/adaptors/cantera/native.py:main",
             "src/schemaxis/adaptors/cantera/thermo.py:118-121",
             "https://cantera.org/stable/python/thermo.html#cantera.ThermoPhase.equilibrate"
           ]
@@ -656,12 +691,12 @@
             "gas"
           ],
           "sources": [
-            "src/schemaxis/adaptors/cantera/adaptor.py:62-64"
+            "src/schemaxis/adaptors/cantera/adaptor.py:76-78"
           ]
         },
         "/properties/output": {
           "status": "reviewed",
-          "explanation": "The id of the node whose table is published. It must be the second node (thermoSweep or equilibrate); the gas node has no table and cannot be selected.",
+          "explanation": "The id of the node whose table is published. It must be the second node (thermoSweep, equilibrate or reactorHistory); the gas node has no table and cannot be selected.",
           "label": "Output node",
           "pitfalls": [
             "After renaming the second node, update output too, otherwise planning fails with INVALID_SELECTION."
@@ -670,7 +705,264 @@
             "table"
           ],
           "sources": [
-            "src/schemaxis/adaptors/cantera/adaptor.py:71"
+            "src/schemaxis/adaptors/cantera/adaptor.py:87"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3": {
+          "status": "reviewed",
+          "explanation": "Choose the reactorHistory node to follow the gas in time as it reacts in a closed adiabatic reactor, instead of tabulating independent temperatures. It reads the pressure and composition of the gas node and adds its own initial temperature, reactor model, sample times and solver tolerances.",
+          "examples": [
+            {
+              "id": "ignition",
+              "filter": "reactorHistory",
+              "inputs": {
+                "input": "fuelAir"
+              },
+              "options": {
+                "model": "constantPressure",
+                "temperature": 1000,
+                "times": [
+                  0,
+                  0.0001,
+                  0.0002,
+                  0.0003,
+                  0.00031,
+                  0.00032,
+                  0.0004,
+                  0.0005,
+                  0.001,
+                  0.005,
+                  0.02
+                ],
+                "relativeTolerance": 1e-09,
+                "absoluteTolerance": 1e-15,
+                "maxSteps": 20000,
+                "ignitionTemperatureRise": 400
+              }
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:32-40",
+            "src/schemaxis/adaptors/cantera/adaptor.py:92-98",
+            "docs/cantera.md#reactor-time-histories"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/filter": {
+          "status": "reference",
+          "explanation": "Select the declared operation that creates this node’s result.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options": {
+          "status": "reviewed",
+          "explanation": "The reactor settings. model chooses whether pressure or volume is held; temperature is the initial temperature; times lists the sampled instants; relativeTolerance, absoluteTolerance and maxSteps are passed to Cantera's ReactorNet integrator and read back; ignitionTemperatureRise defines the reported ignition delay. Omitted settings take the Schemaxis defaults shown for each field.",
+          "examples": [
+            {
+              "model": "constantPressure",
+              "temperature": 1000,
+              "times": [
+                0,
+                0.0001,
+                0.0002,
+                0.0003,
+                0.00031,
+                0.00032,
+                0.0004,
+                0.0005,
+                0.001,
+                0.005,
+                0.02
+              ],
+              "relativeTolerance": 1e-09,
+              "absoluteTolerance": 1e-15,
+              "maxSteps": 20000,
+              "ignitionTemperatureRise": 400
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:32-40",
+            "src/schemaxis/adaptors/cantera/native.py:reactor"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/model": {
+          "status": "reviewed",
+          "label": "Reactor held at",
+          "explanation": "constantPressure uses Cantera's IdealGasConstPressureReactor: pressure stays at the gas node value, the volume expands as the gas heats, and specific enthalpy is conserved. constantVolume uses IdealGasReactor: the 1 m3 volume and the density stay fixed, pressure rises with heat release, and specific internal energy is conserved. Both are closed and adiabatic.",
+          "defaultMeaning": "Schemaxis default: constantPressure.",
+          "examples": [
+            "constantPressure",
+            "constantVolume"
+          ],
+          "pitfalls": [
+            "Constant-volume ignition reaches a higher final temperature and pressure than constant-pressure ignition from the same state; do not compare delays across models without saying which was used."
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:33",
+            "src/schemaxis/adaptors/cantera/kinetics.py:derivative",
+            "https://cantera.org/stable/python/zerodim.html#cantera.IdealGasConstPressureReactor",
+            "https://cantera.org/stable/python/zerodim.html#cantera.IdealGasReactor",
+            "https://cantera.org/stable/reference/reactors/ideal-gas-constant-pressure-reactor.html",
+            "https://cantera.org/stable/reference/reactors/ideal-gas-reactor.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/temperature": {
+          "status": "reviewed",
+          "label": "Initial temperature",
+          "units": "Kelvin",
+          "explanation": "Temperature of the gas at time zero; the gas node supplies the initial pressure and composition. The response is very sensitive to it: with this mechanism, stoichiometric hydrogen/air at 101325 Pa at constant pressure reaches a 400 K rise after about 0.3 ms from 1000 K, 9 ms from 950 K and 0.24 s from 900 K, and not within 1 s from 850 K or below.",
+          "defaultMeaning": "Schemaxis default: 1000 K.",
+          "examples": [
+            1000,
+            1200
+          ],
+          "pitfalls": [
+            "All sampled and integrator-step temperatures must remain within 300-3500 K, the NASA7 data range; an undiluted hot mixture can exceed it and fails with UNSUPPORTED_STATE. Dilute with N2 or AR or start colder.",
+            "Starting exactly at 1000 K crosses the NASA7 range boundary immediately; the enthalpy polynomials jump there by at most 0.19 J/kg, which verification allows only when the samples straddle the boundary."
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:34",
+            "src/schemaxis/adaptors/cantera/native.py:reactor",
+            "src/schemaxis/adaptors/cantera/kinetics.py:verify_history",
+            "src/schemaxis/adaptors/cantera/thermochemistry.json",
+            "verification/2026-10-16-cantera-completion.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/times": {
+          "status": "reviewed",
+          "label": "Sample times",
+          "units": "Seconds from the start of the reaction",
+          "explanation": "The instants at which the reactor state is recorded, one CSV row each, in strictly increasing order from 0 to at most 1 s. Cantera chooses its own internal steps; it advances exactly to each listed time. Include 0 to record the initial state. The last time also ends the ignition search.",
+          "defaultMeaning": "Schemaxis default: 0, 0.1, 0.2, 0.3, 0.4, 0.5 and 1 ms.",
+          "examples": [
+            [
+              0,
+              0.0001,
+              0.0002,
+              0.0003,
+              0.0004,
+              0.0005,
+              0.001
+            ]
+          ],
+          "pitfalls": [
+            "Repeated or decreasing times fail planning with INVALID_TIMES at options.times.",
+            "Times are seconds, not milliseconds: 0.3 ms is 0.0003.",
+            "If ignition happens after the last time, the reported delay is null; extend the list rather than assuming no ignition."
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:35-36",
+            "src/schemaxis/adaptors/cantera/adaptor.py:84-85",
+            "https://cantera.org/stable/python/zerodim.html#cantera.ReactorNet.advance"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/times/items": {
+          "status": "reviewed",
+          "label": "Sample time",
+          "units": "Seconds",
+          "explanation": "One sample instant, 0-1 s, at which the reactor state becomes a CSV row. Near a steep ignition front, verification compares it with the independent solution within a 1% time window, because a tiny timing difference there changes the temperature greatly.",
+          "examples": [
+            0.0003
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:35",
+            "src/schemaxis/adaptors/cantera/kinetics.py:verify_history"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/relativeTolerance": {
+          "status": "reviewed",
+          "label": "Relative tolerance",
+          "explanation": "Relative error tolerance assigned to Cantera's ReactorNet.rtol for its CVODES integrator and read back before integration. Smaller values give more accurate histories at the cost of more steps.",
+          "defaultMeaning": "Schemaxis default: 1e-9, which is also Cantera's default.",
+          "examples": [
+            1e-09
+          ],
+          "pitfalls": [
+            "Values looser than 1e-8 are rejected: at 1e-6 the native ignition delay moved by about 0.9%, close to the 1% verification window, so verification could no longer distinguish solver error from wrong kinetics."
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:37",
+            "src/schemaxis/adaptors/cantera/native.py:reactor",
+            "https://cantera.org/stable/python/zerodim.html#cantera.ReactorNet.rtol"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/absoluteTolerance": {
+          "status": "reviewed",
+          "label": "Absolute tolerance",
+          "explanation": "Absolute error tolerance assigned to Cantera's ReactorNet.atol and read back. It mainly controls the accuracy of tiny radical mass fractions during the induction period, which decide when ignition happens.",
+          "defaultMeaning": "Schemaxis default: 1e-15, which is also Cantera's default.",
+          "examples": [
+            1e-15
+          ],
+          "pitfalls": [
+            "Values looser than 1e-12 are rejected because they can let the radical pool, and therefore the ignition delay, drift."
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:38",
+            "src/schemaxis/adaptors/cantera/native.py:reactor",
+            "https://cantera.org/stable/python/zerodim.html#cantera.ReactorNet.atol"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/maxSteps": {
+          "status": "reviewed",
+          "label": "Maximum steps per sample",
+          "units": "Integrator steps (count)",
+          "explanation": "Maximum number of internal CVODES steps Cantera may take before reaching the next sample time (ReactorNet.max_steps); it bounds the work of each interval and is read back. The separate ignition pass is also bounded to 200000 steps in total.",
+          "defaultMeaning": "Schemaxis default: 20000.",
+          "examples": [
+            20000
+          ],
+          "pitfalls": [
+            "Reaching the limit fails the run with NATIVE_EXECUTION_FAILED; add intermediate sample times or raise the limit instead of loosening tolerances."
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:39",
+            "src/schemaxis/adaptors/cantera/native.py:reactor",
+            "https://cantera.org/stable/python/zerodim.html#cantera.ReactorNet.max_steps"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/ignitionTemperatureRise": {
+          "status": "reviewed",
+          "label": "Ignition temperature rise",
+          "units": "Kelvin above the initial temperature",
+          "explanation": "Defines the reported ignition delay: the first time the reactor temperature reaches the initial temperature plus this rise, interpolated linearly in time between consecutive native integrator steps. The same rule is applied to the independent host integration, and the two delays must agree within 1%. The delay is null if the threshold is not reached by the last sample time.",
+          "defaultMeaning": "Schemaxis default: 400 K.",
+          "examples": [
+            400
+          ],
+          "pitfalls": [
+            "A small rise reports the onset of heat release and a large rise the end of the steep temperature increase; for diluted or weakly reacting mixtures the threshold may never be reached."
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:40",
+            "src/schemaxis/adaptors/cantera/kinetics.py:crossing",
+            "src/schemaxis/adaptors/cantera/native.py:reactor",
+            "docs/cantera.md#reactor-time-histories"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs/properties/input": {
+          "status": "reviewed",
+          "label": "Gas",
+          "explanation": "The id of the gas node that supplies the initial pressure and composition of the reactor. It must name the first node exactly; any other reference fails planning with INVALID_DEPENDENCY.",
+          "examples": [
+            "fuelAir"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/cantera/adaptor.py:76-78"
           ]
         }
       }

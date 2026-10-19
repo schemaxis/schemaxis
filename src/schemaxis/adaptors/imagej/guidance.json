@@ -1,0 +1,288 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "analyzeParticles": {
+      "status": "reviewed",
+      "explanation": "Thresholds one calibrated 8- or 16-bit grayscale image with ImageJ 1.x and measures every particle: pixel count, area, centroid and bounding box in the declared unit, plus raw mean/min/max intensity. Outputs are particles.csv (one row per particle, units in column names) and particle-summary.json (image digest, calibration, threshold, connectivity, filters and totals). Every native value is checked against an independent connected-component model and a fresh-process re-measurement. Use it to count and size blobs, grains, pores or cells after a fixed intensity threshold, then hand the table to Calc or R.",
+      "sources": [
+        "docs/imagej.md",
+        "src/schemaxis/adaptors/imagej/capabilities.py",
+        "src/schemaxis/adaptors/imagej/images.py"
+      ],
+      "pitfalls": [
+        "The threshold is a fixed inclusive raw-intensity window; there is no automatic threshold, smoothing or watershed separation.",
+        "Calibration comes from the document, not the file: declare the true pixel size and unit.",
+        "Touching objects merge into one particle; corner contact merges them under eight connectivity.",
+        "Synthetic acceptance targets establish semantics, not suitability for a particular experimental dataset."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/imagej-particles.json",
+          "purpose": "Eight analytic particles at 0.5 um per pixel."
+        },
+        {
+          "reference": "examples/schemaxis/imagej-particles-filled.json",
+          "purpose": "Fill holes, drop edge particles and specks."
+        },
+        {
+          "reference": "examples/schemaxis/imagej-to-calc.json",
+          "purpose": "Hand the verified table to Calc."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.imagej/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A particle-measurement request for one grayscale image: which file, how large its pixels are, which raw intensities count as particle pixels, how pixels connect and which particles to keep. No macro, script or plugin can be supplied.",
+          "sources": [
+            "docs/imagej.md#document",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis document; it must be \"schemaxis.imagej/1\". It is not the ImageJ release (the runtime is ImageJ 1.54).",
+          "sources": [
+            "docs/imagej.md#document",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "examples": [
+            "schemaxis.imagej/1"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The only operation is analyzeParticles: threshold, find particles and measure them.",
+          "sources": [
+            "docs/imagej.md#document",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "examples": [
+            "analyzeParticles"
+          ]
+        },
+        "/properties/image": {
+          "status": "reviewed",
+          "explanation": "Absolute path to the image to measure: a binary P5 .pgm (maxval 255 or 65535) or an uncompressed single-plane baseline .tif/.tiff with 8- or 16-bit unsigned samples, at most 2048 px per side and 1048576 px. The bytes are copied into the run directory and their SHA-256 is recorded, so a later change to the file prevents reuse of the result.",
+          "sources": [
+            "docs/imagej.md#document",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Image file",
+          "fileExtensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "examples": [
+            "/data/targets/particles-8bit.pgm"
+          ],
+          "pitfalls": [
+            "Relative paths are rejected; resolve the path first.",
+            "Colour, compressed, multi-page, signed 16-bit or inverted-LUT files are rejected; convert to plain grayscale.",
+            "Calibration stored in the file is ignored; declare it in calibration."
+          ]
+        },
+        "/properties/calibration": {
+          "status": "reviewed",
+          "explanation": "Physical size of one pixel. It replaces any calibration stored in the file and sets the unit of every length and area column.",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Pixel calibration",
+          "examples": [
+            {
+              "pixelWidth": 0.5,
+              "pixelHeight": 0.5,
+              "unit": "um"
+            }
+          ],
+          "pitfalls": [
+            "Use the acquisition or stage-micrometer calibration of this image, not of a different magnification."
+          ]
+        },
+        "/properties/calibration/properties/pixelWidth": {
+          "status": "reviewed",
+          "explanation": "Width of one pixel along x, in the chosen unit. Centroid x, boundsX and boundsWidth scale by it, and area by pixelWidth*pixelHeight.",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Pixel width",
+          "units": "calibration.unit per pixel",
+          "examples": [
+            0.5,
+            0.25
+          ],
+          "pitfalls": [
+            "Enter the size of one pixel, not the field of view or the scale-bar length."
+          ]
+        },
+        "/properties/calibration/properties/pixelHeight": {
+          "status": "reviewed",
+          "explanation": "Height of one pixel along y (downward), in the chosen unit. Set it equal to pixelWidth for square pixels; rectangular pixels are supported.",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Pixel height",
+          "units": "calibration.unit per pixel",
+          "examples": [
+            0.5
+          ]
+        },
+        "/properties/calibration/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Length unit of the pixel size and of every published length; areas use the unit squared. \"um\" means micrometres and appears in column names as um (ImageJ shows it as µm).",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Length unit",
+          "examples": [
+            "um",
+            "mm"
+          ],
+          "pitfalls": [
+            "The unit is a label for the declared numbers; nothing is converted."
+          ]
+        },
+        "/properties/threshold": {
+          "status": "reviewed",
+          "explanation": "Inclusive window of raw stored intensities that defines particle pixels: lower <= value <= upper.",
+          "sources": [
+            "docs/imagej.md#threshold",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Intensity threshold",
+          "examples": [
+            {
+              "lower": 100,
+              "upper": 255
+            }
+          ],
+          "pitfalls": [
+            "Bright particles on a dark background use a high window (for example 100-255); dark particles use a low window (for example 0-80).",
+            "A window covering the whole range is rejected."
+          ]
+        },
+        "/properties/threshold/properties/lower": {
+          "status": "reviewed",
+          "explanation": "Lowest raw intensity counted as a particle pixel (inclusive).",
+          "sources": [
+            "docs/imagej.md#threshold",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Lower intensity",
+          "units": "raw stored intensity",
+          "examples": [
+            100,
+            18000
+          ],
+          "pitfalls": [
+            "Values are raw: 0-255 for 8-bit and 0-65535 for 16-bit images, regardless of display contrast."
+          ]
+        },
+        "/properties/threshold/properties/upper": {
+          "status": "reviewed",
+          "explanation": "Highest raw intensity counted as a particle pixel (inclusive). It must not exceed the image maximum (255 for 8-bit).",
+          "sources": [
+            "docs/imagej.md#threshold",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Upper intensity",
+          "units": "raw stored intensity",
+          "examples": [
+            255,
+            65535
+          ]
+        },
+        "/properties/connectivity": {
+          "status": "reviewed",
+          "explanation": "How pixels join into particles: eight joins pixels touching at a corner; four joins only edge neighbours, so corner-touching blobs stay separate.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Connectivity",
+          "defaultMeaning": "eight: ImageJ's default particle tracing.",
+          "examples": [
+            "eight",
+            "four"
+          ],
+          "pitfalls": [
+            "four requires includeHoles true because ImageJ fills holes for 4-connected particles."
+          ]
+        },
+        "/properties/includeHoles": {
+          "status": "reviewed",
+          "explanation": "When true, each particle is the whole region inside its outer boundary: interior holes, and any particle lying inside them, count towards its area and intensity statistics. When false, a particle is exactly its connected thresholded pixels.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Include holes",
+          "defaultMeaning": "false: holes are excluded and enclosed particles are reported separately.",
+          "examples": [
+            false,
+            true
+          ],
+          "pitfalls": [
+            "With holes included, enclosed background lowers the mean intensity and min becomes the background value."
+          ]
+        },
+        "/properties/excludeEdges": {
+          "status": "reviewed",
+          "explanation": "When true, particles whose bounding box touches any image border are dropped, because they may be cut off. They are counted in the summary under rejected.edge.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Exclude edge particles",
+          "defaultMeaning": "false: border particles are measured as seen.",
+          "examples": [
+            true
+          ]
+        },
+        "/properties/minimumArea": {
+          "status": "reviewed",
+          "explanation": "Smallest particle area kept, in unit squared (inclusive). It is converted to a whole pixel count before ImageJ runs; use it to drop noise specks.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Minimum area",
+          "units": "calibration.unit^2",
+          "defaultMeaning": "0: keep particles of any size.",
+          "examples": [
+            0.5
+          ],
+          "pitfalls": [
+            "A value smaller than one pixel area keeps single-pixel particles."
+          ]
+        },
+        "/properties/maximumArea": {
+          "status": "reviewed",
+          "explanation": "Largest particle area kept, in unit squared (inclusive), converted to a whole pixel count.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Maximum area",
+          "units": "calibration.unit^2",
+          "defaultMeaning": "Omitted: no upper limit.",
+          "examples": [
+            100
+          ],
+          "pitfalls": [
+            "A window with no whole pixel count between minimum and maximum is rejected."
+          ]
+        }
+      }
+    }
+  }
+}

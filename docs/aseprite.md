@@ -43,6 +43,7 @@ before launching Aseprite; authored scripts and native reflection are unsupporte
 | `pixel` | Required `layer`, `x`, `y`, `colour`; `frame` defaults to 1. |
 | `rect` | Pixel options plus required positive `width`, `height`; filled rectangle. |
 | `circle` | Pixel options plus required nonnegative integer `radius`; filled integer disk centred at `(x,y)`. |
+| `importImage` | Required absolute PNG `source`, exact `width`, `height`, existing `layer`, and `x`, `y`; `frame` defaults to 1. Replaces the cel rectangle including transparency. |
 | `tag` | Required unique `name`, `fromFrame`, `toFrame`; optional `direction`: `forward`, `reverse`, `pingPong`, `pingPongReverse`. |
 
 Coordinates are zero-based canvas pixels; frame indices and tag endpoints are
@@ -51,13 +52,69 @@ A circle includes pixels whose squared distance from its centre is at most the
 squared radius; radius zero draws one pixel. Shapes must fit wholly inside the
 canvas. Draw operations replace pixels in the selected cel. RGBA colours are four
 integer bytes, with alpha restricted to 255 or transparent `[0,0,0,0]`. Transparent
-drawing erases pixels. Partial alpha, blend modes, indexed colour, groups, external
-image imports, fonts and arbitrary Lua are outside this version's contract.
+drawing erases pixels. Partial alpha, blend modes, indexed colour, groups, unbounded
+image formats, fonts and arbitrary Lua are outside this version's contract.
 
 Limits: 256 nodes, 256×256 canvas, 16 layers, 32 frames, 256 palette entries,
 64-character layer/tag names, 1–65535 ms frame durations, and 262144 total
 canvas×layer×frame pixels. `schema()` exposes structural validation; `plan()` also
 enforces dependencies, bounds, resource limits and supported colour semantics.
+
+## Import captured PNG artwork
+
+`importImage` turns prepared raster assets into editable artwork cels. Start with
+[the import example](../examples/schemaxis/aseprite-import.json), replace both
+`/path/to/badge.png` placeholders with the absolute path of
+[badge.png](../examples/schemaxis/fixtures/aseprite/badge.png), then run normally.
+The 6×4 example keeps a blue background below imported artwork, places the same
+3×2 asset in two frames, and adds a procedural highlight after import.
+[The variant](../examples/schemaxis/aseprite-import-variant.json) uses
+[badge-variant.png](../examples/schemaxis/fixtures/aseprite/badge-variant.png),
+changes placement and second-frame duration; the
+[clipping example](../examples/schemaxis/aseprite-import-clipping-invalid.json)
+fails with `INVALID_DRAW` before opening any source or launching Aseprite.
+
+Placement is replacement, including transparent pixels: the image rectangle
+replaces earlier pixels in the selected cel. Transparent samples erase earlier
+pixels in that cel; they reveal lower layers when flattened. Repeated imports into
+the same cel apply in node order. Every other pixel is preserved. Import into an
+empty cel creates it, while the named layer and one-based frame must already exist.
+Later procedural drawing can paint or erase the imported artwork. There is no
+implicit frame copying, scaling, cropping, clipping or source-over blending.
+
+Declare the source's exact pixel `width` and `height` (1–256), and integer `x`, `y`
+for its top-left canvas corner (zero-based, right/down). Planning validates declared
+bounds and a total limit of 1048576 imported pixels; execution independently
+checks captured dimensions before native launch. Sources must be absolute local
+`.png` regular files, no symlinks, at most 2 MiB each and 16 MiB in total. Only
+noninterlaced RGBA8 PNG containing IHDR, consecutive IDAT and IEND is accepted.
+Palette, grayscale, 16-bit, animation, ancillary metadata (including ICC/gamma/sRGB
+profiles) and partial alpha are rejected with `UNSUPPORTED_IMAGE`. Prepare plain
+RGBA sample PNGs beforehand. No colour conversion is performed or promised.
+
+Alpha must be 0 or 255. RGB channels hidden behind alpha zero are normalised to
+zero for verification because native cel trimming can discard them. Captured
+original bytes remain unchanged. Opaque channels are compared exactly. The
+adaptor never interprets embedded profiles, scales images or rounds partial alpha.
+A wrong dimension raises `IMAGE_DIMENSIONS`; correct the assertion or the source,
+then execute in a fresh directory. A missing/nonregular path raises
+`INVALID_RESOURCE`. Relative paths and control characters fail planning.
+
+Every run retains `input-manifest.json`; imports additionally retain
+`inputs/source-NNN.png` with node identity, original source path, dimensions and
+SHA-256 in the manifest. Native `Image{fromFile=...}` reads only these generated
+capture names. Offline verification needs the captures, never the original source
+location. Workflow reuse fingerprints the actual validated source bytes, so
+changed artwork invalidates reuse. The [PNG handoff example](../examples/schemaxis/aseprite-import-workflow.json)
+places a separately verified procedural icon preview into another editable sprite.
+Keep captures with exported/copied runs; do
+not hand-edit their manifest. Fresh runs use this capture contract, including an
+empty manifest for procedural documents. Earlier procedural evidence without a
+manifest remains verifiable only with the exact previous trusted worker SHA-256
+and all original result/publication/readback checks. Imports always require the
+new capture contract; a missing or malformed manifest cannot downgrade them.
+Earlier source-bound qualification receipts remain historical and become stale
+when adaptor source changes.
 
 ## Outputs and evidence
 
@@ -88,6 +145,8 @@ A second native process reopens the `.aseprite` and both PNGs. Its independent
 `verification.json` records runtime version, dimensions, layer order, frame
 durations, palette, tags, every cel's canvas pixels and both PNGs' decoded pixels.
 Cel trimming and absent empty cels are normalised to full transparent canvases.
+A dependency-free host PNG decoder also checks every preview and sheet pixel
+directly against the independently decoded captured sources and procedural model.
 The host compares this readback with a separately implemented Python integer
 raster model, including normal-layer compositing and sheet frame placement.
 Neither process exit zero nor file existence is accepted as success.
@@ -121,6 +180,7 @@ GPU support or exhaustive Aseprite feature coverage.
 Implementation uses the official [batch CLI](https://www.aseprite.org/docs/cli/),
 [Sprite](https://www.aseprite.org/api/sprite),
 [Image](https://www.aseprite.org/api/image),
+[Cel](https://www.aseprite.org/api/cel),
 [Palette](https://www.aseprite.org/api/palette),
 [Tag](https://www.aseprite.org/api/tag) and
 [JSON](https://www.aseprite.org/api/json) APIs.

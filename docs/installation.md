@@ -4,6 +4,12 @@ Install Python 3.10 or newer, then run `python3 -m pip install .` from the repos
 Install the native applications you need from their official distributors. Schemaxis
 keeps planning and discovery independent of those installations.
 
+The base installation supports [headless CLI operation](headless.md) without a
+Schemaxis GUI dependency. Use `schemaxis --version`, `schemaxis --help` or
+`schemaxis help TOPIC` for [command and capability discovery](cli-discovery.md).
+See [storage management](storage-management.md) for explicit inventory, reviewed
+backup/archive plans and restoration; these commands preserve source data.
+
 From the repository (or your workflow working directory), record application locations:
 
 ```bash
@@ -20,6 +26,9 @@ schemaxis configure ngspice /path/to/ngspice
 schemaxis configure inkscape /path/to/inkscape
 schemaxis configure ffmpeg /path/to/ffmpeg
 schemaxis configure shotcut /path/to/Shotcut.app/melt
+schemaxis configure kicad /path/to/kicad-cli
+schemaxis configure imagej /path/to/java
+schemaxis configure prusaslicer /path/to/prusa-slicer
 ```
 
 Use actual executable paths or, for ParaView, its installation root. Other providers
@@ -40,6 +49,10 @@ Explicit CLI flags and Python `locations` arguments override configured defaults
 existing adaptor environment variables and PATH searches remain fallbacks when no
 location is configured. `run`, workflow execution, `inspect` and new console sessions
 use these defaults. Saved console configurations take precedence until reconfigured.
+Executable locations preserve the selected absolute path, including a Python
+virtual environment's interpreter symlink. Resolving that symlink to the system
+interpreter would lose the environment's installed native packages. Installation
+root locations are canonicalised separately.
 Additional launcher keys such as `freecad_gui` can be added to `locations` for
 assembly execution. FreeCAD's live GUI workflows may require a GUI launcher: use `console --executable`
 or the console's configuration command when its launcher differs from batch FreeCAD.
@@ -55,6 +68,17 @@ Python remains dependency-free. See [the meshing guide](gmsh.md).
 Cantera similarly uses an isolated Python environment with Cantera 3.2.x; the
 qualified 3.2.0 h2o2 mechanism is checked by hash. Pass its Python interpreter
 with `--cantera`; see [the thermochemistry guide](cantera.md).
+
+[KiCad board inspection and drill export](kicad.md) use `kicad-cli` 10.0.7.
+[PrusaSlicer](prusaslicer.md) uses the 2.9.6 console executable for bounded FFF
+slicing; no printer connection is needed. Their overrides are `--kicad` and
+`--prusaslicer`.
+
+[ImageJ particle measurement](imagej.md) uses the ImageJ 1.54t core `ij.jar` and a
+full JDK with the Java source launcher (11 or newer; qualified on OpenJDK 21).
+Configure `imagej` as the Java executable, then add `"imagejJar": "/path/to/ij.jar"`
+to the private configuration's `locations` object, or pass `--imagej-jar`.
+The Fiji launcher and plugins are outside this bounded integration.
 
 The circuit adaptor is qualified on ngspice 47. Configure its batch executable
 or use `--ngspice`; no graphical frontend, KiCad installation or user startup

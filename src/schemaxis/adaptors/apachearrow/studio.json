@@ -1,0 +1,254 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.apachearrow/1",
+    "operation": "prepareTable",
+    "source": "/replace/with/measurements.csv",
+    "columns": [
+      {
+        "name": "id",
+        "type": "int64",
+        "nullable": false
+      },
+      {
+        "name": "small",
+        "type": "int32",
+        "nullable": false
+      },
+      {
+        "name": "reading",
+        "type": "float64",
+        "nullable": true
+      },
+      {
+        "name": "enabled",
+        "type": "bool",
+        "nullable": true
+      },
+      {
+        "name": "label",
+        "type": "utf8",
+        "nullable": true
+      },
+      {
+        "name": "observed",
+        "type": "timestamp_us_utc",
+        "nullable": true
+      }
+    ],
+    "where": [],
+    "select": [
+      {
+        "column": "id",
+        "name": "id"
+      },
+      {
+        "column": "small",
+        "name": "small"
+      },
+      {
+        "column": "reading",
+        "name": "reading"
+      },
+      {
+        "column": "enabled",
+        "name": "enabled"
+      },
+      {
+        "column": "label",
+        "name": "label"
+      },
+      {
+        "column": "observed",
+        "name": "observed"
+      }
+    ]
+  },
+  "categories": [
+    {
+      "id": "tables",
+      "title": "Typed tables",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "measurements",
+      "title": "Nullable measurement table",
+      "description": "Declare every CSV column and preserve exact identifiers, nulls, Unicode text and UTC microseconds in Parquet. Replace the CSV path.",
+      "document": {
+        "version": "schemaxis.apachearrow/1",
+        "operation": "prepareTable",
+        "source": {
+          "$fill": "source"
+        },
+        "columns": [
+          {
+            "name": "id",
+            "type": "int64",
+            "nullable": false
+          },
+          {
+            "name": "small",
+            "type": "int32",
+            "nullable": false
+          },
+          {
+            "name": "reading",
+            "type": "float64",
+            "nullable": true
+          },
+          {
+            "name": "enabled",
+            "type": "bool",
+            "nullable": true
+          },
+          {
+            "name": "label",
+            "type": "utf8",
+            "nullable": true
+          },
+          {
+            "name": "observed",
+            "type": "timestamp_us_utc",
+            "nullable": true
+          }
+        ],
+        "where": [],
+        "select": [
+          {
+            "column": "id",
+            "name": "id"
+          },
+          {
+            "column": "small",
+            "name": "small"
+          },
+          {
+            "column": "reading",
+            "name": "reading"
+          },
+          {
+            "column": "enabled",
+            "name": "enabled"
+          },
+          {
+            "column": "label",
+            "name": "label"
+          },
+          {
+            "column": "observed",
+            "name": "observed"
+          }
+        ]
+      },
+      "testValues": {
+        "source": "/replace/with/measurements.csv"
+      },
+      "fields": {
+        "source": {
+          "label": "Typed CSV source",
+          "type": "path",
+          "required": true,
+          "description": "Absolute local UTF-8 CSV matching every declared column; no file symlink or schema inference.",
+          "extensions": [
+            "csv"
+          ],
+          "acceptsKinds": [
+            "file"
+          ]
+        }
+      },
+      "requires": "Configure isolated PyArrow 26.0.0 Python and select a bounded typed CSV."
+    },
+    {
+      "id": "selection",
+      "title": "Select labelled measurements",
+      "description": "Filter accepted rows, widen the batch integer and explicitly fill missing labels.",
+      "document": {
+        "version": "schemaxis.apachearrow/1",
+        "operation": "prepareTable",
+        "source": {
+          "$fill": "source"
+        },
+        "columns": [
+          {
+            "name": "id",
+            "type": "int64",
+            "nullable": false
+          },
+          {
+            "name": "small",
+            "type": "int32",
+            "nullable": false
+          },
+          {
+            "name": "reading",
+            "type": "float64",
+            "nullable": true
+          },
+          {
+            "name": "enabled",
+            "type": "bool",
+            "nullable": true
+          },
+          {
+            "name": "label",
+            "type": "utf8",
+            "nullable": true
+          },
+          {
+            "name": "observed",
+            "type": "timestamp_us_utc",
+            "nullable": true
+          }
+        ],
+        "where": [
+          {
+            "column": "enabled",
+            "test": "eq",
+            "value": "true"
+          }
+        ],
+        "select": [
+          {
+            "column": "label",
+            "name": "label",
+            "fillNull": "unlabelled"
+          },
+          {
+            "column": "small",
+            "name": "batch",
+            "cast": "int64"
+          },
+          {
+            "column": "observed",
+            "name": "observed"
+          }
+        ]
+      },
+      "testValues": {
+        "source": "/replace/with/measurements.csv"
+      },
+      "fields": {
+        "source": {
+          "label": "Typed CSV source",
+          "type": "path",
+          "required": true,
+          "description": "Absolute local UTF-8 CSV matching every declared column; no file symlink or schema inference.",
+          "extensions": [
+            "csv"
+          ],
+          "acceptsKinds": [
+            "file"
+          ]
+        }
+      },
+      "requires": "Configure isolated PyArrow 26.0.0 Python and select a bounded typed CSV."
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

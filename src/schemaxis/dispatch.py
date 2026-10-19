@@ -1,5 +1,6 @@
 """Isolated native process groups, cooperative cancellation and resource hints."""
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 import hashlib
 import math
@@ -14,6 +15,47 @@ from schemaxis.artifacts import atomic_json
 from schemaxis.errors import fail
 
 _local = threading.local()
+_deadline = ContextVar('schemaxis_execution_deadline', default=None)
+# Bound at import so an adaptor test that scripts the shared time.monotonic for
+# its own stage budget does not also feed the enclosing framework deadline.
+_clock = time.monotonic
+
+
+def _valid_timeout(timeout):
+    if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
+        fail('INVALID_TIMEOUT', 'timeout must be finite and positive')
+
+
+@contextmanager
+def execution_deadline(timeout):
+    """Bound a run and its verification without extending an enclosing budget.
+
+    Native verifiers opt in by calling remaining_timeout before each launch and
+    after their final observation. Existing subprocess timeout policy is unchanged.
+    """
+    _valid_timeout(timeout)
+    deadline = _clock() + timeout
+    parent = _deadline.get()
+    token = _deadline.set(min(parent, deadline) if parent is not None else deadline)
+    try:
+        yield
+    finally:
+        _deadline.reset(token)
+
+
+def remaining_timeout(default=300):
+    """Return a native-call budget or reject cancelled/expired verification.
+
+    Standalone verification has no run scope and uses the supplied default.
+    """
+    _valid_timeout(default)
+    if cancellation_requested():
+        fail('RUNNER_CANCELLED', 'execution cancelled before verification completed')
+    deadline = _deadline.get()
+    remaining = default if deadline is None else min(default, deadline - _clock())
+    if remaining <= 0:
+        fail('RUNNER_TIMED_OUT', 'execution and verification exhausted the timeout')
+    return remaining
 
 
 def cancellation_token():

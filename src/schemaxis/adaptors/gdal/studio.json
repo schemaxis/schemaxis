@@ -1,0 +1,159 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.gdal/1",
+    "operation": "window",
+    "source": "/replace/with/elevation.tif",
+    "x": 1,
+    "y": 1,
+    "width": 4,
+    "height": 3,
+    "outputWidth": 4,
+    "outputHeight": 3,
+    "epsg": 3857,
+    "units": "m",
+    "nodata": -9999,
+    "resampling": "nearest",
+    "lossPolicy": "strict"
+  },
+  "categories": [
+    {
+      "id": "raster",
+      "title": "GIS rasters",
+      "icon": "image"
+    }
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "window",
+      "title": "Extract elevation window",
+      "description": "Replace source path; retain pixel size, units, nodata and geographic extent.",
+      "document": {
+        "version": "schemaxis.gdal/1",
+        "operation": "window",
+        "source": {
+          "$fill": "source"
+        },
+        "x": 1,
+        "y": 1,
+        "width": 4,
+        "height": 3,
+        "outputWidth": 4,
+        "outputHeight": 3,
+        "epsg": 3857,
+        "units": "m",
+        "nodata": -9999,
+        "resampling": "nearest",
+        "lossPolicy": "strict"
+      },
+      "fields": {
+        "source": {
+          "label": "Source GeoTIFF",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "tif",
+            "tiff"
+          ],
+          "acceptsKinds": [
+            "image"
+          ],
+          "description": "Choose a supported north-up single-band uncompressed GeoTIFF whose CRS, units and nodata match this starter."
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/elevation.tif"
+      },
+      "requires": "Configure an isolated Python interpreter with GDAL 3.13.3; select a supported bounded local source raster."
+    },
+    {
+      "id": "resize",
+      "title": "Resize categorical raster window",
+      "description": "Nearest-neighbour centre samples on a changed grid; no averaging.",
+      "document": {
+        "version": "schemaxis.gdal/1",
+        "operation": "window",
+        "source": {
+          "$fill": "source"
+        },
+        "x": 1,
+        "y": 1,
+        "width": 4,
+        "height": 3,
+        "outputWidth": 3,
+        "outputHeight": 2,
+        "epsg": 3857,
+        "units": "m",
+        "nodata": -9999,
+        "resampling": "nearest",
+        "lossPolicy": "strict"
+      },
+      "fields": {
+        "source": {
+          "label": "Source GeoTIFF",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "tif",
+            "tiff"
+          ],
+          "acceptsKinds": [
+            "image"
+          ],
+          "description": "Choose a supported north-up single-band uncompressed GeoTIFF whose CRS, units and nodata match this starter."
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/elevation.tif"
+      },
+      "requires": "Configure an isolated Python interpreter with GDAL 3.13.3; select a supported bounded local source raster."
+    },
+    {
+      "id": "temperature",
+      "title": "Resample geographic temperature",
+      "description": "Finite Float32 degrees grid, Kelvin band values; x longitude and y latitude.",
+      "document": {
+        "version": "schemaxis.gdal/1",
+        "operation": "window",
+        "source": {
+          "$fill": "source"
+        },
+        "x": 0,
+        "y": 0,
+        "width": 6,
+        "height": 5,
+        "outputWidth": 9,
+        "outputHeight": 7,
+        "epsg": 4326,
+        "units": "K",
+        "nodata": -9999,
+        "resampling": "nearest",
+        "lossPolicy": "strict"
+      },
+      "fields": {
+        "source": {
+          "label": "Source GeoTIFF",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "tif",
+            "tiff"
+          ],
+          "acceptsKinds": [
+            "image"
+          ],
+          "description": "Choose a supported north-up single-band uncompressed GeoTIFF whose CRS, units and nodata match this starter."
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/temperature.tif"
+      },
+      "requires": "Configure an isolated Python interpreter with GDAL 3.13.3; select a supported bounded local source raster."
+    }
+  ],
+  "viewers": [
+    "image",
+    "text"
+  ]
+}

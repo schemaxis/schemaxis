@@ -1,0 +1,187 @@
+"""Bounded independent classic GeoTIFF reader and nearest-window oracle (stdlib)."""
+import math
+import struct
+import xml.etree.ElementTree as ET
+
+MAX_PIXELS = 262144
+TYPES = {'UInt16': (16, 1, 'H'), 'Int16': (16, 2, 'h'), 'Float32': (32, 3, 'f')}
+SNAPSHOT_KEYS = {'width','height','dtype','epsg','geotransform','pixelInterpretation','band','units','nodata','pixels'}
+
+
+def real_finite(value):
+    if type(value) not in (int,float): return False
+    try: return math.isfinite(value)
+    except OverflowError: return False
+
+
+def conditioned(geotransform, width, height):
+    """Require pixel spacing well above double-coordinate roundoff."""
+    if not isinstance(geotransform,(list,tuple)) or len(geotransform)!=6 or any(not real_finite(v) for v in geotransform):
+        raise ValueError('finite numeric six-value geotransform required')
+    x,dx,rx,y,ry,dy=geotransform
+    if rx!=0 or ry!=0 or dx<=0 or dy>=0: raise ValueError('north-up affine required')
+    for origin,step,count in ((x,dx,width),(y,dy,height)):
+        edge=origin+step*count
+        if not math.isfinite(edge) or abs(step)<1024*max(math.ulp(origin),math.ulp(edge)):
+            raise ValueError('unresolvable affine: pixel spacing must exceed 1024 coordinate ULPs')
+
+
+def validate_snapshot(raster):
+    if not isinstance(raster,dict) or set(raster)!=SNAPSHOT_KEYS: raise ValueError('raster snapshot closed shape differs')
+    for k in ('width','height','epsg','band'):
+        if type(raster[k]) is not int: raise ValueError(k+' must be an integer, not a boolean')
+    w,h=raster['width'],raster['height']
+    if not 1<=w<=4096 or not 1<=h<=4096 or w*h>MAX_PIXELS or raster['band']!=1 or raster['epsg'] not in (4326,3857): raise ValueError('raster dimensions/band/CRS differ')
+    if type(raster['dtype']) is not str or raster['dtype'] not in TYPES or type(raster['units']) is not str or raster['units'] not in ('m','K','1') or raster['pixelInterpretation']!='area': raise ValueError('raster type/units/interpretation differ')
+    dtype=raster['dtype'];nodata=raster['nodata'];pixels=raster['pixels']
+    if not isinstance(pixels,list) or len(pixels)!=w*h: raise ValueError('raster pixel cardinality differs')
+    if not real_finite(nodata): raise ValueError('finite numeric nodata required')
+    values=[nodata,*pixels]
+    if any(not real_finite(v) for v in values): raise ValueError('pixels require finite numbers, not booleans')
+    if dtype=='Float32':
+        try:
+            if any(struct.unpack('<f',struct.pack('<f',v))[0]!=v for v in values): raise ValueError('pixels/nodata must be exactly Float32-representable')
+        except (OverflowError,struct.error) as error: raise ValueError('Float32 pixel range') from error
+        if any(type(v) is not float for v in pixels): raise ValueError('Float32 snapshot pixels must be floating point')
+    else:
+        lo,hi=(0,65535) if dtype=='UInt16' else (-32768,32767)
+        if any(type(v) is not int or not lo<=v<=hi for v in pixels) or not lo<=nodata<=hi or int(nodata)!=nodata: raise ValueError('integer pixel/nodata range or type')
+    conditioned(raster['geotransform'],w,h)
+
+
+def _parse(data):
+    if len(data) > 8*1024**2 or len(data) < 8: raise ValueError('TIFF byte limit/header')
+    endian = {'II': '<', 'MM': '>'}.get(data[:2].decode('ascii'))
+    if not endian: raise ValueError('TIFF byte order')
+    def unpack(fmt, offset):
+        size=struct.calcsize(endian+fmt)
+        if offset < 0 or offset+size > len(data): raise ValueError('TIFF offset outside file')
+        return struct.unpack_from(endian+fmt, data, offset)
+    magic, offset=unpack('HI',2)
+    if magic != 42: raise ValueError('classic TIFF required; no BigTIFF')
+    count=unpack('H',offset)[0]
+    if not 1 <= count <= 32: raise ValueError('TIFF tag limit')
+    tags={}; metadata_spans=[(0,8),(offset,offset+2+12*count+4)]
+    if offset<8: raise ValueError('IFD overlaps TIFF header')
+    for i in range(count):
+        address=offset+2+12*i
+        tag, kind, n=unpack('HHI',address)
+        if tag in tags or kind not in (2,3,4,12) or n > MAX_PIXELS: raise ValueError('duplicate/unsupported TIFF field')
+        single_short={258,259,262,274,277,284,339}
+        single_integer={256,257,278}
+        if n<1 or (tag in single_short and (kind!=3 or n!=1)) or (tag in single_integer and (kind not in (3,4) or n!=1)):
+            raise ValueError('TIFF scalar tag kind/count mismatch')
+        if (tag in (273,279) and kind not in (3,4)) or (tag==33550 and (kind!=12 or n!=3)) or (tag==33922 and (kind!=12 or n!=6)) or (tag==34735 and kind!=3) or (tag==34736 and (kind!=12 or n>2)) or (tag in (34737,42112,42113) and kind!=2):
+            raise ValueError('TIFF array/metadata tag kind/count mismatch')
+        fmt={2:'B',3:'H',4:'I',12:'d'}[kind]; size=struct.calcsize(fmt)*n
+        position=address+8 if size<=4 else unpack('I',address+8)[0]
+        if size>4:
+            if any(position<b and position+size>a for a,b in metadata_spans): raise ValueError('overlapping TIFF metadata')
+            metadata_spans.append((position,position+size))
+        value=unpack(str(n)+fmt,position)
+        if kind==2:
+            raw=bytes(value)
+            if not raw.endswith(b'\0'): raise ValueError('unterminated TIFF ASCII')
+            value=raw[:-1].decode('ascii')
+        tags[tag]=value
+    if unpack('I',offset+2+12*count)[0] != 0: raise ValueError('multiple TIFF images/overviews refused')
+    allowed={256,257,258,259,262,273,274,277,278,279,284,339,33550,33922,34735,34736,34737,42112,42113}
+    if set(tags)-allowed: raise ValueError('unsupported TIFF metadata/tile/mask tags: '+str(sorted(set(tags)-allowed)))
+    def scalar(tag, default=None):
+        value=tags.get(tag,(default,))
+        if not isinstance(value,tuple) or len(value)!=1: raise ValueError('scalar TIFF tag expected')
+        return value[0]
+    w,h=scalar(256),scalar(257)
+    if not isinstance(w,int) or not isinstance(h,int) or not 1<=w<=4096 or not 1<=h<=4096 or w*h>MAX_PIXELS: raise ValueError('pixel budget')
+    if (scalar(259),scalar(262),scalar(277),scalar(274,1),scalar(284,1))!=(1,1,1,1,1): raise ValueError('require uncompressed north-up grayscale single-band strips')
+    key=scalar(258),scalar(339,1)
+    dtype=next((name for name,v in TYPES.items() if v[:2]==key),None)
+    if not dtype: raise ValueError('supported dtype UInt16/Int16/Float32 required')
+    rows=scalar(278)
+    if not isinstance(rows,int) or rows<1: raise ValueError('invalid rows per strip')
+    offsets,counts=tags.get(273,()),tags.get(279,())
+    if len(offsets)!=(h+rows-1)//rows or len(counts)!=len(offsets): raise ValueError('strip cardinality')
+    values=[]; spans=[]
+    for i,(start,size) in enumerate(zip(offsets,counts)):
+        n=w*min(rows,h-i*rows)
+        if size!=n*key[0]//8 or start<8 or start+size>len(data): raise ValueError('strip size/range')
+        if any(start<b and start+size>a for a,b in spans+metadata_spans): raise ValueError('overlapping strips')
+        spans.append((start,start+size));values.extend(unpack(str(n)+TYPES[dtype][2],start))
+    if any(not math.isfinite(v) for v in values): raise ValueError('nonfinite pixels')
+    scale,tie=tags.get(33550),tags.get(33922)
+    if not scale or not tie or len(scale)!=3 or len(tie)!=6 or tie[:3]!=(0,0,0) or scale[2]!=0 or tie[5]!=0:
+        raise ValueError('require one north-up zero-raster-origin tiepoint and scale')
+    if not all(math.isfinite(v) for v in (*scale,*tie)) or scale[0]<=0 or scale[1]<=0: raise ValueError('invalid geotransform')
+    raw=tags.get(34735,())
+    if len(raw)<4 or raw[:3]!=(1,1,0) or len(raw)!=4+4*raw[3]: raise ValueError('GeoKey directory')
+    geo={}; used_doubles=set()
+    for i in range(raw[3]):
+        k,loc,n,v=raw[4+4*i:8+4*i]
+        if k in geo: raise ValueError('duplicate GeoKey')
+        if k in (1026,2049,3073):
+            if loc!=34737 or not isinstance(tags.get(34737),str) or v+n>len(tags[34737])+1: raise ValueError('citation GeoKey')
+        elif k in (2057,2059):
+            doubles=tags.get(34736,())
+            if loc!=34736 or n!=1 or v>=len(doubles) or doubles[v]!={2057:6378137.,2059:298.257223563}[k]: raise ValueError('WGS84 ellipsoid differs')
+            used_doubles.add(v)
+        elif loc!=0 or n!=1: raise ValueError('unsupported indirect GeoKey')
+        geo[k]=v
+    if used_doubles!=set(range(len(tags.get(34736,())))): raise ValueError('unreferenced GeoDouble metadata')
+    epsg=geo.get(2048) if geo.get(1024)==2 else geo.get(3072)
+    permitted={1024,1025,1026,2048,2049,2054,2057,2059} if epsg==4326 else {1024,1025,1026,2049,2054,3072,3073,3076}
+    if epsg not in (4326,3857) or set(geo)-permitted or geo.get(1025)!=1 or geo.get(1024)!=(2 if epsg==4326 else 1): raise ValueError('only EPSG4326/3857 PixelIsArea')
+    if (epsg==4326 and geo.get(2054,9102)!=9102) or (epsg==3857 and geo.get(3076,9001)!=9001): raise ValueError('CRS units differ')
+    nodata_text=tags.get(42113)
+    if not isinstance(nodata_text,str): raise ValueError('explicit nodata required')
+    nodata=float(nodata_text)
+    if not math.isfinite(nodata): raise ValueError('finite nodata required')
+    if dtype!='Float32' and (not nodata.is_integer() or not (0<=nodata<=65535 if dtype=='UInt16' else -32768<=nodata<=32767)): raise ValueError('nodata outside dtype')
+    if dtype=='Float32' and struct.unpack('<f',struct.pack('<f',nodata))[0]!=nodata: raise ValueError('nodata must be exactly Float32-representable')
+    metadata=tags.get(42112)
+    unit=''
+    if metadata is not None:
+        if '<!' in metadata: raise ValueError('XML declarations refused')
+        root=ET.fromstring(metadata)
+        if root.tag!='GDALMetadata' or root.attrib or len(root)!=1: raise ValueError('unsupported GDAL metadata')
+        item=root[0]
+        if item.tag!='Item' or item.attrib!={'name':'UNITTYPE','sample':'0','role':'unittype'} or len(item): raise ValueError('only band units metadata supported')
+        if (root.text or '').strip() or (item.tail or '').strip(): raise ValueError('unexpected metadata text')
+        unit=item.text or ''
+    if unit not in ('m','K','1'): raise ValueError('explicit m/K/1 band unit required')
+    return {'width':w,'height':h,'dtype':dtype,'epsg':epsg,'geotransform':[tie[3],scale[0],0,tie[4],0,-scale[1]],'pixelInterpretation':'area','band':1,'units':unit,'nodata':nodata,'pixels':values}
+
+
+def parse(data):
+    try:
+        raster=_parse(data);validate_snapshot(raster);return raster
+    except (struct.error, OverflowError, ET.ParseError) as error:
+        raise ValueError('malformed TIFF/metadata: '+str(error)) from error
+
+
+def expected(source, plan):
+    validate_snapshot(source)
+    x,y,w,h=(plan[k] for k in ('x','y','width','height'))
+    ow,oh=plan['outputWidth'],plan['outputHeight']
+    if x+w>source['width'] or y+h>source['height']: raise ValueError('window outside source pixels')
+    if source['epsg']!=plan['epsg'] or source['units']!=plan['units'] or source['nodata']!=plan['nodata']: raise ValueError('declared CRS/units/nodata do not match source')
+    gt=source['geotransform']
+    pixels=[source['pixels'][(y+min(h-1,((2*j+1)*h)//(2*oh)))*source['width']+x+min(w-1,((2*i+1)*w)//(2*ow))] for j in range(oh) for i in range(ow)]
+    result={**source,'width':ow,'height':oh,'geotransform':[gt[0]+x*gt[1],gt[1]*w/ow,0,gt[3]+y*gt[5],0,gt[5]*h/oh],'pixels':pixels}
+    validate_snapshot(result);return result
+
+
+def compare(expected, actual):
+    validate_snapshot(expected);validate_snapshot(actual)
+    for k,v in expected.items():
+        if k=='geotransform':
+            # Four representable-double steps, never a tolerance proportional
+            # to the large coordinate origin. Conditioning bounds this below
+            # 1/256 of a pixel, including the far edge.
+            if any(abs(a-b)>4*max(math.ulp(a),math.ulp(b)) for a,b in zip(v,actual[k])):
+                raise ValueError('geotransform differs beyond four ULPs')
+        elif actual[k]!=v: raise ValueError(k+' differs')
+
+
+def summary(raster):
+    valid=[v for v in raster['pixels'] if v!=raster['nodata']];gt=raster['geotransform']
+    return {k:v for k,v in raster.items() if k!='pixels'} | {'validCount':len(valid),'nodataCount':len(raster['pixels'])-len(valid),'minimum':min(valid) if valid else None,'maximum':max(valid) if valid else None,'mean':math.fsum(valid)/len(valid) if valid else None,'corners':[[gt[0],gt[3]],[gt[0]+raster['width']*gt[1],gt[3]+raster['height']*gt[5]]]}

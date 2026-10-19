@@ -1,5 +1,9 @@
 """Trusted Lua source shipped as Python package data without packaging hooks."""
 
+# Previous packaged procedural-only worker: retained evidence without a capture
+# manifest may use exactly this trusted source identity, never arbitrary Lua.
+LEGACY_PROCEDURAL_WORKER_SHA256 = '09bcdb34c346d95d1803a2dbadc4ddd0445b756f5393f4a95e8eb26287610099'
+
 WORKER = r'''
 -- Trusted worker. Authored JSON is data, never Lua source or reflected API names.
 local function read(path)
@@ -89,6 +93,8 @@ if app.params.stage == "build" then
   local plan = read("plan.json")
   local sprite
   local layers = {}
+  local imported = {}
+  for _,record in ipairs(read("input-manifest.json").images) do imported[record.node] = record end
   for _,node in ipairs(plan.nodes) do
     local op,o = node.filter,node.options
     if op == "sprite" then
@@ -103,10 +109,30 @@ if app.params.stage == "build" then
     elseif op == "palette" then palette(sprite,o.colours)
     elseif op == "tag" then
       local t = sprite:newTag(o.fromFrame,o.toFrame); t.name = o.name; t.aniDir = dirs[o.direction]
+    elseif op == "importImage" then
+      local record = assert(imported[node.id], "missing captured image")
+      local source = Image{fromFile=record.retained}
+      assert(source.colorMode == ColorMode.RGB and source.width == o.width and source.height == o.height)
+      local l = assert(layers[o.layer])
+      local cel = l:cel(o.frame)
+      local image = Image(sprite.width,sprite.height,ColorMode.RGB)
+      -- Normalise a trimmed cel back to canvas coordinates before replacement.
+      if cel then image:drawImage(cel.image,cel.position) end
+      for y=0,o.height-1 do
+        for x=0,o.width-1 do
+          local pixel = source:getPixel(x,y)
+          local alpha = app.pixelColor.rgbaA(pixel)
+          assert(alpha == 0 or alpha == 255, "partial alpha is unsupported")
+          image:drawPixel(o.x+x,o.y+y,alpha == 0 and 0 or pixel)
+        end
+      end
+      if cel then cel.image = image; cel.position = Point(0,0)
+      else sprite:newCel(l,o.frame,image,Point(0,0)) end
     elseif op == "pixel" or op == "rect" or op == "circle" then
       local l = assert(layers[o.layer])
       local cel = l:cel(o.frame)
-      local image = cel and Image(cel.image) or Image(sprite.width,sprite.height,ColorMode.RGB)
+      local image = Image(sprite.width,sprite.height,ColorMode.RGB)
+      if cel then image:drawImage(cel.image,cel.position) end
       local c = app.pixelColor.rgba(o.colour[1],o.colour[2],o.colour[3],o.colour[4])
       if op == "circle" then
         for dy=-o.radius,o.radius do
@@ -119,7 +145,7 @@ if app.params.stage == "build" then
           for x=o.x,o.x+(o.width or 1)-1 do image:drawPixel(x,y,c) end
         end
       end
-      if cel then cel.image = image else sprite:newCel(l,o.frame,image,Point(0,0)) end
+      if cel then cel.image = image; cel.position = Point(0,0) else sprite:newCel(l,o.frame,image,Point(0,0)) end
     else error("unsupported operation") end
   end
   sprite:saveAs("sprite.aseprite")

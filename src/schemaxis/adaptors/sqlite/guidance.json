@@ -1,0 +1,227 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "summarise": {
+      "status": "reviewed",
+      "explanation": "Join typed tables through a declared foreign key, optionally filter integers, then group and count/sum exact integer amounts. Choose this for reproducible relational reports and a fresh checked database. Null join keys are omitted, null values are ignored by SUM, and an all-null group has a null total.",
+      "sources": [
+        "docs/sqlite.md"
+      ],
+      "pitfalls": [
+        "Use exact JSON integers, explicit nullability and primary/foreign keys; do not pass SQL or a pre-existing database."
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.sqlite/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Declare the complete relational report, from captured typed source tables to ordered groups. Each execution creates a new database; changing source bytes requires a new run.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the SQLite document contract schemaxis.sqlite/1. This version names the input language; the qualified native release is recorded separately.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Join typed tables through a declared foreign key, optionally filter integers, then group and count/sum exact integer amounts. Choose this for reproducible relational reports and a fresh checked database. Null join keys are omitted, null values are ignored by SUM, and an all-null group has a null total.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables": {
+          "status": "reviewed",
+          "explanation": "Declare parent tables before children so foreign keys can name an earlier primary key. Every source is captured before native execution; 1\u20134 tables and up to 2048 rows each are supported.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items": {
+          "status": "reviewed",
+          "explanation": "Describe one imported table and its ownership: a local JSON array of exact row objects, declared column types, primary key and optional foreign keys. Empty arrays are valid.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Give this table a unique lower-case ASCII identifier, such as sales. Qualified query fields use this name; SQLite internal names are excluded.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute regular local .json row-array file. Rows must contain exactly the declared columns, with actual JSON nulls where allowed; file symlinks and duplicate JSON keys are rejected. Workflow reuse hashes the captured bytes.",
+          "sources": [
+            "docs/sqlite.md"
+          ],
+          "fileExtensions": [
+            ".json"
+          ]
+        },
+        "/properties/tables/items/properties/columns": {
+          "status": "reviewed",
+          "explanation": "List every source column in database order. Choose INTEGER for exact unitless integer arithmetic or TEXT for printable ASCII labels; automatic conversion is forbidden.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/columns/items": {
+          "status": "reviewed",
+          "explanation": "Describe one typed column. Nullability is explicit and defaults to false; a primary-key column must remain nonnullable.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/columns/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Name the source object key with a distinct lower-case ASCII identifier. Case and spelling must match each source row exactly.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/columns/items/properties/type": {
+          "status": "reviewed",
+          "explanation": "Choose INTEGER for actual JSON integers within \u00b11000000000 (booleans excluded), or TEXT for up to 256 printable ASCII characters. No float parsing, date interpretation or unit conversion occurs.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/columns/items/properties/nullable": {
+          "status": "reviewed",
+          "explanation": "Allow actual JSON null in this column when true. Omission forbids null; empty text and zero are values, never missing data. Primary-key columns cannot allow null.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/primaryKey": {
+          "status": "reviewed",
+          "explanation": "Choose a nonnullable column whose values uniquely identify all rows. Duplicate primary values fail before native execution; this key is the only allowed foreign-key target.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/foreignKeys": {
+          "status": "reviewed",
+          "explanation": "Declare at most four parent relationships. Omission means no foreign keys; every nonnull local value must exist in the earlier parent table, even if a later query would filter that row out.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/foreignKeys/items": {
+          "status": "reviewed",
+          "explanation": "Connect a child column to an earlier table primary key of the same type. Null local keys are allowed only when the column is nullable and do not match an inner join.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/foreignKeys/items/properties/column": {
+          "status": "reviewed",
+          "explanation": "Name the child column carrying the parent identity. Use one foreign-key relationship per local column, and declare its nullability deliberately.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/foreignKeys/items/properties/table": {
+          "status": "reviewed",
+          "explanation": "Name an earlier declared parent table. Tables cannot reference themselves or later imports in this bounded contract.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/tables/items/properties/foreignKeys/items/properties/target": {
+          "status": "reviewed",
+          "explanation": "Name the earlier parent table primaryKey column. A same-type unique primary key prevents accidental many-to-many row expansion.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/from": {
+          "status": "reviewed",
+          "explanation": "Choose the base table supplying report rows. Without join, all query columns must belong to this table; with join, both base and parent columns are available.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/join": {
+          "status": "reviewed",
+          "explanation": "Optionally enrich base rows with one parent table by following a declared foreign key. Omission keeps base rows alone; inner join drops null local keys and cannot multiply rows through a duplicate parent.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/join/properties/table": {
+          "status": "reviewed",
+          "explanation": "Choose the earlier parent table named by a base-table foreign key. This is an inner join only; unmatched nonnull keys are an input integrity error.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/join/properties/local": {
+          "status": "reviewed",
+          "explanation": "Name the base-table foreign-key column used to find its parent. Null local keys produce no joined row.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/join/properties/remote": {
+          "status": "reviewed",
+          "explanation": "Name the joined parent primary key, matching the base foreign-key declaration exactly. Composite and non-key joins are excluded.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/where": {
+          "status": "reviewed",
+          "explanation": "Optionally keep only rows whose chosen INTEGER column is at least minimum, after joining. Omission keeps all joined rows; null filtered values do not pass.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/where/properties/column": {
+          "status": "reviewed",
+          "explanation": "Choose a qualified INTEGER field such as sales.id or sales.amount from the active tables. Null values fail this filter; text comparison and expressions are excluded.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/where/properties/minimum": {
+          "status": "reviewed",
+          "explanation": "Set an inclusive exact integer threshold in the same units as the selected column; no units are inferred. For example 3 keeps IDs 3 and above. The threshold must remain within \u00b11000000000.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/groupBy": {
+          "status": "reviewed",
+          "explanation": "Choose 1\u20133 distinct qualified columns defining groups. Output names g0, g1 and g2 follow this order; binary ascending ordering places null first and distinguishes null, empty string, zero and text case.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/groupBy/items": {
+          "status": "reviewed",
+          "explanation": "Name one active table.column, such as departments.region. All rows with identical typed values form one group; no case folding or numeric/text coercion occurs.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        },
+        "/properties/sum": {
+          "status": "reviewed",
+          "explanation": "Choose a qualified INTEGER amount column to sum after joining/filtering. Null amounts are ignored; all-null groups produce null totals. row_count still includes those rows. Empty query results publish headers with zero rows.",
+          "sources": [
+            "docs/sqlite.md"
+          ]
+        }
+      }
+    }
+  }
+}

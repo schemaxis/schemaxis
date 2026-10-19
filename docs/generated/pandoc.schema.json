@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.pandoc/1"
+    },
+    "operation": {
+      "const": "report"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "default": 1
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "paragraph"
+                      ]
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 2048
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "text"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "table"
+                      ]
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      "minItems": 1,
+                      "maxItems": 8
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "minItems": 1,
+                        "maxItems": 8
+                      },
+                      "minItems": 1,
+                      "maxItems": 64
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "columns",
+                    "rows"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "image"
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 4096
+                    },
+                    "alt": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "widthMm": {
+                      "type": "number",
+                      "minimum": 10,
+                      "maximum": 150,
+                      "default": 80
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "source",
+                    "alt"
+                  ]
+                }
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 32
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "heading",
+          "content"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 32
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "title",
+    "sections"
+  ]
+}

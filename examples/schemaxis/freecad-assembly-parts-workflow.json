@@ -1,0 +1,321 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "plate",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "parameters": {
+          "width": {
+            "kind": "length",
+            "value": 80,
+            "minimum": 60,
+            "maximum": 100
+          },
+          "thickness": {
+            "kind": "length",
+            "value": 5,
+            "minimum": 2,
+            "maximum": 50
+          },
+          "boreRadius": {
+            "kind": "length",
+            "value": 3,
+            "minimum": 2,
+            "maximum": 5
+          }
+        },
+        "nodes": [
+          {
+            "id": "part",
+            "filter": "body"
+          },
+          {
+            "id": "outline",
+            "filter": "rectangle",
+            "inputs": {
+              "body": "part"
+            },
+            "options": {
+              "height": 50,
+              "plane": "XY"
+            },
+            "drive": {
+              "width": {
+                "terms": {
+                  "width": 1
+                }
+              }
+            }
+          },
+          {
+            "id": "slab",
+            "filter": "pad",
+            "inputs": {
+              "body": "part",
+              "profile": "outline"
+            },
+            "drive": {
+              "length": {
+                "terms": {
+                  "thickness": 1
+                }
+              }
+            }
+          },
+          {
+            "id": "bore",
+            "filter": "circle",
+            "inputs": {
+              "body": "part"
+            },
+            "options": {
+              "plane": "XY",
+              "centre": [
+                15,
+                10
+              ]
+            },
+            "drive": {
+              "radius": {
+                "terms": {
+                  "boreRadius": 1
+                }
+              }
+            }
+          },
+          {
+            "id": "finished",
+            "filter": "pocket",
+            "inputs": {
+              "base": "slab",
+              "profile": "bore"
+            },
+            "options": {
+              "extent": "throughAll"
+            }
+          }
+        ],
+        "output": "finished"
+      }
+    },
+    {
+      "id": "spacer",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "parameters": {
+          "width": {
+            "kind": "length",
+            "value": 60,
+            "minimum": 40,
+            "maximum": 90
+          },
+          "thickness": {
+            "kind": "length",
+            "value": 12,
+            "minimum": 2,
+            "maximum": 50
+          },
+          "boreRadius": {
+            "kind": "length",
+            "value": 4,
+            "minimum": 2,
+            "maximum": 5
+          }
+        },
+        "nodes": [
+          {
+            "id": "part",
+            "filter": "body"
+          },
+          {
+            "id": "outline",
+            "filter": "rectangle",
+            "inputs": {
+              "body": "part"
+            },
+            "options": {
+              "height": 40,
+              "plane": "XY"
+            },
+            "drive": {
+              "width": {
+                "terms": {
+                  "width": 1
+                }
+              }
+            }
+          },
+          {
+            "id": "slab",
+            "filter": "pad",
+            "inputs": {
+              "body": "part",
+              "profile": "outline"
+            },
+            "drive": {
+              "length": {
+                "terms": {
+                  "thickness": 1
+                }
+              }
+            }
+          },
+          {
+            "id": "bore",
+            "filter": "circle",
+            "inputs": {
+              "body": "part"
+            },
+            "options": {
+              "plane": "XY",
+              "centre": [
+                -10,
+                5
+              ]
+            },
+            "drive": {
+              "radius": {
+                "terms": {
+                  "boreRadius": 1
+                }
+              }
+            }
+          },
+          {
+            "id": "finished",
+            "filter": "pocket",
+            "inputs": {
+              "base": "slab",
+              "profile": "bore"
+            },
+            "options": {
+              "extent": "throughAll"
+            }
+          }
+        ],
+        "output": "finished"
+      }
+    },
+    {
+      "id": "assembly",
+      "document": {
+        "version": "schemaxis.freecad.assembly/1",
+        "units": "mm",
+        "parts": [
+          {
+            "id": "plate",
+            "source": {
+              "$artifact": "plate",
+              "index": 2
+            },
+            "mounts": {
+              "top": {
+                "position": [
+                  0,
+                  0,
+                  {
+                    "terms": {
+                      "thickness": 1
+                    }
+                  }
+                ]
+              },
+              "side": {
+                "position": [
+                  {
+                    "terms": {
+                      "width": 0.5
+                    }
+                  },
+                  0,
+                  {
+                    "terms": {
+                      "thickness": 0.5
+                    }
+                  }
+                ],
+                "z": "+X",
+                "x": "-Z"
+              }
+            }
+          },
+          {
+            "id": "spacer",
+            "source": {
+              "$artifact": "spacer",
+              "index": 2
+            },
+            "mounts": {
+              "bottom": {},
+              "top": {
+                "position": [
+                  0,
+                  0,
+                  {
+                    "terms": {
+                      "thickness": 1
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "components": [
+          {
+            "id": "base",
+            "part": "plate",
+            "rotation": 30
+          },
+          {
+            "id": "spacer",
+            "part": "spacer"
+          },
+          {
+            "id": "cover",
+            "part": "plate"
+          }
+        ],
+        "grounded": "base",
+        "joints": [
+          {
+            "id": "baseToSpacer",
+            "type": "fixed",
+            "parent": {
+              "component": "base",
+              "mount": "top"
+            },
+            "child": {
+              "component": "spacer",
+              "mount": "bottom"
+            },
+            "offset": [
+              5,
+              0,
+              0
+            ],
+            "clocking": 90
+          },
+          {
+            "id": "spacerToCover",
+            "type": "fixed",
+            "parent": {
+              "component": "spacer",
+              "mount": "top"
+            },
+            "child": {
+              "component": "cover",
+              "mount": "side"
+            },
+            "offset": [
+              0,
+              0,
+              2
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

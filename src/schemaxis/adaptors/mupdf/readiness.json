@@ -1,0 +1,260 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.mupdf/1": {
+      "guide": "docs/mupdf.md",
+      "context": {
+        "purpose": "Review selected PDF pages in a declared order as PNG images, extracted UTF-8 text and crop/rotation metadata. Use this for bounded archival previews and document review. The PDF is captured before execution; fresh native reopening checks every raster and text output. MuPDF renders effective CropBox View appearances with inherited rotation, followed by the requested clockwise quarter turn. Text follows native content order; OCR and arbitrary document editing are outside this route.",
+        "assumptions": "Unencrypted local PDF, passive effective CropBox View rendering, native content-order text; POSIX resource caps and MuPDF 1.28.5.",
+        "constraints": "Input <=16 MiB/128 whole-document pages; <=16 distinct selected pages,36–300dpi, quarter turns; <=4096 each raster dimension,16,777,216 combined pixels. No authored scripts, passwords, URLs, crop or PDF editing. Native-repaired/malformed PDFs are rejected. Text <=1048576 characters/page and4194304 combined. PNG density tags and native resolution readback match requested DPI.",
+        "inspection": "Inspect ordered page PNG/text and review-summary metadata; PNG RGB pixels compare with fresh native source reopening PNM and text. Literal fixture oracle independently qualifies geometry/colours/order/Unicode example.",
+        "recovery": "INVALID_PDF_SOURCE needs an absolute bounded regular PDF. INVALID_PDF_PAGES needs unique page numbers; PDF_PAGE_RANGE means the native document has fewer pages. ENCRYPTED_PDF needs an authorized unencrypted copy. PDF_PIXEL_LIMIT needs lower density/fewer pages. UNSUPPORTED_RUNTIME needs MuPDF 1.28.5. Retained logs/result explain process faults."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/mupdf-review.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/mupdf-review-variant.json"
+        },
+        {
+          "id": "duplicate-pages",
+          "reference": "examples/schemaxis/mupdf-pages-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_PDF_PAGES",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_mupdf.py"
+      ],
+      "acceptance": [
+        "tools/qualify_mupdf.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified PNG/text publications run through normal workflow jobs; source-byte digests invalidate reuse.",
+          "references": [
+            "docs/mupdf.md",
+            "tools/qualify_mupdf.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared expressions/references and finite visits resolve before PDF review planning.",
+          "references": [
+            "docs/mupdf.md",
+            "tools/qualify_mupdf.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://mupdf.readthedocs.io/en/1.28.5/reference/javascript/types/PDFDocument.html",
+          "https://mupdf.readthedocs.io/en/1.28.5/reference/javascript/types/PDFPage.html",
+          "https://mupdf.readthedocs.io/en/1.28.5/reference/javascript/types/Pixmap.html",
+          "https://mupdf.readthedocs.io/en/1.28.5/reference/javascript/types/StructuredText.html"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers version, preflight, rendering, fresh readback and verification; POSIX AS1GiB/FSIZE64MiB/CPU120s caps per native stage.",
+          "cancellation": "Shared owned process-tree cancellation plus prepublication cancellation check. Incomplete/failed evidence remains inspectable.",
+          "logs": "Captured PDF and digest, authored/effective plan, trusted scripts/launchers/commands/consumed-input bindings, native metadata/stdout/stderr/submissions, PNM readback and final artifacts retained.",
+          "verification": "Standard-library PNG CRC/zlib/filter decoder compares all RGB pixels with separate native PDF reopening PNM; native text/boxes/order compared across processes. Literal hand-built fixture oracle independently checks exact geometry and sampled colours. Offline verification checks retained evidence, without launching MuPDF or inventing new proof."
+        },
+        "data": [
+          {
+            "id": "pdf",
+            "direction": "input",
+            "kind": "pdf",
+            "format": "PDF",
+            "traits": {
+              "encryption": "none",
+              "pages": "1–128"
+            },
+            "losses": [
+              "Only selected effective CropBox views are published; original bytes are retained for provenance."
+            ],
+            "scope": "Captured local regular PDF <=16MiB; native parser establishes page count/encryption."
+          },
+          {
+            "id": "page-image",
+            "direction": "output",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "colour": "8-bit DeviceRGB",
+              "alpha": false
+            },
+            "losses": [
+              "PNG is an opaque 8-bit DeviceRGB raster of the effective CropBox and View appearances; no vectors, layers, links, forms or editability.",
+              "Inherited PDF rotation and UserUnit are applied before the requested clockwise output rotation. No authored crop or media-box override.",
+              "Text is native content-order UTF-8 extraction; font mappings determine Unicode, and reading order, OCR, layout and accessibility are not certified.",
+              "Document actions, PDF JavaScript, links and attachments are never executed or followed. This passive rendering integration is not a PDF sanitizer or malware isolation boundary.",
+              "Offline verification checks retained native source/command/readback consistency. Independent correctness is qualified on the known fixture, not every PDF."
+            ],
+            "scope": "Ordered opaque page raster with native View appearances and declared density/rotation."
+          },
+          {
+            "id": "page-text",
+            "direction": "output",
+            "kind": "text",
+            "format": "UTF-8",
+            "traits": {
+              "ordering": "native content order"
+            },
+            "losses": [
+              "No OCR, reading-order, layout or universal Unicode/font-map guarantee."
+            ],
+            "scope": "One extracted text file per selected page."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "image",
+            "scope": "View ordered page PNGs.",
+            "limits": "Raster review only; source PDF actions are never activated."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect extracted text and review-summary metadata.",
+            "limits": "No embedded PDF editor; text is native content order."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit page order/density/rotation or local PDF source, plan fresh and verify. Same-path byte changes invalidate workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified PNG/text publications run through normal workflow jobs; source-byte digests invalidate reuse."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared expressions/references and finite visits resolve before PDF review planning."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Bounded captured PDF bytes participate in reuse identity, including same-path changes."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing, undo and validation support the closed review document."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared forms expose PDF path, ordered page list, DPI and quarter-turn rotation."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native-inspection hook; batch page metadata is a publication."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial local subprocess only."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "PDF pages are explicit ordered selections, not temporal datasets."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No live application connection or native edit synchronization."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The captured source is retained; no edited PDF document is saved."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Only passive raster/text review is supported; no general document-format conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "ordered-review",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/mupdf/review.pdf"
+            },
+            "scope": "Hand-built three-page literal PDF with nonzero MediaBox/CropBox origins, inherited and overridden rotations, unequal dimensions, page3 UserUnit=2, quadrant colours and WinAnsi café. tools/qualify_mupdf.py independently checks exact geometry, text and known 5x5 colour regions. Changed order/DPI/clockwise rotation variant.",
+            "checks": [
+              {
+                "file": "review-summary.json",
+                "format": "json",
+                "pointer": "/pages/0/width",
+                "expected": 216,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "review-summary.json",
+                "format": "json",
+                "pointer": "/pages/0/height",
+                "expected": 144,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "page-001.txt",
+                "format": "text",
+                "expected": "Review café\n\n",
+                "pointer": ""
+              }
+            ]
+          },
+          {
+            "id": "density-rotation-order",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/mupdf/review.pdf"
+            },
+            "scope": "Hand-built three-page literal PDF with nonzero MediaBox/CropBox origins, inherited and overridden rotations, unequal dimensions, page3 UserUnit=2, quadrant colours and WinAnsi café. tools/qualify_mupdf.py independently checks exact geometry, text and known 5x5 colour regions. Changed order/DPI/clockwise rotation variant.",
+            "checks": [
+              {
+                "file": "review-summary.json",
+                "format": "json",
+                "pointer": "/pages/0/width",
+                "expected": 384,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "review-summary.json",
+                "format": "json",
+                "pointer": "/pages/0/height",
+                "expected": 576,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "page-001.txt",
+                "format": "text",
+                "expected": "Review Gamma\n\n",
+                "pointer": ""
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial passive PDF review route, complete fields, publications and lifecycle.",
+        "review": [
+          "verification/2026-10-17-mupdf-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native-inspection hook; batch page metadata is a publication.",
+          "mpi": "Serial local subprocess only.",
+          "time-batches": "PDF pages are explicit ordered selections, not temporal datasets.",
+          "live-editing": "No live application connection or native edit synchronization.",
+          "native-save": "The captured source is retained; no edited PDF document is saved.",
+          "conversion": "Only passive raster/text review is supported; no general document-format conversion."
+        }
+      }
+    }
+  }
+}

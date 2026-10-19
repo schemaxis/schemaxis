@@ -259,6 +259,211 @@
               "options",
               "inputs"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "selectAttributes"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "idField": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "predicates": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "field": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "type": {
+                          "enum": [
+                            "number",
+                            "string",
+                            "boolean"
+                          ]
+                        },
+                        "comparison": {
+                          "enum": [
+                            "eq",
+                            "ne",
+                            "gt",
+                            "ge",
+                            "lt",
+                            "le",
+                            "isNull",
+                            "isNotNull"
+                          ]
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "maxLength": 4096
+                            },
+                            {
+                              "type": "boolean"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "field",
+                        "type",
+                        "comparison"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 16
+                  },
+                  "minFeatures": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000,
+                    "default": 1
+                  },
+                  "maxFeatures": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000,
+                    "default": 10000
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "idField",
+                  "predicates"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "summariseAttributes"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "idField": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "groupBy": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "aggregates": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "statistic": {
+                          "enum": [
+                            "count",
+                            "nonNullCount",
+                            "sum",
+                            "mean"
+                          ]
+                        },
+                        "field": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "units": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name",
+                        "statistic",
+                        "units"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 16
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "idField",
+                  "groupBy",
+                  "aggregates"
+                ]
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "input"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options",
+              "inputs"
+            ]
           }
         ]
       }

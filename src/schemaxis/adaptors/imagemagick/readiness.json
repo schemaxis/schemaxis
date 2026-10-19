@@ -1,0 +1,309 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.imagemagick/1": {
+      "guide": "docs/imagemagick.md",
+      "context": {
+        "purpose": "Prepare exact PNG details and indexed contact sheets from bounded captured raster images.",
+        "assumptions": "Declared or explicitly assumed sRGB encoded samples; no colour transformation. Top-left integer pixel coordinates.",
+        "constraints": "1\u20138 RGB/RGBA8 non-interlaced PNGs; 8MiB each; 1048576 aggregate input pixels and aggregate publication pixels including sheet, 4096 per side. No ICC, APNG, compressed text, palettes, 16-bit, arbitrary options or delegates.",
+        "inspection": "Inspect image-NN.png, optional sheet.png and raster-summary.json. Summary contains IDs, dimensions, colour assumptions, pixel hashes and sheet index/positions; no visual labels.",
+        "recovery": "INVALID_RASTER_SOURCE: absolute regular local PNG. INVALID_RASTER_PNG: unsupported chunk/format or corrupt/budgeted data. RASTER_COLOUR_REQUIRED: tag as sRGB or explicitly assume-srgb. RASTER_CROP_OUTSIDE: fit crop within source. RASTER_PIXEL_BUDGET: reduce crop, scale or sheet. INVALID_RASTER_ALPHA: omit unused background. INTERPRETER_NOT_FOUND: configure ImageMagick 7."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/imagemagick-baseline.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/imagemagick-variant.json"
+        },
+        {
+          "id": "flatten",
+          "reference": "examples/schemaxis/imagemagick-flatten.json"
+        },
+        {
+          "id": "sheet",
+          "reference": "examples/schemaxis/imagemagick-sheet.json"
+        },
+        {
+          "id": "invalid-id",
+          "reference": "examples/schemaxis/imagemagick-invalid-id.json",
+          "expect": "invalid",
+          "fault": "INVALID_RASTER_ID",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_imagemagick.py"
+      ],
+      "acceptance": [
+        "tools/qualify_imagemagick.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified PNG artifacts feed downstream PNG preparation; normal scheduler handoffs retain provenance.",
+          "references": [
+            "docs/imagemagick.md",
+            "tools/qualify_imagemagick.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure expressions and finite studies resolve before the native recipe.",
+          "references": [
+            "docs/imagemagick.md",
+            "tools/qualify_imagemagick.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://imagemagick.org/command-line-options/#crop",
+          "https://imagemagick.org/command-line-options/#sample",
+          "https://imagemagick.org/command-line-options/#rotate",
+          "https://imagemagick.org/command-line-options/#alpha",
+          "https://imagemagick.org/command-line-options/#compose",
+          "https://imagemagick.org/security-policy/",
+          "https://www.w3.org/TR/png-3/"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers version, policy listing, all prepare/composite children and verification. Each child CPU 60s, address space 1GiB, file output 16MiB; native PNG cache 128MiB and no map/disk spill.",
+          "cancellation": "Shared owned process-group cancellation; serial child execution and final cancellation check before publication.",
+          "logs": "Authored/effective plan, complete source captures and byte bindings, scoped security policy, exact launcher/commands/input hashes, stage stdout/stderr/submissions, native images and independently computed summary.",
+          "verification": "Independent dependency-free stdlib PNG CRC/chunk/filter/decompression decoder reconstructs every expected RGBA sample and layout. Native command, input, policy, membership and runtime records are also checked."
+        },
+        "data": [
+          {
+            "id": "png-input",
+            "direction": "input",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "colour": "sRGB encoded RGB/RGBA8",
+              "alpha": "straight"
+            },
+            "losses": [
+              "Only the documented bounded PNG subset is accepted; physical resolution and metadata are stripped."
+            ],
+            "scope": "Captured regular local PNG, aggregate input pixel budget applies."
+          },
+          {
+            "id": "png-output",
+            "direction": "output",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "colour": "sRGB encoded RGBA8",
+              "alpha": "straight"
+            },
+            "losses": [
+              "Crop discards outside samples; integer scaling replicates; flatten discards alpha and blends encoded samples, not linear light; sheet has metadata index without visual labels."
+            ],
+            "scope": "PNG publications ordered by images, optional sheet, then text summary."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "image",
+            "scope": "Exact pixel image publications and optional contact sheet.",
+            "limits": "RGBA8 PNG only, combined publication pixel budget 1048576; no typography/colour appearance claim."
+          },
+          {
+            "panel": "text",
+            "scope": "JSON dimensions, observed colour assumptions, IDs, sample hashes and sheet index.",
+            "limits": "Host-authored inspection summary, not a native identify readback."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Change the absolute PNG source and crop/scale/quarterTurns. Retain source bytes for provenance; same-path byte changes invalidate scheduler reuse."
+        },
+        "features": {
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native inspection; verified PNGs and index metadata are ordinary publications."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The recipe is serial and each child is limited to one thread."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No native temporal batching; common finite studies remain available."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No persistent native session; edit JSON then create a new bounded run."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "PNG publications are supported; no application session/project save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No colour-space or file-format conversion; only declared PNG sample preparation."
+          },
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified PNG artifacts feed downstream PNG preparation; normal scheduler handoffs retain provenance."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure expressions and finite studies resolve before the native recipe."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The absolute source path and its captured byte digest participate in reuse identity."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable JSON source with common undo and validation."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Common pointer forms expose all crop, scale, quarter-turn, alpha, colour-policy and sheet controls."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/images/0/source": "examples/schemaxis/fixtures/imagemagick/grid.png"
+            },
+            "scope": "Literal 3x2 RGBA grid establishes every sample, including RGB beneath zero alpha; independent stdlib PNG decode reconstructs crop, replication, clockwise rotation, encoded-sample flatten and exact sheet placements. Host summary is not native readback.",
+            "checks": [
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/images/0/dimensions",
+                "expected": [
+                  4,
+                  4
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/outputPixels",
+                "expected": 16,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/images/0/source": "examples/schemaxis/fixtures/imagemagick/grid.png"
+            },
+            "scope": "Literal 3x2 RGBA grid establishes every sample, including RGB beneath zero alpha; independent stdlib PNG decode reconstructs crop, replication, clockwise rotation, encoded-sample flatten and exact sheet placements. Host summary is not native readback.",
+            "checks": [
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/images/0/dimensions",
+                "expected": [
+                  2,
+                  2
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/outputPixels",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "flatten",
+            "example": "flatten",
+            "edits": [],
+            "resources": {
+              "/images/0/source": "examples/schemaxis/fixtures/imagemagick/grid.png"
+            },
+            "scope": "Literal 3x2 RGBA grid establishes every sample, including RGB beneath zero alpha; independent stdlib PNG decode reconstructs crop, replication, clockwise rotation, encoded-sample flatten and exact sheet placements. Host summary is not native readback.",
+            "checks": [
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/images/0/dimensions",
+                "expected": [
+                  2,
+                  2
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/outputPixels",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "sheet",
+            "example": "sheet",
+            "edits": [],
+            "resources": {
+              "/images/0/source": "examples/schemaxis/fixtures/imagemagick/grid.png",
+              "/images/1/source": "examples/schemaxis/fixtures/imagemagick/grid-rgb.png"
+            },
+            "scope": "Literal 3x2 RGBA grid establishes every sample, including RGB beneath zero alpha; independent stdlib PNG decode reconstructs crop, replication, clockwise rotation, encoded-sample flatten and exact sheet placements. Host summary is not native readback.",
+            "checks": [
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/images/0/dimensions",
+                "expected": [
+                  4,
+                  4
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "raster-summary.json",
+                "format": "json",
+                "pointer": "/outputPixels",
+                "expected": 88,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial exact PNG preparation route and every nested image/crop/sheet field, native policy/runner, independent all-pixel oracle and workflow reuse.",
+        "review": [
+          "verification/2026-10-17-imagemagick-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native inspection; verified PNGs and index metadata are ordinary publications.",
+          "mpi": "The recipe is serial and each child is limited to one thread.",
+          "time-batches": "No native temporal batching; common finite studies remain available.",
+          "live-editing": "No persistent native session; edit JSON then create a new bounded run.",
+          "native-save": "PNG publications are supported; no application session/project save.",
+          "conversion": "No colour-space or file-format conversion; only declared PNG sample preparation."
+        }
+      }
+    }
+  }
+}

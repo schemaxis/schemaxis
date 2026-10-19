@@ -43,14 +43,13 @@ class PremiereTests(unittest.TestCase):
         document['dimensions']={'variant':{'$analytic':{'type':'values','values':[1,2]}}}
         self.assertEqual(registry.plan(document)['states'],2)
 
-    def test_release_policy_captures_premiere_headers_and_excludes_beta_runtime(self):
+    def test_release_policy_captures_stable_application_patches_not_beta_or_uxp(self):
         metadata=json.loads((ROOT/'src/schemaxis/adaptors/premiere/upstream.json').read_text())
         pattern=metadata['source']['pattern']
-        self.assertEqual(re.findall(pattern,'<h2 id="premiere-v2660">Premiere v26.6.0</h2><p>Release notes</p>'),['26.6.0'])
-        self.assertEqual(re.findall(pattern,'<h2 id="premiere-pro-v2700">Premiere Pro v27.0.0</h2><p>Release notes</p>'),['27.0.0'])
+        self.assertEqual(re.findall(pattern,'<h2>September 2026 (version 26.5.2)</h2>'),['26.5.2'])
+        self.assertEqual(re.findall(pattern,'<h2 id="release">September 2026 (version 26.5)</h2>'),['26.5'])
+        self.assertFalse(re.findall(pattern,'<h2>September 2026 (version 27.0 Beta)</h2>'))
         self.assertFalse(re.findall(pattern,'<h2>UXP v9.3.0</h2>'))
-        self.assertFalse(re.findall(pattern,'<h2>Premiere v27.0.0 Beta</h2>'))
-        self.assertFalse(re.findall(pattern,'<h2 id="premiere-pro-v2520">Premiere Pro v25.2.0</h2>\n<h3 id="initial-public-beta-release-for-uxp-in-premiere-pro">Initial Public Beta Release for UXP in Premiere Pro</h3>'))
         self.assertIsNone(metadata['absorbedVersion'])
 
     def test_bounds_paths_unknown_fields_and_fractional_rates(self):

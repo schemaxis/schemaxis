@@ -7,20 +7,20 @@
       "description": "Experimental Premiere contract version."
     },
     "operation": {
-      "const": "sequenceContract",
-      "description": "Observe the active sequence through the supplied read-only UXP panel."
+      "enum": [
+        "sequenceContract",
+        "sequenceLayout"
+      ]
     },
     "projectPath": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 4096,
-      "description": "Exact absolute path identity of the open saved Premiere project; its bytes are not read."
+      "maxLength": 4096
     },
     "sequenceName": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 256,
-      "description": "Exact name of the active sequence to inspect; no sequence is selected or modified."
+      "maxLength": 256
     },
     "fps": {
       "type": "integer",
@@ -33,22 +33,19 @@
         30,
         50,
         60
-      ],
-      "description": "Integer sequence rate: 24, 25, 30, 50 or 60. Fractional/drop-frame rates are unsupported."
+      ]
     },
     "width": {
       "type": "integer",
       "minimum": 2,
       "maximum": 8192,
-      "default": 1920,
-      "description": "Expected sequence frame width; rendered dimensions are not inspected."
+      "default": 1920
     },
     "height": {
       "type": "integer",
       "minimum": 2,
       "maximum": 8192,
-      "default": 1080,
-      "description": "Expected sequence frame height; rendered dimensions are not inspected."
+      "default": 1080
     },
     "clips": {
       "type": "array",
@@ -84,6 +81,117 @@
       "minItems": 1,
       "maxItems": 128,
       "description": "Ordered contiguous clips on the sole unmuted video track, at zero-based timeline positions."
+    },
+    "endFrame": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "clips": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sourcePath": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "startFrame": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "default": 0
+                },
+                "frameCount": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 600
+                },
+                "timelineFrame": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 599
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "sourcePath",
+                "frameCount",
+                "timelineFrame"
+              ]
+            },
+            "minItems": 0,
+            "maxItems": 128
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "clips"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "minItems": 1,
+            "maxItems": 8
+          },
+          "startFrame": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 599
+          },
+          "frameCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 600
+          },
+          "minimumActiveTracks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8,
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "tracks",
+          "startFrame",
+          "frameCount"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 32,
+      "default": []
     }
   },
   "additionalProperties": false,
@@ -91,7 +199,53 @@
     "version",
     "operation",
     "projectPath",
-    "sequenceName",
-    "clips"
+    "sequenceName"
+  ],
+  "oneOf": [
+    {
+      "properties": {
+        "operation": {
+          "const": "sequenceContract"
+        }
+      },
+      "required": [
+        "clips"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "endFrame"
+            ]
+          },
+          {
+            "required": [
+              "tracks"
+            ]
+          },
+          {
+            "required": [
+              "requirements"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "properties": {
+        "operation": {
+          "const": "sequenceLayout"
+        }
+      },
+      "required": [
+        "endFrame",
+        "tracks"
+      ],
+      "not": {
+        "required": [
+          "clips"
+        ]
+      }
+    }
   ]
 }

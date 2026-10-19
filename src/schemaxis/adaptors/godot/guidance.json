@@ -245,6 +245,36 @@
         "With rotation [0, 0, 0] the cone points horizontally along -Z; aim it with a negative X angle (downward) and a Y angle (heading).",
         "angle is measured from the cone axis to its edge, so 45 gives a 90-degree wide cone."
       ]
+    },
+    "transformGroup": {
+      "status": "reviewed",
+      "explanation": "Create a named, non-renderable Node3D transform group to move, rotate and scale a static assembly together. Connect child geometry or other groups through inputs.parent. Transform options are local to the parent; leaving parent out attaches to the scene root. Group world bounds enclose descendant geometry; empty groups have no bounds. Cameras, lights and sprites stay at the root.",
+      "sources": [
+        "docs/godot.md#static-assemblies",
+        "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+        "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+      ],
+      "examples": [
+        {
+          "filter": "transformGroup",
+          "id": "assembly",
+          "options": {
+            "rotation": [
+              0,
+              45,
+              0
+            ],
+            "scale": [
+              2,
+              1,
+              1
+            ]
+          }
+        }
+      ],
+      "pitfalls": [
+        "This is a transform hierarchy, not Godot named membership groups, animation, instancing or physics. All descendants remain owned by the saved scene root."
+      ]
     }
   },
   "routes": {
@@ -252,7 +282,7 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A Godot scene document: an ordered list of material, geometry, sprite, light and camera nodes that Schemaxis builds into an editable Godot 4 project (project.godot) and scene (scene.tscn) in metres, then reopens in a fresh Godot process and checks node by node. It needs exactly one camera and at least one mesh or sprite; set preview to also render a 640 x 480 PNG from that camera.",
+          "explanation": "A Godot scene document: an ordered list of material, geometry, sprite, light and camera nodes that Schemaxis builds into an editable Godot 4 project (project.godot) and scene (scene.tscn) in metres, then reopens in a fresh Godot process and checks node by node. It needs exactly one camera and at least one mesh or sprite; set preview to also render a 640 x 480 PNG from that camera. Named transformGroup nodes organise static geometry assemblies; parent links are acyclic and may refer forward.",
           "pitfalls": [
             "Editing the saved scene in Godot is supported but invalidates the original verification receipt; keep the whole output directory together."
           ],
@@ -597,7 +627,7 @@
         },
         "/properties/nodes/items/oneOf/1/properties/options/properties/position": {
           "status": "reviewed",
-          "explanation": "World position [x, y, z] of the box centre in metres (the BoxMesh is centred on its node). A box resting on the ground at y = 0 needs y equal to half its height.",
+          "explanation": "World position [x, y, z] of the box centre in metres (the BoxMesh is centred on its node). A box resting on the ground at y = 0 needs y equal to half its height. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Centre position",
           "units": "Metres (world coordinates, Y up)",
           "defaultMeaning": "Schemaxis default: [0, 0, 0].",
@@ -665,7 +695,7 @@
         },
         "/properties/nodes/items/oneOf/1/properties/options/properties/rotation": {
           "status": "reviewed",
-          "explanation": "Orientation of the box as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. A box rotated [0, 45, 0] turns its faces 45 degrees about the vertical axis.",
+          "explanation": "Orientation of the box as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. A box rotated [0, 45, 0] turns its faces 45 degrees about the vertical axis. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Rotation",
           "units": "Degrees",
           "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
@@ -702,7 +732,7 @@
         },
         "/properties/nodes/items/oneOf/1/properties/options/properties/scale": {
           "status": "reviewed",
-          "explanation": "Scale factors [x, y, z] along the box's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. For a box, changing size is usually clearer than scaling; scale keeps BoxMesh size unchanged and stretches the node.",
+          "explanation": "Scale factors [x, y, z] along the box's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. For a box, changing size is usually clearer than scaling; scale keeps BoxMesh size unchanged and stretches the node. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Scale",
           "units": "Dimensionless factor per axis",
           "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
@@ -735,10 +765,12 @@
           ]
         },
         "/properties/nodes/items/oneOf/1/properties/inputs": {
-          "status": "reference",
-          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "status": "reviewed",
+          "explanation": "Required material references an earlier material declaration. Optional parent references a transformGroup anywhere in this document; omit it for the scene root. The material is a resource dependency, while parent controls the geometry coordinate frame.",
           "sources": [
-            "docs/studio-adaptor-contract.md"
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
           ]
         },
         "/properties/nodes/items/oneOf/1/properties/inputs/properties/material": {
@@ -818,7 +850,7 @@
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/position": {
           "status": "reviewed",
-          "explanation": "World position [x, y, z] of the sphere centre in metres. A sphere resting on the ground at y = 0 needs y equal to its radius.",
+          "explanation": "World position [x, y, z] of the sphere centre in metres. A sphere resting on the ground at y = 0 needs y equal to its radius. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Centre position",
           "units": "Metres (world coordinates, Y up)",
           "defaultMeaning": "Schemaxis default: [0, 0, 0].",
@@ -868,7 +900,7 @@
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/rotation": {
           "status": "reviewed",
-          "explanation": "Orientation of the sphere as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation is visible only when scale is non-uniform or the material shows the tessellation; it still changes the verified transform.",
+          "explanation": "Orientation of the sphere as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation is visible only when scale is non-uniform or the material shows the tessellation; it still changes the verified transform. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Rotation",
           "units": "Degrees",
           "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
@@ -905,7 +937,7 @@
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/scale": {
           "status": "reviewed",
-          "explanation": "Scale factors [x, y, z] along the sphere's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal factors turn the sphere into an ellipsoid with semi-axes radius x factor.",
+          "explanation": "Scale factors [x, y, z] along the sphere's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal factors turn the sphere into an ellipsoid with semi-axes radius x factor. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Scale",
           "units": "Dimensionless factor per axis",
           "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
@@ -938,10 +970,12 @@
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/inputs": {
-          "status": "reference",
-          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "status": "reviewed",
+          "explanation": "Required material references an earlier material declaration. Optional parent references a transformGroup anywhere in this document; omit it for the scene root. The material is a resource dependency, while parent controls the geometry coordinate frame.",
           "sources": [
-            "docs/studio-adaptor-contract.md"
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/inputs/properties/material": {
@@ -1023,7 +1057,7 @@
         },
         "/properties/nodes/items/oneOf/3/properties/options/properties/position": {
           "status": "reviewed",
-          "explanation": "World position [x, y, z] of the cylinder centre in metres, half-way along its axis. An upright cylinder standing on the ground at y = 0 needs y equal to height / 2.",
+          "explanation": "World position [x, y, z] of the cylinder centre in metres, half-way along its axis. An upright cylinder standing on the ground at y = 0 needs y equal to height / 2. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Centre position",
           "units": "Metres (world coordinates, Y up)",
           "defaultMeaning": "Schemaxis default: [0, 0, 0].",
@@ -1089,7 +1123,7 @@
         },
         "/properties/nodes/items/oneOf/3/properties/options/properties/rotation": {
           "status": "reviewed",
-          "explanation": "Orientation of the cylinder as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the cylinder along the X axis; [90, 0, 0] lays it along Z.",
+          "explanation": "Orientation of the cylinder as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the cylinder along the X axis; [90, 0, 0] lays it along Z. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Rotation",
           "units": "Degrees",
           "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
@@ -1126,7 +1160,7 @@
         },
         "/properties/nodes/items/oneOf/3/properties/options/properties/scale": {
           "status": "reviewed",
-          "explanation": "Scale factors [x, y, z] along the cylinder's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal X and Z factors give an elliptical cross-section; the Y factor multiplies the height.",
+          "explanation": "Scale factors [x, y, z] along the cylinder's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Unequal X and Z factors give an elliptical cross-section; the Y factor multiplies the height. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Scale",
           "units": "Dimensionless factor per axis",
           "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
@@ -1159,10 +1193,12 @@
           ]
         },
         "/properties/nodes/items/oneOf/3/properties/inputs": {
-          "status": "reference",
-          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "status": "reviewed",
+          "explanation": "Required material references an earlier material declaration. Optional parent references a transformGroup anywhere in this document; omit it for the scene root. The material is a resource dependency, while parent controls the geometry coordinate frame.",
           "sources": [
-            "docs/studio-adaptor-contract.md"
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
           ]
         },
         "/properties/nodes/items/oneOf/3/properties/inputs/properties/material": {
@@ -1243,7 +1279,7 @@
         },
         "/properties/nodes/items/oneOf/4/properties/options/properties/position": {
           "status": "reviewed",
-          "explanation": "World position [x, y, z] of the plane centre in metres. For a ground plane, y is the ground height; objects meant to rest on it must be placed relative to this height.",
+          "explanation": "World position [x, y, z] of the plane centre in metres. For a ground plane, y is the ground height; objects meant to rest on it must be placed relative to this height. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Centre position",
           "units": "Metres (world coordinates, Y up)",
           "defaultMeaning": "Schemaxis default: [0, 0, 0].",
@@ -1305,7 +1341,7 @@
         },
         "/properties/nodes/items/oneOf/4/properties/options/properties/rotation": {
           "status": "reviewed",
-          "explanation": "Orientation of the plane as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] turns the horizontal plane into a wall facing +Z; [-90, 0, 0] faces it towards -Z.",
+          "explanation": "Orientation of the plane as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] turns the horizontal plane into a wall facing +Z; [-90, 0, 0] faces it towards -Z. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Rotation",
           "units": "Degrees",
           "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
@@ -1342,7 +1378,7 @@
         },
         "/properties/nodes/items/oneOf/4/properties/options/properties/scale": {
           "status": "reviewed",
-          "explanation": "Scale factors [x, y, z] along the plane's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The X and Z factors multiply the two size lengths; the Y factor has no visible effect on a flat plane.",
+          "explanation": "Scale factors [x, y, z] along the plane's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The X and Z factors multiply the two size lengths; the Y factor has no visible effect on a flat plane. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Scale",
           "units": "Dimensionless factor per axis",
           "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
@@ -1375,10 +1411,12 @@
           ]
         },
         "/properties/nodes/items/oneOf/4/properties/inputs": {
-          "status": "reference",
-          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "status": "reviewed",
+          "explanation": "Required material references an earlier material declaration. Optional parent references a transformGroup anywhere in this document; omit it for the scene root. The material is a resource dependency, while parent controls the geometry coordinate frame.",
           "sources": [
-            "docs/studio-adaptor-contract.md"
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
           ]
         },
         "/properties/nodes/items/oneOf/4/properties/inputs/properties/material": {
@@ -1459,7 +1497,7 @@
         },
         "/properties/nodes/items/oneOf/5/properties/options/properties/position": {
           "status": "reviewed",
-          "explanation": "World position [x, y, z] in metres where the glTF mesh's own origin is placed. The mesh is not re-centred: if its vertices lie away from their origin, the mesh appears offset from position by the same amount.",
+          "explanation": "World position [x, y, z] in metres where the glTF mesh's own origin is placed. The mesh is not re-centred: if its vertices lie away from their origin, the mesh appears offset from position by the same amount. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Origin position",
           "units": "Metres (world coordinates, Y up)",
           "defaultMeaning": "Schemaxis default: [0, 0, 0] (keep the glTF coordinates).",
@@ -1511,7 +1549,7 @@
         },
         "/properties/nodes/items/oneOf/5/properties/options/properties/rotation": {
           "status": "reviewed",
-          "explanation": "Orientation of the imported mesh as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation turns the mesh about its glTF origin, not about its centre.",
+          "explanation": "Orientation of the imported mesh as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation turns the mesh about its glTF origin, not about its centre. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Rotation",
           "units": "Degrees",
           "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
@@ -1548,7 +1586,7 @@
         },
         "/properties/nodes/items/oneOf/5/properties/options/properties/scale": {
           "status": "reviewed",
-          "explanation": "Scale factors [x, y, z] along the imported mesh's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Use it to convert a model authored in other length units, for example 0.001 for millimetres; scaling is about the glTF origin.",
+          "explanation": "Scale factors [x, y, z] along the imported mesh's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Use it to convert a model authored in other length units, for example 0.001 for millimetres; scaling is about the glTF origin. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Scale",
           "units": "Dimensionless factor per axis",
           "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
@@ -1581,10 +1619,12 @@
           ]
         },
         "/properties/nodes/items/oneOf/5/properties/inputs": {
-          "status": "reference",
-          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "status": "reviewed",
+          "explanation": "Required material references an earlier material declaration. Optional parent references a transformGroup anywhere in this document; omit it for the scene root. The material is a resource dependency, while parent controls the geometry coordinate frame.",
           "sources": [
-            "docs/studio-adaptor-contract.md"
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
           ]
         },
         "/properties/nodes/items/oneOf/5/properties/inputs/properties/material": {
@@ -2164,7 +2204,7 @@
         },
         "/properties/nodes/items/oneOf/9/properties/options/properties/position": {
           "status": "reviewed",
-          "explanation": "World position [x, y, z] of the capsule centre in metres, half-way along its axis. An upright capsule standing on the ground at y = 0 needs y equal to height / 2.",
+          "explanation": "World position [x, y, z] of the capsule centre in metres, half-way along its axis. An upright capsule standing on the ground at y = 0 needs y equal to height / 2. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Centre position",
           "units": "Metres (world coordinates, Y up)",
           "defaultMeaning": "Schemaxis default: [0, 0, 0].",
@@ -2233,7 +2273,7 @@
         },
         "/properties/nodes/items/oneOf/9/properties/options/properties/rotation": {
           "status": "reviewed",
-          "explanation": "Orientation of the capsule as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the capsule along the X axis.",
+          "explanation": "Orientation of the capsule as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [0, 0, 90] lays the capsule along the X axis. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Rotation",
           "units": "Degrees",
           "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
@@ -2270,7 +2310,7 @@
         },
         "/properties/nodes/items/oneOf/9/properties/options/properties/scale": {
           "status": "reviewed",
-          "explanation": "Scale factors [x, y, z] along the capsule's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Non-uniform factors distort the round ends into ellipsoidal caps; prefer radius and height for size changes.",
+          "explanation": "Scale factors [x, y, z] along the capsule's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. Non-uniform factors distort the round ends into ellipsoidal caps; prefer radius and height for size changes. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Scale",
           "units": "Dimensionless factor per axis",
           "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
@@ -2303,10 +2343,12 @@
           ]
         },
         "/properties/nodes/items/oneOf/9/properties/inputs": {
-          "status": "reference",
-          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "status": "reviewed",
+          "explanation": "Required material references an earlier material declaration. Optional parent references a transformGroup anywhere in this document; omit it for the scene root. The material is a resource dependency, while parent controls the geometry coordinate frame.",
           "sources": [
-            "docs/studio-adaptor-contract.md"
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
           ]
         },
         "/properties/nodes/items/oneOf/9/properties/inputs/properties/material": {
@@ -2388,7 +2430,7 @@
         },
         "/properties/nodes/items/oneOf/10/properties/options/properties/position": {
           "status": "reviewed",
-          "explanation": "World position [x, y, z] of the torus centre (the centre of the hole) in metres.",
+          "explanation": "World position [x, y, z] of the torus centre (the centre of the hole) in metres. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Centre position",
           "units": "Metres (world coordinates, Y up)",
           "defaultMeaning": "Schemaxis default: [0, 0, 0].",
@@ -2461,7 +2503,7 @@
         },
         "/properties/nodes/items/oneOf/10/properties/options/properties/rotation": {
           "status": "reviewed",
-          "explanation": "Orientation of the torus as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] stands the ring upright, with its hole facing along Z.",
+          "explanation": "Orientation of the torus as Euler angles [x, y, z] in degrees, written to Godot's rotation_degrees and applied after scale and before the move to position. Godot combines them in its intrinsic YXZ order, which equals turning about world Z first, then world X, then world Y; positive angles follow the right-hand rule. Rotation [90, 0, 0] stands the ring upright, with its hole facing along Z. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Rotation",
           "units": "Degrees",
           "defaultMeaning": "Schemaxis default: [0, 0, 0] (unrotated).",
@@ -2498,7 +2540,7 @@
         },
         "/properties/nodes/items/oneOf/10/properties/options/properties/scale": {
           "status": "reviewed",
-          "explanation": "Scale factors [x, y, z] along the torus's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The Y factor changes the tube thickness in the vertical direction only, flattening or stretching the ring.",
+          "explanation": "Scale factors [x, y, z] along the torus's local axes, written to the node's scale and applied before rotation. Each factor multiplies the declared dimensions in that axis, and the verified world bounds include it. The Y factor changes the tube thickness in the vertical direction only, flattening or stretching the ring. With inputs.parent, this value is local to the named transformGroup; ancestor transforms compose afterward.",
           "label": "Scale",
           "units": "Dimensionless factor per axis",
           "defaultMeaning": "Schemaxis default: [1, 1, 1] (no scaling).",
@@ -2531,10 +2573,12 @@
           ]
         },
         "/properties/nodes/items/oneOf/10/properties/inputs": {
-          "status": "reference",
-          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "status": "reviewed",
+          "explanation": "Required material references an earlier material declaration. Optional parent references a transformGroup anywhere in this document; omit it for the scene root. The material is a resource dependency, while parent controls the geometry coordinate frame.",
           "sources": [
-            "docs/studio-adaptor-contract.md"
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
           ]
         },
         "/properties/nodes/items/oneOf/10/properties/inputs/properties/material": {
@@ -3023,6 +3067,219 @@
           "explanation": "Connect named results from other nodes to the input ports of this operation.",
           "sources": [
             "docs/studio-adaptor-contract.md"
+          ]
+        },
+        "/properties/nodes/items/oneOf/1/properties/inputs/properties/parent": {
+          "status": "reviewed",
+          "explanation": "Optional id of a declared transformGroup. The child position, rotation and scale are relative to that group. Omit for the scene root. Forward references are allowed; missing groups, cycles and non-group parents are rejected. At most 16 parent links; world positions are bounded to ±1000000 m and basis-column lengths to [0.000001,10000].",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ],
+          "examples": [
+            "assembly"
+          ],
+          "pitfalls": [
+            "A material or mesh id cannot be a parent. Parent identity is distinct from ownership: the saved scene root owns every node."
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/inputs/properties/parent": {
+          "status": "reviewed",
+          "explanation": "Optional id of a declared transformGroup. The child position, rotation and scale are relative to that group. Omit for the scene root. Forward references are allowed; missing groups, cycles and non-group parents are rejected. At most 16 parent links; world positions are bounded to ±1000000 m and basis-column lengths to [0.000001,10000].",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ],
+          "examples": [
+            "assembly"
+          ],
+          "pitfalls": [
+            "A material or mesh id cannot be a parent. Parent identity is distinct from ownership: the saved scene root owns every node."
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs/properties/parent": {
+          "status": "reviewed",
+          "explanation": "Optional id of a declared transformGroup. The child position, rotation and scale are relative to that group. Omit for the scene root. Forward references are allowed; missing groups, cycles and non-group parents are rejected. At most 16 parent links; world positions are bounded to ±1000000 m and basis-column lengths to [0.000001,10000].",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ],
+          "examples": [
+            "assembly"
+          ],
+          "pitfalls": [
+            "A material or mesh id cannot be a parent. Parent identity is distinct from ownership: the saved scene root owns every node."
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs/properties/parent": {
+          "status": "reviewed",
+          "explanation": "Optional id of a declared transformGroup. The child position, rotation and scale are relative to that group. Omit for the scene root. Forward references are allowed; missing groups, cycles and non-group parents are rejected. At most 16 parent links; world positions are bounded to ±1000000 m and basis-column lengths to [0.000001,10000].",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ],
+          "examples": [
+            "assembly"
+          ],
+          "pitfalls": [
+            "A material or mesh id cannot be a parent. Parent identity is distinct from ownership: the saved scene root owns every node."
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs/properties/parent": {
+          "status": "reviewed",
+          "explanation": "Optional id of a declared transformGroup. The child position, rotation and scale are relative to that group. Omit for the scene root. Forward references are allowed; missing groups, cycles and non-group parents are rejected. At most 16 parent links; world positions are bounded to ±1000000 m and basis-column lengths to [0.000001,10000].",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ],
+          "examples": [
+            "assembly"
+          ],
+          "pitfalls": [
+            "A material or mesh id cannot be a parent. Parent identity is distinct from ownership: the saved scene root owns every node."
+          ]
+        },
+        "/properties/nodes/items/oneOf/9/properties/inputs/properties/parent": {
+          "status": "reviewed",
+          "explanation": "Optional id of a declared transformGroup. The child position, rotation and scale are relative to that group. Omit for the scene root. Forward references are allowed; missing groups, cycles and non-group parents are rejected. At most 16 parent links; world positions are bounded to ±1000000 m and basis-column lengths to [0.000001,10000].",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ],
+          "examples": [
+            "assembly"
+          ],
+          "pitfalls": [
+            "A material or mesh id cannot be a parent. Parent identity is distinct from ownership: the saved scene root owns every node."
+          ]
+        },
+        "/properties/nodes/items/oneOf/10/properties/inputs/properties/parent": {
+          "status": "reviewed",
+          "explanation": "Optional id of a declared transformGroup. The child position, rotation and scale are relative to that group. Omit for the scene root. Forward references are allowed; missing groups, cycles and non-group parents are rejected. At most 16 parent links; world positions are bounded to ±1000000 m and basis-column lengths to [0.000001,10000].",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ],
+          "examples": [
+            "assembly"
+          ],
+          "pitfalls": [
+            "A material or mesh id cannot be a parent. Parent identity is distinct from ownership: the saved scene root owns every node."
+          ]
+        },
+        "/properties/nodes/items/oneOf/13": {
+          "status": "reviewed",
+          "explanation": "One named static transform group. It holds child geometry and nested groups without creating a visible mesh. An empty group is valid and has null bounds.",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/id": {
+          "status": "reviewed",
+          "explanation": "Unique ASCII identifier for this group. Other nodes name this id in inputs.parent; it is not a filesystem path. Renaming requires updating references.",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Use transformGroup to create a native Node3D assembly transform. This is a fixed operation selector.",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/options": {
+          "status": "reviewed",
+          "explanation": "Local transform of the assembly pivot. Omitted position and rotation are zero; omitted scale is one. Child transforms compose through this pivot.",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "XYZ translation of the group pivot relative to its parent, in metres. Default [0,0,0], each component within ±100000 m. An ancestor rotation or scale changes the world displacement.",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One X, Y or Z translation component in metres, relative to the parent. Range ±100000 m; default zero.",
+          "sources": [
+            "docs/godot.md#static-assemblies"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/options/properties/rotation": {
+          "status": "reviewed",
+          "explanation": "XYZ Euler angles in degrees, default [0,0,0], each within [-180,180]. Godot intrinsic YXZ means points are scaled, rotated Z then X then Y, and translated. Ancestor transforms apply afterward.",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/options/properties/rotation/items": {
+          "status": "reviewed",
+          "explanation": "One X, Y or Z Euler component in degrees, in [-180,180], default zero. The three components together use intrinsic YXZ order.",
+          "sources": [
+            "docs/godot.md#static-assemblies"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "Optional parent group dependency. Omit inputs to place this group directly under the scene root. Materials cannot parent groups.",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/options/properties/scale": {
+          "status": "reviewed",
+          "explanation": "Positive dimensionless XYZ scale, default [1,1,1], components in [0.001,1000]. Zero and mirrored/negative scales are rejected. Non-uniform scales combined with child rotations can induce shear; full affine composition is preserved.",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/options/properties/scale/items": {
+          "status": "reviewed",
+          "explanation": "One positive dimensionless X, Y or Z scale component in [0.001,1000], default one. Negative and zero factors are invalid.",
+          "sources": [
+            "docs/godot.md#static-assemblies"
+          ]
+        },
+        "/properties/nodes/items/oneOf/13/properties/inputs/properties/parent": {
+          "status": "reviewed",
+          "explanation": "Optional id of a declared transformGroup. The child position, rotation and scale are relative to that group. Omit for the scene root. Forward references are allowed; missing groups, cycles and non-group parents are rejected. At most 16 parent links; world positions are bounded to ±1000000 m and basis-column lengths to [0.000001,10000].",
+          "sources": [
+            "docs/godot.md#static-assemblies",
+            "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
+            "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner"
+          ],
+          "examples": [
+            "assembly"
+          ],
+          "pitfalls": [
+            "A material or mesh id cannot be a parent. Parent identity is distinct from ownership: the saved scene root owns every node."
           ]
         }
       }

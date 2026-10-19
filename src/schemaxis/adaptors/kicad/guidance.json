@@ -1,0 +1,517 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "inspectBoard": {
+      "status": "reviewed",
+      "explanation": "Reads an existing saved KiCad board and reports what it contains: footprints by type and side, pads, through vias, nets, holes grouped by size and plating, the Edge.Cuts outline size, minimum track width, drill and track-to-track clearance. A dependency-free host reader computes these facts and KiCad's own board statistics report (kicad-cli pcb export stats) must agree with every one of them. Outputs are board-summary.json and the native board-statistics.json. Choose it to confirm what a board file contains before checking or fabricating it; it runs no design rules.",
+      "sources": [
+        "docs/kicad.md#inspect-a-board",
+        "src/schemaxis/adaptors/kicad/board.py",
+        "src/schemaxis/adaptors/kicad/capabilities.py"
+      ],
+      "pitfalls": [
+        "Only saved two-copper-layer boards in KiCad 8.0-10.0 format are read; newer, older, multilayer or unknown formats fail with UNSUPPORTED_BOARD rather than being guessed.",
+        "Minimum track clearance follows KiCad's statistic: different-net tracks and vias compared on each item's primary layer only. It is a summary number, not a design rule check.",
+        "Mounting holes and other footprints without through_hole or smd attributes are counted as unspecified components, as KiCad does."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/kicad-inspect.json",
+          "purpose": "Inspect the 30 x 20 mm fixture with four footprints and six holes."
+        }
+      ]
+    },
+    "designRuleCheck": {
+      "status": "reviewed",
+      "explanation": "Runs KiCad's native design rule check (kicad-cli pcb drc) on a captured copy of a saved board with every severity reported, and accepts the board only if the actual numbers of errors, warnings and unconnected items stay within the authored maximums. The board's own .kicad_pro rules and severities apply. Where the host model applies it independently predicts track/via clearance breaches and missing pad connections, which must match the native report. Outputs are board-summary.json, the native drc-report.json and board-statistics.json. Choose it before fabrication or after editing a board; exceeding a maximum fails the run with DRC_VIOLATIONS.",
+      "sources": [
+        "docs/kicad.md#design-rule-check",
+        "src/schemaxis/adaptors/kicad/drc.py",
+        "src/schemaxis/adaptors/kicad/capabilities.py"
+      ],
+      "pitfalls": [
+        "Global footprint libraries are not loaded, so library checks report lib_footprint_issues unless the project sets those checks to ignore; the summary lists every ignored check.",
+        "Zones are checked as saved: the run never refills zones, so refill and save in KiCad first if fills are stale.",
+        "Schematic parity is not checked; a board that passes here can still disagree with its schematic."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/kicad-drc.json",
+          "purpose": "Require zero errors, warnings and unconnected items on the clean fixture."
+        }
+      ]
+    },
+    "drillExport": {
+      "status": "reviewed",
+      "explanation": "Runs the same design rule check and, only if it passes the authored maximums, exports Excellon drill files with kicad-cli pcb export drill: decimal coordinates, absolute board origin, in millimetres or inches, with plated (PTH) and non-plated (NPTH) holes in separate files or one merged file. Every drill hit is read back independently and matched one-to-one to a board hole by position, diameter and plating. Outputs are the drill files, board-summary.json, drc-report.json and board-statistics.json. Choose it to produce the drilling data a board fabricator needs alongside layer plots from KiCad.",
+      "sources": [
+        "docs/kicad.md#drill-export",
+        "src/schemaxis/adaptors/kicad/drill.py",
+        "src/schemaxis/adaptors/kicad/capabilities.py"
+      ],
+      "pitfalls": [
+        "Excellon uses a y-up frame: a hole at KiCad board position (8, 10) mm is written X8.0Y-10.0.",
+        "Only round holes spanning F.Cu to B.Cu are supported; slots, drill offsets, backdrills, blind/buried vias and drilled pads on back-side footprints are rejected before KiCad runs.",
+        "No drill map, drill report or Gerber job file is produced; layer plots still come from KiCad itself."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/kicad-drill.json",
+          "purpose": "Separate PTH/NPTH millimetre drill files for the baseline fixture."
+        },
+        {
+          "reference": "examples/schemaxis/kicad-drill-variant.json",
+          "purpose": "One merged inch drill file for the 40 x 25 mm variant with nine holes."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.kicad/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A request to inspect, design-rule-check or drill-export one existing saved KiCad board. The board is referenced by path and read-only; this document only selects the operation and its acceptance limits.",
+          "sources": [
+            "docs/kicad.md#documents-and-fields"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis board request; it must be \"schemaxis.kicad/1\". It is not the KiCad release or the board file format version.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "schemaxis.kicad/1"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "What to do with the board: inspectBoard reports its contents, designRuleCheck runs KiCad's design rules against authored maximum counts, drillExport additionally writes Excellon drill files after a passing check.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "designRuleCheck"
+          ]
+        },
+        "/properties/operation/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "inspectBoard: count and measure the board and confirm the counts against KiCad's statistics report.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "inspectBoard"
+          ]
+        },
+        "/properties/operation/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "designRuleCheck: run KiCad's design rules and accept the board within authored maximum counts.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "designRuleCheck"
+          ]
+        },
+        "/properties/operation/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "drillExport: design-rule-check, then write and verify Excellon drill files.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "drillExport"
+          ]
+        },
+        "/properties/board": {
+          "status": "reviewed",
+          "explanation": "Absolute path to an existing saved .kicad_pcb file. A sibling .kicad_pro (rules, netclasses, severities) and .kicad_dru (custom rules) with the same name are captured with it; KiCad only ever sees copies inside the run directory, so the original is never modified.",
+          "sources": [
+            "docs/kicad.md#documents-and-fields",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "fileExtensions": [
+            ".kicad_pcb"
+          ],
+          "pitfalls": [
+            "Relative paths are rejected; Studio and conformance resolve repository fixtures to absolute paths.",
+            "Save the board in KiCad first: autosave files and unsaved edits are not read.",
+            "Without a sibling .kicad_pro, KiCad's default rules (0.2 mm clearance) and severities apply."
+          ],
+          "examples": [
+            "/path/to/boards/sensor.kicad_pcb"
+          ],
+          "label": "Board file"
+        },
+        "/properties/maximumErrors": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable number of DRC violations with error severity (for example clearance, shorts, minimum annular width) in the native report. The run fails with DRC_VIOLATIONS when the actual count is larger; the report and summary are kept for review. Excluded violations are reported separately and never counted.",
+          "sources": [
+            "docs/kicad.md#design-rule-check",
+            "src/schemaxis/adaptors/kicad/drc.py"
+          ],
+          "units": "count",
+          "defaultMeaning": "Schemaxis default: 0, so any such finding fails the run.",
+          "pitfalls": [
+            "Raising a maximum accepts findings rather than fixing them; record why in the request or review."
+          ],
+          "examples": [
+            0
+          ],
+          "label": "Maximum errors"
+        },
+        "/properties/maximumWarnings": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable number of DRC violations with warning severity (for example dangling tracks or silkscreen overlaps) in the native report. The run fails with DRC_VIOLATIONS when the actual count is larger; the report and summary are kept for review. Severities come from the board project; checks set to ignore are listed but not counted.",
+          "sources": [
+            "docs/kicad.md#design-rule-check",
+            "src/schemaxis/adaptors/kicad/drc.py"
+          ],
+          "units": "count",
+          "defaultMeaning": "Schemaxis default: 0, so any such finding fails the run.",
+          "pitfalls": [
+            "Raising a maximum accepts findings rather than fixing them; record why in the request or review."
+          ],
+          "examples": [
+            0
+          ],
+          "label": "Maximum warnings"
+        },
+        "/properties/maximumUnconnected": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable number of unconnected items (connections KiCad's ratsnest still shows as missing) in the native report. The run fails with DRC_VIOLATIONS when the actual count is larger; the report and summary are kept for review. Every routed net needs all of its pads connected by copper to reach zero.",
+          "sources": [
+            "docs/kicad.md#design-rule-check",
+            "src/schemaxis/adaptors/kicad/drc.py"
+          ],
+          "units": "count",
+          "defaultMeaning": "Schemaxis default: 0, so any such finding fails the run.",
+          "pitfalls": [
+            "Raising a maximum accepts findings rather than fixing them; record why in the request or review."
+          ],
+          "examples": [
+            0
+          ],
+          "label": "Maximum unconnected items"
+        },
+        "/properties/units": {
+          "status": "reviewed",
+          "explanation": "Units of the coordinates and tool diameters written in the Excellon files: mm writes three decimals, in writes four. The summary and comparisons are always in millimetres.",
+          "sources": [
+            "docs/kicad.md#drill-export",
+            "src/schemaxis/adaptors/kicad/drill.py"
+          ],
+          "defaultMeaning": "Schemaxis default: mm.",
+          "pitfalls": [
+            "Ask your fabricator which units they expect; inch files round positions to 0.0001 in (2.54 micrometres)."
+          ],
+          "examples": [
+            "mm",
+            "in"
+          ],
+          "label": "Drill units"
+        },
+        "/properties/separatePlating": {
+          "status": "reviewed",
+          "explanation": "Whether plated (board-PTH.drl) and non-plated (board-NPTH.drl) holes go in separate files. When false, one board.drl contains both, with each tool marked plated or non-plated.",
+          "sources": [
+            "docs/kicad.md#drill-export",
+            "src/schemaxis/adaptors/kicad/drill.py"
+          ],
+          "defaultMeaning": "Schemaxis default: true, two files; the NPTH file is written even when the board has no non-plated holes.",
+          "examples": [
+            true
+          ],
+          "label": "Separate PTH/NPTH files"
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Inspection request: only the board path; no design rules are run and nothing is exported.",
+          "sources": [
+            "docs/kicad.md#inspect-a-board"
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Design rule check request: the board plus maximum error, warning and unconnected counts.",
+          "sources": [
+            "docs/kicad.md#design-rule-check"
+          ]
+        },
+        "/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Drill export request: the design rule check fields plus drill units and the plated/non-plated file split.",
+          "sources": [
+            "docs/kicad.md#drill-export"
+          ]
+        },
+        "/oneOf/0/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis board request; it must be \"schemaxis.kicad/1\". It is not the KiCad release or the board file format version.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "schemaxis.kicad/1"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Selects inspectBoard for this request; the other fields shown are the ones this operation accepts.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "inspectBoard"
+          ]
+        },
+        "/oneOf/0/properties/board": {
+          "status": "reviewed",
+          "explanation": "Absolute path to an existing saved .kicad_pcb file. A sibling .kicad_pro (rules, netclasses, severities) and .kicad_dru (custom rules) with the same name are captured with it; KiCad only ever sees copies inside the run directory, so the original is never modified.",
+          "sources": [
+            "docs/kicad.md#documents-and-fields",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "fileExtensions": [
+            ".kicad_pcb"
+          ],
+          "pitfalls": [
+            "Relative paths are rejected; Studio and conformance resolve repository fixtures to absolute paths.",
+            "Save the board in KiCad first: autosave files and unsaved edits are not read.",
+            "Without a sibling .kicad_pro, KiCad's default rules (0.2 mm clearance) and severities apply."
+          ],
+          "examples": [
+            "/path/to/boards/sensor.kicad_pcb"
+          ],
+          "label": "Board file"
+        },
+        "/oneOf/1/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis board request; it must be \"schemaxis.kicad/1\". It is not the KiCad release or the board file format version.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "schemaxis.kicad/1"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Selects designRuleCheck for this request; the other fields shown are the ones this operation accepts.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "designRuleCheck"
+          ]
+        },
+        "/oneOf/1/properties/board": {
+          "status": "reviewed",
+          "explanation": "Absolute path to an existing saved .kicad_pcb file. A sibling .kicad_pro (rules, netclasses, severities) and .kicad_dru (custom rules) with the same name are captured with it; KiCad only ever sees copies inside the run directory, so the original is never modified.",
+          "sources": [
+            "docs/kicad.md#documents-and-fields",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "fileExtensions": [
+            ".kicad_pcb"
+          ],
+          "pitfalls": [
+            "Relative paths are rejected; Studio and conformance resolve repository fixtures to absolute paths.",
+            "Save the board in KiCad first: autosave files and unsaved edits are not read.",
+            "Without a sibling .kicad_pro, KiCad's default rules (0.2 mm clearance) and severities apply."
+          ],
+          "examples": [
+            "/path/to/boards/sensor.kicad_pcb"
+          ],
+          "label": "Board file"
+        },
+        "/oneOf/1/properties/maximumErrors": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable number of DRC violations with error severity (for example clearance, shorts, minimum annular width) in the native report. The run fails with DRC_VIOLATIONS when the actual count is larger; the report and summary are kept for review. Excluded violations are reported separately and never counted.",
+          "sources": [
+            "docs/kicad.md#design-rule-check",
+            "src/schemaxis/adaptors/kicad/drc.py"
+          ],
+          "units": "count",
+          "defaultMeaning": "Schemaxis default: 0, so any such finding fails the run.",
+          "pitfalls": [
+            "Raising a maximum accepts findings rather than fixing them; record why in the request or review."
+          ],
+          "examples": [
+            0
+          ],
+          "label": "Maximum errors"
+        },
+        "/oneOf/1/properties/maximumWarnings": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable number of DRC violations with warning severity (for example dangling tracks or silkscreen overlaps) in the native report. The run fails with DRC_VIOLATIONS when the actual count is larger; the report and summary are kept for review. Severities come from the board project; checks set to ignore are listed but not counted.",
+          "sources": [
+            "docs/kicad.md#design-rule-check",
+            "src/schemaxis/adaptors/kicad/drc.py"
+          ],
+          "units": "count",
+          "defaultMeaning": "Schemaxis default: 0, so any such finding fails the run.",
+          "pitfalls": [
+            "Raising a maximum accepts findings rather than fixing them; record why in the request or review."
+          ],
+          "examples": [
+            0
+          ],
+          "label": "Maximum warnings"
+        },
+        "/oneOf/1/properties/maximumUnconnected": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable number of unconnected items (connections KiCad's ratsnest still shows as missing) in the native report. The run fails with DRC_VIOLATIONS when the actual count is larger; the report and summary are kept for review. Every routed net needs all of its pads connected by copper to reach zero.",
+          "sources": [
+            "docs/kicad.md#design-rule-check",
+            "src/schemaxis/adaptors/kicad/drc.py"
+          ],
+          "units": "count",
+          "defaultMeaning": "Schemaxis default: 0, so any such finding fails the run.",
+          "pitfalls": [
+            "Raising a maximum accepts findings rather than fixing them; record why in the request or review."
+          ],
+          "examples": [
+            0
+          ],
+          "label": "Maximum unconnected items"
+        },
+        "/oneOf/2/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis board request; it must be \"schemaxis.kicad/1\". It is not the KiCad release or the board file format version.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "schemaxis.kicad/1"
+          ]
+        },
+        "/oneOf/2/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Selects drillExport for this request; the other fields shown are the ones this operation accepts.",
+          "sources": [
+            "docs/kicad.md",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "examples": [
+            "drillExport"
+          ]
+        },
+        "/oneOf/2/properties/board": {
+          "status": "reviewed",
+          "explanation": "Absolute path to an existing saved .kicad_pcb file. A sibling .kicad_pro (rules, netclasses, severities) and .kicad_dru (custom rules) with the same name are captured with it; KiCad only ever sees copies inside the run directory, so the original is never modified.",
+          "sources": [
+            "docs/kicad.md#documents-and-fields",
+            "src/schemaxis/adaptors/kicad/adaptor.py"
+          ],
+          "fileExtensions": [
+            ".kicad_pcb"
+          ],
+          "pitfalls": [
+            "Relative paths are rejected; Studio and conformance resolve repository fixtures to absolute paths.",
+            "Save the board in KiCad first: autosave files and unsaved edits are not read.",
+            "Without a sibling .kicad_pro, KiCad's default rules (0.2 mm clearance) and severities apply."
+          ],
+          "examples": [
+            "/path/to/boards/sensor.kicad_pcb"
+          ],
+          "label": "Board file"
+        },
+        "/oneOf/2/properties/maximumErrors": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable number of DRC violations with error severity (for example clearance, shorts, minimum annular width) in the native report. The run fails with DRC_VIOLATIONS when the actual count is larger; the report and summary are kept for review. Excluded violations are reported separately and never counted.",
+          "sources": [
+            "docs/kicad.md#design-rule-check",
+            "src/schemaxis/adaptors/kicad/drc.py"
+          ],
+          "units": "count",
+          "defaultMeaning": "Schemaxis default: 0, so any such finding fails the run.",
+          "pitfalls": [
+            "Raising a maximum accepts findings rather than fixing them; record why in the request or review."
+          ],
+          "examples": [
+            0
+          ],
+          "label": "Maximum errors"
+        },
+        "/oneOf/2/properties/maximumWarnings": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable number of DRC violations with warning severity (for example dangling tracks or silkscreen overlaps) in the native report. The run fails with DRC_VIOLATIONS when the actual count is larger; the report and summary are kept for review. Severities come from the board project; checks set to ignore are listed but not counted.",
+          "sources": [
+            "docs/kicad.md#design-rule-check",
+            "src/schemaxis/adaptors/kicad/drc.py"
+          ],
+          "units": "count",
+          "defaultMeaning": "Schemaxis default: 0, so any such finding fails the run.",
+          "pitfalls": [
+            "Raising a maximum accepts findings rather than fixing them; record why in the request or review."
+          ],
+          "examples": [
+            0
+          ],
+          "label": "Maximum warnings"
+        },
+        "/oneOf/2/properties/maximumUnconnected": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable number of unconnected items (connections KiCad's ratsnest still shows as missing) in the native report. The run fails with DRC_VIOLATIONS when the actual count is larger; the report and summary are kept for review. Every routed net needs all of its pads connected by copper to reach zero.",
+          "sources": [
+            "docs/kicad.md#design-rule-check",
+            "src/schemaxis/adaptors/kicad/drc.py"
+          ],
+          "units": "count",
+          "defaultMeaning": "Schemaxis default: 0, so any such finding fails the run.",
+          "pitfalls": [
+            "Raising a maximum accepts findings rather than fixing them; record why in the request or review."
+          ],
+          "examples": [
+            0
+          ],
+          "label": "Maximum unconnected items"
+        },
+        "/oneOf/2/properties/units": {
+          "status": "reviewed",
+          "explanation": "Units of the coordinates and tool diameters written in the Excellon files: mm writes three decimals, in writes four. The summary and comparisons are always in millimetres.",
+          "sources": [
+            "docs/kicad.md#drill-export",
+            "src/schemaxis/adaptors/kicad/drill.py"
+          ],
+          "defaultMeaning": "Schemaxis default: mm.",
+          "pitfalls": [
+            "Ask your fabricator which units they expect; inch files round positions to 0.0001 in (2.54 micrometres)."
+          ],
+          "examples": [
+            "mm",
+            "in"
+          ],
+          "label": "Drill units"
+        },
+        "/oneOf/2/properties/separatePlating": {
+          "status": "reviewed",
+          "explanation": "Whether plated (board-PTH.drl) and non-plated (board-NPTH.drl) holes go in separate files. When false, one board.drl contains both, with each tool marked plated or non-plated.",
+          "sources": [
+            "docs/kicad.md#drill-export",
+            "src/schemaxis/adaptors/kicad/drill.py"
+          ],
+          "defaultMeaning": "Schemaxis default: true, two files; the NPTH file is written even when the board has no non-plated holes.",
+          "examples": [
+            true
+          ],
+          "label": "Separate PTH/NPTH files"
+        }
+      }
+    }
+  }
+}

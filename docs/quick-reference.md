@@ -9,6 +9,9 @@ All output directories must be new; their parents must already exist.
 
 | Task | Command |
 | --- | --- |
+| Print the installed version | `python3 -m schemaxis --version` |
+| Discover commands and capability topics | `python3 -m schemaxis help TOPIC` |
+| Inspect storage without changing it | `python3 -m schemaxis storage inspect --root OUTPUT_ROOT` |
 | Discover providers and GPU render options | `python3 -m schemaxis discover` |
 | Export all Schemaxis input formats | `python3 -m schemaxis schema --all` |
 | Refresh generated schemas and option references | `python3 -m schemaxis reference` |
@@ -27,6 +30,18 @@ All output directories must be new; their parents must already exist.
 | Execute FreeCAD | `python3 -m schemaxis run INPUT.json --freecad /path/to/freecadcmd --output-directory RUN` |
 | Execute Godot | `python3 -m schemaxis run INPUT.json --godot /path/to/godot --output-directory RUN` |
 | Execute Aseprite | `python3 -m schemaxis run INPUT.json --aseprite /path/to/aseprite --output-directory RUN` |
+| Publish a structured report | `python3 -m schemaxis run INPUT.json --pandoc /path/to/pandoc --output-directory RUN` |
+| Plot numeric CSV series | `python3 -m schemaxis run INPUT.json --gnuplot /path/to/gnuplot --output-directory RUN` |
+| Summarise related tables | `python3 -m schemaxis run INPUT.json --sqlite /path/to/sqlite3 --output-directory RUN` |
+| Review selected PDF pages | `python3 -m schemaxis run INPUT.json --mupdf /path/to/mutool --output-directory RUN` |
+| Assemble selected PDF pages | `python3 -m schemaxis run INPUT.json --qpdf /path/to/qpdf --mupdf /path/to/mutool --output-directory RUN` |
+| Prepare PNG details or sheets | `python3 -m schemaxis run INPUT.json --imagemagick /path/to/magick --output-directory RUN` |
+| Assemble PCM16 audio excerpts | `python3 -m schemaxis run INPUT.json --sox /path/to/sox --output-directory RUN` |
+| Lay out a directed graph | `python3 -m schemaxis run INPUT.json --graphviz /path/to/dot --output-directory RUN` |
+| Convert a bounded VTU/VTK mesh | `python3 -m schemaxis run INPUT.json --meshio /path/to/meshio-environment/bin/python --output-directory RUN` |
+| Extract a GeoTIFF window | `python3 -m schemaxis run INPUT.json --gdal /path/to/gdal-environment/bin/python --output-directory RUN` |
+| Construct a plate or spacer | `python3 -m schemaxis run INPUT.json --openscad /path/to/openscad --output-directory RUN` |
+| Prepare typed nullable Parquet | `python3 -m schemaxis run INPUT.json --apachearrow /path/to/pyarrow-environment/bin/python --output-directory RUN` |
 | Terminal console | `python3 -m schemaxis console --workspace .schemaxis` |
 | Visual console | `python3 -m schemaxis console --workspace .schemaxis --web` |
 | Discover input requirements | `python3 -m schemaxis query INPUT.json` |
@@ -34,14 +49,11 @@ All output directories must be new; their parents must already exist.
 | Observe a selected node | `python3 -m schemaxis inspect INPUT.json --node NODE --visit 0 --output-directory RUN --blender /path/to/blender` |
 | Host tests | `PYTHONPATH=src python3 -m unittest discover -s tests/unit -q` |
 
-Versions: `schemaxis/1` (ParaView), `schemaxis.blender/1` (Blender),
-`schemaxis.blender.render/1` (saved-scene rendering), `schemaxis.freecad/1` (CAD),
-`schemaxis.freecad.assembly/1` (fixed assemblies), `schemaxis.godot/1`,
-`schemaxis.aseprite/1`, `schemaxis.ffmpeg/1`, `schemaxis.qgis/1`,
-and `schemaxis.workflow/1` (application operations).
-Workflows currently accept ParaView, Blender, saved-scene rendering and FreeCAD
-solids, Godot, Aseprite, FFmpeg and QGIS. Assemblies remain standalone and
-nested workflows are unsupported.
+Choose a version and its fields from the [document-family table](json-input.md#1-basic-structure).
+It includes PCB, imaging, fabrication, reports, plots, relational tables and PDF
+assembly/review alongside the numerical, CAD, media and post-processing adaptors. `schemaxis discover` reports workflow
+support for each route; only routes declaring that support belong in
+`schemaxis.workflow/1`. Nested workflows are unsupported.
 Native applications run in separate processes; discovery and planning do not
 require them to be installed.
 

@@ -1,0 +1,412 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.graphviz/1": {
+      "guide": "docs/graphviz.md",
+      "context": {
+        "purpose": "Automatically lay out named directed dependencies and feedback flows with editable DOT and independently inspected geometry.",
+        "assumptions": "Graphviz dot 16.1.0; declared simple directed topology; fixed monochrome boxes and plain ASCII labels.",
+        "constraints": "2\u2013200 nodes, 1\u2013500 unique nonself edges, TB/LR directions; DAG or explicit cyclic policy; no arbitrary DOT, native flags, clusters, URLs, images or HTML.",
+        "inspection": "Inspect graph.svg, graph.dot, native graph.plain and host layout.json. Literal topology and labels are independent expectations; SVG/plain coherence shares the same layout engine.",
+        "recovery": "GRAPH_CYCLE: remove feedback or choose graphPolicy cyclic. INVALID_GRAPH_EDGE: choose unique distinct declared endpoints. INVALID_GRAPH_LABEL: use short supported ASCII. INTERPRETER_NOT_FOUND: configure dot 16.1.0."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/graphviz-baseline.json"
+        },
+        {
+          "id": "left-right",
+          "reference": "examples/schemaxis/graphviz-left-right.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/graphviz-variant.json"
+        },
+        {
+          "id": "cycle",
+          "reference": "examples/schemaxis/graphviz-cycle.json"
+        },
+        {
+          "id": "cycle-invalid",
+          "reference": "examples/schemaxis/graphviz-cycle-invalid.json",
+          "expect": "invalid",
+          "fault": "GRAPH_CYCLE",
+          "schemaValid": true
+        },
+        {
+          "id": "edge-invalid",
+          "reference": "examples/schemaxis/graphviz-edge-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_GRAPH_EDGE",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_graphviz.py"
+      ],
+      "acceptance": [
+        "tools/qualify_graphviz.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified layout JSON values can feed declared downstream graph fields; all artifacts remain explicit publications.",
+          "references": [
+            "docs/graphviz.md",
+            "tools/qualify_graphviz.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references and finite TB/LR studies resolve before the same literal graph contract.",
+          "references": [
+            "docs/graphviz.md",
+            "tools/qualify_graphviz.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://graphviz.org/docs/layouts/dot/",
+          "https://graphviz.org/doc/info/lang.html",
+          "https://graphviz.org/docs/attrs/rankdir/",
+          "https://graphviz.org/docs/outputs/plain/",
+          "https://graphviz.org/docs/outputs/svg/"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers version, layout and final inspection. Native CPU 30s, address space 512MiB, file 8MiB; every evidence read bounded 4MiB.",
+          "cancellation": "Shared owned-process group cancellation and publication cancellation check. Failed runs retain explicit failed status.",
+          "logs": "Authored/effective plans, trusted DOT, launchers, native input hashes, exact command submissions, stdout/stderr, SVG/plain and checked layout JSON.",
+          "verification": "Literal declared node/edge multiplicity and labels; positive finite native bounds, fixed boxes, separated interiors, attached spline endpoints and DAG direction invariants. Closed SVG grammar rejects extra/hidden content; all box/spline geometry compared with plain inches\u219272points and inverted y. No optimality or rendered typography claim."
+        },
+        "data": [
+          {
+            "id": "graph",
+            "direction": "output",
+            "kind": "image",
+            "format": "SVG",
+            "traits": {
+              "layout": "directed fixed-box graph"
+            },
+            "losses": [
+              "Fixed monochrome design; no measured typography or optimal crossing claim."
+            ],
+            "scope": "Closed verified SVG with exact declared topology and plain geometry coherence."
+          },
+          {
+            "id": "dot",
+            "direction": "output",
+            "kind": "text",
+            "format": "DOT",
+            "traits": {
+              "editable": true
+            },
+            "losses": [
+              "External DOT edits are outside verified execution."
+            ],
+            "scope": "Trusted generated source for external handoff."
+          },
+          {
+            "id": "layout",
+            "direction": "output",
+            "kind": "text",
+            "format": "plain and JSON",
+            "traits": {
+              "units": "inch",
+              "origin": "lower-left"
+            },
+            "losses": [
+              "Control points describe spline bodies; plain omits arrowhead tips."
+            ],
+            "scope": "Raw native plain and independently reconstructed host JSON geometry/topology."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "image",
+            "scope": "View verified graph.svg.",
+            "limits": "No live editing or reverse synchronisation."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect editable graph.dot, graph.plain and layout.json.",
+            "limits": "Layout JSON is host inspection, not independent native generation."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit nodes/edges, plan and run. All graph fields bind workflow reuse; shared references and finite studies are supported."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified layout JSON values can feed declared downstream graph fields; all artifacts remain explicit publications."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references and finite TB/LR studies resolve before the same literal graph contract."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Complete declared graph identity participates in workflow reuse; no external source files exist."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable shared JSON document with undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared nested forms for node labels, endpoint IDs, layout direction and graph policy."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "This serial batch layout route does not implement native-inspection; generated editable DOT is an output, not an interactive native session or arbitrary file import."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "This serial batch layout route does not implement mpi; generated editable DOT is an output, not an interactive native session or arbitrary file import."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "This serial batch layout route does not implement time-batches; generated editable DOT is an output, not an interactive native session or arbitrary file import."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "This serial batch layout route does not implement live-editing; generated editable DOT is an output, not an interactive native session or arbitrary file import."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "This serial batch layout route does not implement native-save; generated editable DOT is an output, not an interactive native session or arbitrary file import."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "This serial batch layout route does not implement conversion; generated editable DOT is an output, not an interactive native session or arbitrary file import."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {},
+            "scope": "Native branch/rejoin, LR orientation, changed topology or explicit feedback; independent literal membership/labels and bounded geometry invariants plus same-engine SVG/plain coherence.",
+            "checks": [
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/nodeIds",
+                "expected": [
+                  "extract",
+                  "build",
+                  "check",
+                  "publish"
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/edgePairs",
+                "expected": [
+                  [
+                    "extract",
+                    "build"
+                  ],
+                  [
+                    "extract",
+                    "check"
+                  ],
+                  [
+                    "build",
+                    "publish"
+                  ],
+                  [
+                    "check",
+                    "publish"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/acyclic",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/labels/extract",
+                "expected": "Extract 01",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "left-right",
+            "example": "left-right",
+            "edits": [],
+            "resources": {},
+            "scope": "Native branch/rejoin, LR orientation, changed topology or explicit feedback; independent literal membership/labels and bounded geometry invariants plus same-engine SVG/plain coherence.",
+            "checks": [
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/rankDirection",
+                "expected": "LR",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/acyclic",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/nodeIds",
+                "expected": [
+                  "extract",
+                  "build",
+                  "check",
+                  "publish"
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {},
+            "scope": "Native branch/rejoin, LR orientation, changed topology or explicit feedback; independent literal membership/labels and bounded geometry invariants plus same-engine SVG/plain coherence.",
+            "checks": [
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/nodeIds",
+                "expected": [
+                  "extract",
+                  "build",
+                  "check",
+                  "publish",
+                  "archive"
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/edgePairs",
+                "expected": [
+                  [
+                    "extract",
+                    "build"
+                  ],
+                  [
+                    "extract",
+                    "check"
+                  ],
+                  [
+                    "build",
+                    "publish"
+                  ],
+                  [
+                    "check",
+                    "publish"
+                  ],
+                  [
+                    "publish",
+                    "archive"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "cycle",
+            "example": "cycle",
+            "edits": [],
+            "resources": {},
+            "scope": "Native branch/rejoin, LR orientation, changed topology or explicit feedback; independent literal membership/labels and bounded geometry invariants plus same-engine SVG/plain coherence.",
+            "checks": [
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/acyclic",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/topologicalOrder",
+                "expected": [],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/edgePairs",
+                "expected": [
+                  [
+                    "extract",
+                    "build"
+                  ],
+                  [
+                    "extract",
+                    "check"
+                  ],
+                  [
+                    "build",
+                    "publish"
+                  ],
+                  [
+                    "check",
+                    "publish"
+                  ],
+                  [
+                    "publish",
+                    "extract"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial directed graph document, all fields, bounded isolated execution, editable DOT, native SVG/plain and topology/geometry inspection.",
+        "review": [
+          "verification/2026-10-17-graphviz-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "This serial batch layout route does not implement native-inspection; generated editable DOT is an output, not an interactive native session or arbitrary file import.",
+          "mpi": "This serial batch layout route does not implement mpi; generated editable DOT is an output, not an interactive native session or arbitrary file import.",
+          "time-batches": "This serial batch layout route does not implement time-batches; generated editable DOT is an output, not an interactive native session or arbitrary file import.",
+          "live-editing": "This serial batch layout route does not implement live-editing; generated editable DOT is an output, not an interactive native session or arbitrary file import.",
+          "native-save": "This serial batch layout route does not implement native-save; generated editable DOT is an output, not an interactive native session or arbitrary file import.",
+          "conversion": "This serial batch layout route does not implement conversion; generated editable DOT is an output, not an interactive native session or arbitrary file import."
+        }
+      }
+    }
+  }
+}

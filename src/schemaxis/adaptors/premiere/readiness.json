@@ -4,11 +4,11 @@
     "schemaxis.premiere/1": {
       "guide": "docs/premiere.md",
       "context": {
-        "purpose": "Check the structure and source identities of an already open saved Premiere sequence through documented read-only UXP APIs. Experimental integration; native qualification is pending.",
+        "purpose": "Check saved Premiere sequence source identities and complete named video track layouts, with exact frame range coverage requirements. Read-only; native qualification pending.",
         "assumptions": "Windows/macOS host, Premiere 26.5+, UDT 2.2+, supplied panel loaded in developer mode, exact native project/source paths and an idle active sequence. Local private bridge folder.",
-        "constraints": "One unmuted contiguous video track, 1..128 clips, at most 600 timeline frames, integer 24/25/30/50/60 fps, zero sequence start, empty audio tracks, no captions/transitions/disabled/adjustment/reversed/offline/nested/merged/multicam/proxy clips. Effects and source/rendered bytes are not checked.",
-        "inspection": "Compare exact native ticks, ordered source identities, project/sequence GUIDs, dimensions and runtime identity. Two complete matching observations detect observed concurrent edits without claiming atomicity.",
-        "recovery": "NATIVE_ENVIRONMENT_UNAVAILABLE on Linux is expected. BRIDGE_NOT_CONFIGURED requires --premiere-bridge. RUNNER_TIMED_OUT needs a fresh attempt and explicit panel folder selection. CONTRACT_MISMATCH needs matching native sequence structure. No native action is performed to repair the project."
+        "constraints": "sequenceContract: one contiguous video track. sequenceLayout: complete ordered 1..8 uniquely named video tracks, gaps/overlays/empty tracks, 1..128 total clips, 1..600 frames and 0..32 coverage requirements. Integer 24/25/30/50/60 fps, zero sequence start. All tracks unmuted and clips enabled; empty audio tracks, no captions/transitions/adjustment/reversed/offline/nested/merged/multicam/proxy clips. Source/rendered bytes, opacity, effects and intermediate time remapping are not checked.",
+        "inspection": "Compare exact native ticks, ordered source identities, project/sequence GUIDs, dimensions and runtime identity. Two complete matching observations detect observed concurrent edits without claiming atomicity. For sequenceLayout, independently reconstruct observed frame occupancy, per-track gaps and named minimum-active-track coverage decisions.",
+        "recovery": "NATIVE_ENVIRONMENT_UNAVAILABLE on Linux is expected. BRIDGE_NOT_CONFIGURED requires --premiere-bridge. RUNNER_TIMED_OUT needs a fresh attempt and explicit panel folder selection. CONTRACT_MISMATCH needs matching native sequence structure. No native action is performed to repair the project. INVALID_LAYOUT needs ordered non-overlapping positive clip ranges within endFrame. REQUIREMENT_FAILED retains layout.json with uncovered frame numbers; revise the intended requirement or manually repair the native timeline, then use a fresh attempt."
       },
       "examples": [
         {
@@ -21,26 +21,44 @@
           "expect": "invalid",
           "fault": "INVALID_RATE",
           "schemaValid": false
+        },
+        {
+          "id": "layout",
+          "reference": "examples/schemaxis/premiere-layout.json"
+        },
+        {
+          "id": "layout-variant",
+          "reference": "examples/schemaxis/premiere-layout-variant.json"
+        },
+        {
+          "id": "layout-overlap-invalid",
+          "reference": "examples/schemaxis/premiere-layout-overlap-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_LAYOUT",
+          "schemaValid": true
         }
       ],
       "conformance": [
-        "tests/unit/test_premiere.py"
+        "tests/unit/test_premiere.py",
+        "tests/unit/test_premiere_layout.py"
       ],
       "acceptance": [
-        "tools/qualify_premiere.py"
+        "tools/qualify_premiere.py",
+        "tools/qualify_premiere_layout.py"
       ],
       "development": {
         "api": [
           "https://developer.adobe.com/premiere-pro/uxp/resources/fundamentals/apis/",
           "https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/sequence",
           "https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/videocliptrackitem",
-          "https://developer.adobe.com/premiere-pro/uxp/resources/recipes/host-info/"
+          "https://developer.adobe.com/premiere-pro/uxp/resources/recipes/host-info/",
+          "https://developer.adobe.com/premiere-pro/uxp/ppro-reference/classes/videotrack"
         ],
         "lifecycle": {
           "timeout": "A shared elapsed deadline bounds human panel selection, observation arrival and final host verification; panel checks expiry before publishing.",
           "cancellation": "Shared cancellation ends the bounded wait; no native application process is started or killed. Expired jobs cannot publish accepted results.",
           "logs": "Retain authored/plan/request/response/observation, per-attempt nonce and bridge-job path, structured failed result and final verification. No fictitious native process log.",
-          "verification": "Closed bounded native observation checks exact ticks and source identities against an independent authored plan; request hash/nonce prevent stale attempts. Two complete matching observations, native runtime/project identities and retained byte hashes. Source contents, effects and export are unverified; local wholesale evidence fabrication is outside the trust model."
+          "verification": "Closed bounded native observation checks exact ticks and source identities against an independent authored plan; request hash/nonce prevent stale attempts. Two complete matching observations, native runtime/project identities and retained byte hashes. Source contents, effects and export are unverified; local wholesale evidence fabrication is outside the trust model. Layout reports are regenerated from exact observed ticks using a bounded occupancy grid; missing, changed or failed reports cannot verify."
         },
         "data": [
           {
@@ -74,6 +92,36 @@
               "No project creation, save, rendering, export, workflow scheduling or automatic reuse"
             ],
             "scope": "Native structure and identities only; no saved project artifact or rendered video."
+          },
+          {
+            "id": "layout-contract",
+            "direction": "input",
+            "kind": "sequenceLayout",
+            "format": "Schemaxis JSON",
+            "traits": {
+              "timeUnits": "sequence frames",
+              "mutation": false
+            },
+            "losses": [
+              "Source paths are identities only; no media-content validation."
+            ],
+            "scope": "Complete ordered named video tracks with explicit source/timeline ranges and coverage requirements."
+          },
+          {
+            "id": "layout-report",
+            "direction": "output",
+            "kind": "sequenceLayout",
+            "format": "Schemaxis editorial layout JSON",
+            "traits": {
+              "timeUnits": "sequence frames",
+              "readOnly": true,
+              "rendered": false
+            },
+            "losses": [
+              "Editorial interval occupancy is not proof of visible footage, opacity or effects.",
+              "Native Premiere qualification is pending."
+            ],
+            "scope": "Per-track gaps/occupied frames and named coverage checks on exact native interval readback."
           }
         ],
         "inspection": [
@@ -203,6 +251,88 @@
                 "expected": "Schemaxis Colours"
               }
             ]
+          },
+          {
+            "id": "layout-baseline",
+            "example": "layout",
+            "edits": [],
+            "scope": "Unexecuted native recipe: manually prepare the documented three-track six-colour fixture. Independent literal interval expectations; host DOM doubles do not qualify native behaviour.",
+            "checks": [
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/tracks/0/occupiedFrames",
+                "expected": 8
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/tracks/1/occupiedFrames",
+                "expected": 4
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/tracks/1/gaps",
+                "expected": [
+                  {
+                    "startFrame": 0,
+                    "endFrame": 3
+                  },
+                  {
+                    "startFrame": 7,
+                    "endFrame": 10
+                  }
+                ]
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/requirements/0/uncoveredFrames",
+                "expected": []
+              }
+            ]
+          },
+          {
+            "id": "layout-held-out",
+            "example": "layout-variant",
+            "edits": [],
+            "scope": "Unexecuted native recipe: manually prepare the documented three-track six-colour fixture. Independent literal interval expectations; host DOM doubles do not qualify native behaviour.",
+            "checks": [
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/tracks/0/occupiedFrames",
+                "expected": 8
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/tracks/1/occupiedFrames",
+                "expected": 2
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/tracks/1/gaps",
+                "expected": [
+                  {
+                    "startFrame": 0,
+                    "endFrame": 4
+                  },
+                  {
+                    "startFrame": 6,
+                    "endFrame": 10
+                  }
+                ]
+              },
+              {
+                "file": "layout.json",
+                "format": "json",
+                "pointer": "/requirements/0/uncoveredFrames",
+                "expected": []
+              }
+            ]
           }
         ]
       },
@@ -213,6 +343,22 @@
             "docs/adaptor-runtime.md",
             "docs/premiere.md"
           ]
+        }
+      },
+      "completion": {
+        "scope": "sequenceLayout complete named video-track inspection and editorial coverage requirements; preserved sequenceContract regressions. Host and documentation acceptance only; native blocked on Linux.",
+        "review": [
+          "verification/2026-10-17-premiere-completion.md"
+        ],
+        "notApplicable": {
+          "workflow": "No workflow contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook.",
+          "native-inspection": "No native-inspection contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook.",
+          "mpi": "No mpi contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook.",
+          "reusable-inputs": "No reusable-inputs contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook.",
+          "time-batches": "No time-batches contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook.",
+          "live-editing": "No live-editing contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook.",
+          "native-save": "No native-save contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook.",
+          "conversion": "No conversion contract is advertised. Human panel selection is required; this experimental observation is not a shared native-inspection workspace hook."
         }
       }
     }

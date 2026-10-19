@@ -1,0 +1,450 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.numpy/1": {
+      "guide": "docs/numpy.md",
+      "context": {
+        "purpose": "Explain correlated multi-channel numeric measurements with centred, explicitly scaled principal components, labelled loadings/scores or a retained-subspace projector, explained variance and a reconstruction in channel units.",
+        "assumptions": "Arithmetic mean centring, n-1 denominator, declared scaling (none needs one shared unit), parsed binary64 data; isolated NumPy 2.5.4 with OpenBLAS 0.3.34 on POSIX, one thread.",
+        "constraints": "2-32 channels, 3-10000 rows, 160000 cells, 8 MiB ASCII CSV, at most 10 components; raw values zero or within [1e-48,1e48]; offset ratio <=1e6; scaled spread within [1e-48,1e48]; every published value within +/-1e100.",
+        "inspection": "Inspect spectrum/loadings/scores or projector/reconstruction CSVs and pca-verification.json, the host record of a posteriori loading/subspace bounds, certification ratios, effective tolerances and requirement statuses.",
+        "recovery": "Correct located contract/CSV/range/scaling faults; repeated spectra need subspace output or other retention; uncertified reconstructions need standardise or less extreme scales; unmet/indeterminate requirements are retained evidence, not accepted results."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/numpy-sensors.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/numpy-sensors-standardised.json"
+        },
+        {
+          "id": "drift",
+          "reference": "examples/schemaxis/numpy-pressure-drift.json"
+        },
+        {
+          "id": "unit-mismatch",
+          "reference": "examples/schemaxis/numpy-unit-mismatch-invalid.json",
+          "expect": "invalid",
+          "fault": "PCA_UNIT_MISMATCH",
+          "schemaValid": true
+        },
+        {
+          "id": "declared-scale-missing",
+          "reference": "examples/schemaxis/numpy-declared-scale-invalid.json",
+          "expect": "invalid",
+          "fault": "PCA_INVALID_CONTRACT",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_numpy.py"
+      ],
+      "acceptance": [
+        "tools/qualify_numpy.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified table artifacts hand off by index; only accepted runs (requirements met) can be consumed.",
+          "references": [
+            "docs/numpy.md",
+            "examples/schemaxis/numpy-denoise-workflow.json",
+            "tools/qualify_numpy.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared references, expressions and finite studies resolve to the same literal PCA contract.",
+          "references": [
+            "docs/numpy.md",
+            "tools/qualify_numpy.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://numpy.org/doc/stable/reference/generated/numpy.linalg.svd.html",
+          "https://numpy.org/doc/stable/reference/generated/numpy.linalg.eigh.html",
+          "https://numpy.org/doc/stable/reference/generated/numpy.linalg.eigvalsh.html",
+          "https://numpy.org/doc/stable/reference/generated/numpy.linalg.norm.html",
+          "https://github.com/numpy/numpy/releases/tag/v2.5.4"
+        ],
+        "lifecycle": {
+          "timeout": "Single total deadline (default 120 s) over host validation, both native stages and host verification; native CPU 60 s, address space 4 GiB, 64 MiB per file.",
+          "cancellation": "Owned process-group cancellation through the shared runner and a pre-publication check.",
+          "logs": "Captured CSV, authored/plan/native configuration, worker and implementation fingerprints, consumed-input bindings, submissions, stdout/stderr, native fault records and readback record.",
+          "verification": "Independent standard-library oracle: strict CSV grammar, fsum statistics, cyclic Jacobi spectrum with residual-based eigenvalue bounds, Davis-Kahan loading and subspace bounds, Eckart-Young residual and host-owned requirement/certification decisions recomputed by saved verification."
+        },
+        "data": [
+          {
+            "id": "measurements",
+            "direction": "input",
+            "kind": "table",
+            "format": "ASCII numeric CSV",
+            "traits": {
+              "header": "optional row key then channels",
+              "units": "declared per column"
+            },
+            "losses": [
+              "Decimal text is parsed to binary64; no quotes, missing values, dates or text columns."
+            ],
+            "scope": "Regular local capture <=8 MiB; complete host validation before native launch."
+          },
+          {
+            "id": "spectrum",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV component,eigenvalue,varianceFraction,cumulativeFraction",
+            "traits": {
+              "index": "integer component",
+              "order": "descending eigenvalue"
+            },
+            "losses": [
+              "Eigenvalue accuracy is relative to total variance only."
+            ],
+            "scope": "All p eigenvalues of the n-1 covariance of the scaled data."
+          },
+          {
+            "id": "loadings",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV component,<channels>",
+            "traits": {
+              "sign": "first channel within 2*eta of the largest magnitude is positive"
+            },
+            "losses": [
+              "Components output only; refused for repeated or near-repeated eigenvalues."
+            ],
+            "scope": "Unit-norm principal axes validated to sine angle <= loadingTolerance."
+          },
+          {
+            "id": "scores",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV <rowKey or row>,PC1..PCK",
+            "traits": {
+              "definition": "scaled data times published loadings"
+            },
+            "losses": [],
+            "scope": "Components output only."
+          },
+          {
+            "id": "projector",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV channelIndex,<channels>",
+            "traits": {
+              "symmetry": "exact"
+            },
+            "losses": [
+              "Subspace output only; no per-component basis."
+            ],
+            "scope": "Projector onto the retained subspace validated to distance <= loadingTolerance."
+          },
+          {
+            "id": "reconstruction",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV <rowKey or row>,<channels>",
+            "traits": {
+              "units": "channel units"
+            },
+            "losses": [
+              "Rank-K approximation; certified per channel to <= loadingTolerance x sample deviation."
+            ],
+            "scope": "Mean plus scale times the retained projection of every row."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "pca-summary.json",
+            "traits": {
+              "decisions": "none; measurements and native residual diagnostics only"
+            },
+            "losses": [],
+            "scope": "Native measurements, runtime identity and digests."
+          },
+          {
+            "id": "verification",
+            "direction": "output",
+            "kind": "text",
+            "format": "pca-verification.json",
+            "traits": {
+              "bindings": "source, parsed data, publications, plan, runtime, implementation"
+            },
+            "losses": [],
+            "scope": "Sole final requirement, effective-tolerance and certification record."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect CSV publications, pca-summary.json and pca-verification.json.",
+            "limits": "No interactive native session or plot."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Every source byte digest participates in reuse identity; same-path edits invalidate reuse."
+        },
+        "features": {
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native session; inspect the verified CSV tables and the host verification record."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "One native BLAS/OpenMP thread in one process; no MPI."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No time-list batches; use finite document studies."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No persistent native state or reverse editing."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No format conversion; the route analyses one numeric CSV."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "NumPy has no application document to save; publications are inspectable CSV/JSON only (no .npy or pickle)."
+          },
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified table artifacts hand off by index; only accepted runs (requirements met) can be consumed."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared references, expressions and finite studies resolve to the same literal PCA contract."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Source byte digests participate in reuse identity; same-path edits invalidate reuse."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable channel, unit, scaling, retention and requirement declarations with undo through common authoring."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Nested channels, retention and requirement fields are editable forms."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/numpy-sensors.csv"
+            },
+            "scope": "Exact rational construction: eigenvalues 64 d^2/63 for d=(4,2,1,0.5), loadings = columns of H4/2, per-channel rank-2 RMS sqrt(0.3125) mV, requirements met.",
+            "checks": [
+              {
+                "file": "spectrum.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    1,
+                    16.253968253968253,
+                    0.7529411764705882,
+                    0.7529411764705882
+                  ],
+                  [
+                    2,
+                    4.063492063492063,
+                    0.18823529411764706,
+                    0.9411764705882353
+                  ],
+                  [
+                    3,
+                    1.0158730158730158,
+                    0.047058823529411764,
+                    0.9882352941176471
+                  ],
+                  [
+                    4,
+                    0.25396825396825395,
+                    0.011764705882352941,
+                    1.0
+                  ]
+                ],
+                "relative": 1e-12,
+                "absolute": 1e-15
+              },
+              {
+                "file": "loadings.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    1,
+                    0.5,
+                    0.5,
+                    0.5,
+                    0.5
+                  ],
+                  [
+                    2,
+                    0.5,
+                    -0.5,
+                    0.5,
+                    -0.5
+                  ]
+                ],
+                "relative": 0,
+                "absolute": 1e-12
+              },
+              {
+                "file": "pca-summary.json",
+                "format": "json",
+                "pointer": "/reconstructionRMS",
+                "expected": [
+                  0.5590169943749475,
+                  0.5590169943749475,
+                  0.5590169943749475,
+                  0.5590169943749475
+                ],
+                "relative": 1e-12,
+                "absolute": 0
+              },
+              {
+                "file": "pca-verification.json",
+                "format": "json",
+                "pointer": "/assessment/requirements/status",
+                "expected": {
+                  "minimumExplainedVariance": "met",
+                  "reconstructionRMS.ch1": "met"
+                },
+                "relative": 0,
+                "absolute": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/numpy-sensors.csv"
+            },
+            "scope": "Same data standardised: correlation eigenvalues 4 d^2/sum(d^2), projector onto the first two columns of H4/2, unchanged rank-2 RMS in mV.",
+            "checks": [
+              {
+                "file": "spectrum.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    1,
+                    3.011764705882353,
+                    0.7529411764705882,
+                    0.7529411764705882
+                  ],
+                  [
+                    2,
+                    0.7529411764705882,
+                    0.18823529411764706,
+                    0.9411764705882353
+                  ],
+                  [
+                    3,
+                    0.18823529411764706,
+                    0.047058823529411764,
+                    0.9882352941176471
+                  ],
+                  [
+                    4,
+                    0.047058823529411764,
+                    0.011764705882352941,
+                    1.0
+                  ]
+                ],
+                "relative": 1e-12,
+                "absolute": 1e-15
+              },
+              {
+                "file": "projector.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    1,
+                    0.5,
+                    0,
+                    0.5,
+                    0
+                  ],
+                  [
+                    2,
+                    0,
+                    0.5,
+                    0,
+                    0.5
+                  ],
+                  [
+                    3,
+                    0.5,
+                    0,
+                    0.5,
+                    0
+                  ],
+                  [
+                    4,
+                    0,
+                    0.5,
+                    0,
+                    0.5
+                  ]
+                ],
+                "relative": 0,
+                "absolute": 1e-12
+              },
+              {
+                "file": "pca-summary.json",
+                "format": "json",
+                "pointer": "/reconstructionRMS",
+                "expected": [
+                  0.5590169943749475,
+                  0.5590169943749475,
+                  0.5590169943749475,
+                  0.5590169943749475
+                ],
+                "relative": 1e-12,
+                "absolute": 0
+              },
+              {
+                "file": "pca-verification.json",
+                "format": "json",
+                "pointer": "/assessment/requirements/overall",
+                "expected": "met",
+                "relative": 0,
+                "absolute": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial principalComponents route: all fields, strict CSV and closed range contract, scaling/units, retention/resolution/degeneracy, components and subspace outputs, host-owned requirements and certification, saved verification, workflow handoff.",
+        "review": [
+          "verification/2026-10-19-numpy-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native session; inspect the verified CSV tables and the host verification record.",
+          "mpi": "One native BLAS/OpenMP thread in one process; no MPI.",
+          "time-batches": "No time-list batches; use finite document studies.",
+          "live-editing": "No persistent native state or reverse editing.",
+          "conversion": "No format conversion; the route analyses one numeric CSV.",
+          "native-save": "NumPy has no application document to save; publications are inspectable CSV/JSON only (no .npy or pickle)."
+        }
+      }
+    }
+  }
+}

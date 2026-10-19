@@ -4,9 +4,9 @@
     "schemaxis.qgis/1": {
       "guide": "docs/qgis.md",
       "context": {
-        "purpose": "Run bounded 2D vector import, explicit CRS reprojection, metric buffering and rectangular clipping; publish an editable GeoPackage/project. Compute projected polygon centroids with retained attributes.",
-        "assumptions": "Configured Python with QGIS 3.x; one input layer with a known CRS. Buffering requires projected metre coordinates; geographic degrees are not metres.",
-        "constraints": "At most 10000 features and one million vertices; 2D subset only. GeoPackage feature IDs are regenerated. PNG preview is not a georeferenced raster. No automatic conversion from unrelated geometry kinds. Centroids require projected polygons and may lie outside their source geometry.",
+        "purpose": "Run bounded 2D vector import, explicit CRS reprojection, metric buffering and rectangular clipping; publish an editable GeoPackage/project. Compute projected polygon centroids with retained attributes. Select typed feature attributes and publish grouped count/sum/mean tables with stable member IDs and explicit units.",
+        "assumptions": "Configured QGIS Python launcher; the same implementation supports QGIS 3/4 APIs. Latest-stable 4.2.3 is the native acceptance target. A single 2D input vector layer needs a known EPSG CRS; metric buffering needs projected metre coordinates.",
+        "constraints": "At most 10000 features and one million vertices; 2D subset only. GeoPackage feature IDs are regenerated. PNG preview is not a georeferenced raster. No automatic conversion from unrelated geometry kinds. Centroids require projected polygons and may lie outside their source geometry. Attribute selection requires unique nonempty string semantic IDs; groups use nullable string keys, numeric aggregates reject Boolean, and units are annotations without conversion. Summary side tables preserve the input vector unchanged.",
         "inspection": "Inspect feature counts, CRS, bounds, attributes and reopened geometry. The shared console can inspect retained text/image evidence; it does not offer a GIS map editor.",
         "recovery": "INVALID_ARGUMENT requires a valid EPSG identifier and positive clip extent. Close/checkpoint GeoPackage sidecars before reading. Configure native QGIS and preserve build/reopen logs on failure."
       },
@@ -48,16 +48,33 @@
         {
           "id": "centroids",
           "reference": "examples/schemaxis/qgis-centroids.json"
+        },
+        {
+          "id": "attributes",
+          "reference": "examples/schemaxis/qgis-attributes.json"
+        },
+        {
+          "id": "attributes-variant",
+          "reference": "examples/schemaxis/qgis-attributes-variant.json"
+        },
+        {
+          "id": "attributes-invalid",
+          "reference": "examples/schemaxis/qgis-attributes-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": true
         }
       ],
       "conformance": [
         "tests/unit/test_media_geospatial.py",
-        "tests/unit/test_adaptor_migration.py"
+        "tests/unit/test_adaptor_migration.py",
+        "tests/unit/test_qgis_attributes.py"
       ],
       "acceptance": [
         "tools/qualify_adaptor_migration.py",
         "tools/qualify_media_geospatial.py",
-        "tools/qualify_qgis_centroids.py"
+        "tools/qualify_qgis_centroids.py",
+        "tools/qualify_qgis_attributes.py"
       ],
       "profiles": {
         "workflow": {
@@ -77,7 +94,11 @@
       },
       "development": {
         "api": [
-          "https://qgis.org/pyqgis/"
+          "https://qgis.org/pyqgis/",
+          "https://api.qgis.org/api/classQgsFeature.html",
+          "https://api.qgis.org/api/classQgsFields.html",
+          "https://api.qgis.org/api/classQgsVectorDataProvider.html",
+          "https://api.qgis.org/api/classQgsVectorFileWriter.html"
         ],
         "lifecycle": {
           "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
@@ -114,6 +135,22 @@
               "Centroid reduces each polygon to a point and loses its boundary and area."
             ],
             "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "group-summary",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV/GeoPackage with typed JSON companion",
+            "traits": {
+              "ordering": "null group then Unicode string; memberIds lexicographic",
+              "units": "explicit authored annotations"
+            },
+            "losses": [
+              "No geometry in summary tables; original input vector is retained as the graph output.",
+              "CSV null values use empty cells; groupIsNull and typed JSON preserve null versus empty string.",
+              "Sum/mean are IEEE binary64 values; large integers and decimal quantities can round, so exact decimal accounting is outside scope."
+            ],
+            "scope": "Grouped count/nonNullCount/sum/mean with stable semantic member IDs; no unit conversion."
           }
         ],
         "inspection": [
@@ -337,8 +374,161 @@
                 "expected": "EPSG:3857"
               }
             ]
+          },
+          {
+            "id": "attribute-baseline",
+            "example": "attributes",
+            "edits": [],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/fixtures/qgis/assets.geojson"
+            },
+            "scope": "Literal score boundary, nullable groups, member IDs, all/null numeric counts and kW arithmetic. Fresh project reopens its selected vector and no-geometry summary table.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/count",
+                "expected": 6
+              },
+              {
+                "file": "summary-regional_load.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  {
+                    "group": null,
+                    "groupIsNull": true,
+                    "memberIds": [
+                      "e"
+                    ],
+                    "assets": 1,
+                    "valid_loads": 1,
+                    "total_kw": 2,
+                    "mean_kw": 2
+                  },
+                  {
+                    "group": "",
+                    "groupIsNull": false,
+                    "memberIds": [
+                      "i"
+                    ],
+                    "assets": 1,
+                    "valid_loads": 1,
+                    "total_kw": 3,
+                    "mean_kw": 3
+                  },
+                  {
+                    "group": "empty",
+                    "groupIsNull": false,
+                    "memberIds": [
+                      "h"
+                    ],
+                    "assets": 1,
+                    "valid_loads": 0,
+                    "total_kw": null,
+                    "mean_kw": null
+                  },
+                  {
+                    "group": "north",
+                    "groupIsNull": false,
+                    "memberIds": [
+                      "b",
+                      "g"
+                    ],
+                    "assets": 2,
+                    "valid_loads": 1,
+                    "total_kw": 6,
+                    "mean_kw": 6
+                  },
+                  {
+                    "group": "south",
+                    "groupIsNull": false,
+                    "memberIds": [
+                      "c"
+                    ],
+                    "assets": 1,
+                    "valid_loads": 1,
+                    "total_kw": 4,
+                    "mean_kw": 4
+                  }
+                ],
+                "relative": 1e-12,
+                "absolute": 1e-12
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/attributes/eligible/memberIds",
+                "expected": [
+                  "b",
+                  "c",
+                  "e",
+                  "g",
+                  "h",
+                  "i"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "attribute-strict-boundary",
+            "example": "attributes-variant",
+            "edits": [],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/fixtures/qgis/assets.geojson"
+            },
+            "scope": "Literal score boundary, nullable groups, member IDs, all/null numeric counts and kW arithmetic. Fresh project reopens its selected vector and no-geometry summary table.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/snapshot/count",
+                "expected": 1
+              },
+              {
+                "file": "summary-regional_load.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  {
+                    "group": null,
+                    "groupIsNull": true,
+                    "memberIds": [
+                      "e"
+                    ],
+                    "assets": 1,
+                    "valid_loads": 1,
+                    "total_kw": 2,
+                    "mean_kw": 2
+                  }
+                ],
+                "relative": 1e-12,
+                "absolute": 1e-12
+              },
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/attributes/eligible/memberIds",
+                "expected": [
+                  "e"
+                ]
+              }
+            ]
           }
         ]
+      },
+      "completion": {
+        "scope": "Typed selectAttributes and summariseAttributes side tables, semantic feature ID tracing, explicit counts/units/null policies, native table/project reopening, discovery/guidance/Studio starter and bounded independent acceptance.",
+        "review": [
+          "verification/2026-10-17-qgis-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "This route does not implement native-inspection; use its documented batch/source workflow.",
+          "mpi": "This route does not implement mpi; use its documented batch/source workflow.",
+          "time-batches": "This route does not implement time-batches; use its documented batch/source workflow.",
+          "live-editing": "This route does not implement live-editing; use its documented batch/source workflow.",
+          "native-save": "This route does not implement native-save; use its documented batch/source workflow."
+        }
       }
     }
   }

@@ -1,0 +1,239 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "report": {
+      "status": "reviewed",
+      "explanation": "Publish an ordered report with a visible title, sections, plain paragraphs, rectangular text tables and captured PNG figures as standalone HTML and editable Word DOCX. Use it for small measured-result reports. Trusted JSON AST, sandboxed writers, independent HTML/OOXML inspection and fresh DOCX native readback retain actual declared content. Default typography and pagination are not an exact layout or accessibility contract.",
+      "pitfalls": [
+        "Replace each image placeholder with an absolute regular plain RGB/RGBA PNG path.",
+        "Begin headings at level 1 and avoid increasing by more than 1.",
+        "Every table row must have one text cell per column; numeric values must be written as strings.",
+        "No authored markup, templates, filters, scripts, rich text or arbitrary input-document conversion."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/pandoc-report.json",
+          "purpose": "Report a measured calibration table with a local PNG and ordered outline."
+        },
+        {
+          "reference": "examples/schemaxis/pandoc-report-variant.json",
+          "purpose": "Change a cell, image width and heading level and verify both formats."
+        }
+      ],
+      "sources": [
+        "docs/pandoc.md",
+        "https://pandoc.org/MANUAL.html"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.pandoc/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A bounded ordered report published as standalone HTML and editable Word DOCX, with plain paragraphs, rectangular text tables and captured PNG images. Every generated document is inspected against these authored values.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "The report document contract identifier must be schemaxis.pandoc/1. This is independent of the Pandoc executable release.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select report to publish both standalone HTML and Word DOCX and verify their ordered semantic content.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/title": {
+          "status": "reviewed",
+          "explanation": "Required report title, up to 160 plain-text characters. It appears before the first section in both outputs and labels the HTML browser tab; it is not a filename.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections": {
+          "status": "reviewed",
+          "explanation": "Ordered outline of 1–32 sections, each with a heading and content. Array order is publication order; no native sorting or implicit content is added.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items": {
+          "status": "reviewed",
+          "explanation": "One section with required heading/content and optional outline level. It is published after the preceding section; its outline level does not alter the order of its content.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/heading": {
+          "status": "reviewed",
+          "explanation": "Required section heading, up to 160 plain-text characters. The preceding level controls its outline depth; the text is escaped literally rather than parsed as markup.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/level": {
+          "status": "reviewed",
+          "explanation": "Outline depth 1–3, unitless. Omission selects 1. Start at 1 and increase by at most 1; decreasing levels can skip. This controls semantic heading style, not page layout.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ],
+          "units": "unitless outline depth",
+          "defaultMeaning": "Omission selects level 1."
+        },
+        "/properties/sections/items/properties/content": {
+          "status": "reviewed",
+          "explanation": "Ordered 1–32 content blocks in this section: paragraph, table or image. The whole report permits 128 blocks, 65536 text characters and 8 images. Every kind has its own closed fields.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items": {
+          "status": "reviewed",
+          "explanation": "One content block selected from the closed paragraph, text-table or captured-PNG alternatives. Keep content order explicit; arbitrary document AST nodes are not accepted.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "Paragraph content alternative: select kind paragraph and supply one plain-text text value; no table or image properties are accepted here.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/0/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Select paragraph for one plain-text paragraph.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/0/properties/text": {
+          "status": "reviewed",
+          "explanation": "One required paragraph of 1–2048 plain-text characters. Use single ordinary spaces and no line breaks/controls; punctuation such as < and & is literal, never markup or executable content.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "Table content alternative: select kind table and declare a single column-header row plus rectangular text data rows; cell spans and formulas are excluded.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/1/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Select table for one rectangular text table with a single header row.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/1/properties/columns": {
+          "status": "reviewed",
+          "explanation": "The required single header row:1–8 nonempty text column labels, each at most 256 characters. Every data row must contain exactly this many cells in this order.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/1/properties/columns/items": {
+          "status": "reviewed",
+          "explanation": "One nonempty column heading, up to 256 plain-text characters, with single spaces and no controls. Its position determines the corresponding cell in each data row.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/1/properties/rows": {
+          "status": "reviewed",
+          "explanation": "Required 1–64 data rows in authored order. Each row has exactly one nonempty plain-text cell per column; numeric-looking values remain text and formulas are unsupported.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/1/properties/rows/items": {
+          "status": "reviewed",
+          "explanation": "One ordered row of text cells. Its length must equal the number of column headings; no missing cells, nulls, merged cells or automatic padding.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/1/properties/rows/items/items": {
+          "status": "reviewed",
+          "explanation": "One nonempty text cell, up to 256 characters, at the declared row/column position. It retains exact text, including numeric spelling; use single spaces and no line breaks.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "Image content alternative: select kind image, a captured plain local PNG, descriptive alt text and optional physical width. No remote fetches or arbitrary image conversion.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/2/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Select image for one captured local RGB/RGBA PNG with descriptive alt text and a physical display width.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/2/properties/source": {
+          "status": "reviewed",
+          "explanation": "Required absolute path of a regular local .png, not a URL or symlink. Captured once with a digest before rendering; at most 4 MiB per image and 8 MiB combined, 8-bit RGB/RGBA, non-interlaced,1–2048 pixels per axis and 1048576 pixels total. Only IHDR/IDAT/IEND chunks are accepted.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/2/properties/alt": {
+          "status": "reviewed",
+          "explanation": "Required descriptive plain text for the image, up to 256 characters. Retained in HTML alt and DOCX drawing description and checked on fresh native readback. It does not create a visible figure caption.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/2/properties/widthMm": {
+          "status": "reviewed",
+          "explanation": "Displayed image width in millimetres, inclusive 10–150, default 80 when omitted. Aspect ratio follows the captured pixel dimensions. OOXML rounds physical geometry within two EMU (1/18000 mm); native JSON readback width tolerance is 0.001 mm.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ],
+          "units": "millimetres",
+          "defaultMeaning": "Omission displays the image 80 mm wide with its captured pixel aspect ratio."
+        }
+      }
+    }
+  }
+}

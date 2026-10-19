@@ -100,7 +100,8 @@ class MetadataTests(unittest.TestCase):
             def native_run(document, directory, **kwargs):
                 (directory/'result.json').write_text(json.dumps({'status':'succeeded','verified':True,'nativeEvidence':'retained'}))
                 return {'status':'succeeded'}
-            with patch('schemaxis.publication_metadata.finalise', side_effect=OSError('injected disk failure')):
+            with patch('schemaxis.schema_snapshots.capture_run'), \
+                    patch('schemaxis.publication_metadata.finalise', side_effect=OSError('injected disk failure')):
                 with self.assertRaises(OSError):
                     execute(document, root, {}, native_run, lambda *a: True, lambda d: {}, timeout=1)
             result = json.loads((root/'result.json').read_text())

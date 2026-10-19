@@ -5,8 +5,15 @@ export function slug(text) {
 
 export function searchTopics(entries, query, group = '') {
   const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  // Prose supports word prefixes, but "place" must not match "replaces".
+  // Keep partial title matches for native identifiers such as pvClip.
+  const proseTerms = terms.map((term) => {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|[^\\p{L}\\p{N}_])${escaped}`, 'u');
+  });
   return entries.filter((item) => (!group || item.group === group)
-    && terms.every((term) => `${item.title.toLowerCase()} ${item.search}`.includes(term)))
+    && terms.every((term, index) => item.title.toLowerCase().includes(term)
+      || proseTerms[index].test(item.search)))
     .map((item) => ({item, score: terms.reduce((score, term) => score
       + (item.title.toLowerCase() === term ? 10 : item.title.toLowerCase().includes(term) ? 5 : 0), 0)}))
     .sort((a, b) => b.score - a.score || a.item.title.localeCompare(b.item.title))
