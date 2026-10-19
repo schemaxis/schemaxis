@@ -30,6 +30,7 @@ from pathlib import Path
 from schemaxis.errors import fail
 
 MAX_FACETS = 2000000
+CHECK_EVERY = 65536   # facets between cooperative deadline/cancellation checks
 EPS32 = 2.0**-24
 EPS_SUM = 2.0**-50
 ADVICE = 'reduce linearDeflection so the tessellation can meet the check, or inspect the native solid'
@@ -70,7 +71,10 @@ def integrals(path, origin):
     vertices, forward = {}, []
     radius = 0.0
     view = memoryview(data)[84:]
-    for record in struct.iter_unpack('<12fH', view):
+    from .step_source import checkpoint
+    for index, record in enumerate(struct.iter_unpack('<12fH', view)):
+        if index % CHECK_EVERY == 0:
+            checkpoint()
         triangle = (record[3:6], record[6:9], record[9:12])
         ids = []
         for p in triangle:
@@ -89,8 +93,10 @@ def integrals(path, origin):
         mx += d*(ax+bx+cx)/4; my += d*(ay+by+cy)/4; mz += d*(az+bz+cz)/4
         a, b, c = ids
         forward.extend(((a << 32) | b, (b << 32) | c, (c << 32) | a))
+    checkpoint()
     unique = len(set(forward)) == len(forward)
     reverse = sorted(((code & 0xffffffff) << 32) | (code >> 32) for code in forward)
+    checkpoint()
     closed = unique and sorted(forward) == reverse
     centre = [mx/volume+ox, my/volume+oy, mz/volume+oz] if volume else None
     return {'facets': count, 'signedVolume': volume, 'centreOfMass': centre, 'bounds': [lo[0], hi[0], lo[1], hi[1], lo[2], hi[2]],

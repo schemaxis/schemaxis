@@ -455,7 +455,8 @@ def native_edit(q, run, target):
     return json.loads((target/'edit.json').read_text())
 
 
-def qualify(directory, executable, log=None):
+def qualify(directory, executable, log=None, targeted=False):
+    """targeted=True runs baseline, revision and the two source-removal lifecycle groups only."""
     directory = Path(directory).absolute()
     directory.mkdir(parents=True, exist_ok=False)
     q = Qualification(directory, executable, log)
@@ -483,6 +484,11 @@ def qualify(directory, executable, log=None):
     q.run(importing(inputs/'bracket-rev-b.step', base_expect(revised_truth, points=False)), directory/'revision')
     q.check('revision', {'staleExpectations': stale, 'updated': registry.verify(directory/'revision')['verified'],
                          'volumes': [truth['volume'], revised_truth['volume']]})
+    if targeted:
+        q.check('workflowSourceRemoval', workflow_source_removal(q, directory, base, truth))
+        q.check('workflowStudySourceRemoval', workflow_source_removal(q, directory, base, truth, study=True))
+        q.check('studySourceRemoval', study_source_removal(q, directory, base, truth))
+        return finish(q)
 
     # 3 Units: inch and metre files; a wrong label is refused before any native launch.
     write_planar(inputs/'bracket-inch.step', transform(base, I3, 1/25.4), unit='inch', name='bracket')
@@ -618,17 +624,121 @@ def qualify(directory, executable, log=None):
 
     # 13 Workflow reuse and invalidation through the scheduler.
     q.check('workflowReuse', workflow_reuse(q, directory, base, truth))
+    q.check('workflowSourceRemoval', workflow_source_removal(q, directory, base, truth))
+    q.check('workflowStudySourceRemoval', workflow_source_removal(q, directory, base, truth, study=True))
+    q.check('studySourceRemoval', study_source_removal(q, directory, base, truth))
 
     # 14 Whole-run timeout: process tree stopped, failed result, nothing verified.
     q.check('timeout', {'fault': failures(lambda: registry.run(importing(inputs/'bracket.step', base_expect(truth)), directory/'timeout',
                                                                locations={'freecad': executable}, timeout=0.5)),
                         'result': json.loads((directory/'timeout/result.json').read_text()) if (directory/'timeout/result.json').exists() else None})
 
+    return finish(q)
+
+
+
+
+def finish(q):
     q.report['sourceDigestAtEnd'] = source_digest('freecad')
     q.report['sourceUnchangedDuringRun'] = q.report['sourceDigestAtEnd'] == q.report['sourceDigest']
     q.report.update(verified=q.report['sourceUnchangedDuringRun'], seconds=time.time()-q.report['started'])
     q.save()
     return q.report
+
+
+def study_document(source, truth):
+    """A common analytic study: two placement states of one imported part."""
+    return importing(source, base_expect(truth),
+                     placement={'position': [{'$analytic': {'type': 'values', 'values': [0, 50]}}, 0, 0], 'clocking': 0})
+
+
+def scheduler_results(tree):
+    return [p for p in sorted(Path(tree).rglob('result.json')) if isinstance(json.loads(p.read_text()).get('jobs'), list)]
+
+
+def forge_job_maps(tree):
+    """Forge every scheduler input map (each workflow result and each job record); return the originals."""
+    originals = {}
+    for path in scheduler_results(tree) + sorted(Path(tree).rglob('job.json')):
+        originals[path] = path.read_text()
+        value = json.loads(originals[path])
+        for record in (value['jobs'] if path.name == 'result.json' else [value]):
+            record['inputHashes'] = {k: '0'*64 for k in record['inputHashes']}
+        path.write_text(json.dumps(value))
+    assert originals, 'no scheduler input maps found'
+    return originals
+
+
+def workflow_source_removal(q, directory, base, truth, *, study=False):
+    """Scheduled workflow (study=True: with an analytic member, so a study of workflows) after original removal."""
+    from schemaxis.workflow import execute, verify as verify_workflow
+    from schemaxis.schema_snapshots import export_run
+    from schemaxis.parallel import retained_inputs, reusable_inputs
+    work = directory/('workflow-study-removal' if study else 'workflow-removal'); work.mkdir()
+    source = work/'supplier'/'bracket.step'; source.parent.mkdir(); write_planar(source, base, name='bracket')
+    second = study_document(source, truth) if study else importing(source, base_expect(truth), refine=True)
+    document = {'version': 'schemaxis.workflow/1', 'operations': [
+        {'id': 'part', 'document': importing(source, base_expect(truth))}, {'id': 'second', 'document': second}]}
+    execute(document, work/'run', freecad=q.executable, timeout=300)
+    jobs = [json.loads(p.read_text()) for p in sorted((work/'run').rglob('job.json'))]
+    retained = [retained_inputs(Path(j['directory']), j['effective']) for j in jobs]
+    assert jobs and all(r == j['inputHashes'] for r, j in zip(retained, jobs)), retained
+    record = {'jobs': len(jobs), 'schedulerResults': len(scheduler_results(work/'run')),
+              'commonStudy': json.loads((work/'run'/'result.json').read_text()).get('protocol') is not None,
+              'before': verify_workflow(work/'run'), 'retainedEqualsJobMaps': True, 'retained': retained}
+    export_run(work/'run', work/'exported')
+    source.unlink()
+    record['originalAfterRemoval'] = verify_workflow(work/'run')
+    record['exportedAfterRemoval'] = verify_workflow(work/'exported')
+    export_run(work/'exported', work/'re-exported')
+    record['reExportedAfterRemoval'] = verify_workflow(work/'re-exported')
+    originals = forge_job_maps(work/'re-exported')
+    forged = failures(lambda: verify_workflow(work/'re-exported'))
+    for path, text in originals.items():
+        path.write_text(text)
+    assert forged and forged['code'] == 'VERIFICATION_FAILED', forged
+    record['forgedResultAndJobMaps'] = {**forged, 'forgedFiles': len(originals)}
+    record['restoredAfterForgery'] = verify_workflow(work/'re-exported')
+    record['reuseWithOriginalAbsent'] = failures(lambda: reusable_inputs(document['operations'][0]['document']))
+    record['freshRunWithOriginalAbsent'] = failures(lambda: execute(document, work/'fresh-absent', freecad=q.executable, timeout=300))
+    record['resumeExportedWithOriginalAbsent'] = failures(lambda: execute(document, work/'exported', freecad=q.executable,
+                                                                          timeout=300, resume=True))
+    assert record['reuseWithOriginalAbsent']['code'] == 'RESOURCE_NOT_FOUND'
+    assert record['freshRunWithOriginalAbsent'] and record['freshRunWithOriginalAbsent']['code'] == 'RESOURCE_NOT_FOUND'
+    assert record['resumeExportedWithOriginalAbsent'] is not None, 'resume must not reuse or succeed without the original'
+    write_planar(source, base, name='bracket')
+    source.write_text(source.read_text().replace("'2026-10-19T00:00:00'", "'2026-10-19T12:00:00'"))
+    execute(document, work/'run', freecad=q.executable, timeout=300, resume=True)
+    reused = [job.get('reused') for p in scheduler_results(work/'run') for job in json.loads(p.read_text())['jobs']]
+    record['changedOriginalResumeReused'] = reused
+    assert reused and not any(reused), reused
+    record['afterChangedRerun'] = verify_workflow(work/'run')
+    return record
+
+
+def study_source_removal(q, directory, base, truth):
+    """Standalone common study: verify, export and re-export after source removal; planning refuses the absent source."""
+    from schemaxis.schema_snapshots import export_run
+    from schemaxis.parallel import retained_inputs, reusable_inputs
+    work = directory/'study-removal'; work.mkdir()
+    source = work/'supplier'/'bracket.step'; source.parent.mkdir(); write_planar(source, base, name='bracket')
+    document = study_document(source, truth)
+    q.run(document, work/'run', timeout=300)
+    states = json.loads((work/'run'/'result.json').read_text())['states']
+    before = retained_inputs(work/'run', document)
+    record = {'states': len(states), 'before': registry.verify(work/'run'), 'retained': before,
+              'reusableBefore': reusable_inputs(document) == before}
+    export_run(work/'run', work/'exported')
+    source.unlink()
+    record['originalAfterRemoval'] = registry.verify(work/'run')
+    record['exportedAfterRemoval'] = registry.verify(work/'exported')
+    export_run(work/'exported', work/'re-exported')
+    record['reExportedAfterRemoval'] = registry.verify(work/'re-exported')
+    record['retainedAfterRemoval'] = retained_inputs(work/'re-exported', document) == before
+    record['planWithOriginalAbsent'] = failures(lambda: registry.plan(document, legacy=True))
+    record['reuseWithOriginalAbsent'] = failures(lambda: reusable_inputs(document))
+    assert record['retainedAfterRemoval'] and record['planWithOriginalAbsent']['code'] == 'RESOURCE_NOT_FOUND'
+    return record
 
 
 def admission_traps(inputs, base):
@@ -745,5 +855,6 @@ if __name__ == '__main__':
     parser.add_argument('--directory', required=True)
     parser.add_argument('--executable', required=True, help='absolute FreeCAD command-line launcher')
     parser.add_argument('--pid-log', help='optional launcher PID log used to prove refusals start no native process')
+    parser.add_argument('--targeted', action='store_true', help='baseline, revision and source-removal lifecycle groups only')
     arguments = parser.parse_args()
-    print(json.dumps(list(qualify(arguments.directory, arguments.executable, arguments.pid_log)['checks'])))
+    print(json.dumps(list(qualify(arguments.directory, arguments.executable, arguments.pid_log, arguments.targeted)['checks'])))

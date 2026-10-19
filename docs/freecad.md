@@ -116,6 +116,10 @@ plain `SHAPE_REPRESENTATION_RELATIONSHIP`. It refuses, before FreeCAD starts:
 - any representation, unit context or B-rep that is not reached from the shape
   definition;
 - more than one solid;
+- two legitimate STEP forms outside this bounded subset, reported as unsupported
+  forms rather than corrupt files: a `SHAPE_REPRESENTATION` that holds the solid
+  directly without a relationship, and faceted B-rep (`FACETED_BREP`) solids.
+  Re-export them as an advanced B-rep representation;
 - more than 100000 entities or 2000 oriented edges in one loop;
 - nesting, string and token limits;
 - non-ASCII text and compressed files.
@@ -136,9 +140,21 @@ therefore changes the plan, and resume reruns the job.
    failing field);
 5. saves, exports, and reopens everything in a separate process.
 
-Cancellation is checked before each FreeCAD process starts and after
-verification. One total deadline (default 300 s) covers the whole run, and an
-overrun stops the FreeCAD process tree. Read time depends on the geometry, not
+One total deadline (default 300 s) starts before planning. It covers the source
+scan, capture, the FreeCAD processes and verification, and an overrun stops the
+FreeCAD process tree. Cancellation and the deadline are checked before each
+FreeCAD process starts, after verification, and cooperatively inside the long
+host loops:
+- every 2048 STEP instances or records while scanning;
+- every 65536 facets while integrating the STL;
+- every MiB while hashing retained copies.
+
+A stop raises `RUNNER_CANCELLED` or `RUNNER_TIMED_OUT`.
+
+Workflow resource estimation validates the document without reading STEP
+sources. A scheduled workflow therefore still verifies after an original is
+removed, while a new run, reuse or resume reads the current file and refuses an
+absent or changed one. Read time depends on the geometry, not
 only on file size. The entity and loop limits bound the measured worst case: a
 valid 6000-edge face took 397 s, and 2000 edges took about 14 s.
 
@@ -206,7 +222,10 @@ exact planar faces, curved faces within the meshing deflection `d` (half of
 The established acceptance of 0.5 % relative or 1e-5 mm³ absolute volume
 difference remains an additional ceiling, now applied to the host volume. A
 budget that is not finite, is negative, or is not smaller than the volume is
-refused. A mesh that cannot meet the checks fails with advice to reduce
+refused. The host check holds the whole mesh in memory. At the cap of 2000000
+facets, measured on one host, it took about 11 s and peaked at about 980 MiB.
+Its final closure comparison (one sort) runs between checkpoints. A mesh that
+cannot meet the checks fails with advice to reduce
 `linearDeflection`.
 
 The verify result reports `exportChecks`:

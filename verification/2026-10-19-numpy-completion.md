@@ -1,5 +1,24 @@
 # NumPy principalComponents completion review — 19 October 2026
 
+## Final technical acceptance
+
+Root completed independent-review reconciliation, shared portability integration,
+generated reference and Help, full host and Studio suites, admission checks and
+final source-current common native receipt registration. The app browser tests
+passed. Fresh full numerical qualification passed 25 semantic cases plus the
+documented invalid-record, export, workflow, study and lifecycle checks.
+
+Technical acceptance is limited to NumPy 2.5.4 with OpenBLAS 0.3.34 and the
+domain and numerical limits below. Programme delivery credit remains pending
+the parked paired PrusaSlicer strengthening. See the [final closeout record](2026-10-19-closeout.md).
+
+## Earlier implementation and review record
+
+The following records the earlier assignment stage. Statements that generation,
+browser checks, integration or receipt registration were pending are historical;
+those gates are closed by the final acceptance above. Numerical, cross-host and
+untested-consumer limits still apply.
+
 Scope: `schemaxis.numpy/1`, `principalComponents`. Bounded, unit-aware principal component
 analysis of one numeric ASCII CSV:
 - explicit centring and scaling (`none`, `standardise`, `declared`);

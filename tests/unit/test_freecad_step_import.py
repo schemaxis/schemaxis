@@ -605,5 +605,157 @@ class MemberReaderLayerTests(unittest.TestCase):
             self.assertEqual(document_xml.read_member(archive, 'Document.xml', 1 << 20), ArchiveBoundaryTests.DOCUMENT.encode())
 
 
+def expiring_clock(after):
+    """A dispatch clock that is at 0 for `after` reads, then far beyond any deadline."""
+    calls = {'n': 0}
+    def clock():
+        calls['n'] += 1
+        return 0.0 if calls['n'] <= after else 1e12
+    return clock
+
+
+class ReviewRepairTests(Fixture):
+    """Review 1002 F1-F4: source-free resources, cooperative deadlines, bounded evidence JSON, named unsupported forms."""
+
+    def big_step(self, teeth=400):
+        xs = [-20+40*i/(2*teeth) for i in range(2*teeth+1)]
+        comb = [(-20, -15), (20, -15)]
+        for k in range(2*teeth, 0, -1):
+            hi = 20 if k % 2 else 15
+            comb += [(xs[k], hi), (xs[k-1], hi)]
+        comb = [p for i, p in enumerate(comb) if i == 0 or p != comb[i-1]]
+        return Q.write_planar(self.root/'big.step', Q.prism(comb, [], 0, 10), name='comb')
+
+    # F1
+    def test_resources_hook_reads_no_source_but_still_validates(self):
+        from schemaxis.adaptors.freecad.integration import resources, reusableInputs
+        from schemaxis.parallel import work_items
+        path = self.write('supplier.step')
+        document = self.doc(path)
+        path.unlink()
+        self.assertEqual(resources(document, {}, 'part'), {})
+        workflow = {'version': 'schemaxis.workflow/1', 'operations': [{'id': 'part', 'document': document}]}
+        self.assertEqual(len(work_items(workflow)[2]), 1)
+        self.assertEqual(self.code(lambda: reusableInputs(document)).code, 'RESOURCE_NOT_FOUND')
+        self.assertEqual(self.code(lambda: plan(document)).code, 'RESOURCE_NOT_FOUND')
+        bad = self.doc(path, orientation={'z': '+Y'})
+        self.assertEqual(self.code(lambda: resources(bad, {}, 'part')).code, 'INVALID_AXIS')
+        weak = Q.importing(path, {'volume': {'value': 1}})
+        self.assertEqual(self.code(lambda: resources(weak, {}, 'part')).code, 'INVALID_ARGUMENT')
+
+    # F2
+    def test_scanner_stops_inside_its_loop_on_deadline_and_cancellation(self):
+        import threading
+        from schemaxis import dispatch
+        data = text(self.big_step())
+        total = len(step_source._parse(data, {'bytes': step_source.MAX_BYTES, 'entities': step_source.MAX_ENTITIES, 'loopEdges': None})[1])
+        self.assertGreater(total, 20000)
+        parsed = {'n': 0}
+        original = step_source._instance
+        def counting(parser):
+            parsed['n'] += 1
+            return original(parser)
+        with mock.patch.object(step_source, '_instance', counting), mock.patch.object(step_source, 'CHECK_EVERY', 1000), \
+                mock.patch.object(dispatch, '_clock', expiring_clock(5)), dispatch.execution_deadline(300):
+            with self.assertRaises(SchemaxisError) as caught:
+                step_source.admit(data, 'part.options.file')
+        self.assertEqual(caught.exception.fault.code, 'RUNNER_TIMED_OUT')
+        self.assertLess(parsed['n'], total//4)
+        parsed['n'] = 0
+        event = threading.Event(); event.set()
+        with mock.patch.object(step_source, '_instance', counting), dispatch.allocation({}, event):
+            with self.assertRaises(SchemaxisError) as caught:
+                step_source.admit(data, 'part.options.file')
+        self.assertEqual((caught.exception.fault.code, parsed['n']), ('RUNNER_CANCELLED', 0))
+        self.assertEqual(step_source.admit(data, 'part.options.file')['unit'], 'mm')   # control: no scope, no stop
+
+    def test_stl_integrals_stop_inside_the_facet_loop(self):
+        from schemaxis import dispatch
+        tri = []
+        for k in range(400):
+            tri += box_triangles((3*k, 0, 0), (3*k+1, 1, 1))
+        path = write_stl(self.root/'many.stl', tri)
+        seen = {'n': 0}
+        original = export_checks._finite
+        def counting(values):
+            seen['n'] += 1
+            return original(values)
+        with mock.patch.object(export_checks, '_finite', counting), mock.patch.object(export_checks, 'CHECK_EVERY', 500), \
+                mock.patch.object(dispatch, '_clock', expiring_clock(4)), dispatch.execution_deadline(300):
+            with self.assertRaises(SchemaxisError) as caught:
+                export_checks.integrals(path, (0, 0, 0))
+        self.assertEqual(caught.exception.fault.code, 'RUNNER_TIMED_OUT')
+        self.assertLess(seen['n'], 3*len(tri)//2)
+        self.assertEqual(export_checks.integrals(path, (0, 0, 0))['facets'], len(tri))   # control
+
+    def test_run_deadline_covers_pre_launch_scan_and_capture(self):
+        from schemaxis import dispatch
+        from schemaxis.adaptors.freecad import adaptor
+        source = self.big_step()
+        executable = self.root/'freecadcmd'; executable.write_text('#!/bin/sh\nexit 0\n'); executable.chmod(0o755)
+        document = Q.importing(source, Q.base_expect(TRUTH))
+        with mock.patch.object(adaptor, 'SubprocessRunner') as runner, mock.patch.object(step_source, 'CHECK_EVERY', 1000), \
+                mock.patch.object(dispatch, '_clock', expiring_clock(4)):
+            fault = self.code(lambda: adaptor._native_run(document, self.root/'scan', executable=str(executable)))
+        self.assertEqual(fault.code, 'RUNNER_TIMED_OUT')
+        runner.assert_not_called()
+        self.assertFalse((self.root/'scan').exists())          # stopped while planning, before any run directory
+        # Planning (2 scans: shared validation and the run) completes; the deadline then expires inside capture's rescan.
+        original = adaptor.capture
+        def late_capture(prepared, directory):
+            dispatch._clock = expiring_clock(0)
+            return original(prepared, directory)
+        with mock.patch.object(adaptor, 'SubprocessRunner') as runner, mock.patch.object(adaptor, 'capture', late_capture), \
+                mock.patch.object(dispatch, '_clock', dispatch._clock):
+            fault = self.code(lambda: adaptor._native_run(document, self.root/'capture', executable=str(executable)))
+        self.assertEqual(fault.code, 'RUNNER_TIMED_OUT')
+        runner.assert_not_called()
+        self.assertEqual(json.loads((self.root/'capture/result.json').read_text())['status'], 'failed')
+        import inspect
+        self.assertEqual(inspect.signature(adaptor._native_run).parameters['timeout'].default, 300)
+
+    # F3
+    def test_bounded_evidence_json(self):
+        run = self.root/'evidence'; run.mkdir()
+        (run/'ok.json').write_text(json.dumps({'a': '[[[[{{{{', 'b': [[1], {'c': [2]}]}))
+        self.assertEqual(saved_checks.read_json(run, 'ok.json')['b'][1]['c'], [2])
+        cases = {'deep.json': '['*65 + ']'*65, 'very-deep.json': '['*200000 + ']'*200000, 'broken.json': '{"a": [1, }',
+                 'binary.json': b'\xff\xfe{}', 'missing.json': None}
+        for name, content in cases.items():
+            with self.subTest(name=name):
+                if isinstance(content, bytes): (run/name).write_bytes(content)
+                elif content is not None: (run/name).write_text(content)
+                fault = self.code(lambda: saved_checks.read_json(run, name))
+                self.assertEqual((fault.code, fault.location), ('VERIFICATION_FAILED', name))
+        (run/'big.json').write_text(json.dumps({'x': 'y'*2000}))
+        fault = self.code(lambda: saved_checks.read_json(run, 'big.json', limit=1000))
+        self.assertEqual((fault.code, fault.location), ('VERIFICATION_FAILED', 'big.json'))
+        with mock.patch.object(saved_checks.json, 'loads', side_effect=RuntimeError('programming defect')):
+            with self.assertRaises(RuntimeError):
+                saved_checks.read_json(run, 'ok.json')
+
+    def test_verifier_reports_hostile_evidence_json_structurally(self):
+        from schemaxis.adaptors.freecad.adaptor import verify
+        boundary = ArchiveBoundaryTests(); boundary.root = self.root
+        run = boundary.run_fixture()
+        self.assertTrue(verify(run)['verified'])
+        (run/'built.json').write_text('['*100000 + ']'*100000)
+        fault = self.code(lambda: verify(run))
+        self.assertEqual((fault.code, fault.location), ('VERIFICATION_FAILED', 'built.json'))
+
+    # F4
+    def test_unsupported_forms_are_named_not_called_corrupt(self):
+        data = text(self.write('base.step')).decode()
+        direct = data.replace('ADVANCED_BREP_SHAPE_REPRESENTATION(', 'SHAPE_REPRESENTATION(')
+        head, body = data.split('DATA;\n', 1)
+        faceted = head + 'DATA;\n#95000=FACETED_BREP(\'x\',#1);\n' + body
+        for label, sample in (('direct', direct), ('faceted', faceted)):
+            with self.subTest(label=label):
+                with self.assertRaises(step_source._Refuse) as caught:
+                    step_source.scan(sample.encode())
+                self.assertEqual(caught.exception.code, 'UNSUPPORTED_SOURCE')
+                self.assertIn('unsupported form', caught.exception.args[0])
+
+
 if __name__ == '__main__':
     unittest.main()

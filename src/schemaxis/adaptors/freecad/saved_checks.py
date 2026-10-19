@@ -9,6 +9,7 @@ they get RERUN_REQUIRED, never an automatic downgrade.
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 from schemaxis.errors import fail
 from schemaxis.run_paths import owned_path
@@ -17,11 +18,51 @@ EXPORT_EVIDENCE = 'schemaxis.freecad.export/2'
 SOURCE_NODES = ('readSTEP', 'importSTEP')
 
 
+EVIDENCE_BYTES = 64*1024*1024
+EVIDENCE_DEPTH = 64
+_JSON_TOKENS = re.compile(r'"(?:[^"\\]|\\.)*"|[\[\]{}]')
+
+
+def read_json(directory, name, *, limit=EVIDENCE_BYTES, depth=EVIDENCE_DEPTH):
+    """Bounded read of one run-owned JSON evidence file with structured size, depth and syntax faults.
+
+    Nesting is measured on the text (strings skipped) before parsing, so deep input never
+    reaches the recursive decoder; programmer errors are not caught."""
+    path = owned_path(directory, name)
+    try:
+        size = path.stat().st_size
+        if size > limit:
+            fail('VERIFICATION_FAILED', 'Run evidence file exceeds its size bound', name, bytes=size, limit=limit)
+        with path.open('rb') as handle:
+            data = handle.read(limit+1)
+    except OSError as error:
+        fail('VERIFICATION_FAILED', 'Run evidence file is missing or unreadable', name, detail=str(error)[:200])
+    if len(data) > limit:
+        fail('VERIFICATION_FAILED', 'Run evidence file exceeds its size bound', name, limit=limit)
+    try:
+        text = data.decode('utf-8')
+    except UnicodeDecodeError:
+        fail('VERIFICATION_FAILED', 'Run evidence file is not UTF-8 JSON', name)
+    level = deepest = 0
+    for token in _JSON_TOKENS.finditer(text):
+        mark = token.group()
+        if mark in '[{':
+            level += 1
+            if level > depth:
+                fail('VERIFICATION_FAILED', 'Run evidence file is nested beyond its depth bound', name, depth=depth)
+        elif mark in ']}':
+            level -= 1
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as error:
+        fail('VERIFICATION_FAILED', 'Run evidence file is not valid JSON', name, detail=str(error)[:200])
+
+
 def records(directory):
     path = Path(directory)/'sources.json'
     if not path.exists():
         return {}
-    value = json.loads(owned_path(directory, 'sources.json').read_text())
+    value = read_json(directory, 'sources.json')
     if not isinstance(value, dict):
         fail('VERIFICATION_FAILED', 'STEP capture record must be an object', str(directory))
     return value
@@ -30,7 +71,9 @@ def records(directory):
 def file_sha256(path):
     digest = hashlib.sha256()
     with open(path, 'rb') as handle:
+        from .step_source import checkpoint
         for block in iter(lambda: handle.read(1 << 20), b''):
+            checkpoint()
             digest.update(block)
     return digest.hexdigest()
 

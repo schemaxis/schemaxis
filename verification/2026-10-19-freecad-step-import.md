@@ -1,5 +1,23 @@
 # FreeCAD checked STEP import, refine and hardened exports
 
+## Final technical acceptance
+
+The bounded phase-three increment is accepted after the original owner repaired
+F1–F4 and the independent reviewer found no remaining blocker. The reviewer
+independently checked saved workflows and studies after source removal, export
+and re-export, invalid saved records and real-clock deadline interruption.
+The final full host and Studio suites passed, and common modelling and assembly
+native receipts were refreshed and registered against the final source.
+
+Qualification is limited to FreeCAD 1.1.4 on Linux and the cases below. The final
+STL closure sort is non-interruptible between cooperative checks; the measured
+large-mesh time and memory figures below are observations on one host. Earlier
+GUI evidence remains scoped to its original run; no new consumer qualification
+is implied. This phase adds no programme strengthening credit. See the
+[final closeout record](2026-10-19-closeout.md).
+
+## Implementation and review evidence
+
 Phase three, first increment, of the FreeCAD strengthening. It adds checked import
 of one external STEP solid (`importSTEP`) with explicit units, orientation,
 placement and analyst facts, plus an optional parametric refine. Every new
@@ -190,6 +208,50 @@ retained files were checked. Root's encryption, method-99, strong-encryption and
 UTF-16 entity probes now each give `VERIFICATION_FAILED` at `model.FCStd`.
 Programmer errors and `RERUN_REQUIRED` are unchanged. No native process was
 started.
+
+## Follow-up: independent review findings F1–F4
+
+**F1 (high).** Workflow resource estimation now plans with a non-reading source
+provider. Every authored option and fact is still validated, but no STEP bytes
+are read. New runs, capture, `reusableInputs` and resume still read the authored
+file.
+
+The native targeted qualification passed baseline, revision and three
+source-removal groups, with the source digest equal at start and end:
+- a plain scheduled workflow (2 jobs);
+- a workflow with an analytic member, which runs as a common study of workflows
+  (4 jobs);
+- a standalone common study (2 states).
+
+In each group:
+- The saved run, its schema-aware export and a re-export all verify after the
+  original is deleted.
+- `retainedInputs` equals the recorded job maps.
+- Forging every scheduler input map (in the workflow results and each job record)
+  is refused as `VERIFICATION_FAILED`.
+- Reuse, a fresh run and a resume of the export with the original absent fail
+  `RESOURCE_NOT_FOUND`.
+- A changed original reruns every job.
+
+**F2 (medium).** One whole-run deadline (default still 300 s) starts before
+planning. Cooperative checks through the shared `remaining_timeout` run every
+2048 STEP instances or records, every 65536 STL facets and every MiB of retained
+hashing. Host tests show the scanner, the STL integrals, the pre-launch scan and
+capture each stop inside their loops on deadline or cancellation.
+
+At 1997568 facets the host STL check took 10.9 s and peaked at 983 MiB RSS on
+one host. Its final closure sort runs between checkpoints.
+
+**F3 (low).** Verifier evidence JSON is read with a 64 MiB bound and a
+string-aware nesting pre-scan (depth 64) before parsing. Results are structured
+`VERIFICATION_FAILED` at the file name, and programmer errors propagate.
+
+**F4 (low).** A `SHAPE_REPRESENTATION` that holds the solid directly, and
+`FACETED_BREP` solids, are refused as named unsupported forms (not corrupt files)
+and documented.
+
+F5 needed no change; the 0.5 % ceiling is kept. Each repair was mutation-checked
+by host tests.
 
 ## Limits
 

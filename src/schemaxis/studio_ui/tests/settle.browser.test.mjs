@@ -33,7 +33,10 @@ async function start(session) {
 
 async function assertQuiet(session) {
   assert.equal(await session.evaluate(`${editor}.getDiagnostics().length`), 0);
-  assert.equal(await session.evaluate(`document.querySelectorAll('.wb-editor-host .sx-diag').length`), 0);
+  // Diagnostic state updates synchronously; its decorations render on the next
+  // animation frame. Check that frame's DOM instead of racing a pending render.
+  assert.equal(await session.evaluate(`new Promise(resolve => requestAnimationFrame(() =>
+    resolve(document.querySelectorAll('.wb-editor-host .sx-diag').length)))`), 0);
   assert.equal(await session.evaluate('studio.notify.store.get().problems.length'), 0);
   assert.equal(await session.evaluate(`document.querySelectorAll('.toast').length`), 0);
 }

@@ -173,10 +173,16 @@ def schema():
 
 
 def run(document, directory, *, executable=None, timeout=300):
-    prepared = plan(document)
     if type(timeout) not in (int,float) or not math.isfinite(timeout) or timeout <= 0:
         fail('INVALID_TIMEOUT', 'CAD timeout must be finite and positive')
-    deadline = time.monotonic()+timeout
+    # One whole-run deadline covers planning (the STEP source scan), capture, native stages and verification.
+    from schemaxis.dispatch import execution_deadline
+    with execution_deadline(timeout):
+        return _run(document, directory, executable=executable, timeout=timeout, deadline=time.monotonic()+timeout)
+
+
+def _run(document, directory, *, executable, timeout, deadline):
+    prepared = plan(document)
     executable = executable or os.environ.get('FREECAD_CMD')
     if not executable or not Path(executable).is_absolute() or not Path(executable).is_file():
         fail('INTERPRETER_NOT_FOUND', 'provide an absolute FreeCAD command-line executable with --freecad')
@@ -265,7 +271,8 @@ def close(a, b):
 
 def _verify(directory, require_result=True):
     directory = Path(directory).absolute()
-    document = json.loads((directory/'authored.json').read_text())
+    from .saved_checks import read_json
+    document = read_json(directory, 'authored.json')
     if 'designStudy' in document:
         from .design_study import verify as verify_study
         return verify_study(directory)
@@ -275,13 +282,13 @@ def _verify(directory, require_result=True):
     captured = records(directory)
     # Replay planning from retained bytes bound to the capture record; never reopen originals.
     prepared = plan(document, source=CapturedSources(directory, captured))
-    if json.loads(owned_path(directory, 'plan.json').read_text()) != prepared:
+    if read_json(directory, 'plan.json') != prepared:
         fail('VERIFICATION_FAILED', 'CAD plan differs from input')
-    if require_result and json.loads((directory/'result.json').read_text()).get('verified') is not True:
+    if require_result and read_json(directory, 'result.json').get('verified') is not True:
         fail('INCOMPLETE_EXECUTION', 'CAD job did not complete')
     verify_sources(directory, prepared, captured)
-    receipt = json.loads((directory/'verification.json').read_text())
-    built = json.loads((directory/'built.json').read_text())
+    receipt = read_json(directory, 'verification.json')
+    built = read_json(directory, 'built.json')
     from .saved_checks import require_hardened
     require_hardened(built, receipt, directory)
     if receipt.get('status') != 'succeeded' or receipt.get('units') != 'mm' or not receipt.get('freshProcess'):
@@ -320,7 +327,7 @@ def _verify(directory, require_result=True):
     from .selections import verify as verify_selections
     verify_selections(prepared, built.get('selections', {}), receipt.get('selections', {}))
     from .measurements import verify as verify_measurements, evaluate
-    publication = (json.loads((directory/'measurements.json').read_text()) if prepared.get('measurements')
+    publication = (read_json(directory, 'measurements.json') if prepared.get('measurements')
                    else evaluate(prepared, {}))
     verify_measurements(prepared, built.get('measurementObservations', {}),
                         receipt.get('measurementObservations', {}), publication)

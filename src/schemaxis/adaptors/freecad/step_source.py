@@ -64,9 +64,26 @@ REFUSED = {'NEXT_ASSEMBLY_USAGE_OCCURRENCE': 'assembly structure', 'MAPPED_ITEM'
            'REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION': 'a transformed representation relationship',
            'ITEM_DEFINED_TRANSFORMATION': 'a transformed representation relationship'}
 
+# Legitimate STEP forms outside this bounded subset; named so a refusal is not read as a corrupt file.
+UNSUPPORTED_FORMS = {
+    'FACETED_BREP': 'STEP faceted B-rep (FACETED_BREP) solids are an unsupported form (not a corrupt file); export an advanced B-rep',
+    'FACETED_BREP_SHAPE_REPRESENTATION': 'STEP faceted B-rep representations are an unsupported form (not a corrupt file); export an advanced B-rep'}
+
 TOKEN = re.compile(r"""(?P<ws>[ \t\r\n]+)|(?P<comment>/\*.*?\*/)|(?P<string>'(?:[^']|'')*')|(?P<binary>"[0-9A-F]*")
 |(?P<ref>\#[0-9]{1,9})|(?P<enum>\.[A-Z_][A-Z0-9_]*\.)|(?P<number>[+-]?[0-9]+(?:\.[0-9]*)?(?:E[+-]?[0-9]+)?)
 |(?P<keyword>!?[A-Z_][A-Z0-9_]*(?:-[0-9A-Z_]+)*)|(?P<punct>[(),;=$*])""", re.X | re.S)
+
+
+CHECK_EVERY = 2048   # instances or records between cooperative deadline/cancellation checks
+
+
+def checkpoint():
+    """Stop inside long host loops when the run is cancelled or its whole-run deadline has passed.
+
+    Uses the framework's remaining_timeout, which reads the enclosing execution_deadline and
+    cancellation token; outside any run scope it never stops work."""
+    from schemaxis.dispatch import remaining_timeout
+    remaining_timeout()
 
 
 class _Refuse(Exception):
@@ -218,7 +235,10 @@ def _parse(data, limits):
         raise _Refuse('UNSUPPORTED_SOURCE', 'STEP file must have one DATA section after its header (no anchor or reference sections)')
     parser.take(); parser.take('punct', ';')
     table = {}
+    checkpoint()
     while not parser.peek('ENDSEC'):
+        if len(table) % CHECK_EVERY == 0:
+            checkpoint()
         identifier = int(parser.take('ref')[1:])
         parser.take('punct', '=')
         if identifier in table:
@@ -304,13 +324,17 @@ def _representation(table, identifier, kinds):
 
 def _admit(table, limits, *, export=False):
     counts = {}
-    for identifier, record in table.items():
+    for position, (identifier, record) in enumerate(table.items()):
+        if position % CHECK_EVERY == 0:
+            checkpoint()
         for name, parameters in record.items():
             if name in REFUSED:
                 raise _Refuse('UNSUPPORTED_SOURCE', f'STEP {REFUSED[name]} is not supported; supply one part as one solid',
                               entity=name, instance=identifier)
             if 'EXTERNAL' in name:
                 raise _Refuse('UNSUPPORTED_SOURCE', 'STEP external references are not supported', entity=name, instance=identifier)
+            if name in UNSUPPORTED_FORMS and not export:
+                raise _Refuse('UNSUPPORTED_SOURCE', UNSUPPORTED_FORMS[name], entity=name, instance=identifier)
             if name not in VOCABULARY and not export:
                 raise _Refuse('UNSUPPORTED_SOURCE', 'STEP entity type is outside the supported solid subset',
                               entity=name, instance=identifier)
@@ -335,6 +359,10 @@ def _admit(table, limits, *, export=False):
     kind, items, context = _representation(table, top, {'SHAPE_REPRESENTATION', 'ADVANCED_BREP_SHAPE_REPRESENTATION'})
     roots = [definitions[0]]
     relationships = [k for k, v in table.items() if set(v) & RELATIONSHIPS]
+    if kind == 'SHAPE_REPRESENTATION' and any(isinstance(ref, tuple) and ref[0] == 'ref' and table[ref[1]].keys() & SOLIDS
+                                             for ref in items):
+        raise _Refuse('UNSUPPORTED_SOURCE', 'STEP SHAPE_REPRESENTATION that holds the solid directly is an unsupported form '
+                      '(not a corrupt file); export the solid in an ADVANCED_BREP_SHAPE_REPRESENTATION')
     if kind == 'ADVANCED_BREP_SHAPE_REPRESENTATION':
         brep, brep_items, brep_context, structure = top, items, context, 'direct'
         if relationships:
@@ -370,6 +398,8 @@ def _admit(table, limits, *, export=False):
     # Reachability closure from the admitted shape definition (and its sole relationship).
     reached, stack = set(), list(roots)
     while stack:
+        if len(reached) % CHECK_EVERY == 0:
+            checkpoint()
         identifier = stack.pop()
         if identifier in reached:
             continue
@@ -420,6 +450,20 @@ def read_bounded(path, location, *, limit=MAX_BYTES, code='RESOURCE_NOT_FOUND'):
     if len(data) > limit:
         fail('RESOURCE_LIMIT', 'STEP file exceeds the admitted size', location, limit=limit)
     return data
+
+
+class UnreadSources:
+    """Resource estimation only: every authored option is still validated, but no source is read.
+
+    Used by the workflow resources hook, whose plan is discarded; source admission,
+    capture and reuse checks still read the authored path (AuthoredSources) or the
+    retained copy (CapturedSources).
+    """
+    replay = False
+    reads = False
+
+    def read(self, value, identity, location):
+        raise AssertionError('UnreadSources never reads a source')
 
 
 class AuthoredSources:

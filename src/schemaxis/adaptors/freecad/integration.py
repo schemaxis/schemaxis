@@ -4,9 +4,12 @@ from schemaxis.artifacts import file_digest
 
 
 def resources(document, spec, identity):
+    """Validate the document without reading STEP sources: saved workflow verification
+    recomputes work items after an original may have been removed."""
     from .adaptor import plan
+    from .step_source import UnreadSources
     from schemaxis.parallel import provisional
-    plan(provisional(document))
+    plan(provisional(document), source=UnreadSources())
     return {}
 
 
@@ -44,7 +47,8 @@ def retainedInputs(directory, document):
     directory = Path(directory)
     captured = records(directory)
     prepared = plan(document, source=CapturedSources(directory, captured))
-    if json.loads(owned_path(directory, 'plan.json').read_text()) != prepared:
+    from .saved_checks import read_json
+    if read_json(directory, 'plan.json') != prepared:
         fail('VERIFICATION_FAILED', 'Retained input provenance does not belong to this document', str(directory))
     return verify_sources(directory, prepared, captured)
 

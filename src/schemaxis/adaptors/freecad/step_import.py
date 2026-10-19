@@ -97,6 +97,10 @@ def prepare(identity, options, provider):
     rotation = clocking_rotation(options['placement']['clocking'])
     check_expectations(options['expect'], location+'.expect')
     provider = provider or step_source.AuthoredSources()
+    frame = {'partFromFile': part_from_file, 'worldFromPart': rotation, 'worldFromFile': multiply(rotation, part_from_file),
+             'translation': [float(v) for v in options['placement']['position']]}
+    if getattr(provider, 'reads', True) is False:
+        return {'frame': frame}
     path, data = provider.read(options['file'], identity, location+'.file')
     facts = step_source.admit(data, location+'.file')
     if facts['unit'] != options['units']:
@@ -105,9 +109,7 @@ def prepare(identity, options, provider):
              recovery='set units to what the file declares; units assert file meaning and never rescale it')
     return {'source': {'path': path, **{k: facts[k] for k in ('sha256', 'bytes', 'schema', 'unit', 'structure', 'solid',
                                                                'entities', 'maxLoopEdges')}},
-            'frame': {'partFromFile': part_from_file, 'worldFromPart': rotation,
-                      'worldFromFile': multiply(rotation, part_from_file),
-                      'translation': [float(v) for v in options['placement']['position']]}}
+            'frame': frame}
 
 
 def within(a, b, tolerance):
