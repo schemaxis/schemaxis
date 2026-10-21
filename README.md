@@ -155,6 +155,11 @@ Copyright © 2026 David L. F. Gaden. Licensed under the
 [Apache License 2.0](LICENSE). Third-party material keeps its own licence: see
 [NOTICE](NOTICE) and [LICENSES/](LICENSES).
 
+Core and Studio include general-purpose database adaptors, geometry, meshing,
+local case files and workflow execution. Integrated database-backed case/history
+services and CFD solver/case-preparation integrations are separate components.
+See [Distribution boundary](docs/distribution.md).
+
 "Schemaxis" is a trademark of David L. F. Gaden (application pending). See
 [TRADEMARKS.md](TRADEMARKS.md). ParaView, Blender, FreeCAD and the other
 application names are trademarks of their respective owners. Their use here

@@ -43,6 +43,7 @@ Use one summary line where possible; keep any further lines to 80 characters
 or fewer. Sign off each commit (`git commit -s`) to certify the
 [Developer Certificate of Origin](https://developercertificate.org/): that you
 wrote the change or have the right to submit it under the project's licence.
+Do not add `Co-Authored-By` trailers.
 
 ## AI-assisted contributions
 
@@ -54,3 +55,7 @@ was copied in.
 
 By contributing, you agree that your contributions are licensed under the
 Apache License 2.0 (see [LICENSE](LICENSE)).
+
+See [Distribution boundary](docs/distribution.md) before proposing database
+integration or CFD case-preparation features. General-purpose database adaptors,
+geometry and meshing remain part of the core.

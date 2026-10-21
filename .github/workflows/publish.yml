@@ -15,7 +15,46 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install build
+      - name: Check release tag matches the package version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python - <<'PY'
+          import os, tomllib
+          with open('pyproject.toml', 'rb') as source:
+              version = tomllib.load(source)['project']['version']
+          expected = 'v' + version
+          if os.environ['RELEASE_TAG'] != expected:
+              raise SystemExit('Release tag must be ' + expected)
+          PY
+      - run: python -m pip install build '.[test,yaml]'
+      - name: Verify core and generated documentation
+        run: |
+          PYTHONPATH=src python -m schemaxis reference --check
+          PYTHONPATH=src python tools/generate_studio_help.py --check
+          PYTHONPATH=src python -m unittest discover -s tests/unit -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Studio modules
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+          files = sorted(str(p) for p in Path('src/schemaxis/studio_ui/tests').glob('*.test.mjs')
+                         if 'browser' not in p.name)
+          subprocess.run(['node', '--test', *files], check=True)
+          PY
       - run: python -m build
       - run: python tools/release_gate.py --path dist
+      - name: Check installation of the release wheel
+        run: |
+          python -m venv /tmp/schemaxis-release-check
+          /tmp/schemaxis-release-check/bin/python -m pip install --no-deps dist/*.whl
+          cd /tmp
+          /tmp/schemaxis-release-check/bin/python -m schemaxis discover
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: dist/*
       - uses: pypa/gh-action-pypi-publish@release/v1

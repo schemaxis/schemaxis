@@ -66,6 +66,22 @@ A successful process or existing file alone is not proof of a successful workflo
 - Prefer that single summary line. Add further detail only when necessary;
   additional lines should be rare.
 - Keep every subsequent line, including trailers, at most 80 characters.
+- Do not add Co-Authored-By trailers. Keep the actual human author and any
+  required DCO sign-off; tool assistance is described in the project documentation.
+
+## Distribution boundary
+
+- The core, Studio, geometry, meshing, post-processing and general-purpose
+  application/database adaptors are distributed under Apache-2.0, subject to
+  retained third-party notices.
+- Ordinary local case files, execution receipts, workflow resume, scheduling
+  and explicit storage preservation stay in the core.
+- Integrated database-backed case catalogues, cross-case history and workflow
+  intelligence belong in a separate private repository. Do not add that service
+  to the core or make the core depend on it.
+- CFD solver execution and CFD-specific boundary-condition/case preparation
+  belong in separately maintained integrations, not the public core.
+- See docs/distribution.md for the release boundary and extension contract.
 
 ## Verification and local configuration
 
