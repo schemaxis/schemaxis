@@ -238,14 +238,16 @@ class SchedulerTests(unittest.TestCase):
                 self.store.create(spec(**changes))
 
     def test_calendar_dst_gap_skipped_fold_first(self):
-        trigger = {'kind': 'calendar', 'start': '2026-03-07T00:00:00Z', 'timezone': 'America/Winnipeg',
+        # Exercise known historical transitions rather than future civil-time rules.
+        # Winnipeg's 2024 gap/fold remain valid with both old and new tzdata.
+        trigger = {'kind': 'calendar', 'start': '2024-03-09T00:00:00Z', 'timezone': 'America/Winnipeg',
                    'hour': 2, 'minute': 30, 'weekdays': list(range(7))}
-        due = next_due(trigger, instant('2026-03-08T00:00:00Z'), True)
-        self.assertEqual(due, instant('2026-03-09T07:30:00Z'))
-        trigger.update(start='2026-10-31T00:00:00Z', hour=1)
-        first = next_due(trigger, instant('2026-11-01T00:00:00Z'), True)
-        self.assertEqual(first, instant('2026-11-01T06:30:00Z'))
-        self.assertEqual(next_due(trigger, first), instant('2026-11-02T07:30:00Z'))
+        due = next_due(trigger, instant('2024-03-10T00:00:00Z'), True)
+        self.assertEqual(due, instant('2024-03-11T07:30:00Z'))
+        trigger.update(start='2024-11-02T00:00:00Z', hour=1)
+        first = next_due(trigger, instant('2024-11-03T00:00:00Z'), True)
+        self.assertEqual(first, instant('2024-11-03T06:30:00Z'))
+        self.assertEqual(next_due(trigger, first), instant('2024-11-04T07:30:00Z'))
 
     def test_preview_boundary(self):
         result = self.store.preview(spec(), count=2, now=self.now)
