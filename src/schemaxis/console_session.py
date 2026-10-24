@@ -13,6 +13,7 @@ import uuid
 import zipfile
 from xml.etree import ElementTree
 from .errors import fail
+from .core.faults import SchemaxisError
 from .storage import encoded, load, digest, atomic, AtomicPublicationError
 from . import authoring
 from .core.documents import document_format
@@ -95,23 +96,41 @@ class AdaptorConsoleSession:
             raise
 
     def _validate_state(self):
+        # Explicit checks rather than assertions, which python -O removes.
+        def require(condition):
+            if not condition: fail('RECOVERY_FAILED', 'session structure is invalid')
         try:
             state = self._state
-            assert state['activeDocument'] in state['documents']
-            assert type(state['nextRevision']) is int
+            require(isinstance(state, dict) and all(isinstance(state.get(key), dict)
+                for key in ('documents', 'configurations', 'references')))
+            require(isinstance(state.get('fileBaselines', {}), dict))
+            require(type(state.get('nextRevision')) is int)
+            require(isinstance(state.get('activeDocument'), str) and state['activeDocument'] in state['documents'])
             for identity, record in state['documents'].items():
-                assert str(uuid.UUID(identity)) == identity
-                assert type(record['revision']) is int and 0 < record['revision'] <= state['nextRevision']
+                require(str(uuid.UUID(identity)) == identity and isinstance(record, dict))
+                require(type(record.get('revision')) is int and 0 < record['revision'] <= state['nextRevision'])
+                require(isinstance(record.get('undo'), list) and isinstance(record.get('redo'), list))
+                attempts = record.get('attempts', [])
+                require(isinstance(attempts, list) and all(isinstance(item, dict) and 'status' in item for item in attempts))
+                # Checked up front: invalid JSON drafts never reach provider validation.
+                require(isinstance(record.get('provider'), str) and record['provider'] in CONSOLE_TYPES)
                 for snapshot in [record] + record['undo'] + record['redo']:
+                    require(isinstance(snapshot, dict) and 'document' in snapshot)
+                    diagnostics = snapshot.get('diagnostics', [])
+                    require(isinstance(diagnostics, list) and all(isinstance(item, dict) for item in diagnostics))
                     if 'source' in snapshot:
+                        require(isinstance(snapshot['source'], str) and snapshot.get('sourceFormat', 'json') in ('json', 'yaml'))
                         document, diagnostics = authoring.analyse(snapshot['source'],
                             lambda value: self._validate(value, record['provider']), snapshot.get('sourceFormat', 'json'))
-                        assert document == snapshot['document']
-                        assert bool(diagnostics) == bool(snapshot.get('diagnostics'))
+                        require(document == snapshot['document'])
+                        require(bool(diagnostics) == bool(snapshot.get('diagnostics')))
                     else:
                         self._validate(snapshot['document'], record['provider'])
-            assert isinstance(state['configurations'], dict) and isinstance(state['references'], dict)
-        except (KeyError, TypeError, ValueError, AssertionError):
+        except SchemaxisError as error:
+            # Structured validation faults in saved state mean recovery failed.
+            if error.fault.code == 'RECOVERY_FAILED': raise
+            fail('RECOVERY_FAILED', 'session structure is invalid', cause=error.fault.code)
+        except (KeyError, TypeError, ValueError):
             fail('RECOVERY_FAILED', 'session structure is invalid')
 
     def _commit(self, state):
