@@ -444,6 +444,28 @@ class QpdfJson(unittest.TestCase):
             self.fault(good, 'PDF_STRUCTURE_LIMIT')
         with patch.object(inspection, 'MAX_OBJECTS', 3):
             self.fault(good, 'PDF_STRUCTURE_LIMIT')
+        text = good.decode().replace('"version": 2', '"text": "' + '\u00e9' * 12 + '", "version": 2')
+        with patch.object(inspection, 'MAX_JSON_BYTES', len(text) + 1):
+            self.fault(text, 'PDF_STRUCTURE_LIMIT')
+
+    def test_json_nesting_bound_is_explicit_and_preserves_quoted_content(self):
+        good = json.loads(synthetic([{}]))
+        # The root object is one container; exactly 127 nested arrays fit.
+        for containers, accepted in ((127, True), (128, False)):
+            document = (json.dumps(good)[:-1] + ', "nested": ' + '[' * containers
+                        + '0' + ']' * containers + '}').encode()
+            with self.subTest(containers=containers):
+                if accepted:
+                    self.assertEqual(inspection.parse(document, 'x')['version'], 2)
+                else:
+                    self.fault(document, 'PDF_STRUCTURE_LIMIT')
+        self.fault(b'{"a":' * 129, 'PDF_STRUCTURE_LIMIT')
+        self.fault(b'[' * 20000 + b'0' + b']' * 20000, 'PDF_STRUCTURE_LIMIT')
+        good['text'] = '[{\\"' * 20000 + '\u00e9' + '\\\\' + '}]' * 20000
+        self.assertEqual(inspection.parse(json.dumps(good, ensure_ascii=False).encode(), 'x')['text'], good['text'])
+        self.fault(b'{"text":"' + b'[' * 20000, 'PDF_STRUCTURE_UNSUPPORTED')
+        self.fault(b'}' + b'[' * 20000, 'PDF_STRUCTURE_UNSUPPORTED')
+        self.assertEqual(code_of(lambda: inspection.parse(b'[' * 129, 'x', 'VERIFICATION_FAILED')), 'PDF_STRUCTURE_LIMIT')
 
     def test_malformed_structure_is_a_declared_fault_not_a_python_exception(self):
         for catalogue in ('/Metadata',):

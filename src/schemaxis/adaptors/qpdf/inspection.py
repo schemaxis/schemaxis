@@ -15,6 +15,7 @@ from schemaxis.errors import fail
 REF = re.compile(r'^(\d+) (\d+) R$')
 
 MAX_JSON_BYTES = 64 * 1024 * 1024
+MAX_JSON_DEPTH = 128       # JSON containers, independent of Python's decoder limits
 MAX_OBJECTS = 200000        # entries in qpdf's object table, and objects reachable from one selection
 MAX_SOURCE_PAGES = 500
 MAX_ANCESTRY = 32           # page-tree depth above a selected page
@@ -51,12 +52,43 @@ TRAILER_KEYS = {'/Root', '/ID', '/Size'}
 XREF_STREAM_KEYS = {'/Type', '/W', '/Index', '/Filter', '/DecodeParms', '/Length'}
 
 
+def _check_json_depth(text, what):
+    """Bound containers before decoding; quoted brackets do not count.
+
+    This is only a resource check. The JSON decoder still validates syntax.
+    QPDF emits UTF-8 JSON, so the caller decodes that encoding first.
+    """
+    depth, quoted, escaped = 0, False, False
+    for char in text:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == '"':
+                quoted = False
+        elif char == '"':
+            quoted = True
+        elif char in '[{':
+            depth += 1
+            if depth > MAX_JSON_DEPTH:
+                fail('PDF_STRUCTURE_LIMIT', what + ': qpdf JSON exceeds %d container levels' % MAX_JSON_DEPTH)
+        elif char in ']}':
+            depth -= 1
+            if depth < 0:
+                return  # Malformed syntax belongs to the decoder below.
+
+
 def parse(data, what, code='PDF_STRUCTURE_UNSUPPORTED'):
     """Bounded JSON parse with the same limits for sources and the final PDF."""
     if len(data) > MAX_JSON_BYTES:
         fail('PDF_STRUCTURE_LIMIT', what + ': qpdf JSON exceeds %d bytes' % MAX_JSON_BYTES)
     try:
-        value = json.loads(data)
+        if isinstance(data, str) and len(data.encode('utf-8')) > MAX_JSON_BYTES:
+            fail('PDF_STRUCTURE_LIMIT', what + ': qpdf JSON exceeds %d bytes' % MAX_JSON_BYTES)
+        text = data if isinstance(data, str) else data.decode('utf-8-sig')
+        _check_json_depth(text, what)
+        value = json.loads(text)
         objects = value['qpdf'][1]
         if (value.get('version') != 2 or not isinstance(objects, dict) or not isinstance(value['pages'], list)
                 or not isinstance(objects['trailer']['value'], dict) or not isinstance(value['encrypt'], dict)):

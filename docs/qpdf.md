@@ -98,6 +98,11 @@ only if absent, null or empty. Page-tree ancestors of a selected page may contai
 Parent, Kids, Count, MediaBox, CropBox, Rotate, Resources`. Only the pages you select and their
 effective resources are examined; other pages of the same PDF are not.
 
+QPDF's UTF-8 JSON observation is limited to 64 MiB and 128 nested containers before
+decoding, independently of the Python version. Brackets inside strings do not
+count. A larger or deeper observation fails with `PDF_STRUCTURE_LIMIT` for both
+source admission and final-output verification.
+
 | Refused | Fault |
 | --- | --- |
 | Encrypted PDFs, including empty-user-password and owner-restricted files | `ENCRYPTED_PDF` |
@@ -183,7 +188,7 @@ wrong runtime, a timeout, or a cancellation faults (`INTERPRETER_NOT_FOUND`, `UN
 ## Limits, lifecycle and reuse
 
 * Sources ≤ 16 MiB each, ≤ 32 MiB together, ≤ 500 pages each; ≤ 4 sources; ≤ 200 output pages; QPDF JSON
-  ≤ 64 MiB and 200,000 objects; chains of objects that are only references ≤ 16, and references
+  ≤ 64 MiB, 128 nested containers and 200,000 objects; chains of objects that are only references ≤ 16, and references
   dereferenced along one resource path ≤ 32 deep.
 * Every native stage runs under the shared cancellable runner with POSIX address-space (1 GiB QPDF,
   2 GiB MuPDF), file-size (64 MiB) and CPU (120 s) caps. A run's `--timeout` covers every launch
