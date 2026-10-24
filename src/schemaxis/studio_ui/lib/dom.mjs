@@ -23,6 +23,9 @@ function applyProps(element, props) {
       element.addEventListener(key.slice(2).toLowerCase(), value);
     } else if (key === 'ref' && typeof value === 'function') {
       value(element);
+    } else if (key === 'value' && element instanceof HTMLTextAreaElement) {
+      // A textarea ignores a value attribute; initialise its editable value.
+      element.value = String(value);
     } else if (key in element && !(element instanceof SVGElement) && typeof value !== 'string') {
       element[key] = value;
     } else if (value === true) {

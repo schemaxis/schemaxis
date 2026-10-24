@@ -106,6 +106,36 @@ for (const theme of ['light', 'dark']) {
   });
 }
 
+test('Workbench displays and edits an existing array property', {timeout: 90000}, async () => {
+  const session = await launch({provider: 'paraview'});
+  try {
+    await session.wait('window.studio?.store.get().adaptors.length', 'adaptor catalogue');
+    await session.evaluate(`(async () => {
+      const ctx = window.studio;
+      const record = await ctx.api.post('/api/documents', {action: 'new', provider: 'paraview',
+        name: 'Saved surface', document: {version: 'schemaxis/1',
+          nodes: [{id: 'surface', filter: 'readSurface', options: {files: ['surface.vtp']}}],
+          scenes: [{id: 'surface', geometry: ['surface']}]}});
+      await ctx.refresh();
+      ctx.windows.open('workbench', {document: record.id});
+    })()`);
+    await session.wait(`${active}.store?.get().schema`, 'reader workbench loaded');
+    await session.clickSelector('.wb-outline-item[data-pointer="/nodes/0"]');
+    assert.deepEqual(JSON.parse(await session.evaluate(
+      `document.querySelector('[aria-label="/nodes/0/options/files"]').value`)), ['surface.vtp']);
+    await session.evaluate(`(() => {
+      const field = document.querySelector('[aria-label="/nodes/0/options/files"]');
+      field.value = JSON.stringify(['edited.vtp']);
+      field.dispatchEvent(new Event('change', {bubbles: true}));
+    })()`);
+    await session.wait(`JSON.parse(${active}.editor.getValue()).nodes[0].options.files[0] === 'edited.vtp'`,
+      'edited array retained in source');
+    assert.deepEqual(session.exceptions, []);
+  } finally {
+    await session.close();
+  }
+});
+
 test('Workbench saves a nested operation to its parent design', {timeout: 90000}, async () => {
   const session = await launch();
   try {
