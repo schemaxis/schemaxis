@@ -85,25 +85,31 @@ class ExecutionService:
             raise
 
     def _validate_state(self):
+        def require(condition):
+            if not condition: fail('RECOVERY_FAILED', 'agent state relationships are invalid')
         try:
             state = self.state
-            assert all(isinstance(state[key], dict) for key in state)
+            require(all(isinstance(state[key], dict) for key in state))
             for identity, task in state['tasks'].items():
-                assert identity == task['id'] and type(task['revision']) is int and task['revision'] >= 0
-                assert type(task['attempts']) is int and task['attempts'] >= 0
-                assert set(task['budget']) == set(DEFAULT_BUDGET)
-                assert isinstance(task['authorisation']['allowedProviders'], list)
+                require(isinstance(task, dict))
+                require(identity == task['id'] and type(task['revision']) is int and task['revision'] >= 0)
+                require(type(task['attempts']) is int and task['attempts'] >= 0)
+                require(isinstance(task['budget'], dict) and set(task['budget']) == set(DEFAULT_BUDGET))
+                require(isinstance(task['authorisation']['allowedProviders'], list))
             for identity, plan in state['plans'].items():
-                assert plan['id'] == identity and plan['task'] in state['tasks']
-                assert type(plan['revision']) is int and 0 < plan['revision'] <= state['tasks'][plan['task']]['revision']
+                require(isinstance(plan, dict))
+                require(plan['id'] == identity and plan['task'] in state['tasks'])
+                require(type(plan['revision']) is int and 0 < plan['revision'] <= state['tasks'][plan['task']]['revision'])
                 for section in ('document', 'plan'):
-                    assert isinstance(plan[section]['file'], str) and isinstance(plan[section]['sha256'], str)
+                    require(isinstance(plan[section]['file'], str) and isinstance(plan[section]['sha256'], str))
             for identity, job in state['jobs'].items():
-                assert identity == job['id'] and job['plan'] in state['plans'] and job['task'] in state['tasks']
-                assert job['status'] in TERMINAL | {'running', 'cancellation-requested'}
+                require(isinstance(job, dict))
+                require(identity == job['id'] and job['plan'] in state['plans'] and job['task'] in state['tasks'])
+                require(job['status'] in TERMINAL | {'running', 'cancellation-requested'})
             for identity, resource in state['resources'].items():
-                assert identity == resource['id'] and resource['job'] in state['jobs']
-        except (AssertionError, TypeError, KeyError):
+                require(isinstance(resource, dict))
+                require(identity == resource['id'] and resource['job'] in state['jobs'])
+        except (TypeError, KeyError):
             fail('RECOVERY_FAILED', 'agent state relationships are invalid')
 
     @property

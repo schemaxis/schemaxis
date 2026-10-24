@@ -13,6 +13,7 @@ import re
 import uuid
 from .storage import atomic, encoded, load, digest, AtomicPublicationError
 from .errors import fail, keys
+from .core.faults import SchemaxisError
 from .observations import bounded
 from .console_references import ReferenceStore
 from . import workspaces
@@ -61,12 +62,20 @@ class InspectionStore:
                     or value.get('digest') != digest(value.get('state'))):
                 fail('RECOVERY_FAILED', 'inspection state checksum or version differs')
             self.state = value['state']
+            def require(condition):
+                if not condition: fail('RECOVERY_FAILED', 'inspection state relationships are invalid')
             try:
-                assert isinstance(self.state['resources'], dict)
+                require(isinstance(self.state, dict) and isinstance(self.state['resources'], dict))
                 workspaces.preset(self.state['presentation']['preset'])
                 for identity, record in self.state['resources'].items():
-                    assert record['id'] == identity and record['revision'] in record['snapshots']
-            except (AssertionError, KeyError, TypeError):
+                    require(isinstance(record, dict) and isinstance(record['snapshots'], dict))
+                    require(record['id'] == identity and record['revision'] in record['snapshots'])
+                selected = self.state['presentation']['resource']
+                require(selected is None or selected in self.state['resources'])
+            except SchemaxisError as error:
+                if error.fault.code == 'RECOVERY_FAILED': raise
+                fail('RECOVERY_FAILED', 'inspection state relationships are invalid', cause=error.fault.code)
+            except (KeyError, TypeError):
                 fail('RECOVERY_FAILED', 'inspection state relationships are invalid')
 
     def _commit(self, state):
