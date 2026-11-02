@@ -179,7 +179,11 @@ def build(*, check=False):
     assets = {}
     for key, page in pages.items():
         if len(page['body'].encode()) > 100000:
-            page['bodyGzip'] = base64.b64encode(gzip.compress(page.pop('body').encode(), mtime=0)).decode()
+            packed = gzip.compress(page.pop('body').encode(), compresslevel=9, mtime=0)
+            # Python 3.11/3.12 delegate mtime=0 to zlib, which supplies the host
+            # OS byte. Match the canonical "unknown" OS used by other versions.
+            packed = packed[:9] + b'\xff' + packed[10:]
+            page['bodyGzip'] = base64.b64encode(packed).decode()
         assets[key + '.json'] = json.dumps(page, ensure_ascii=False, separators=(',', ':')) + '\n'
     assets['index.json'] = json.dumps(index, ensure_ascii=False, separators=(',', ':')) + '\n'
     if check:
