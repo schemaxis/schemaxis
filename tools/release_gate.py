@@ -15,7 +15,9 @@ matched. The exit status is 1 when any hit is not covered by the allowlist
 (`tools/release_gate_allow.json`), 2 for usage or input errors, and 0 otherwise.
 """
 import argparse
+import base64
 import fnmatch
+import gzip
 import io
 import json
 import os
@@ -25,10 +27,16 @@ import subprocess
 import sys
 import tarfile
 import zipfile
+import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ALLOW = ROOT / 'tools' / 'release_gate_allow.json'
 BINARY_PROBE = 8192
+# Packaged Studio help stores large page bodies gzip-compressed and base64-encoded
+# (tools/generate_studio_help.py). Base64 is scanned as the text it encodes, not
+# as the encoding: random letter runs in it match short patterns by chance, and
+# the actual content would otherwise be invisible.
+GZIP_FIELD = re.compile(r'"bodyGzip":"([A-Za-z0-9+/=]+)"')
 
 # Built-in, project-neutral checks. Organisation- or person-specific terms do
 # not belong in this public file: keep them in a private patterns file and pass
@@ -93,12 +101,40 @@ def match_line(line):
     return [name for name, expression in PATTERNS if expression.search(line)]
 
 
+def expand_gzip_fields(text):
+    """Return (text, bodies): the text with each decodable gzip field replaced by
+    a placeholder, and the decompressed body of each in order. A field that is
+    not valid base64 gzip is left in place and scanned as written."""
+    bodies = []
+
+    def replace(match):
+        try:
+            data = gzip.decompress(base64.b64decode(match.group(1), validate=True))
+        except (ValueError, OSError, EOFError, zlib.error):
+            return match.group(0)
+        bodies.append(data.decode('utf-8', errors='replace'))
+        return f'"bodyGzip":"<decoded body {len(bodies)}>"'
+
+    return GZIP_FIELD.sub(replace, text), bodies
+
+
+def scan_lines(name, text):
+    return [(name, number, pattern) for number, line in enumerate(text.splitlines(), 1)
+            for pattern in match_line(line)]
+
+
 def scan_text(name, text):
-    """Return (name, line, pattern) hits for a file name and its text content."""
+    """Return (name, line, pattern) hits for a file name and its text content.
+
+    Hits inside a decoded gzip field are labelled `name!bodyGzip`, with line
+    numbers counted within the decompressed body.
+    """
     hits = [(name, 0, pattern) for pattern in match_line(name)]
     if text is not None:
-        for number, line in enumerate(text.splitlines(), 1):
-            hits.extend((name, number, pattern) for pattern in match_line(line))
+        text, bodies = expand_gzip_fields(text)
+        hits.extend(scan_lines(name, text))
+        for body in bodies:
+            hits.extend(scan_lines(f'{name}!bodyGzip', body))
     return hits
 
 

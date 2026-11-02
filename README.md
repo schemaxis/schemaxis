@@ -58,9 +58,14 @@ minor versions; migration notes are in the [changelog](CHANGELOG.md).
 Schemaxis needs Python 3.10 or newer and has no runtime dependencies.
 
 ```bash
-pip install schemaxis            # or: pip install "schemaxis[yaml]" for YAML input
-schemaxis discover               # list every adaptor and its contract
+git clone https://github.com/schemaxis/schemaxis.git
+cd schemaxis
+python3 -m pip install .         # or: python3 -m pip install '.[yaml]' for YAML
+schemaxis discover              # list every adaptor and its contract
 ```
+
+Install from the source repository for this preview. A PyPI package release is
+separate from publication of the repository.
 
 From a source checkout, without installing:
 

@@ -1,5 +1,7 @@
 """Release gate pattern matching, private patterns, allowlists, directory and package scans."""
+import base64
 import contextlib
+import gzip
 import io
 import json
 import os
@@ -81,6 +83,26 @@ class ReleaseGateTests(unittest.TestCase):
         hits = gate.scan_bytes('x/' + SECRET + '.bin', b'\0' + HOME.encode())
         self.assertEqual(hits, [('x/' + SECRET + '.bin', 0, SECRET)])
         self.assertEqual(gate.scan_bytes('t.txt', HOME.encode()), [('t.txt', 1, HOME)])
+
+    def test_gzip_fields_are_scanned_as_their_decoded_text(self):
+        gate.configure([self.private])
+        body = 'clean line\nmentions ' + CODENAME + ' here\n' + 'filler text\n' * 200
+        encoded = base64.b64encode(gzip.compress(body.encode(), mtime=0)).decode()
+        page = '{"id":"x","bodyGzip":"' + encoded + '"}\n'
+        self.assertEqual(gate.scan_text('help/x.json', page), [('help/x.json!bodyGzip', 2, CODENAME)])
+        # A run of letters inside the encoding is not a hit: the encoding is not scanned.
+        chance = encoded[40:44]
+        self.assertNotIn(chance, body)
+        noise = self.temp / 'noise.json'
+        noise.write_text(json.dumps({'substrings': [chance]}))
+        gate.configure([noise])
+        self.assertEqual(gate.scan_text('help/x.json', page), [])
+        # A field that is not gzip is scanned as written.
+        gate.configure([self.private])
+        plain = '{"bodyGzip":"' + base64.b64encode(('see ' + SECRET).encode()).decode() + '"}'
+        self.assertEqual(gate.scan_text('help/y.json', plain), [])
+        self.assertEqual(gate.scan_text('help/y.json', '{"bodyGzip":"' + SECRET + '"}'),
+                         [('help/y.json', 1, SECRET)])
 
     def test_allowlist_glob_and_pattern_restriction(self):
         allow = self.temp / 'allow.json'
