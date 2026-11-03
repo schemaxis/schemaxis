@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Check migrated delivery context and shared authoring through public agent tools.
 
 Independent native values are checked by adaptor conform; this client checks the

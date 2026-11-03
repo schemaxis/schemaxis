@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native data access and representation-preserving semantic snapshots."""
 import hashlib
 import math

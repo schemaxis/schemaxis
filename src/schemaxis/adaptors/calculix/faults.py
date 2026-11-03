@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Scientific scope and recovery stay local to the CalculiX adaptor."""
 from schemaxis.core.faults import Fault,SchemaxisError
 

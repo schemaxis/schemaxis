@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Workspace-owned schema objects and portable run dependencies (host-only).
 
 Content is canonical finite JSON. Provenance is descriptive, not part of content

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // HTTP client for the loopback Studio server. Every fault becomes an ApiError
 // carrying the server's structured fault (code, message, location, recovery).
 

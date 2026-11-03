@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native existing-video frame selection with independent per-frame checks."""
 import argparse
 import copy

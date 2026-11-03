@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded, exact JSON observations with pointers into retained evidence."""
 import copy
 import re

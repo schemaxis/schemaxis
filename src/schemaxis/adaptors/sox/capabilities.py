@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Curated PCM audio assembly discovery without native imports."""
 import json
 from importlib.resources import files

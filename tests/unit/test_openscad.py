@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host CAD semantics and independent geometry adversaries, without native imports."""
 import copy
 import json

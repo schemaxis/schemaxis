@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent linear-tetrahedron measurements from retained mesh coordinates.
 
 Mean ratio is 12*(3*V)**(2/3)/sum(edge_length**2): one for a regular

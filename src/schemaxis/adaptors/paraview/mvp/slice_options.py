@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Reviewed adaptor mappings; native inventory is captured separately.
 
 Adding a native option here is an implementation decision, not an automatic

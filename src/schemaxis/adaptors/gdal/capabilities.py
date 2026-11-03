@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Curated GIS raster discovery; separate from vector GIS operations."""
 import json
 from importlib.resources import files

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Narrow instrumentation and setup for the compact-plan authoring pilot."""
 import collections
 import hashlib

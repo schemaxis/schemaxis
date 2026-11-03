@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native workers for sourced assemblies; imported only inside FreeCAD's interpreter.
 
 The workers only observe and record. The host judges every receipt against the

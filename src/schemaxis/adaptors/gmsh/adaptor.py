@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded single-solid tetrahedral meshing with isolated native execution."""
 import hashlib
 import json

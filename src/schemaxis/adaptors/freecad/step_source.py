@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded ISO 10303-21 admission for one external STEP solid; host-only.
 
 This is a lexical scanner and entity-reference walk, not a geometry reader. It

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Scheduling invariants: isolation, dependencies, budgets, retry and cancellation."""
 import copy
 import json

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Read time metadata after applying reader options, before scheduling data."""
 from pathlib import Path
 from schemaxis.adaptors.paraview.filters import catalogue, validate_options

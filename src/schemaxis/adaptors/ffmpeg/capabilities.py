@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Selection and loss guidance for bounded media preparation."""
 import json
 from importlib.resources import files

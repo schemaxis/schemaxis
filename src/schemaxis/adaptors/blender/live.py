@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Persistent Blender worker with bounded authored input and native geometry.
 
 LiveSession(executable, fresh_directory) supports request('apply', document=...),

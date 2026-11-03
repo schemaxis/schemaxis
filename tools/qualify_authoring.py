@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native serial acceptance of shared source, console edits and agent plans."""
 import argparse
 import json

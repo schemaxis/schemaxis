@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Metadata-explicit raster window extraction with independent GeoTIFF verification."""
 import hashlib
 import json

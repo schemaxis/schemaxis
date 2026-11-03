@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Durable authoring markers are drafts, never executable runtime values."""
 from .errors import fail
 

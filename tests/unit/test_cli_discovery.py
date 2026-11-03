@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Public help/version discovery and host-only CLI behaviour."""
 import json
 import os

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify pyproj route chainage through the public Schemaxis paths with the real runtime.
 
 Shared conformance kit; domain, endpoint-gap, merge, analytic and requirement cases with outcomes

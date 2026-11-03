@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent regression identities, finite intent gates and native-evidence attacks."""
 import copy
 import json

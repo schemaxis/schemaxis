@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Import public property documentation as reference guidance, never as reviewed prose.
 
 Run capture_paraview_context.py --properties in pvpython first. This host-only

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Resolve recorded run paths within the currently selected, self-contained copy.
 
 An export's origin is a location hint, not verification evidence. Native receipts

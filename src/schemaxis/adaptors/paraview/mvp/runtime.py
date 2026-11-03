@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Standalone verification code embedded in the exact submitted replay.
 
 This file runs inside ParaView's interpreter. Keep it independent of Schemaxis imports

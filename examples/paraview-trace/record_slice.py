@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Run with pvbatch --force-offscreen-rendering record_slice.py OUTPUT_DIRECTORY.
 
 Record ParaView's own trace while reusing a slice, and verify geometry without

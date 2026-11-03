@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Read-only document view shared by interim windows: header, status and source.
 
 import {h, icon, mount} from '../lib/dom.mjs';

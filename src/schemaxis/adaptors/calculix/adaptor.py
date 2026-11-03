@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Intent-to-mesh elastic cantilevers; no authored decks or native commands."""
 import hashlib
 import json

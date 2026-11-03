@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Named CAD quantities, public value handoffs and persistent measurements."""
 import argparse
 import copy

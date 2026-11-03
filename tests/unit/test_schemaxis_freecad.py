@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """FreeCAD contracts stay host-safe and reject false or altered CAD evidence."""
 import copy
 import json

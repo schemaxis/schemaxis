@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Bounded normal-pvbatch dispatch probe; does not qualify Schemaxis MPI workflows.
 
 Select mpiexec from the MPI installation against which pvbatch was built.

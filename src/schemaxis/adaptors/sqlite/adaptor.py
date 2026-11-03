@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Typed captured tables and closed relational intentions, never authored SQL."""
 import csv
 import hashlib

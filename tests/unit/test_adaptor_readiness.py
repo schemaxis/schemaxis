@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Reusable host admission contract, including incomplete third-party adaptors."""
 import copy
 import importlib.util

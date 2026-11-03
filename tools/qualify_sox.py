@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify native PCM edits, analytic sample oracle, evidence and workflow lifecycle."""
 import argparse
 import copy

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Conceptual-help inventory, projection and admission remain host-only."""
 import copy
 import json

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Small, provider-neutral value contracts used by the Schemaxis core.
 
 Serialized contracts deliberately contain descriptions and symbolic addresses only.

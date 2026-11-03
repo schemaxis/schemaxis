@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bracket semantics, target units, refusal and CAD execution lifecycle bounds."""
 import copy
 import json

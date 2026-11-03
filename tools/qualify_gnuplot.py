@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Gnuplot four-case geometry, hostile evidence, lifecycle and source reuse."""
 import argparse
 import copy

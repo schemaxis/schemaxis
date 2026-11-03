@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """One declaration grammar and one validation path for declared arguments.
 
 An argument declaration is an ordinary dictionary. It is written either as an

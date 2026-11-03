@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Bounded native acceptance for the KiCad board adaptor.
 
 Runs the original fixtures through an actual kicad-cli, compares results with

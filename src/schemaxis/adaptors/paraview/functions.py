@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Pure helpers for OpenFOAM authoring; no ParaView import."""
 
 def foam_regions(groups):

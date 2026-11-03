@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Generated node and non-node adaptors enter the registry without framework edits."""
 import json
 import os

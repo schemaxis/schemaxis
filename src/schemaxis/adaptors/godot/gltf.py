@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded, embedded, static glTF geometry; no external resources or scripts."""
 import base64
 import json

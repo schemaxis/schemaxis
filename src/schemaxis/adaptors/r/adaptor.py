@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Declared numeric regression, native R models and independently measured intent."""
 import hashlib
 import json

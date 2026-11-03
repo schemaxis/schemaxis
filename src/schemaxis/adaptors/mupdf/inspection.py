@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded standard-library PNG/PNM decoding, independent of MuPDF bindings."""
 import hashlib
 import struct

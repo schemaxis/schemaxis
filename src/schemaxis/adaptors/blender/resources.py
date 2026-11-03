@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Retain file-only native mesh sources without importing Blender on the host."""
 import json
 import shutil

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Typed nullable table preparation with native Arrow and independent Parquet checks."""
 import hashlib
 import json

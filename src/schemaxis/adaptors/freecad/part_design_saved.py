@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Read the persisted Body history independently of native object readback."""
 from . import part_design as policy
 from .document_xml import Document, ARCHIVE_ERRORS

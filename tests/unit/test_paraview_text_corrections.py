@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Corrected ParaView text: discovery semantics, field and operation guidance and Studio recipes.
 
 These pin text fixes whose source facts were settled against the bundled ParaView 5.13.3

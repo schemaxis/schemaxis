@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded 1D/3D numeric-table interpretation, safe on the host as well as Blender."""
 from schemaxis.tabular import read_csv
 from schemaxis.errors import fail

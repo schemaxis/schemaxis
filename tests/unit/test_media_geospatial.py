@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent pixel, timing, workflow and vector-contract regression tests."""
 import copy
 import json

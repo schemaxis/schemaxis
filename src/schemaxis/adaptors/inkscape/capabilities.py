@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Domain intent and measured acceptability for declared technical diagrams."""
 def catalogue():
     return {'groups': {'diagram': {'label': 'Technical diagrams', 'purpose': 'Produce a measured, editable technical block diagram.', 'domain': 'visualisation'}},

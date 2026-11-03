@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Small, closed spreadsheet grammar and independent ODS/XLSX readback."""
 import math
 import statistics

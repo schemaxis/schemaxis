@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Curated PDF page-assembly discovery."""
 import json
 from importlib.resources import files

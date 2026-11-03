@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe, bounded comparison of oriented float32 STL triangles."""
 import hashlib
 import math

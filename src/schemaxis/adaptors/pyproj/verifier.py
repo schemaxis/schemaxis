@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent host verification of routeStations publications (standard library only).
 
 * ``structural``: exact, oracle-free rules (tables, GeoJSON, chainage rule, captured waypoints).

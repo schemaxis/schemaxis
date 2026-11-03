@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native application locations for a local Studio workspace, without launching apps."""
 import os
 from pathlib import Path

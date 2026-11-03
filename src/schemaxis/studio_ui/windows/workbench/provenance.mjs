@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // A reference names the bytes and authored revision loaded into its viewer.
 import {ApiError} from '../../lib/api.mjs';
 

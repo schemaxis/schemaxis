@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Forward captured upstream documentation without importing ParaView."""
 import json
 from pathlib import Path

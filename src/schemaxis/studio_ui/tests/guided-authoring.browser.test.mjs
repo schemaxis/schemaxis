@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Full-shell guided authoring acceptance against packaged libraries and real host routes.
 // No native application is invoked: validation and template export are host-only.
 import assert from 'node:assert/strict';

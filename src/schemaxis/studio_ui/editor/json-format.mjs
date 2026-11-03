@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Width-aware JSON layout. Formatting changes whitespace only.
 export function formatJson(value, {indent = '  ', compact = false, width = 100} = {}) {
   if (!compact) return JSON.stringify(value, null, indent);

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // JSON lexer with source offsets. It never throws: malformed input becomes
 // 'error' tokens or tokens carrying an `error` message, so partial documents
 // can be highlighted and parsed tolerantly.

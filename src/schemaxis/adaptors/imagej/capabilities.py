@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Operation discovery and domain guidance for bounded ImageJ particle measurement."""
 import json
 from importlib.resources import files

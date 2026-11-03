@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native distributed publication: fetch only compact per-rank fingerprints."""
 import hashlib
 import json

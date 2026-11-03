@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe ParaView execution capabilities and qualification boundaries."""
 from schemaxis.errors import fail
 

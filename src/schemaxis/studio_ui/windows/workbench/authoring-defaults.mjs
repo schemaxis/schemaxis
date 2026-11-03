@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Identity and connection choices shared by every adaptor's Add form.
 export function identityPool(value) {
   const used = new Set();

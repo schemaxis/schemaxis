@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Shared camera declarations and validation; no application imports."""
 import copy
 from schemaxis.core.declarations import validate_arguments, validate_value

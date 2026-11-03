@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Notifications: transient toasts plus a durable Problems/Log history.
 // Errors are never silently replaced; each one stays in Problems until cleared.
 

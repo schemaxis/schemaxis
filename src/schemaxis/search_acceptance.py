@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Adaptor-owned acceptance phrases, shared by admission and Studio regressions."""
 import re
 from urllib.parse import quote

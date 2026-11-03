@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Start window: what to do next, recent documents and installed adaptors.
 
 import {h, icon, mount} from '../lib/dom.mjs';

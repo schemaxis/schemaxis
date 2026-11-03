@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Dependency-free bounded PNG sample decoder, independent of Aseprite.
 
 Source assets deliberately support only unprofiled, noninterlaced RGBA8 PNG.

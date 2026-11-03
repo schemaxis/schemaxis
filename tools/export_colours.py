@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Development-only palette export; native execution never imports Matplotlib.
 
 Run on a host with Matplotlib: python3 tools/export_colours.py

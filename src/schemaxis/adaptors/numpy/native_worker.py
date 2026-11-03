@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted NumPy PCA worker; copied into the owned run directory and never host-imported.
 
 Run as: python -I -B native-worker.py compute|readback   (working directory = run directory)

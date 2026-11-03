@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted Blender main-thread worker. Host import does not import bpy."""
 import hashlib
 import json

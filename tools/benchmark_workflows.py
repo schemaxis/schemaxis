@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Prepare and prove repeatable workflow benchmarks; not autonomous AI scores.
 
 The grader reads neutral artifacts and never calls Schemaxis.verify or trusts

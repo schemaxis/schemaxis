@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Agent, CLI and Studio share durable scheduling with no native dispatch."""
 from datetime import datetime, timedelta, timezone
 import json

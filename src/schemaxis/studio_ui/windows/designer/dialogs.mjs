@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {parse, documentValue} from '../../editor/json-parse.mjs';
 import {dumpYaml} from '../../editor/yaml-parse.mjs';
 // Designer dialogs: new operation, template export, rename and confirmation helpers.

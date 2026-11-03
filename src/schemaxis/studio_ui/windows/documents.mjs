@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Creating documents: new workflow designs and new adaptor instances.
 
 import {h, icon, mount} from '../lib/dom.mjs';

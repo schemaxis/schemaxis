@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Actual FreeCAD GUI check of an imported, refined part's editable placement, on copies only.
 
 PYTHONPATH=src python3 tools/qualify_freecad_step_import_gui.py --run RUN --directory OUT \\

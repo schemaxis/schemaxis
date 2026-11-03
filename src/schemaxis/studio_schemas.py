@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only structural schemas for Studio's saved design envelopes.
 
 Reuse the authored workflow contract, allowing the empty designer canvas.

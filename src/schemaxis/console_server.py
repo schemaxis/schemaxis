@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Shared loopback API transport; the Studio module supplies the visual shell."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json

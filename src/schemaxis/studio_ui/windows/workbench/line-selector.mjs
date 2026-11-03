@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Shared world-coordinate line placement, using explicit bounds or a native snapshot.
 import {h} from '../../lib/dom.mjs';
 import {openDialog} from '../../shell/dialog.mjs';

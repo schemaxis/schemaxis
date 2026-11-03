@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Loopback server for Schemaxis Studio.
 
 Security is inherited from the console server: loopback binding, a per-launch

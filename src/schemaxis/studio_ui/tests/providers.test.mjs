@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Adaptor display identities: built-in table, manifest `display` metadata and a
 // generated fallback for external adaptor packages the Studio has never seen.
 

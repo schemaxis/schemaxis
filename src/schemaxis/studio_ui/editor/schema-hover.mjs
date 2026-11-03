@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Schema hover information for the JSON editor.
 
 import {parsePointer} from './json-pointer.mjs';

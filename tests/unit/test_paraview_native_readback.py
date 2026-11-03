@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native readback and pre-write checks observed in bounded ParaView 5.13.3 probes (2026-10-12).
 
 Native objects are replaced by small stand-ins; no ParaView is imported.

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host contract and independent parser checks; no meshio/NumPy import."""
 import copy
 import json

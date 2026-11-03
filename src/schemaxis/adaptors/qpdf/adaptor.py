@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded PDF page assembly through QPDF, verified by fresh native observation.
 
 Published bytes are judged against the captured sources by two fresh MuPDF observers and

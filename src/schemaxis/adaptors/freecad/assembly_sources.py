@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe assemblies of verified phase-one Body parts joined at named mounts.
 
 Each part definition names one verified single-Body ``model.FCStd`` publication

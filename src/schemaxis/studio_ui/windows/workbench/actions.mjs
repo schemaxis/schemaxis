@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Revision-checked authoring, file saving and native jobs.
 import {h} from '../../lib/dom.mjs';
 import {reportDiagnostics} from '../../editor/settle-server.mjs';

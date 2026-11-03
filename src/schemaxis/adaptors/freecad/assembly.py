@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe planning and verified execution of bounded native fixed assemblies.
 
 The contract uses box/cylinder part definitions, App::Link component instances,

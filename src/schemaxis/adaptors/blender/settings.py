@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Static, bounded Cycles rendering contract (no Blender imports)."""
 from schemaxis.core.declarations import validate_arguments
 

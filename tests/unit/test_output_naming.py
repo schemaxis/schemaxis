@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Output naming is a post-verification view that never overwrites evidence.
 
 Runs are produced by the real workflow executor and verified by the real

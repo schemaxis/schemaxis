@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Real-case submission through the slice provider and its existing runner."""
 import hashlib
 import json

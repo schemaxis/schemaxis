@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native captured-PNG acceptance: baseline, changed artwork and legacy regression."""
 import argparse
 import hashlib

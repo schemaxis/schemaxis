@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 import unittest
 from schemaxis.core.composition import evaluate
 from schemaxis.core.documents import resolve_document

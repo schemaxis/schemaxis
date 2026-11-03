@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify a measured cantilever stress table and its independent workbook checks."""
 import argparse
 import copy

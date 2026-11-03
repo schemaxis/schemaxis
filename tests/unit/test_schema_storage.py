@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Workspace sharing, offline retention, recovery and conservative ownership."""
 from concurrent.futures import ProcessPoolExecutor
 import json

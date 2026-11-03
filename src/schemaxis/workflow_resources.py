@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded, copied workflow inputs with portable constituent manifests.
 
 This host-only foundation captures regular files; it does not infer dependencies

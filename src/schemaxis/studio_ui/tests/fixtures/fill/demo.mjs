@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {createJsonEditor} from '../../../editor/editor.mjs';
 const schema = await (await fetch('../../../../../../docs/generated/paraview.authored.schema.json')).json();
 document.documentElement.dataset.theme = new URLSearchParams(location.search).get('theme') || 'light';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Closed report model, trusted Pandoc AST and independent document inspection."""
 import base64
 import hashlib

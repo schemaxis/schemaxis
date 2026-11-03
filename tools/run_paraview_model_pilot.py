@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Compare smaller and frontier Claude models with trusted native/Schemaxis recipes.
 
 Each recipe replicate has six Claude or four Codex conversations and four rounds. The independent

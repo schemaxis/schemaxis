@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify two changing common input states against each route's independent fixtures."""
 import argparse
 import copy

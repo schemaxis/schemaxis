@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Capture and bind bounded workflow templates without launching applications.
 
 This first contract supports scalar parameters and fixed-length numeric vectors.

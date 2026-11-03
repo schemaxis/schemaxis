@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Bottom panel: Problems, Jobs, Log and the command Console.
 
 import {h, icon, mount} from '../lib/dom.mjs';

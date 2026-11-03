@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded native catalogue qualification in isolated processes.
 
 Each receipt describes the tested fixture only; it is not all-options coverage.

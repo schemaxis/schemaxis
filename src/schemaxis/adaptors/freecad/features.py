@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted native property bindings for the extended CAD feature tree."""
 import FreeCAD as App
 import Part

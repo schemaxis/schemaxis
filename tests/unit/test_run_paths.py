@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Exported evidence reads its selected copy, without rewriting native receipts."""
 import json
 from pathlib import Path

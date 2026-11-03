@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Real HTTP bind/plan/save/load flow. Optional bounded native Octave acceptance:
 // STUDIO_RUN_NATIVE=1 runs the same case through the actual configured application.
 import assert from 'node:assert/strict';

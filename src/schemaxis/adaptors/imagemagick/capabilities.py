@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Curated intent-level PNG preparation discovery."""
 import json
 from importlib.resources import files

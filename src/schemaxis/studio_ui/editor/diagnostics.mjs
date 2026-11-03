@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Diagnostics: map pointer-based messages to text ranges, and summarise them
 // per line for the gutter. Pure functions (no DOM).
 

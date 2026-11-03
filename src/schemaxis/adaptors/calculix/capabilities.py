@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Domain intent, physical scope and measured acceptance for elastic beams."""
 def catalogue():
     return {'groups':{'elasticity':{'label':'Elastic cantilevers','purpose':'Assess a bounded rectangular cantilever against explicit serviceability limits.','domain':'mechanics'}},

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 import sys
 import unittest
 from schemaxis.core.faults import SchemaxisError

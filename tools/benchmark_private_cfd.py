@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Compare raw ParaView and Schemaxis slices of an existing private CFD case.
 
 A serial post-processing equivalence smoke test, not a solver-validation or AI

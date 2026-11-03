@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Inline 16 px line icons for viewer toolbars (stroke = currentColor).
 // Kept local so viewers work without the shell's sprite sheet.
 

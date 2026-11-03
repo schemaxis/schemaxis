@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Dependency-free browser harness: starts a real Studio server on a fresh
 // workspace, launches headless Chromium and drives it over the DevTools protocol.
 

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Deterministic, bounded rotational profiles without native application imports."""
 import math
 from schemaxis.errors import fail

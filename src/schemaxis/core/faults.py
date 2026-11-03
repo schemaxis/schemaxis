@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Structured, transport-neutral Schemaxis faults and exceptions."""
 
 from __future__ import annotations

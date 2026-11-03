@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Strict JSON and durable atomic publication shared by workspace owners."""
 import hashlib
 import json

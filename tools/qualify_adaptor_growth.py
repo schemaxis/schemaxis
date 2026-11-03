@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Exercise published delivery context through the public agent protocol.
 
 A deterministic acceptance client, not a language-model evaluation. Native paths

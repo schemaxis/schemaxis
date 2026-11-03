@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host doubles prove service lifecycle; separate qualification runs native apps."""
 import base64
 import copy

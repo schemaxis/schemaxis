@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Execute a verified publication schedule inside serial pvbatch."""
 from pathlib import Path
 import time as clock

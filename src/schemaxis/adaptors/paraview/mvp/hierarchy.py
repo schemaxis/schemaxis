@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Static, hierarchical native browsing. These paths are help addresses, not code."""
 import json
 from collections import Counter

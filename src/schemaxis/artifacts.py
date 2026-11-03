@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Shared durable JSON and recursive native-runtime packaging."""
 import hashlib
 import io

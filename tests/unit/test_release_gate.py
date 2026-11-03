@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Release gate pattern matching, private patterns, allowlists, directory and package scans."""
 import base64
 import contextlib

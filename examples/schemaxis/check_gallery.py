@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent geometry expectations for blender-gallery.json."""
 import json
 import math

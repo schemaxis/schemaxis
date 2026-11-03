@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Fixed Octave program; authored documents never contain executable source."""
 WORKER = r'''1; % Explicit script containing local functions.
 function emit_json(path, value)

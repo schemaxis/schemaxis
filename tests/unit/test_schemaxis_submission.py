@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 import json
 from pathlib import Path
 import tempfile

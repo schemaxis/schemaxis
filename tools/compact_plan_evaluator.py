@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Pilot-only supplement to the frozen pixel grader; no producer receipts trusted.
 
 Reject decoded images repeated across distinct requested times when the matching

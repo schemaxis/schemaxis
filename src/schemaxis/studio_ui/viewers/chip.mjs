@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Reference chips: a compact, focusable token for one viewer pick.
 // Used by the shell in reference lists and inside the composer.
 

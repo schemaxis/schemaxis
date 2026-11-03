@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Shared, keyboard-accessible starter selection for document and operation dialogs.
 import {h, icon, mount} from '../lib/dom.mjs';
 

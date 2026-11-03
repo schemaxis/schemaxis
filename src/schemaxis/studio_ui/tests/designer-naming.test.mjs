@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // The naming preview mirrors src/schemaxis/output_naming.py; cases follow
 // tests/unit/test_output_naming.py so the two cannot drift silently.
 

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {yamlPointerAt} from './yaml-parse.mjs';
 // RFC 6901 pointers over the tolerant AST: caret context, pointer ranges and values.
 

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent Arrow host semantics and malformed closed-Parquet rejection."""
 import copy
 import json

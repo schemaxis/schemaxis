@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Catalogue contracts must not confuse metadata generation with native support."""
 import copy
 import json

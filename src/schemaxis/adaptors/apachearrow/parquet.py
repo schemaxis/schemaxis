@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent reader for this adaptor's closed Parquet output encoding.
 
 This is not a general Parquet reader. No Arrow, Thrift or external parser imports.

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Persistent design intent has distinct validation, lifetime and evidence."""
 import copy
 import json

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Bounded native acceptance: timings, equivalence, and failed-worker recovery."""
 import argparse
 import copy

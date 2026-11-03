@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """All-pixel PNG native cases, policy denial, hostile receipts and workflow reuse."""
 import argparse
 import copy

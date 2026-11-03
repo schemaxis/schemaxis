@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Saved-run checks for captured STEP sources, import observations and hardened exports (host-only).
 
 Saved verification never opens an original STEP path. It replays planning from the

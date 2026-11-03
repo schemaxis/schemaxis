@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """KiCad DRC JSON validation and bounded host predictions for cross-checking.
 
 Host predictions cover two failure classes on simple boards: different-net

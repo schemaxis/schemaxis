@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Persist the minimal native view state needed for first-open Body visibility.
 
 FreeCADCmd writes App.Visibility but no GuiDocument.xml. FreeCAD 1.1 GUI restore

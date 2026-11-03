@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Geometry math for the 3D viewer (ported from the console viewer).
 // Geometry stays in native world coordinates at the API boundary. Rendering and
 // ray tests use a centred unit sphere to preserve floating-point precision.

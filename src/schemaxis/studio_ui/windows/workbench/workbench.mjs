@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Public factory: workbenchWindow.create(ctx, {document, operation?}, host).
 // An operation edits nested input in its parent workflow design using the parent's revision.
 import {createComprehension, formattingControls} from './comprehension.mjs';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted serial builtin ParaView worker. Native imports remain process-local."""
 import os
 from pathlib import Path

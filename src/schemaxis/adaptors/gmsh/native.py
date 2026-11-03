@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted isolated Gmsh worker; never imported during host discovery/planning."""
 import json
 import math

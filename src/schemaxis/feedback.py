@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded feedback execution over verified native black boxes.
 
 An app-owned policy proposes documents from prior observations and judges them.

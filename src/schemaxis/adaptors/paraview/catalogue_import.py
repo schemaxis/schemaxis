@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Compile captured native metadata into bounded, host-safe declaration packages.
 
 This developer intake language describes bindings, never arbitrary Python. Unknown

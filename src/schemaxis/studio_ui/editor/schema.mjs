@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Public schema API for the Studio JSON editor.
 //
 //   schemasAt(rootSchema, documentValue, pointer, {editing?, includeMarkers?}) -> schema nodes

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Captured PNG assets: original paths never cross the native boundary."""
 import hashlib
 import os

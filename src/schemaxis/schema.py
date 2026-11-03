@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """JSON Schema export from Schemaxis's existing typed declarations.
 
 This module projects expanded input and literal declarations; schema_authoring

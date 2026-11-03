@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Canvas interaction: pan, zoom, node drag, marquee, wire dragging, keyboard and palette drops.
 
 import {debounce} from '../../lib/dom.mjs';

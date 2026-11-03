@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Durable schedules share exact saved documents with normal verified execution.
 import {h, mount} from '../lib/dom.mjs';
 

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted MuPDF scripts; authored input contributes JSON values, never code."""
 import json
 

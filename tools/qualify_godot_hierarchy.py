@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Bounded native static assembly, independent affine literals and tamper probes."""
 import argparse
 import copy

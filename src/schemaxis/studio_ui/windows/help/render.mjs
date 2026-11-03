@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Render packaged Markdown as DOM text, with no raw HTML or remote dependencies.
 import {h, s} from '../../lib/dom.mjs';
 import {blocks, diagram} from './model.mjs';

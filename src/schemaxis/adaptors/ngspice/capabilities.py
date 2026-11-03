@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Operation selection guidance for declared ngspice linear circuits."""
 import json
 from importlib.resources import files

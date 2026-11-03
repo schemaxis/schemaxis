@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded, synchronous client for a dedicated persistent FreeCAD GUI.
 
 LiveSession(executable, directory) requires a fresh directory and a working GUI

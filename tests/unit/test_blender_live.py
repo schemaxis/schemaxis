@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host lifecycle tests and opt-in serial native Blender acceptance."""
 import copy
 import json

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Decision replay, failure bounds and publication selection without native apps."""
 import copy
 import json

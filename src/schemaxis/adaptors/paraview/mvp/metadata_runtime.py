@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native metadata capture, submitted only by the explicit inspect-native command.
 
 No filter is executed. Definitions and prototype properties are inspected on the

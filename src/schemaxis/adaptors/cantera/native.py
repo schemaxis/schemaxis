@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Isolated Cantera worker; authored input never supplies executable code."""
 import csv
 import hashlib

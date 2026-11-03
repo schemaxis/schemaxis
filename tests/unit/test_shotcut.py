@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host timeline semantics, independent expectations and evidence failure coverage."""
 import copy
 import json

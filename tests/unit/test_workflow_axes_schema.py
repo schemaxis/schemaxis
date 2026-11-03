@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """The workflow/1 authored schema gives study axes the same structured shape as adaptor documents."""
 import json
 import unittest

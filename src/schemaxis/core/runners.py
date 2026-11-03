@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Submission of replay source to an external Python interpreter.
 
 :mod:`schemaxis.core.replay` emits the exact source to be executed and hands it to an

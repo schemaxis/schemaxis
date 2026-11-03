@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Case Runner uses actual bind, schedule, verification and naming with a host native fixture."""
 import copy
 import importlib.util

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Explicit typed runtime function catalogue; functions here have no side effects.
 
 Application bindings register trusted callables. Authored input names a registered

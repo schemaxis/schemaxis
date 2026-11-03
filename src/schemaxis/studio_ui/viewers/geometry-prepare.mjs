@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Validate a native geometry payload and pack it for WebGL and picking.
 //
 // Payload (from session.geometry() / live FreeCAD and Blender workers):

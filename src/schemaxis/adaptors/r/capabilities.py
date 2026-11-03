@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Domain guidance for declared small numeric regression models."""
 import json
 from importlib.resources import files

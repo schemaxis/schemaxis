@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Compare baseline, qualified introduction and packaged checking for two recipes.
 
 Six fresh conversations, four turns each. The hidden grader and native isolation

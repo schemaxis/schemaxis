@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bind every payload member of a saved sourced assembly to independent evidence (host only).
 
 Evidence for each rule (FreeCAD 1.1.4, Document.copyObject into one assembly):

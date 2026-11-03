@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Inspector: design summary, edge details, and dispatch to node and loop panels.
 
 import {h, icon, mount} from '../../lib/dom.mjs';

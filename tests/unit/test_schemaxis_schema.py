@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Schema projection, graph boundaries and generated documentation consistency."""
 import copy
 import importlib.util

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Run with pvbatch create_reader_fixtures.py OUTPUT_DIRECTORY."""
 from paraview import simple as p
 from vtkmodules.vtkCommonDataModel import vtkStructuredGrid,vtkRectilinearGrid

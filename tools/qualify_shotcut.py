@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Independent literal-colour acceptance for native Shotcut timeline cuts/reloads."""
 import argparse
 import copy

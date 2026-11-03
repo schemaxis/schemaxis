@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """App folders are independently discoverable and cannot own shared dependencies."""
 import ast
 import copy

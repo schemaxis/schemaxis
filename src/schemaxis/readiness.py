@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only admission checks over the installed registry, never native qualification.
 
 Delivery metadata contains curated guidance and fixture pointers, not a second

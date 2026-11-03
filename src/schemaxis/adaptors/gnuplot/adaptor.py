@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Declared numeric plots; captured CSV and trusted Gnuplot commands only."""
 import csv
 import hashlib

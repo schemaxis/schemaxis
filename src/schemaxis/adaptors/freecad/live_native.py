@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted GUI timer worker. Importing this module on the host is safe.
 
 Only start() imports FreeCAD/PySide. All document and view operations run from

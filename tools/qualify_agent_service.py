@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native acceptance through the public local agent transport, with retained evidence.
 
 This is a deterministic client, not an evaluation of a language model. Dimensions

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Bounded media intent, lossless/lossy readback and rejection acceptance."""
 import argparse
 import copy

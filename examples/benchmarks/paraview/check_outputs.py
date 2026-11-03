@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded publication checks for the analytic ParaView recipe examples.
 
 Run with pvbatch. This checks actual geometry, fields, image dimensions/content

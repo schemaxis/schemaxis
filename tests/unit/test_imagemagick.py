@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """PNG byte/mode boundaries and exact raster semantics, with literal expectations."""
 import copy
 import json

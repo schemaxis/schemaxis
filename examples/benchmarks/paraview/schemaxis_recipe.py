@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Reusable Schemaxis pipeline recipe: times x slice axis x appearances x cameras.
 
 Usage: python3 schemaxis_recipe.py task.json submission

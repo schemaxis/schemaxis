@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native dimensional constraints for centred rectangle and circle profiles.
 
 Constraint indexing follows FreeCAD's public Sketcher scripting API:

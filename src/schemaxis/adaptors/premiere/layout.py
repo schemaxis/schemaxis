@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Complete-track editorial layout contracts and independent frame coverage checks.
 
 The planner converts authored frames to ticks. The verifier reconstructs a small

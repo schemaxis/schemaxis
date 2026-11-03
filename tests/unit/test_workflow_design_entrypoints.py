@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """The diagram, agent and source editor share one durable authoring contract."""
 import copy
 import json

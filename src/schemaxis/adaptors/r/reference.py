@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent column-scaled Householder QR, classical OLS inference and finite fit assessments."""
 import math
 

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native-only reproduction of the recorded 5.13.3 cell-grid probe failure.
 
 Run with pvpython. No Schemaxis imports: reports whether a tiny interior-point

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Virtual scrolling arithmetic shared by the text and table viewers.
 // Browsers cap element heights (about 16-33 million CSS pixels), so very long
 // documents use a scaled scroll range: the scrollbar position maps

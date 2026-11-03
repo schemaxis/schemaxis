@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Operation handoff through verified durable artifacts, with optional scheduling."""
 import copy
 import json

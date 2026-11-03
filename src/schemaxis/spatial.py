@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Pure, declared spatial helpers shared by authoring and runtime expressions."""
 import math
 from schemaxis.core.directions import DIRECTION_ARGUMENT, resolve_direction

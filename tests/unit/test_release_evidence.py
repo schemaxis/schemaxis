@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Pure helpers of the release evidence runner: paths, summaries and checks."""
 import importlib.util
 import json

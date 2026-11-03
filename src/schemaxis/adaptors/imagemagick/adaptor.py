@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Closed PNG preparation recipes, isolated ImageMagick, independent exact pixels."""
 import hashlib
 import json

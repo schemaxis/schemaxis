@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 import unittest
 from schemaxis.core.faults import SchemaxisError
 from schemaxis.context import InputContext, ObjectRegistry

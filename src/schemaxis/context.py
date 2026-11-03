@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Contextual typed dictionary reads and execution-scoped object identities.
 
 No native runtime imports. Object values stay in process and are never copied.

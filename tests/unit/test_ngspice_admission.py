@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Closed circuit contracts and independent linear-circuit falsification tests."""
 import copy
 import json

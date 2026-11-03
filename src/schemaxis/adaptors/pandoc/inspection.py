@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent HTML/OOXML checks plus fresh native semantic AST readback."""
 import base64
 import hashlib

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """ImageJ particle contracts, independent reference model and verifier falsification."""
 import copy
 import hashlib

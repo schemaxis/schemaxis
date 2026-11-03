@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Evidence that emitted replay source runs in a real ParaView.
 
 This test is skipped unless a ParaView is discoverable, so the suite keeps its

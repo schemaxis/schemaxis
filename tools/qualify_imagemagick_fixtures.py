@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Regenerate literal RGBA grids; no native program or image generation service."""
 from pathlib import Path
 import struct

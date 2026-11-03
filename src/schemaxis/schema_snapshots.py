@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Portable, immutable captures of standalone document schemas.
 
 The manifest is an evidence reference, not a JSON Schema $ref. Schema bytes and

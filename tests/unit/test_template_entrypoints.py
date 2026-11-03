@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """The CLI and local service bind the same captured template revision."""
 import copy
 import json

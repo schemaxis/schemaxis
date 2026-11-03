@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """User-owned application locations; never part of a workflow or runtime archive."""
 from contextlib import contextmanager
 from contextvars import ContextVar

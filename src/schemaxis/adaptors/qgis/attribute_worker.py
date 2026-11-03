@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted native attribute/table mapping; imported only in the QGIS subprocess."""
 import json
 from pathlib import Path

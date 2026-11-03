@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted native pyproj route-chainage worker; authored documents cannot supply code.
 
 Copied into each run directory and launched as ``python -I -B native-worker.py STAGE`` with the

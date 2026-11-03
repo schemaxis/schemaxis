@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only contract checks. Node doubles never qualify native Premiere."""
 import copy
 import hashlib

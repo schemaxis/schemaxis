@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted QGIS worker. Run only with the configured native Python interpreter."""
 import json
 import math

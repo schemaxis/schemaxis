@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Small purpose map over declared bindings, independent of native inventory help."""
 
 

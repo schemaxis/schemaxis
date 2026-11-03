@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded discovery, authoritative details and recovery through the shared service."""
 import base64
 import copy

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded real-case options for the existing slice capability."""
 from schemaxis.core.times import TIMES_ARGUMENT
 

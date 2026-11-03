@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Summarise pilot measurements without double-counting resumed-session cost.
 
 Claude result.usage covers the invocation; result.modelUsage and total_cost_usd

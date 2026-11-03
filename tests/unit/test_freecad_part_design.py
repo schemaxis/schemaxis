@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Body ownership and feature-history rules are independent of native availability."""
 import copy
 import json

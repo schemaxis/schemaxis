@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted native GDAL subprocess; authored documents cannot supply Python."""
 import hashlib
 import json

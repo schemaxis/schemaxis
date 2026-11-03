@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Hand-built PDF fixture and literal oracle: no PDF library/native output inputs."""
 from pathlib import Path
 import json

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Human-readable names for verified workflow outputs, as a post-verification view.
 
 Native publication names stay unchanged because receipts and digests depend on

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // The complete design remains editable, including when malformed source cannot project to a canvas.
 
 import {h, icon} from '../../lib/dom.mjs';

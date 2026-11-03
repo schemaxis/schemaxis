@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Closed physical intent, measured acceptance and trusted launch contracts."""
 import copy
 import hashlib

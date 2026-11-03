@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Reusable development contracts, conformance and scoped receipt semantics."""
 import copy
 import json

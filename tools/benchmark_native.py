@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native reference and grading helpers; deliberately no Schemaxis imports.
 
 Used by the benchmark coordinator, never installed as an adaptor. Inputs are

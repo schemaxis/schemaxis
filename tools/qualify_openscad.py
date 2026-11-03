@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify bounded OpenSCAD geometry, lifecycle and declarative workflow reuse."""
 import argparse
 import copy

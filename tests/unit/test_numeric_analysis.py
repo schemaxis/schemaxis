@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Numerical contracts, analytic oracles, closed workbook grammar and native checks."""
 import copy
 import json

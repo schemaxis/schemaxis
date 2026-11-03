@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Unfinished designs expose real case parameters without inventing values."""
 import copy
 import json

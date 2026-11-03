@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Keyboard-accessible expression forms generated from the authored schema.
 import {h} from '../lib/dom.mjs';
 import {contextFor, expand} from './schema-core.mjs';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Dependency-free linear nodal solver and independently checked circuit tables."""
 import cmath
 import math

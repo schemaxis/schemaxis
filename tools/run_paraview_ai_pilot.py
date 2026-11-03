@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Prepare, independently preflight and run a three-method ParaView AI pilot.
 
 Synthetic spatial/time fields avoid private case redistribution and make silent

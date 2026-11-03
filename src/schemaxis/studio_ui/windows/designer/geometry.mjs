@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Pure geometry and graph helpers for the Workflow Designer canvas.
 // No DOM access: everything here is unit-tested with node --test.
 

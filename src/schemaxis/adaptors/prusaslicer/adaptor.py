@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Slice one declared STL with an explicit FFF printer/material/print profile.
 
 The host renders a complete fixed-policy configuration, runs the PrusaSlicer

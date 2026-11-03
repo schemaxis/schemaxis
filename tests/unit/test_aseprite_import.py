@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Captured artwork contract, independent sample expectations and hostile inputs."""
 import copy
 import hashlib

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Cantera native kit, numeric workbook handoffs and public/human reuse acceptance."""
 import argparse
 import copy

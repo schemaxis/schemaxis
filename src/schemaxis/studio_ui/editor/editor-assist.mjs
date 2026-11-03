@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Completion popup and hover documentation controller for the JSON editor.
 
 import {CompletionPopup, HoverTooltip, hoverContent} from './popup.mjs';

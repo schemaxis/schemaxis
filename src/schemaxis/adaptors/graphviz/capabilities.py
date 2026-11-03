@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only discovery of automatic directed graph layout."""
 import json
 from importlib.resources import files

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Revision-checked Studio document lifecycle, independent of HTTP transport."""
 import copy
 import uuid

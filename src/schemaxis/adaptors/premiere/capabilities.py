@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded guidance without claiming native Premiere qualification."""
 import json
 from importlib.resources import files

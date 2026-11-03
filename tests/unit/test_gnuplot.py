@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Meaningful numeric plot contracts and independent geometry/PNG checks."""
 import copy
 import json

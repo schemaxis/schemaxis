@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent bounded interpretation of the published FFF G-code.
 
 This module does not reuse slicer code or trust native annotations. It replays

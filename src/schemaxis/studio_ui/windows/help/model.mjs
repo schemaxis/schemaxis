@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Pure help navigation, Markdown blocks and bounded search.
 export function slug(text) {
   return text.trim().toLowerCase().replace(/[^\p{L}\p{N}_\s-]/gu, '').replace(/ /g, '-');

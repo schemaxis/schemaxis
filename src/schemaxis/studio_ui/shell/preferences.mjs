@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Theme application and setting writes shared by the shell and Settings window.
 
 export function applyTheme(theme) {

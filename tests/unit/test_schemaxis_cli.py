@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Exercise the public command, routed inputs and structured failures."""
 import json
 import os

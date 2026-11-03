@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Unit-explicit, source-bound mesh interchange with independent format readers."""
 import hashlib
 import json

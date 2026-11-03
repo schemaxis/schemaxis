@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Authenticated HTTP scheduling captures exact saved documents without a worker."""
 import json
 from pathlib import Path

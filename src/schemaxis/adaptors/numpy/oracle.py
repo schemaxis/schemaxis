@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent standard-library PCA oracle and saved verifier for schemaxis.numpy/1.
 
 Never imports NumPy. Expected values come from correctly rounded sums (math.fsum), a

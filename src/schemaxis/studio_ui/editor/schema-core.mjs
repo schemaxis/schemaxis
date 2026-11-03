@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // JSON Schema (2020-12 subset) evaluation core: $ref resolution, branch
 // flattening, conditional evaluation against instance data and descent along
 // JSON pointers. Everything expensive is memoised per schema object.

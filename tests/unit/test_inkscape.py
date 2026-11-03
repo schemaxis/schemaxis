@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host intent, semantic evidence and independent native-measurement contracts."""
 import copy
 import json

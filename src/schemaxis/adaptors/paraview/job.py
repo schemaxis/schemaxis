@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Planning, retained native submission and independent receipt checks."""
 import copy
 import io

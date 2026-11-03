@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Pure editing rules for the JSON editor: auto-indent, auto-close with
 // type-over, pair deletion and block indent/outdent. Each function returns an
 // edit {from, to, text, selectFrom, selectTo} (absolute offsets after the edit)

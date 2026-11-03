@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Declared writer publication, loss contracts and semantic readback.
 
 Native imports remain inside execution functions. Publication owns filenames and

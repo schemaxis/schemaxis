@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Writer verifiers must match what the native ParaView 5.13.3 writers emit.
 
 Houdini samples are literal texts built from the print statements of

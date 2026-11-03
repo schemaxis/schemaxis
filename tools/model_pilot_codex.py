@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Codex CLI transport for the isolated ParaView model comparison.
 
 Uses the existing account through a read-only auth mount. No user configuration,

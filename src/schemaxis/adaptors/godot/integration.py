@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Workflow provenance for embedded geometry and image inputs."""
 from schemaxis.artifacts import file_digest
 from schemaxis.errors import fail

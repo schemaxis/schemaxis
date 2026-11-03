@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Generate exhaustive host-only ParaView documentation appendices.
 
 Run from the repository root with PYTHONPATH=src. Native qualification is separate.

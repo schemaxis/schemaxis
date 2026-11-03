@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent SVG coordinate oracle and standard-library PNG reconstruction."""
 import hashlib
 import json

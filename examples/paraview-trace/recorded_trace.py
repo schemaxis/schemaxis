@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 # trace generated using paraview version 5.13.3
 #import paraview
 #paraview.compatibility.major = 5

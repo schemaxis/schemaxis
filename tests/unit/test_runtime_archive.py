@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native runtime archives carry the licence notices of the code they bundle."""
 from importlib.metadata import PathDistribution
 import io

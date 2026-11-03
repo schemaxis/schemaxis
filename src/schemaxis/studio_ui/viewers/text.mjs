@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Text Viewer: virtualised display of large text (only visible lines are in
 // the DOM), line numbers, find (plain / regex / case) with all matches
 // highlighted, text selection picks, and grep extraction to a table.

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Case run options are validated and returned, but never enter the template digest."""
 import copy
 from pathlib import Path

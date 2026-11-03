@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Case Runner adaptor over captured templates, workflow execution and verification.
 
 The HTTP application owns serial jobs and cancellation. This module never

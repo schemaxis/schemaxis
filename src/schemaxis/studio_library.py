@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Validated, data-only Studio libraries and the host catalogue verification contract.
 
 Libraries use inline ``baseDocument``, field ``testValues`` and a human-readable

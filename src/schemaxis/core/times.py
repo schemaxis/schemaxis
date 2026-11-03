@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Selection of time values from those an application actually has.
 
 A CFD case stores each field at a set of times. A declaration names the times

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """PCM edit decisions, exact semantic failures and strict source bounds."""
 import copy
 import io

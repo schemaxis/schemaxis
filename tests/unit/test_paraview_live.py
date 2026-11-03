@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Portable validation and opt-in serial builtin ParaView live acceptance."""
 import os
 import json

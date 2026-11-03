@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Additional bounded ParaView source, reader and processing declarations."""
 from schemaxis.adaptors.paraview.filters import NativeFilter, ONE, option, vector, direction, choice
 

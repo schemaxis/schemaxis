@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Toolbar and axis triad for the 3D viewer. The viewer owns state; these
 // helpers build DOM with h()/s() and call back through `actions`.
 

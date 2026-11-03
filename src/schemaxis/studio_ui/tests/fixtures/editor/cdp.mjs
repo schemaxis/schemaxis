@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Minimal headless-Chromium driver over the DevTools protocol, using only Node
 // built-ins and Python's http.server. Processes are tracked by handle and killed.
 

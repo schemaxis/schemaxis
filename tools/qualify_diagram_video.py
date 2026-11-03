@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify diagram-to-video handoffs, reordered frames, reuse and rejection.
 
 Uses three independently configured native providers. This checks technical

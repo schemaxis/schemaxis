@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Application-owned scene and settings schemas; host-safe."""
 from schemaxis.schema import NAME, DRAFT, object_schema, arguments_schema, argument_schema, option_schema, graph_document_schema
 from schemaxis.camera import CAMERA

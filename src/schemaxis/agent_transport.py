@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Dependency-free local JSON-lines tool transport (not MCP or a model provider).
 
 One request/response per line. Execution returns immediately with a job ID, so

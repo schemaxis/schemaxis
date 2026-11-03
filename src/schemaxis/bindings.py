@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Shared typed option validation for all adaptors."""
 from schemaxis.core.declarations import validate_arguments
 from schemaxis.core.directions import resolve_direction

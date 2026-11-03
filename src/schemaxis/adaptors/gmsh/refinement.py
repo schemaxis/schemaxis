@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Meshing intent and a bounded coarser-to-finer acceptance policy."""
 import copy
 import json

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native semantic finishing, independent solid oracles and analytic inspection."""
 import argparse
 import copy

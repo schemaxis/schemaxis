@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host semantics of pyproj route chainage; never imports pyproj.
 
 Full run/verify plumbing uses a FAKE runtime: a wrapper interpreter that injects a standard-library

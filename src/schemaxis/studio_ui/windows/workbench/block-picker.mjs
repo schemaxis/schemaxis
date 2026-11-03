@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {h, mount} from '../../lib/dom.mjs';
 
 // Choices are native paths with human labels, scoped to the form's selected input.

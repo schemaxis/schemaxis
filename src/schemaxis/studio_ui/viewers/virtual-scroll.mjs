@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // DOM controller for virtual scrolling (text and table viewers).
 // Structure: scroller (overflow: auto) > sizer (full virtual size) > layer
 // (translated to the viewport). The fractional top row is the source of

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Verified geodesic route chainage: isolated pyproj execution with an independent host verifier."""
 import hashlib
 import json

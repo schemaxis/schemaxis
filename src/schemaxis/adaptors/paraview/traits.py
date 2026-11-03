@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """VTK representation to framework data traits."""
 
 def paraview_traits(native_type):

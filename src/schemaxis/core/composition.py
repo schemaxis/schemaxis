@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Closed authored-value operations; no evaluation of Python or native objects."""
 from copy import deepcopy
 import math

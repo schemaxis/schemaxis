@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 /* Interaction prototype. No native execution, network requests or AI calls. */
 'use strict';
 const $ = id => document.getElementById(id);

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Pure edit-region classification and visibility policy for calm diagnostics.
 import {lex} from './json-lexer.mjs';
 import {nodeAtPointer} from './json-pointer.mjs';

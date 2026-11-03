@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent acceptance checks for the ParaView-to-Blender wireframe example."""
 import json
 import math

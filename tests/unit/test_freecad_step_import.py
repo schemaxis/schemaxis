@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host tests for checked STEP import, retained-source verification and hardened export checks.
 
 Fixtures are written by the qualifier's independent STEP writer (no CAD kernel). No

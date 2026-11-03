@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Small CPU-only native qualification; writes results to a fresh directory."""
 import argparse
 import base64

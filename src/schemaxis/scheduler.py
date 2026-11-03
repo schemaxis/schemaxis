@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded durable triggers over the existing verified execution service.
 
 Control clients lock only the state transaction. A separate foreground owner runs

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """ParaView selection queries as a closed authored grammar; host-safe.
 
 ParaView 5.13.3 evaluates a selection ``QueryString`` with Python ``eval`` when

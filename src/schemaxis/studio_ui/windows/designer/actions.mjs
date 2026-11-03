@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Designer commands shared by the canvas, inspector, header and keyboard.
 
 import {confirmDialog} from '../../shell/dialog.mjs';

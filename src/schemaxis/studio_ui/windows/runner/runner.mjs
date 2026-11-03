@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Case Runner: values-only authoring over the shared template and workflow APIs.
 import {h, icon, mount} from '../../lib/dom.mjs';
 import {Store} from '../../lib/store.mjs';

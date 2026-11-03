@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Scientific numeric plotting discovery, without native imports."""
 import json
 from importlib.resources import files

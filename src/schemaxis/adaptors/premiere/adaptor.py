@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded human-mediated UXP sequence observation, without project mutation."""
 import hashlib
 import json

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Real-server coverage for authoring, snippets, samples, reference chips and parent design edits.
 import assert from 'node:assert/strict';
 import {mkdir, readFile, readdir, writeFile} from 'node:fs/promises';

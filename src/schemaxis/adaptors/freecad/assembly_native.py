@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted built-in Assembly workers; native imports remain process-local."""
 import hashlib
 import json

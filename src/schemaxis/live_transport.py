@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Private, bounded file IPC shared by the two headless live adaptors.
 
 Only packaged trusted scripts execute. This is a local single-client protocol,

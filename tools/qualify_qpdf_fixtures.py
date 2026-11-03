@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Hand-built PDF fixtures and a literal oracle for the QPDF route.
 
 Nothing here uses QPDF, the adaptor, or source-to-output comparison: colours, positions, text

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native linear-circuit kit, Calc handoff and shared document/console reuse."""
 import argparse
 import copy

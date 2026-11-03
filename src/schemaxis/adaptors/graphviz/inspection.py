@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Literal topology oracle and closed SVG/plain geometry consistency checks.
 
 Plain is independent of our DOT generator but shares Graphviz's layout engine

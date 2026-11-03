@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe FreeCAD solid declarations, planning, dispatch and verification."""
 import copy
 import hashlib

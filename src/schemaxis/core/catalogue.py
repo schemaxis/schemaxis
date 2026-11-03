@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Static capability discovery.
 
 Discovery deliberately reads JSON only.  Provider bindings are names recorded

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """A small independent test adaptor; no knowledge of existing applications."""
 import copy
 import json

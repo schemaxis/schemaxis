@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Scene and output validation plus native image publication."""
 import copy
 import hashlib

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only commands avoid POSIX-only imports (no claim of Windows support)."""
 import os
 from pathlib import Path

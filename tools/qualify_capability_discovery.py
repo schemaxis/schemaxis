@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Reproducible M1 host acceptance and optional two-attempt serial FreeCAD proof.
 
 Run from the repository root with PYTHONPATH=src. Bulk responses stay in the

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Window manager: each tab hosts one window instance created from a registered type.
 //
 // A window type is {type, title, icon, roles, singleton, create(ctx, params)}; create

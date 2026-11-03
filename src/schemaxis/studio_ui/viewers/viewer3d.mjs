@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // 3D Viewer: native faces, edges and vertices with orbit / walk navigation,
 // section plane, wireframe overlay, hover highlight and truthful picking.
 //

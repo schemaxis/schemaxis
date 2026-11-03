@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Keyboard and text-input behaviour of the JSON editor.
 
 import {backspaceEdit, indentEdit, newlineEdit, outdentEdit, typeCharEdit} from './editing.mjs';

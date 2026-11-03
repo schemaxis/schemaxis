@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Resolution of a declared linear series into explicit positions.
 
 A slice sweep, a camera sweep and a sample line are all the same declaration:

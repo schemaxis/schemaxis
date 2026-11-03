@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native evaluated-mesh STL export with native import and host-verifiable triangles."""
 import bpy
 from .stl import triangle, digest, file_snapshot, LIMIT

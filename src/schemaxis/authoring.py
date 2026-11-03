@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Shared revision transitions for JSON source, properties and console commands.
 
 Persistence and native ownership belong to the session. Each transition is one

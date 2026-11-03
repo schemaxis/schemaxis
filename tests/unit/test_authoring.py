@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Shared source/property/command semantics, recovery and execution fencing."""
 import copy
 import json

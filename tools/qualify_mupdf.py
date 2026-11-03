@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native MuPDF qualification with an independent literal fixture oracle."""
 import argparse
 import copy

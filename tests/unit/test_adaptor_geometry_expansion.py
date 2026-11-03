@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host and native qualification for list CAD ports, curves and scene transforms."""
 import copy
 import json

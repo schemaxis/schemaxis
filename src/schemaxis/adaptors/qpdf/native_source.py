@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted MuPDF observer script; authored input contributes validated JSON numbers and fixed file names, never code."""
 import json
 

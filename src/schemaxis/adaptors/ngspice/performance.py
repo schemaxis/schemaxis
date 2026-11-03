@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Named finite-sample circuit requirements, separate from solver correctness."""
 import math
 import re

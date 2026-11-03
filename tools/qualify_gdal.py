@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify GDAL with independent pixel/corner oracles and hostile lifecycle probes."""
 import argparse
 import copy

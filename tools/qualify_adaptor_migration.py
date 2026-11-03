@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Run the common kit for selected installed adaptors, retaining all failures.
 
 Host checks are the default. Native qualification is opt-in and must be limited

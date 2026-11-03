@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {formatJson} from '../editor/json-format.mjs';

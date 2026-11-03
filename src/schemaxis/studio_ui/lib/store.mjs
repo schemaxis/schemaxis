@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // A minimal observable store. State is replaced, never mutated in place.
 
 export class Store {

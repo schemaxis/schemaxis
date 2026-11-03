@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Explicit developer intake; separate from static capability discovery."""
 from pathlib import Path
 

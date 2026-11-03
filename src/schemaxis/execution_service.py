@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Durable agent lifecycle over existing registry/workflow execution and receipts.
 
 Captured requests use the existing authored JSON model. This is a service/job

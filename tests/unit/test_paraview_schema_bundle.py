@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Optional grouped export preserves the exact standalone schema contract."""
 import copy
 import hashlib

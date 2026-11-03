@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Run one bounded, filesystem-isolated Claude pair on the RLC benchmark.
 
 Requires Linux bubblewrap, an already authenticated Claude CLI and configured

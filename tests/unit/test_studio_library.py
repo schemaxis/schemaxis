@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """The library contract is strict, confined and backward compatible."""
 import copy
 import json

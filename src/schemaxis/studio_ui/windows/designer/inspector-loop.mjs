@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Loop inspector: members and a simple controller form generated from projection.algorithms.
 
 import {h, icon, mount} from '../../lib/dom.mjs';

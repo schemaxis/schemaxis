@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Malformed saved result envelopes must fail with structured verification faults."""
 import importlib
 import json

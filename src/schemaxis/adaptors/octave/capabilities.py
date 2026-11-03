@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Numerical selection guidance; literal constraints remain in the declarations."""
 
 

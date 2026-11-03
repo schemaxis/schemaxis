@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Render verified saved Schemaxis scenes without reconstructing their geometry."""
 import hashlib
 import json

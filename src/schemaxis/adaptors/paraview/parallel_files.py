@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe streaming hashes and closed parallel VTK XML artifact manifests."""
 import hashlib
 from pathlib import Path

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Snippet field limits must lie inside the limits of the schema option they fill.
 
 The snippet field grammar has inclusive minimum and maximum only, so a field filling a

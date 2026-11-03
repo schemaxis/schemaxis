@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {validBounds, pointOnPlane, observedBounds, geometryBounds} from '../windows/workbench/line-selector.mjs';

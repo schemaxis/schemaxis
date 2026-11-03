@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded technical block diagrams; authored input never contains SVG or commands."""
 import hashlib
 import json

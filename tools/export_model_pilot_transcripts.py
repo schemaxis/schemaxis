@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Export public messages and tool I/O, omitting internal reasoning blocks."""
 import argparse
 import json

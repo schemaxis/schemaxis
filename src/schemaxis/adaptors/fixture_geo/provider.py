@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Deterministic JSON-descriptor provider used to exercise Schemaxis integration.
 
 This provider does not perform geospatial computation and must not be presented

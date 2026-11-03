@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Implementation-adjacent capability declarations and static manifest export."""
 from __future__ import annotations
 

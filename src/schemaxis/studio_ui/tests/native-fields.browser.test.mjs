@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Real Workbench observation wiring with a mocked geometry response; no native process runs.
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """KiCad board contracts, independent reader and falsification tests (host-only)."""
 import copy
 import json

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only Add catalogue projected from adaptor declarations and literal schemas.
 
 Unlike curated recipes these entries promise authoring coverage, not executable

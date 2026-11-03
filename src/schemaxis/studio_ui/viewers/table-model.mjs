@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Table model: CSV/TSV parsing (RFC 4180), delimiter sniffing, header
 // detection, typed tables, column statistics, stable sorting and TSV export.
 // A table is {columns: [{name, type}], rows: [[value, ...], ...]} where values

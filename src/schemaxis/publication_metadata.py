@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Portable output companions, committed independently of native receipts."""
 import copy
 import csv

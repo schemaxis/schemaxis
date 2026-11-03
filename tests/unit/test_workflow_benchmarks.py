@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Benchmark isolation, case reuse and independent artifact falsification."""
 import copy
 import json

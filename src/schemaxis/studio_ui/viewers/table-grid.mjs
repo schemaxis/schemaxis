@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Virtualised table grid: rows and columns are virtualised, the header is
 // sticky, row numbers stick to the left. Handles cell/range selection by mouse
 // and keyboard, sorting clicks, copy and optional in-cell editing.

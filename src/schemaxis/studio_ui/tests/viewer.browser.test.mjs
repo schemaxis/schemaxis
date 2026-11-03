@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Acceptance checks for the four shared viewers under the fixture's strict CSP.
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';

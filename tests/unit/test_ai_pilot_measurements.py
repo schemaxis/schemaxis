@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Keep resumed-conversation cost and per-invocation tokens distinct."""
 import copy
 import json

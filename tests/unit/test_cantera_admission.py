@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host contracts and independent thermodynamic/equilibrium falsification tests."""
 import copy
 import json

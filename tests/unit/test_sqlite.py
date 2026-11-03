@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Exact relational semantics and hostile typed-table inputs."""
 import copy
 import json

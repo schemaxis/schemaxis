@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import assert from 'node:assert/strict';
 import {copyFile, mkdtemp, readFile, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';

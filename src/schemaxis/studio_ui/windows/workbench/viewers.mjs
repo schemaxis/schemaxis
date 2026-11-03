@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Adaptor-declared viewers, local sample loading and reference chips.
 
 import {h, mount} from '../../lib/dom.mjs';

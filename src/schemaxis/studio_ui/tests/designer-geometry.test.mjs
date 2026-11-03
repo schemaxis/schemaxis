@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Pure canvas geometry: Bézier wires, zoom to cursor, port positions, compatibility, layout.
 
 import assert from 'node:assert/strict';

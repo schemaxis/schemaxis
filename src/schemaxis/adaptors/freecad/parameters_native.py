@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native variable-set lifetime and readback for the batch-only driver contract."""
 from . import parameters as policy
 from schemaxis.errors import fail

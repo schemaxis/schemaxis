@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Searchable keyboard-first library popover. The owning library handles preview
 // and insertion; dismissing the popover always clears its temporary preview.
 import {h, mount} from '../../lib/dom.mjs';

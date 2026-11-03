@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Isolated native writer qualification over bounded representative data families."""
 import argparse
 import hashlib

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Designer acceptance: real authoring API, pointer wiring, controller round-trip and template export.
 
 import assert from 'node:assert/strict';

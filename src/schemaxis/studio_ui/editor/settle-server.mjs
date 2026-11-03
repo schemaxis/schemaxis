@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Background validation stays local to the editor: no typing toasts or Problems entries.
 export function backgroundValidation(editor, validate, {delay = 1000} = {}) {
   let timer;

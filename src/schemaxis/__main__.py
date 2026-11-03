@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Shared module and installed-command entry points for Schemaxis."""
 import argparse
 import json

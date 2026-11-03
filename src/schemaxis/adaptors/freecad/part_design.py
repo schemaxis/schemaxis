@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded Body / first Pad / through-all Pocket ownership, host-safe."""
 from schemaxis.errors import fail
 

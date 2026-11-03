@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host contract for routeStations: declarations, strict waypoint CSV, conclusive prechecks and exact rules.
 
 Standard library only (plus the shared declaration grammar and fault envelope). Never imports pyproj.

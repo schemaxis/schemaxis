@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Complete Add coverage and located authoring diagnostics stay host-only."""
 import json
 import unittest

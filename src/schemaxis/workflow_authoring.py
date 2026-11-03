@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host workflow drafts and diagrams derived from the existing workflow planner."""
 import copy
 import json

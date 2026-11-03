@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Schema-driven completion for the JSON editor.
 //
 // Items: {label, insertText, kind: 'property' | 'value' | 'snippet', detail,

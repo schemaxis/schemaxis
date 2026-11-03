@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native CAD topology inspection for explicit edge selection and diagnostics."""
 import copy
 import json

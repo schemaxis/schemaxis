@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Schema evaluation context: memoised $ref resolution (with embedded schema
 // resources), discriminator indexes, marker-branch detection and JSON helpers.
 

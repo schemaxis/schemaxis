@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Classical OLS coefficient inference: closed forms, exact normal equations and evidence attacks."""
 import copy
 from fractions import Fraction

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded, typed references within JSON authoring documents.
 
 Authored composition and arithmetic are closed data operations; no filesystem reads or runtime handles.

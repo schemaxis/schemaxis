@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded existing-video capture contract; no arbitrary native options."""
 import json
 import math

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {parseYaml} from './yaml-parse.mjs';
 // Tolerant JSON parser. It always returns an AST (possibly partial) and a list
 // of diagnostics {from, to, message, severity}. Every value and key carries

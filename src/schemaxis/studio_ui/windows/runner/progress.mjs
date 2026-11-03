@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {h, icon, mount} from '../../lib/dom.mjs';
 
 const LABELS = {pending: 'Pending', running: 'Running', succeeded: 'Verified', failed: 'Failed', blocked: 'Blocked'};

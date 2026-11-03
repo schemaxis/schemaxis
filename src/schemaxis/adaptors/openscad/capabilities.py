@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe dimensional part discovery; no native import."""
 import json
 from importlib.resources import files

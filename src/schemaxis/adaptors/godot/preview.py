@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Dependency-free bounded validation of native-generated PNG previews."""
 import struct
 import zlib

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Port editing: add or edit an input/output port from suggest_ports, and expose inputs as parameters.
 
 import {h, mount} from '../../lib/dom.mjs';

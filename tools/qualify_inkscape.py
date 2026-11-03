@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Fresh bounded diagram qualification plus flow intent, native recovery, analytics and concurrency."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor

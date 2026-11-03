@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native Blender binding. Imported only inside the selected Blender process."""
 import hashlib
 import json

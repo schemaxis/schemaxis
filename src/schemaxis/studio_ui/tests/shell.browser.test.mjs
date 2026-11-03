@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Studio shell smoke test against a real server and headless Chromium.
 // Set STUDIO_SCREENSHOTS=/some/dir to keep screenshots.
 

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Curated mesh operations; public descriptions never import Blender."""
 import copy
 

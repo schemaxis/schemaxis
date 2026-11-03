@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Distributed execution policy and complete, streaming artifact verification."""
 import copy
 import json

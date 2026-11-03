@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Actual FreeCAD GUI qualification of a verified sourced assembly, on copies only.
 
 PYTHONPATH=src python3 tools/qualify_freecad_assembly_sources_gui.py --assembly RUN --directory OUT \\

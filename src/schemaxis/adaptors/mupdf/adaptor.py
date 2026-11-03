@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Captured passive PDF review with retained, source-bound native readback."""
 import hashlib
 import json

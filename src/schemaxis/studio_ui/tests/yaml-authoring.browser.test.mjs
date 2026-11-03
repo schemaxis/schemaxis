@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // YAML authoring acceptance uses the optional host extra, without native execution.
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';

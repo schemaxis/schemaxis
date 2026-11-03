@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Repeatable schemaxis acceptance. Run with PYTHONPATH=src; outputs must be new.
 
 Each native run retains source, input, receipts, exact runtime and artifacts.

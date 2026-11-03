@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """One generated contract test covers every packaged Studio library entry."""
 from pathlib import Path
 import unittest

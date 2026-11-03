@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Seed, audit or export conceptual-help review work for every installed adaptor."""
 import argparse
 import json

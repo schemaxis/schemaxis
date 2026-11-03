@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Render declared FFF intent into one complete, fixed-policy PrusaSlicer config.
 
 Only the documented keys below reach the native process. Authored text never

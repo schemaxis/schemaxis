@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Named geometric measurements as verified cross-adaptor value publications."""
 import math
 from schemaxis.core.declarations import validate_arguments

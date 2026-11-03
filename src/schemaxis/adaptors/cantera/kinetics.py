@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent h2o2 mass-action kinetics and adiabatic closed-reactor histories.
 
 Rate parameters are the public upstream mechanism data retained unchanged in

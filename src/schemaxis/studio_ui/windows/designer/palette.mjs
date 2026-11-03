@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Adaptor palette: search adaptors and their operations; drag onto the canvas or press Enter to add.
 
 import {debounce, h, icon, mount} from '../../lib/dom.mjs';

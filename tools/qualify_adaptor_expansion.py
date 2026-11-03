@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Reproduce CAD, mesh processing and two-way application bridge qualification."""
 import argparse
 import json

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Application-independent data traits and evidence-qualified cost assessment.
 
 Compatibility and cost are separate. Missing traits never count as support, and

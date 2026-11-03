@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 "use strict";
 // SHA-256 of ASCII-only trusted request bytes. Host JSON escapes non-ASCII.
 // This avoids assuming WebCrypto, BigInt or a Node crypto module exists in UXP.

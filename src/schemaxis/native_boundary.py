@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Preserve structured native faults across an application subprocess boundary."""
 from pathlib import Path
 from schemaxis.core.faults import SchemaxisError, Fault

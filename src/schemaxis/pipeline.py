@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Complete graph, dependency-pruned active graph and reusable execution state.
 
 The master owns descriptions only. An active pipeline owns backend objects.

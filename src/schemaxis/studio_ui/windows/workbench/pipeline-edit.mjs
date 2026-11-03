@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {atPointer} from '../../editor/fill-data.mjs';
 import {identityPool, nextIdentity} from './authoring-defaults.mjs';
 

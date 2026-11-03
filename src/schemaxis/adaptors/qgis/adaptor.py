@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe vector GIS contracts; QGIS imports live only in native_worker.py."""
 import hashlib
 import json

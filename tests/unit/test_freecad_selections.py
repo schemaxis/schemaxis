@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Geometric selection meaning and ambiguity, independent of native edge order."""
 import copy
 import math

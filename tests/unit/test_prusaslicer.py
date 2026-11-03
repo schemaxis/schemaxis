@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host checks for bounded PrusaSlicer slicing; native acceptance is separate."""
 import copy
 import hashlib

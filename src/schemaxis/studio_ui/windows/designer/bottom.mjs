@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Collapsible bottom strip under the canvas: Parameters, Outputs, Naming and Source tabs.
 
 import {h, icon, mount} from '../../lib/dom.mjs';

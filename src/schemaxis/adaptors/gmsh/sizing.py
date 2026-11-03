@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host checks for app-owned named-boundary sizing readback."""
 from .mesh import check
 

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Strict parsing for Schemaxis MVP symbolic output references."""
 
 from __future__ import annotations

@@ -1,3 +1,4 @@
+-- Copyright (C) 2026 David L F Gaden
 
 -- Trusted worker. Authored JSON is data, never Lua source or reflected API names.
 local function read(path)

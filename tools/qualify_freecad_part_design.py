@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify inspectable mechanical-part history, native edits and semantic negatives."""
 import argparse
 import copy

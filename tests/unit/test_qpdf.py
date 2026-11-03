@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only QPDF contract, admission, geometry and verifier-mechanics checks; native acceptance is a separate tool."""
 import copy
 import hashlib

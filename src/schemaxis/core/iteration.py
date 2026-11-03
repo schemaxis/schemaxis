@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Deterministic expansion of nested iteration into an ordered visit list.
 
 Producing a set of images from a case is a nest of loops: times, then views,

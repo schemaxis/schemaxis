@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify assemblies of verified phase-one parts at named mounts on native FreeCAD 1.1.x.
 
 PYTHONPATH=src python3 tools/qualify_freecad_assembly_sources.py --directory DIR --executable FREECADCMD

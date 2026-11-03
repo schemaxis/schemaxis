@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Editor DOM: a transparent textarea layered exactly over a highlighted layer,
 // with a line-number gutter. Only the visible lines (plus a margin) are rendered.
 

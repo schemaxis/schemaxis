@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 "use strict";
 const { observeFolder } = require("./observer.js");
 document.getElementById("observe").addEventListener("click", async () => {

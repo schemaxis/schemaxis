@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Light, conservative schema validation for editor squiggles. The server is
 // authoritative; this only reports problems it can attribute unambiguously:
 // type, const/enum, required, additionalProperties and numeric/array/string bounds.

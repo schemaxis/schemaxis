@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded independent classic GeoTIFF reader and nearest-window oracle (stdlib)."""
 import math
 import struct

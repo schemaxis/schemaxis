@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {yamlRender} from './yaml-parse.mjs';
 // Fill mode is a small editor controller. Markers stay ordinary, durable JSON.
 import {h} from '../lib/dom.mjs';

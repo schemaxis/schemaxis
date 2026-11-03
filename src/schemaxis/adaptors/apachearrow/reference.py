@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Standard-library CSV semantics and row oracle, independent of Arrow compute."""
 import csv
 from datetime import datetime, timedelta, timezone

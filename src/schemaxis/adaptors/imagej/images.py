@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent bounded grayscale image decoding and particle reference model.
 
 Nothing here imports or calls ImageJ. The model restates the documented ImageJ

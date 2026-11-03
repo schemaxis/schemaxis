@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify meshio with a literal oracle, hostile artifacts and workflow lifecycle."""
 import argparse
 import copy

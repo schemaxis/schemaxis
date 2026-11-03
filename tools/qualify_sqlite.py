@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify exact native SQLite tables, relational semantics and workflow reuse."""
 import argparse
 import copy

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Package repository help as searchable, lazy-loaded Studio topics.
 
 No native applications, Markdown libraries or network resources are required.

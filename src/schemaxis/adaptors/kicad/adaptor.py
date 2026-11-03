@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded KiCad board inspection, DRC and drill export through isolated kicad-cli."""
 import hashlib
 import json

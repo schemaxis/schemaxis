@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted fixed ImageJ 1.x program; authored values arrive only as checked arguments.
 
 The JDK source-file launcher compiles this text in memory against ij.jar. It uses

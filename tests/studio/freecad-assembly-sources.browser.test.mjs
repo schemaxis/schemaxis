@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {test} from 'node:test';

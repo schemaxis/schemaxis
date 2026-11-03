@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Pure document, schema and snippet helpers shared by the Workbench panels.
 
 import {schemasAt} from '../../editor/schema.mjs';

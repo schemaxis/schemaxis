@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Shared viewer scaffolding: events, the frame (toolbar, body, status bar,
 // state overlay), small toolbar controls and theme colour reading.
 

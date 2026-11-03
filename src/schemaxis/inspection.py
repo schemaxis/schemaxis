@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Provider-aware native observations without geometry publication or rendering."""
 import json
 import os

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Reusable developer conformance and bounded native acceptance.
 
 Native execution is opt-in and only uses installed route entry points. Expected

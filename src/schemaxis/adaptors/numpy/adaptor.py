@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Unit-aware principal component analysis with isolated NumPy and an independent verifier."""
 import hashlib
 import json

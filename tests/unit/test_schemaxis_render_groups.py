@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-side contracts for reusable Blender scene preparation and rendering."""
 import copy
 import json

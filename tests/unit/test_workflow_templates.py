@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Template binding uses captured, validated JSON and preserves failure atomicity."""
 import copy
 from pathlib import Path

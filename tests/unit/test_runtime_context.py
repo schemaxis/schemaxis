@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted native locations and budgets survive real shared execution boundaries."""
 from concurrent.futures import ThreadPoolExecutor
 import copy

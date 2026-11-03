@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Revision-bound native selections and mixed prose/reference messages."""
 import copy
 import math

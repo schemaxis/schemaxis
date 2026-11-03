@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Bounded CAD target search with scientific oracles and cross-adaptor use."""
 import argparse
 import copy

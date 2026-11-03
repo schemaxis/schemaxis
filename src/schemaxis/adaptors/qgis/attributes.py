@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Closed attribute intentions shared with the isolated QGIS worker (stdlib only)."""
 import csv
 import io

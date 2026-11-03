@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Portable benchmark plans, task isolation and recoverable fault injection."""
 import copy
 import importlib.util

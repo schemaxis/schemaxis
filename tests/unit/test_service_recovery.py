@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Persisted relationships must be checked even when Python removes assertions."""
 import json
 import os

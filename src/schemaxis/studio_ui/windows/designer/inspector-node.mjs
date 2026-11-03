@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Node inspector: identity, actions, port editor and "Expose as parameter".
 
 import {h, icon, mount} from '../../lib/dom.mjs';

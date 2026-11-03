@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Deterministic bounded dependency-to-layout policy; no native imports."""
 import re
 from schemaxis.core.faults import SchemaxisError

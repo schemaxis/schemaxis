@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Tiny PNG decoder (8-bit RGB/RGBA, non-interlaced) for screenshot comparisons in tests.
 
 import {inflateSync} from 'node:zlib';

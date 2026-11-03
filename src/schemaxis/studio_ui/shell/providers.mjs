@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Display identity for adaptors: name, short mark and colour.
 
 import {h} from '../lib/dom.mjs';

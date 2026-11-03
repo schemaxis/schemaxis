@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """ParaView backend. Imported only inside the selected native interpreter."""
 import hashlib
 import math

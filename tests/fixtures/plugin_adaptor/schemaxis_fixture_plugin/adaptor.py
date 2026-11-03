@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """A small external test adaptor; it uses only the public framework API."""
 import copy
 import json

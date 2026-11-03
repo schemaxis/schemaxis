@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Opt-in installed Premiere layout acceptance; never runs DOM doubles."""
 import argparse
 import copy

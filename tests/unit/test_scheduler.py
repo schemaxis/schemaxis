@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Durable schedule policy, host-only execution and civil-time qualification."""
 from datetime import datetime, timezone
 import json

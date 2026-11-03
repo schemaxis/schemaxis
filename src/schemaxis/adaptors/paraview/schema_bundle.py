@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Optional portable ParaView schemas grouped by native structural role.
 
 Existing standalone exports remain unchanged. This explicit bundle uses relative

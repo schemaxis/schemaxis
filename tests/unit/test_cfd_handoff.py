@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Portable demo and authored-input regressions; no native application launch."""
 import copy
 import importlib.util

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Table Viewer: virtualised read-only table (optional editing), CSV/TSV or
 // {columns, rows} input, type detection, sorting, column statistics, cell and
 // range selection, TSV copy and a small line plot.

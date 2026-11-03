@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent static assembly contract and hostile hierarchy cases."""
 import copy
 import json

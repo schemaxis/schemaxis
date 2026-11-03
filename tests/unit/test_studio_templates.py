@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Packaged Studio starter documents and filled snippets remain plannable offline."""
 import copy
 import json

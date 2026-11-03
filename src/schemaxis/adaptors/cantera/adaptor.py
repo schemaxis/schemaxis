@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded ideal-gas thermodynamics, equilibrium and reactor histories in isolated Cantera."""
 import csv
 import json

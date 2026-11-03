@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Experimental plan presentation; production CLI and canonical plans are unchanged.
 
 SCHEMAXIS_PLAN_PRESENTATION selects full (control) or compact. Both use the

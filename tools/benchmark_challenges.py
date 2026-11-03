@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Falsify copies of passing reference outputs and require common-grader rejection."""
 import argparse
 import json

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Scan tracked files, directories and packages for material that must not be released.
 
 Usage:

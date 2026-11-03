@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Common options come from the packaged recipes for the chosen operation.
 import {parsePointer} from '../../editor/json-pointer.mjs';
 

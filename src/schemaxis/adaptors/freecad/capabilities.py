@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Curated navigation and authored examples; executable contracts stay in adaptor.py."""
 import json
 from importlib.resources import files

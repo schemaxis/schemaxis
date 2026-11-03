@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Image Viewer: PNG/JPEG with zoom to cursor, pan, fit, 100 %, crisp pixels,
 // pixel grid, cursor pixel + RGBA read-out, pixel picks and frame stepping.
 //

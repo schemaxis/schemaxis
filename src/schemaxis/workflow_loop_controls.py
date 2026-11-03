@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Saved feedback-loop settings, without claiming native coupling execution.
 
 These settings describe point-coupling convergence, not an adaptor's internal

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Host-only contract double. Executes the actual companion, never Premiere.
 "use strict";
 const fs=require("fs"),path=require("path");

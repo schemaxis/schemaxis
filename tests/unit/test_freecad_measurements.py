@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Named quantity validation, independent dimensions and publication integrity."""
 import copy
 import json

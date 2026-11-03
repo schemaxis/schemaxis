@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Packaged help browser. Large references load one operation/topic at a time.
 import {h, icon} from '../../lib/dom.mjs';
 import {searchTopics, contextTopic, decodePage} from './model.mjs';

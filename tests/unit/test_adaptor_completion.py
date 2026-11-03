@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Completion obligations are objective, offline and independent of runtime support."""
 import copy
 import json

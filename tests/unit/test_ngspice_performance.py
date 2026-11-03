@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Sampled performance intent, signed margins and independent replay failures."""
 import copy
 import json

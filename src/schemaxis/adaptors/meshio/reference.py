@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent standard-library readers for a deliberately closed ASCII subset.
 
 These readers do not use meshio, its cell maps or its serialization code.

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded host inspection of immutable text/CSV snapshots and typed selections.
 
 Workspace owners serialise calls. No native imports, extraction engine, authored

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Run trusted argument arrays with shared cancellation, resource and log ownership."""
 import hashlib
 from pathlib import Path

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Command palette (Ctrl+K): fuzzy search over registered commands and documents.
 
 import {h, icon, mount} from '../lib/dom.mjs';

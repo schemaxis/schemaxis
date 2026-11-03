@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Plan text edits that insert JSON values at RFC 6901 pointers while keeping
 // the surrounding indentation. Pure functions: the editor applies the edits.
 //

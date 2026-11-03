@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Closed, bounded host inspection of one phase-one Body source before any native open.
 
 Only the saved form that the qualified schemaxis.freecad/1 PartDesign route writes is

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only, CAD-kernel-independent checks of the published STL against native B-rep facts.
 
 Native Mesh.Volume is not used: it accumulates float32 products about the world

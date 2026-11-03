@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Standalone authored/umbrella schemas, derived from literal declarations.
 
 Schema checks structure; reference resolution and graph/native semantics remain

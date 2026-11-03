@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host contract tests; optional native coverage uses GODOT_EXECUTABLE."""
 import base64
 import copy

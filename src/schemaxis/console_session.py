@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Durable host-only multi-document sessions. Callers serialise session access."""
 import copy
 from collections import ChainMap

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Studio bootstrap: context, layout, polling and global shortcuts.
 
 import {api} from '../lib/api.mjs';

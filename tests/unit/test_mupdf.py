@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only MuPDF contract/oracle checks; native acceptance is a separate tool."""
 import copy
 import importlib.util

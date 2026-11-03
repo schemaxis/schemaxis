@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only conformance of registered adaptors to progressive discovery."""
 import unittest
 

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Release monitoring must distinguish unknown state from successful absorption."""
 import json
 from pathlib import Path

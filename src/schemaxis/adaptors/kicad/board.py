@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Dependency-free bounded KiCad board reader and independent geometric checks.
 
 The reader covers the s-expression subset needed to count and locate copper,

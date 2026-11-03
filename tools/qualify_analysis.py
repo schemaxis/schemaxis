@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Reproducible native numeric, spreadsheet and optional Blender CSV qualification."""
 import argparse
 import json

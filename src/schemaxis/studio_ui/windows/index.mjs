@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Registry of Studio window types.
 
 import {startWindow} from './start.mjs';

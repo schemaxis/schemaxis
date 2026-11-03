@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Ghost previews: render would-be inserted text inline without changing the
 // textarea value, then commit it as one normal (undoable) edit.
 

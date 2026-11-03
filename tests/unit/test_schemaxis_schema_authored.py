@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Standalone authored contracts: real inputs, recursive grammar and rejection."""
 import copy
 import json

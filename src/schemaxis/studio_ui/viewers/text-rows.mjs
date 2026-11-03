@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Virtualised line rendering for the text viewer: a recycled pool of row
 // elements, line numbers, match highlights, line selection and mapping of
 // DOM selections back to document offsets.

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only architecture probes, not a production template loader or native test."""
 import copy
 import datetime

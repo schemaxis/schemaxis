@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Workflow input fingerprints include the actual bounded PNG source bytes."""
 
 def reusableInputs(document):

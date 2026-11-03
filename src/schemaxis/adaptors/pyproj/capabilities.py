@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Curated discovery for verified geodesic route chainage."""
 import json
 from importlib.resources import files

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Design fixture generated from the registered adaptors and the pipe example.
 window.SCHEMAXIS_DESIGN = {
   "adaptors": [

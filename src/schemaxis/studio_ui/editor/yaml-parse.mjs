@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // YAML 1.2 source adapter. The shared schema/pointer services consume this AST.
 import {parseAllDocuments, isMap, isSeq, isAlias, stringify} from './vendor/yaml.mjs';
 

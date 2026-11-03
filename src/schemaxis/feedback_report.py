@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Small, portable human-readable feedback history; no scripts or dependencies."""
 import html
 import json

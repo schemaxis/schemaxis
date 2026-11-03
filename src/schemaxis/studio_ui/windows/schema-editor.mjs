@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Multi-schema JSON authoring using the shared Studio editor and panel language.
 import {createComprehension, formattingControls} from './workbench/comprehension.mjs';
 import {h, icon, mount} from '../lib/dom.mjs';

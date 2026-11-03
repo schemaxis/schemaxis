@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify local native ParaView MPI on a user-supplied decomposed OpenFOAM case.
 
 The case is read-only. All writes go under a fresh evidence directory. No cluster access.

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Generate a reviewable source overlay; never install or qualify an adaptor."""
 import copy
 import json

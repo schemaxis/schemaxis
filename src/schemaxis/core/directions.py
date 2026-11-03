@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Resolution of a declared direction into a canonical frame.
 
 A direction can be spelled as an axis token (``x+``), as a vector, or as an

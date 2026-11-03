@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-side retained attribute verification, using captured files and stdlib SQLite."""
 import json
 import sqlite3

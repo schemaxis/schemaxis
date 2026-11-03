@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native elastic-beam kit, serviceability recovery and semantic tamper rejection."""
 import argparse
 import copy

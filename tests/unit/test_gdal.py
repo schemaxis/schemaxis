@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent GeoTIFF reader, pixel oracle and declarative host contract."""
 import copy
 import importlib.util

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Workflow Designer window: adaptor palette, canvas, inspector and design tables.
 //
 // Bus events: emits 'open-operation' {document, operation}; consumes 'document-changed'.

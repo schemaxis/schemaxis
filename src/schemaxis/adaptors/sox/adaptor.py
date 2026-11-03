@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded sample-frame edit decisions; SoX runs in isolated native processes."""
 import hashlib
 import io

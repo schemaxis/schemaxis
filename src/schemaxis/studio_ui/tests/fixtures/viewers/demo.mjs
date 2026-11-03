@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Mounts all four viewers with fixture data. Query: ?only=3d|image|text|table&theme=dark&lines=200000
 import {createChip} from '../../../viewers/chip.mjs';
 

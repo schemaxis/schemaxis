@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """The hand-written FreeCAD family table must list every declared operation."""
 from pathlib import Path
 import unittest

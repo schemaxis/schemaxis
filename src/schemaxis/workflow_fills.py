@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Expose unfinished runtime inputs through the existing template parameter contract."""
 import copy
 import re

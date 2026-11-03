@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Schema expansion must not invent native input paths for pending artifacts."""
 import copy
 import json

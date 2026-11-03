@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """No-inference integration checks for compact-pilot metering and durability."""
 import contextlib
 import io

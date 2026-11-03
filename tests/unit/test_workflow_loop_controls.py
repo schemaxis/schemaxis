@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Loop settings remain strict and cannot claim unqualified native execution."""
 
 import copy

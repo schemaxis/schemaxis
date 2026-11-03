@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host reactor-history contracts and independent kinetics falsification tests."""
 import copy
 import csv

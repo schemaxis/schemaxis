@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Godot faults use the shared transport envelope."""
 from schemaxis.core.faults import SchemaxisError, Fault
 

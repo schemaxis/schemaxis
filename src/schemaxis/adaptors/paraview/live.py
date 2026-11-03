@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Persistent serial builtin ParaView worker; no GUI or remote server required.
 
 The API matches blender.live.LiveSession. executable accepts pvpython, pvbatch,

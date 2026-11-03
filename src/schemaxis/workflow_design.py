@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Persisted workflow wiring and feedback configuration, without native execution.
 
 The ordinary workflow remains the input baseline. Connections override existing

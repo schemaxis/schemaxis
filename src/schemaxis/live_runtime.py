@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native-neutral persistent graph lifecycle, shared by the live workers."""
 import copy
 import hashlib

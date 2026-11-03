@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Browser-local file selection and export shared by source windows.
 import {h} from '../lib/dom.mjs';
 import {openDialog} from '../shell/dialog.mjs';

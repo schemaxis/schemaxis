@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Local sample attachments let authors inspect output data before native applications run.
 
 import {h, icon, mount} from '../../lib/dom.mjs';

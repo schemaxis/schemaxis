@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent binary STL geometry checks for a bounded polygon extrusion."""
 import math
 import struct

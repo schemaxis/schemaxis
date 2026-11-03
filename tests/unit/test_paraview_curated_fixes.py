@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Pins for curated ParaView operations that must follow the bundled native contract."""
 import json
 from pathlib import Path

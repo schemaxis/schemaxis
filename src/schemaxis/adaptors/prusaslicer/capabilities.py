@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Operation selection guidance for bounded FFF slicing."""
 import json
 from importlib.resources import files

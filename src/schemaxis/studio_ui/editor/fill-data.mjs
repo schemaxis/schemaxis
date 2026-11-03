@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Durable field markers, choices and literal validation shared by the fill UI.
 import {escapeSegment, parsePointer, rangeOfPointer} from './json-pointer.mjs';
 import {documentValue} from './json-parse.mjs';

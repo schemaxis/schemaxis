@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Named video assets and frame-exact cuts published through Shotcut's MLT engine."""
 import hashlib
 import json

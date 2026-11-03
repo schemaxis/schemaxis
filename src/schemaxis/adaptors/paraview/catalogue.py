@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Static native catalogue; no ParaView imports during discovery or planning."""
 import copy
 from functools import lru_cache

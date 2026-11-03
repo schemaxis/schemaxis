@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded assembly graph contracts and independent analytic receipt checks."""
 import copy
 import hashlib

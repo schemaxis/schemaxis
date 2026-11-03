@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Shipped starter through Designer → nested Workbench → export → Case Runner.
 // STUDIO_RUN_NATIVE=1 additionally executes the resulting case in configured GNU Octave.
 import assert from 'node:assert/strict';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Static extension indexing with lazy, scoped configuration.
 
 An index is intentionally small: it maps a public extension identifier to a

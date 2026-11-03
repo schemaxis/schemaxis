@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Compile a native capture; execution qualification is separate from generation."""
 import argparse
 import json

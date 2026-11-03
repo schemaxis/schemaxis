@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 from __future__ import annotations
 
 from pathlib import Path

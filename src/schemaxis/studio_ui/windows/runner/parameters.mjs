@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Parameter values preserve JSON types; constraints remain authoritative on the server.
 import {h} from '../../lib/dom.mjs';
 import {ApiError} from '../../lib/api.mjs';

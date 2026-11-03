@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native ImageJ particle kit, tamper probes, Calc handoff/reuse and public agent reuse.
 
 Requires a Java 11+ runtime with jdk.compiler and ImageJ 1.54 ij.jar. The Calc

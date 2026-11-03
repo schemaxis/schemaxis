@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Studio settings with role-scoped ownership, stored beside the console session.
 
 Roles are local interface modes, not a security boundary: the loopback server has

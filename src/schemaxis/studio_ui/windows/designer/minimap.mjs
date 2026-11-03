@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Minimap: shown bottom-right when the design exceeds the view; click or drag to move the view.
 
 import {h, s} from '../../lib/dom.mjs';

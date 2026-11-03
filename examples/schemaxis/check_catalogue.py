@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent analytic checks for the catalogue's bounded acceptance examples."""
 import argparse
 import csv

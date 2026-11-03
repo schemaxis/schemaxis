@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """The existing Schemaxis fault envelope at schemaxis boundaries."""
 from schemaxis.core.faults import SchemaxisError, Fault
 

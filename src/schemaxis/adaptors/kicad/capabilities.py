@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Operation selection guidance for saved KiCad boards checked by kicad-cli."""
 import json
 from importlib.resources import files

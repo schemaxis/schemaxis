@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded, dependency-free decoding of non-interlaced 8-bit RGB/RGBA PNGs."""
 import struct
 import zlib

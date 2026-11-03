@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Named checks over fixed verified Calc cells, never authored native formulas."""
 import math
 import re

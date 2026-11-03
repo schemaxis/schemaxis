@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Run output convenience must preserve evidence and exclusive ownership."""
 from concurrent.futures import ThreadPoolExecutor
 import json

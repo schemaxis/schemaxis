@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Workspace document actions shared by tabs and recent-document lists.
 import {h} from '../lib/dom.mjs';
 import {openDialog, openMenu, confirmDialog} from '../shell/dialog.mjs';

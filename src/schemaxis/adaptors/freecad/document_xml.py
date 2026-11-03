@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Strict, bounded readers for the new native design-intent metadata only."""
 import struct
 import zlib

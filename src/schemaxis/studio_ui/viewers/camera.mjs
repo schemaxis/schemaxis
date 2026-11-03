@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Camera state and navigation for the 3D viewer, in normalised model space
 // (the model fits the unit sphere). Pure functions: each returns a new camera.
 //

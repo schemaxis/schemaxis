@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Exercise the shared console against five actual installed native adaptors."""
 import argparse
 import json

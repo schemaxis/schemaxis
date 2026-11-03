@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native resources have typed graph dependencies and explicit publication limits."""
 import copy
 from pathlib import Path

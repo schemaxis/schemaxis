@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native geometry construction for the curated Blender declarations."""
 import math
 import bmesh

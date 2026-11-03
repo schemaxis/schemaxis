@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Read upstream releases and prepare bounded, reviewable adaptor repair tasks."""
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone

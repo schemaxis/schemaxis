@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Multi-schema support. A document may embed other documents (workflow
 // operations carry adaptor documents); each object with a string `version`
 // known to the registry is validated and completed against its own schema.

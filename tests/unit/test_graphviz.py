@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Declared topology, closed geometry inspection and host authoring contracts."""
 import copy
 import json

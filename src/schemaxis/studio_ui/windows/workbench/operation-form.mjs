@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Recursive literal schema forms. Unknown/free JSON remains editable; required
 // blanks become durable fill markers rather than plausible invented values.
 import {conceptHelp, nativeBinding} from './concept-help.mjs';

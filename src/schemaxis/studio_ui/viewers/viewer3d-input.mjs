@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Pointer, wheel and keyboard navigation for the 3D viewer canvas.
 //
 // host: {getCamera(), setCamera(camera), invalidate(), render(), aspect(), ndcAt(x, y) → {nx, ny},

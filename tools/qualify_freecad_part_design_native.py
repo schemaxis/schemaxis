@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent geometric/edit oracle for the bounded mechanical-part workflow."""
 import json
 import math

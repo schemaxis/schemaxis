@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Check the Studio starter's design, exact case identity and live parameter bindings.
 
 Run from the repository root with PYTHONPATH=src. No native application starts.

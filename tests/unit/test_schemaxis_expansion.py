@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounds and verification regressions for the expanded native adaptors."""
 import copy
 import json

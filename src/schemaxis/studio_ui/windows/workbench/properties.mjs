@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Forms and browsable schema built from the selected node's actual authored schema.
 
 import {conceptHelp, nativeBinding} from './concept-help.mjs';

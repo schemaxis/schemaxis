@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Line highlighting: JSON tokens plus decoration ranges (diagnostics, bracket
 // matches, ghost text) rendered as spans. Only visible lines are rendered.
 

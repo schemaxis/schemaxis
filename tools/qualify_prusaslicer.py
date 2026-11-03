@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded PrusaSlicer acceptance: shared conformance plus native negative probes.
 
 Host mode runs schema/planner conformance only. ``--native`` additionally runs

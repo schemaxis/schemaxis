@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native filter descriptions. No ParaView imports, reflection or code strings.
 
 Each dictionary above its class is the authoritative option and binding contract.

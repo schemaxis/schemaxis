@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Regenerate documentation/schema artifacts; --check detects declaration drift."""
 import argparse
 import json

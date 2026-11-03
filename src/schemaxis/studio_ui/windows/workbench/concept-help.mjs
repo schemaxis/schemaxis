@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Shared conceptual-help rendering. Pending entries stay explicit and exportable.
 import {h} from '../../lib/dom.mjs';
 export function nativeBinding(guide) {

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Selection guidance for bounded native timeline editing."""
 def catalogue():
     return {'groups': {'editing': {'label': 'Timeline editing', 'purpose': 'Trim and arrange named video source ranges.', 'domain': 'media'}},

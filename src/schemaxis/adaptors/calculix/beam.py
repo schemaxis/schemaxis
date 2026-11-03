@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Deterministic quadratic solids and independent finite-element readback checks."""
 import math
 import re

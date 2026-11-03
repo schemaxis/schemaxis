@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify checked STEP import, parametric refine and hardened exports on native FreeCAD 1.1.x.
 
 PYTHONPATH=src python3 tools/qualify_freecad_step_import.py --directory DIR --executable FREECADCMD

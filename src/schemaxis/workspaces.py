@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted built-in view contracts; authored files cannot provide UI code."""
 import copy
 from .errors import fail

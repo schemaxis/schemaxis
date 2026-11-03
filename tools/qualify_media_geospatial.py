@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Bounded cross-app acceptance with independent pixels, timing and GIS measures."""
 import argparse
 import copy

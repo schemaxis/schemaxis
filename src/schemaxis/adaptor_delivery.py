@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Discoverable development materials over the existing route registry.
 
 Facts remain in declarations and route bindings. Curated development materials

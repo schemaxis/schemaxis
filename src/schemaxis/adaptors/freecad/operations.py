@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Additional literal CAD contracts and topology-independent input checks."""
 import math
 from schemaxis.errors import fail

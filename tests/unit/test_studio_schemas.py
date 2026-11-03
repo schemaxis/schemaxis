@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Design authoring schemas cover blank canvases and the exported starter."""
 import copy
 import json

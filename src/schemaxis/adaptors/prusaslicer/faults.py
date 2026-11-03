@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Slicing scope and recovery stay local to the PrusaSlicer adaptor."""
 from schemaxis.core.faults import Fault, SchemaxisError
 

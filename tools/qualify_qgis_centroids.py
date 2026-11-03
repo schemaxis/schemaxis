@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify projected polygon centroids and reject unsupported native inputs."""
 import argparse
 import copy

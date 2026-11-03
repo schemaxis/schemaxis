@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Readable, navigable reference to the current draft, shared by both editors.
 import {h, mount} from '../../lib/dom.mjs';
 import {escapePointer} from './model.mjs';

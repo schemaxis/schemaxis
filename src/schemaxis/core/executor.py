@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Execution-scoped handle resolution and lazy provider invocation."""
 
 from __future__ import annotations

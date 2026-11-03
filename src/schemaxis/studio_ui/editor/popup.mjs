@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Completion popup and hover tooltip for the JSON editor.
 
 import {h, mount} from '../lib/dom.mjs';

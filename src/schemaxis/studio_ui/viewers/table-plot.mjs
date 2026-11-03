@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Small SVG line plot for the table viewer: one numeric Y against X, axes with
 // nice ticks, optional log Y, per-pixel min/max decimation and a hover read-out.
 

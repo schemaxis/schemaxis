@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Typed sprite operations and independent native readback verification."""
 import hashlib
 import json

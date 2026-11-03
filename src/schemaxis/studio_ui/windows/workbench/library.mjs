@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // V2 snippet library, shared by Workbench and Schema Editor. All insertions use
 // one preview transaction and durable fill markers, including migrated v1 items.
 import {h, icon, mount} from '../../lib/dom.mjs';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Reader setup in an isolated native worker; never imported by discovery."""
 import copy
 import re

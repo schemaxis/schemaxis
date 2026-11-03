@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """YAML profile parity and durable authoring; optional-extra checks skip without it."""
 import importlib.util
 import json

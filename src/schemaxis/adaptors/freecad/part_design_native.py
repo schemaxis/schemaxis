@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native Body ownership and a bounded sketch/Pad/through-Pocket history."""
 import FreeCAD as App
 from schemaxis.errors import fail

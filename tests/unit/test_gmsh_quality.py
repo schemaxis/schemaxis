@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Analytic geometry oracles and declared mesh acceptance contracts."""
 import copy
 import json

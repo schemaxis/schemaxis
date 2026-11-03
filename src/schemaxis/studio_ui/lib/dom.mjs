@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Small DOM helpers. Data is always inserted as text or attributes, never HTML.
 
 const SVG_NS = 'http://www.w3.org/2000/svg';

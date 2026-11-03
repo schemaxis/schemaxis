@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Explicit native mesh import and assembly, without authored Python callbacks."""
 import math
 from pathlib import Path

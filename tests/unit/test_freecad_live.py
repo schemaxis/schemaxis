@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host contract/transport checks; native acceptance is tools/qualify_freecad_live.py."""
 import copy
 import os

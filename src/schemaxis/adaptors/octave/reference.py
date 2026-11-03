@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent host arithmetic used to verify native Octave publications."""
 import cmath
 import bisect

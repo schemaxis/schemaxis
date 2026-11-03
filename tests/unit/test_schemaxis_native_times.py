@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native time discovery is metadata-driven, with explicit unavailable states."""
 import json
 from pathlib import Path

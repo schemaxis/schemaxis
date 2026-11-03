@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent standard-library checks for benchmark MSH publications."""
 import math
 from pathlib import Path

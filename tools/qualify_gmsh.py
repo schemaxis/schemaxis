@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Gmsh native kit, FreeCAD/ParaView handoffs and public-context authoring proof.
 
 Uses ordinary configured runtimes. No missing-runtime skip is a successful result.

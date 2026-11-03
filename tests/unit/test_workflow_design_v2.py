@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Workflow design version 2: ports compile to the shared version 1 machinery."""
 import copy
 import json

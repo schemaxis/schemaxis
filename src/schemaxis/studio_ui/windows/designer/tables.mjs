@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Bottom tabs: template Parameters and named Outputs, edited as tables and saved as a whole.
 
 import {h, icon, mount} from '../../lib/dom.mjs';

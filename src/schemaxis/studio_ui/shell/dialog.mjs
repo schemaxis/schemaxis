@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Modal dialogs and context menus.
 
 import {h, icon} from '../lib/dom.mjs';

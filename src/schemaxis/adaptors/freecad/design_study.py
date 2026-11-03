@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bracketed search for one CAD length controlling one named scalar quantity."""
 import copy
 import json

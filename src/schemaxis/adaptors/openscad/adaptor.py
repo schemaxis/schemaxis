@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Declarative dimensioned plates/spacers with independently checked solids."""
 import hashlib
 import json

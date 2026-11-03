@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Blender policies exposed through the shared adaptor contract."""
 import copy
 import os

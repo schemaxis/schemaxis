@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Curated nullable-table and Parquet interchange discovery."""
 import json
 from importlib.resources import files

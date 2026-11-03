@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native QPDF qualification: literal oracle, replaced-publication tamper matrix, negatives, runtimes, lifecycle and shared boundaries.
 
 Every verification here goes through the public standalone route (registry.verify with stored configuration) unless a

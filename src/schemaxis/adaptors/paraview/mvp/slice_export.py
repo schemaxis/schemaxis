@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """A bounded, real ParaView operation authored through an in-source dictionary."""
 from __future__ import annotations
 

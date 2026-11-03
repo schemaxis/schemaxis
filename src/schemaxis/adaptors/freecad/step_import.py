@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Checked import of one external STEP solid (host policy for the `importSTEP` node).
 
 The authored units assert what the file itself assigns; OCCT converts that unit to

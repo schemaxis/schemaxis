@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify persistent affine length drivers with native edits and independent oracles."""
 import argparse
 import copy

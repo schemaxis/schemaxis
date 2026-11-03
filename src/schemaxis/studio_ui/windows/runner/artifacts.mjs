@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Adapt verified publications to existing viewers. Native file formats remain unmodified.
 import {h, mount} from '../../lib/dom.mjs';
 import {ApiError} from '../../lib/api.mjs';

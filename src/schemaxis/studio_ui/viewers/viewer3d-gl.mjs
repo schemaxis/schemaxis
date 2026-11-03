@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // WebGL 1 renderer for prepared geometry (see geometry-prepare.mjs for the
 // 10-float vertex layout). Faces, native edges and native vertices share one
 // program; barycentric (1,1,1) marks lines and points.

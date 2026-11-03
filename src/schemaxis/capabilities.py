@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Progressive, host-only views of the installed adaptor registry.
 
 A catalogue is an immutable-by-interface snapshot. Navigation metadata belongs to

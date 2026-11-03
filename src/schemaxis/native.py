@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Compatibility import; implementation lives in adaptors.paraview.native."""
 import importlib as _importlib
 import sys as _sys

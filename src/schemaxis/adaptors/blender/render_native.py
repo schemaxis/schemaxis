@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native saved-scene rendering, imported only inside Blender."""
 import hashlib
 import json

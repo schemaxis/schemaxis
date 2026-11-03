@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Textareas normalise CRLF/CR to LF and expose UTF-16 offsets. Immutable
 // inspection snapshots count Unicode code points in the original source.
 

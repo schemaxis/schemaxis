@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent literal layout fixtures; Node doubles do not qualify Premiere."""
 import copy
 import json

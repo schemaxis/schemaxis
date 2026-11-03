@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Verify native numerical publications through typed snapshot/reference tools."""
 import argparse
 import json

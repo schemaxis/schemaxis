@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Explicit, non-destructive storage inventory and portable case preservation.
 
 No application ownership or cross-process run lifecycle is inferred. Source

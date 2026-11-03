@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Additional ParaView 5.13.3 operations using the same dictionary contract."""
 from schemaxis.adaptors.paraview.filters import NativeFilter, ONE, MANY, option, vector, field, direction, choice
 

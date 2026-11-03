@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Unsupported standalone providers must never fall through to ParaView."""
 import copy
 from pathlib import Path

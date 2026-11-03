@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent standard-library geodesic oracle for WGS84; never imports pyproj, PROJ or GeographicLib.
 
 Theory: Bessel's auxiliary sphere with the exact distance and longitude integrals

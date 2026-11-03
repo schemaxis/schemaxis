@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Generator rules that exclude unusable operations or withhold unsafe or inert properties."""
 import json
 from pathlib import Path

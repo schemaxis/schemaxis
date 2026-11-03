@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Generator typing rules of the ParaView catalogue importer (field-data enums, optional
 file lists, pair-list tuples, VTK clamp bounds, uncaptured output ports)."""
 import unittest

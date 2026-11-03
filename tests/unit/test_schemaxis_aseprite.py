@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host contract tests; optional native checks use ASEPRITE_EXE explicitly."""
 import copy
 import json

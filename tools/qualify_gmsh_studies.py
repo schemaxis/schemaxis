@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native mesh intent, feedback, refusal, tamper and cross-adaptor acceptance."""
 import argparse
 import copy

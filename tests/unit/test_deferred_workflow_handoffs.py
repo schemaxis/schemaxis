@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Future verified publications must not masquerade as host filesystem paths."""
 import copy
 import json

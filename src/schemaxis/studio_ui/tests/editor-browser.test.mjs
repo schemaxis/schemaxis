@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Browser smoke test of the JSON editor in headless Chromium (no dependencies).
 // Set EDITOR_SCREENSHOTS=<dir> to keep light/dark screenshots.
 import assert from 'node:assert/strict';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Literal attribute semantics; these tests do not import QGIS or imply native qualification."""
 import copy
 import json

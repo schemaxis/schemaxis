@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Write or check the original synthetic ImageJ particle calibration fixtures.
 
 The images are analytic test targets, not experimental data. Every particle is a

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Schemaxis Studio JSON editor: textarea + highlight overlay, schema completion,
 // hover documentation, diagnostics and ghost previews. See createJsonEditor().
 

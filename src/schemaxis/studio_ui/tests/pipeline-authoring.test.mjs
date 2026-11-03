@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {initialOperation, pipelineChoices} from '../windows/workbench/authoring-defaults.mjs';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent reader for KiCad's decimal absolute Excellon drill subset."""
 import math
 import re

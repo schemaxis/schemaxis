@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded, authenticated artifact reads for Studio viewers."""
 from pathlib import Path
 import hashlib

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Disposable preservation, schema dependencies and untrusted archive safety."""
 import json
 import os

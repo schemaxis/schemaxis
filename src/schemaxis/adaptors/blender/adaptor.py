@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded Blender adaptor using the shared graph, lookup and analytics engine."""
 import copy
 from schemaxis.core.faults import SchemaxisError

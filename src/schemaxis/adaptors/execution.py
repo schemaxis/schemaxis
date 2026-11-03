@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Execution capability checks delegated to the selected adaptor."""
 from schemaxis.errors import fail
 from .registry import route_hook

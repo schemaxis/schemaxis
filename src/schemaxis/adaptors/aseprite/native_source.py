@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted Lua source shipped as Python package data without packaging hooks."""
 
 # Previous packaged procedural-only worker: retained evidence without a capture

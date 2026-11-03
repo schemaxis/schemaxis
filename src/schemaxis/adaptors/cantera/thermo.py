@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent ideal-gas NASA7 thermochemistry and equilibrium verification.
 
 Coefficients are public source data, not fitted to native output. No Cantera,

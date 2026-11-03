@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Application-specific console policy; session persistence stays in the framework."""
 import copy
 from schemaxis.errors import fail

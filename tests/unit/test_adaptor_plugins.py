@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """External adaptor packages register through the schemaxis.adaptors entry-point group."""
 from contextlib import contextmanager
 import io

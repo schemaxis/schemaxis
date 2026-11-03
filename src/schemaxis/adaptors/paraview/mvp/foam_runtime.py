@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native real-case runtime, embedded with versioned helper source in each replay."""
 import hashlib
 import json

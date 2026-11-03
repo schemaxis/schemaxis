@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted isolated PyArrow worker; copied to the owned run and never host-imported."""
 import hashlib
 import json

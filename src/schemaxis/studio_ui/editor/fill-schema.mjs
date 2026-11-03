@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Schema-directed field creation and expression admission. No invented adaptor grammar.
 import {contextFor, expand, schemasAt, childSchemas, matches} from './schema-core.mjs';
 import {escapeSegment, parsePointer, formatPointer} from './json-pointer.mjs';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Qualify built-in fixed Assembly joints, links, solver and editable FCStd.
 
 PYTHONPATH=src python tools/qualify_freecad_assembly.py

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe numerical contracts, provenance capture and independent verification."""
 import copy
 import json

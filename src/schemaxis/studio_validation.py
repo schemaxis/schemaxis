@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Read-only validation of an operation draft in its saved workflow context."""
 import copy
 from dataclasses import replace

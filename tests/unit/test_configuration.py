@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Private location configuration is validated and honoured at execution boundaries."""
 import json
 import os

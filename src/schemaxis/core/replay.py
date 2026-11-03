@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Deterministic Python replay source generation with injected submission.
 
 This module never imports or executes a target application.  It records a

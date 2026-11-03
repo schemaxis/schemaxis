@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded declared linear circuits executed by an isolated ngspice process."""
 import json
 import math

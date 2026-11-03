@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Independently author classic TIFF test pixels, affine metadata and GeoKeys."""
 from pathlib import Path
 import struct

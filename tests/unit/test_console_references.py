@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 import tempfile
 import unittest
 from unittest.mock import patch

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Framework hooks for ParaView execution, evidence and native inspection."""
 import copy
 import json

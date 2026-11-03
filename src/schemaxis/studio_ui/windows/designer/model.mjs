@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Designer data flow: one store per window holding the design projection, revision,
 // selection and viewport. Every mutation posts with the current revision.
 

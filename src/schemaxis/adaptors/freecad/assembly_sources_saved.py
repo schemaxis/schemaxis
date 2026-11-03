@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent saved-file verification of a sourced assembly (no FreeCAD imports).
 
 Each embedded source must be the producer's own saved objects under one bijective

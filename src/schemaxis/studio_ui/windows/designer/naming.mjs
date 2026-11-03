@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Output naming preview: a local mirror of src/schemaxis/output_naming.py.
 // The server stays authoritative; this only renders a live preview while typing.
 

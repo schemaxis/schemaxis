@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent analytic checks for the CAD -> ParaView -> Blender example.
 
 Run with PYTHONPATH=src python3 examples/schemaxis/check_freecad_gallery.py OUTPUT.

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Relational intention discovery without importing or launching SQLite."""
 import json
 from importlib.resources import files

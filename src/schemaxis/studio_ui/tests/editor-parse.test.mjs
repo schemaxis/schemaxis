@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Lexer, tolerant parser and pointer helpers of the Studio JSON editor.
 import assert from 'node:assert/strict';
 import test from 'node:test';

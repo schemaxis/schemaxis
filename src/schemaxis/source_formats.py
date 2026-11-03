@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Explicit conversion between authored JSON and the optional YAML profile."""
 import json
 from .core.documents import document_format, load_document, load_document_file

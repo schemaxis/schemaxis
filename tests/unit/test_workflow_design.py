@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Workflow arrows remain persisted, bounded, and distinct from executable cycles."""
 import copy
 import sys

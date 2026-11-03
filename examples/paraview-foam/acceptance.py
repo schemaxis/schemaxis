@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Execute the file-driven MVP and material failures; retain every CLI report."""
 import argparse
 from copy import deepcopy

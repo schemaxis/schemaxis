@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """ParaView-owned insertion targets for scene and publication controls."""
 
 

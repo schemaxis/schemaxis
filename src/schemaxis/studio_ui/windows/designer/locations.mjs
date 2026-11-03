@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Resolve the backend's mixed $.object/array/index locations to the closest authored JSON pointer.
 
 export function sourcePointer(location, document) {

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Image viewer parts: decoding, canvas drawing, pixel sampling and toolbar.
 
 import {h} from '../lib/dom.mjs';

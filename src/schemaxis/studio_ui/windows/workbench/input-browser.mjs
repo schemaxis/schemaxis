@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Local-host file chooser. Selecting a path never uploads or copies its bytes.
 import {h, mount} from '../../lib/dom.mjs';
 export function inputBrowser(ctx, input, label, extensions = []) {

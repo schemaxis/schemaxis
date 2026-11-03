@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Column type detection shared by grep extraction and the table viewer.
 // Types: 'integer', 'number', 'boolean', 'text', 'empty'.
 // Cells are strings on input; converted values are numbers, booleans,

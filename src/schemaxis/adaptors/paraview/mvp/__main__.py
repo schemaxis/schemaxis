@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Small integration harness for static discovery, planning and execution."""
 import argparse
 import json

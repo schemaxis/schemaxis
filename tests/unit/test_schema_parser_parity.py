@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Detect drift between parser-owned envelopes and exported schema keywords."""
 import ast
 from functools import partial

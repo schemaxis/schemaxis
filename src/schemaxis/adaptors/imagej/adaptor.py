@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded thresholded particle measurement with headless ImageJ 1.x."""
 import hashlib
 import json

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Run with the matching pvpython to refresh public native selection documentation.
 
 This captures metadata only, never executes a filter. Review changed wording and

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Adaptor-owned conceptual guidance, host-safe projection and honest coverage."""
 import json
 import re

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """JSON console front end; the caller owns and closes the session."""
 import json
 import sys

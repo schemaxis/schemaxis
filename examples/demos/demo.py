@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Local demonstration launcher. Uses normal Schemaxis CLI; never overwrites a run."""
 import argparse
 import copy

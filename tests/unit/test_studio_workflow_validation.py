@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Nested drafts validate in their real workflow, without opening future artifacts."""
 import copy
 import json

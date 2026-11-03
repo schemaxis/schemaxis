@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Reusable ordinary ParaView recipe. Invoke with pvbatch --force-offscreen-rendering.
 
 Usage: pvbatch native_recipe.py task.json submission

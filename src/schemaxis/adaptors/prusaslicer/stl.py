@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent bounded STL reading; no repair, no native slicer code.
 
 Triangle winding is authoritative for orientation; stored facet normals are

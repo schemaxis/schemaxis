@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host contracts for assemblies of verified phase-one parts at named mounts.
 
 Producers here are synthetic, receipt-consistent run directories. They prove the

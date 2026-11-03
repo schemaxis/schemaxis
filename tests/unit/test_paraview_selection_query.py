@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """ParaView selection queries never pass authored or runtime text to Python eval."""
 import copy
 import json

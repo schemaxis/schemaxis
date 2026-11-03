@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Ported from console_ui/tests/geometry.test.mjs, plus BVH, flip and element-point tests.
 import test from 'node:test';
 import assert from 'node:assert/strict';

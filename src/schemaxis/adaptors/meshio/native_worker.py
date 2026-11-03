@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted isolated meshio worker; never imported by the host runtime."""
 import hashlib
 import json

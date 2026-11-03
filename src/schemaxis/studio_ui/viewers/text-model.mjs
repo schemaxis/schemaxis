@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Text model for the text viewer: line index, search and grep extraction.
 // Pure logic (no DOM); long jobs are incremental and cancellable.
 

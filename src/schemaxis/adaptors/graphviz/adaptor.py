@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Declared directed topology, trusted DOT, and independent geometry inspection."""
 import hashlib
 import json

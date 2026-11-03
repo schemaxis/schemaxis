@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Selection guidance; executable schemas and the delivery bundle remain normative."""
 import json
 from importlib.resources import files

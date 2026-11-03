@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent native qualification worker; run only by qualify_freecad_parameters.py."""
 import copy
 import json

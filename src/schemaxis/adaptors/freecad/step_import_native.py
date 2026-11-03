@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native importSTEP realisation; imported only inside FreeCAD's interpreter.
 
 The source Part::Feature holds the file-frame solid in millimetres and carries the

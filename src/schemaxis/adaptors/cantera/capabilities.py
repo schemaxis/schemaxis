@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Selection guidance for the bounded Cantera thermochemistry and reactor route."""
 import json
 from importlib.resources import files

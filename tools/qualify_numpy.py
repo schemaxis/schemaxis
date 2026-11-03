@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify NumPy principal component analysis through the public Schemaxis path.
 
 Runs the shared conformance kit, analytic and reviewer cases with outcomes fixed in advance,

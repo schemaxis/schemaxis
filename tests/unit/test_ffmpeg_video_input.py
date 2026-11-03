@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Existing-video contract tests; native qualification lives in its own tool."""
 import copy
 import json

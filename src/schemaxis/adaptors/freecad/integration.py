@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """FreeCAD framework policies; no native application imports on the host."""
 from pathlib import Path
 from schemaxis.artifacts import file_digest

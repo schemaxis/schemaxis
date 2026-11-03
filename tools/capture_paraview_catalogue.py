@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Run with pvpython: capture installed public definitions without executing filters.
 
 Usage: pvpython tools/capture_paraview_catalogue.py OUTPUT.json

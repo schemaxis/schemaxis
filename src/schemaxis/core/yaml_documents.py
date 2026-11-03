@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Optional YAML 1.2 authoring, restricted to finite JSON-compatible values."""
 import io
 import math

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Formulation-independent geodesic anchor: the geodesic ODE on the implicit WGS84 surface.
 
 No auxiliary sphere, Clairaut relation or series: for G(x) = x^2/a^2 + y^2/a^2 + z^2/b^2 - 1 the

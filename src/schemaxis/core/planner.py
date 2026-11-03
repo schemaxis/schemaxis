@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Pure planning for the Schemaxis Python contract spike.
 
 Planning consumes static catalogue records only. It performs no provider

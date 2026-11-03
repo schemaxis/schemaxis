@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Designer canvas: an HTML world layer (node cards) over an SVG wire layer, both under
 // one pan/zoom transform. Interaction lives in canvas-input.mjs, the minimap in minimap.mjs.
 

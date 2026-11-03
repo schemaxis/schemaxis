@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Smoke-test page: mounts the JSON editor with real Schemaxis schemas.
 // Query: ?doc=paraview|workflow|empty&theme=light|dark
 

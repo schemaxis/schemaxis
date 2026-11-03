@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Coordinator-only analytic fixture generation and independent artifact grading.
 
 Run inside pvbatch. No Schemaxis imports or producer receipts are used.

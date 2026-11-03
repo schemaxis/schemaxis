@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Markers survive drafts but are refused at execution and binding boundaries."""
 import copy
 import json

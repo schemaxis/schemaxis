@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """ParaView executable discovery and launch flags; no native imports."""
 import os
 import shutil

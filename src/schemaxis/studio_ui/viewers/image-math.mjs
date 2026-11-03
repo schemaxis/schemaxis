@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Image view arithmetic. A view transform {scale, x, y} maps image pixel
 // coordinates to viewport CSS pixels: screen = (x + px * scale, y + py * scale).
 // Pixel coordinates are integers with the origin at the top-left.

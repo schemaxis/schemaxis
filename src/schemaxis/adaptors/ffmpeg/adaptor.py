@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded image and captured video sources with full native RGB readback."""
 import hashlib
 import json

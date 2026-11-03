@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native sampled requirements, changed components, forgery and handoff gates."""
 import argparse
 import copy

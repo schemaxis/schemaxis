@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native bounded acceptance: PYTHONPATH=src python tools/qualify_freecad_live.py.
 
 Uses the installed GUI/display and freecadcmd. Artifacts and logs are retained in

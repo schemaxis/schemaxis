@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Pure scene helpers for the 3D viewer: picking through the camera, pick
 // payloads, section-plane state and projection of world points.
 

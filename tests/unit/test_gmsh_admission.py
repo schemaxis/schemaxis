@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-only contracts and independent mesh corruption tests for Gmsh."""
 import copy
 import json

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Text viewer panels: the find bar and the grep-extract panel (DOM only;
 // the viewer owns the document and runs the jobs).
 

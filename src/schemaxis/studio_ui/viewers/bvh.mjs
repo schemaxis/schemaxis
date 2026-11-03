@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Bounding volume hierarchy over triangles for fast ray picking.
 // Triangle i occupies positions[9 i .. 9 i + 8] (three XYZ points).
 

@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Schema completion, hover and validation against the real generated Schemaxis schemas.
 import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';

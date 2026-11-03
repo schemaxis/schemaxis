@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded native length drivers; authored expressions initialise each visit only."""
 import math
 import re

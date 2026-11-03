@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host semantics of NumPy principal component analysis; never imports NumPy."""
 import copy
 from fractions import Fraction as F

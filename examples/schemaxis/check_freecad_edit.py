@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Run inside FreeCADCmd to prove the saved bracket remains parametrically editable.
 
 SCHEMAXIS_CAD_GALLERY=/absolute/gallery /path/freecadcmd /absolute/check_freecad_edit.py

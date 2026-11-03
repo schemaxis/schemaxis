@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {h, mount} from '../../lib/dom.mjs';
 import {openDialog} from '../../shell/dialog.mjs';
 import {pipelineChoices} from './authoring-defaults.mjs';

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Run release evidence workflows through the native applications and summarise them.
 
 Each manifest workflow runs three times through the ordinary Schemaxis CLI: an

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Preserved development migration and explicit gaps in the stronger completion gate."""
 import tempfile
 import unittest

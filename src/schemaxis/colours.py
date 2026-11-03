@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Matplotlib named-colour data, without a Matplotlib/NumPy runtime dependency."""
 import json
 import math

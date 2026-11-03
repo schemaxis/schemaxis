@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Native Calc round-trips with independently checked data, formulas and caches."""
 import json
 import math

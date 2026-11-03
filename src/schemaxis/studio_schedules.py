@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Studio controls for the independently owned durable scheduler."""
 from pathlib import Path
 

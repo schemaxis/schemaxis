@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Timer ownership and text-version tracking, independent of editor DOM rendering.
 import {classifyDiagnostics, settledDiagnostics} from './settle.mjs';
 

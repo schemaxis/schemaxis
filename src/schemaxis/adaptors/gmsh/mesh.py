@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent bounded MSH 2.2 reader, tetrahedron checks and explicit VTU export.
 
 No Gmsh imports. The supported interchange subset is ASCII linear triangles and

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Expanded CAD and mesh bridges: typed inputs, loss contracts and tamper checks."""
 import copy
 import json

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Adaptor-owned selection guidance; no native imports or probes."""
 import json
 from importlib.resources import files

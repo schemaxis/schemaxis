@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Isolated native process groups, cooperative cancellation and resource hints."""
 from contextlib import contextmanager
 from contextvars import ContextVar

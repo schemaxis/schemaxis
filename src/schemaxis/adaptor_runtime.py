@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Common authored inputs and stateful execution around native black boxes.
 
 Native graph routes retain their specialised incremental engine. Other routes use

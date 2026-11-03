@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Production search functions also used by adaptor-owned acceptance cases.
 export function searchAdaptors(items, query, displayName = (item) => item.label || item.id) {
   query = query.trim().toLowerCase();

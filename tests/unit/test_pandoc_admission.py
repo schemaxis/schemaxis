@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host report semantics, discovery, schema agreement and bounded evidence."""
 import copy
 import json

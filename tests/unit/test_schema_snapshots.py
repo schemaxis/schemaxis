@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Immutable portable schema evidence, byte identity and failure handling."""
 from concurrent.futures import ThreadPoolExecutor
 import json

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Local input chooser lists paths without uploading case data."""
 import tempfile
 import unittest

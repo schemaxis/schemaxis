@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Curated discovery for unit-aware principal component analysis."""
 import json
 from importlib.resources import files

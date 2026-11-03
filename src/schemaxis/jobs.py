@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Shared serial job ownership around the existing native dispatch context."""
 from concurrent.futures import ThreadPoolExecutor
 import threading

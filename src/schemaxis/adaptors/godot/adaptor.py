@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Host-safe Godot declarations, bounded process execution and receipt verification."""
 import copy
 import hashlib

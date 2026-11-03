@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Discover installed adaptor manifests without importing application runtimes.
 
 Built-in adaptors are folders below ``schemaxis.adaptors``. External adaptor

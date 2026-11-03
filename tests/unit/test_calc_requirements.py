@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded Calc policy, numeric selector distinctions and resource admission."""
 import copy
 import json

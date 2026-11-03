@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Settings window, generated from the server's setting specification.
 
 import {h, mount} from '../lib/dom.mjs';

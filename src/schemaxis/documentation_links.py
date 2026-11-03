@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Offline link syntax and Markdown anchor checks, without availability claims."""
 import re
 from urllib.parse import urlsplit

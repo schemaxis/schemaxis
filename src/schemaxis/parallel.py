@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded dependency scheduler with verified, immutable retry attempts."""
 import copy
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED

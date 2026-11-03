@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Application Setup keeps native locations in the current workspace.
 import {h, icon, mount} from '../lib/dom.mjs';
 import {avatar, identity} from '../shell/providers.mjs';

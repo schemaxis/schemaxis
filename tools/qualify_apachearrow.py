@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Qualify closed nullable Arrow interchange, independent evidence and SQLite handoff."""
 import argparse
 import copy

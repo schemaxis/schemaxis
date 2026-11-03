@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent bounded PNG8 decoder and exact encoded-sample raster oracle.
 
 No ImageMagick identity/decode is used to establish expected pixels. Rows are

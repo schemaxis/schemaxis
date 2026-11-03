@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Revision ordering protects rapid gestures; stale conflicts retain local node positions.
 
 import assert from 'node:assert/strict';

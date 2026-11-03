@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Audit every packaged Studio recipe and guidance route without native imports.
 
 Host planning verifies the supplied fixture values, not the user's actual data.

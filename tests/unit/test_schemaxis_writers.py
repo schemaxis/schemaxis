@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Writer plans must retain explicit fidelity and publication ownership."""
 import copy
 import unittest

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded page-assembly admission over QPDF's JSON; host-only, no native imports.
 
 This is not a PDF parser and not a sanitiser. QPDF supplies the object structure; this

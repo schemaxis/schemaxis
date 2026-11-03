@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Native serial proof of workflow draft/graph/source parity over agent tools."""
 import argparse
 import copy

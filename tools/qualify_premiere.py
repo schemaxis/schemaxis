@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 David L F Gaden
 """Opt-in installed Premiere acceptance; never substitutes mocks for native execution."""
 import argparse
 import copy

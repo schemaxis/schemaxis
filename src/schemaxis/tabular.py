@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded numeric tables exchanged across analysis and spreadsheet applications."""
 import csv
 import io

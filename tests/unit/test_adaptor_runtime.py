@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Framework-wide authored inputs, changing states and verified value handoffs."""
 import copy
 import importlib

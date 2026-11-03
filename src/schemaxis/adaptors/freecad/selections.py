@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Bounded geometric edge intent, resolved afresh for each native topology.
 
 This module is host-safe. Native edge descriptors are ordinary measured data;

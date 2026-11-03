@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 // Library bodies are data. Expand fields to persistent markers and keep identity
 // rewrites scoped to declarations and reference positions, never arbitrary text.
 

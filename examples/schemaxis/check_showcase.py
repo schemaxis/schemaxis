@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Independent numerical checks for the showcase-acceptance.json native run."""
 import argparse
 import json

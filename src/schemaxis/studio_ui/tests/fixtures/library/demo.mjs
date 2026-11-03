@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L F Gaden
 import {createJsonEditor} from '../../../editor/editor.mjs';
 import {createLibrary} from '../../../windows/workbench/library.mjs';
 import {Commands, openPalette} from '../../../shell/palette.mjs';

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L F Gaden
 """Trusted fixed R worker; authored identifiers never become formula symbols."""
 WORKER=r'''args <- commandArgs(trailingOnly=TRUE)
 stopifnot(length(args)==5L)
