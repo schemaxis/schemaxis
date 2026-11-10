@@ -1,0 +1,13 @@
+{
+  "version": "schemaxis.hdf5/1",
+  "operation": "extractData",
+  "source": "/replace/with/hdf5-fixtures/sensor-run.h5",
+  "extracts": [
+    {"id": "acquiring", "dataset": "/run/raw/counts",
+     "where": [{"dataset": "/run/state", "op": "in", "values": ["ACQUIRE", "FAULT"]}, {"dataset": "/run/calibrated/pressure", "op": "finite"}]},
+    {"id": "high_pressure", "dataset": "/run/calibrated/pressure", "format": "json", "where": [{"op": "gt", "value": 101.305}]},
+    {"id": "overloads", "dataset": "/run/events", "fields": ["sample", "code"], "format": "json", "where": [{"field": "level", "op": "ge", "value": 100}]},
+    {"id": "faults_with_pressure", "dataset": "/run/raw/counts", "format": "json",
+     "where": [{"dataset": "/run/state", "op": "eq", "value": "FAULT"}, {"dataset": "/run/calibrated/pressure", "op": "finite"}]}
+  ]
+}

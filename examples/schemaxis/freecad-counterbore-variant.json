@@ -1,0 +1,121 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "parameters": {
+    "thickness": {
+      "kind": "length",
+      "value": 20,
+      "minimum": 10,
+      "maximum": 20
+    },
+    "counterboreDepth": {
+      "kind": "length",
+      "value": 8,
+      "minimum": 2,
+      "maximum": 8
+    },
+    "counterboreRadius": {
+      "kind": "length",
+      "value": 8,
+      "minimum": 5,
+      "maximum": 8
+    }
+  },
+  "nodes": [
+    {
+      "id": "part",
+      "filter": "body"
+    },
+    {
+      "id": "outline",
+      "filter": "rectangle",
+      "inputs": {
+        "body": "part"
+      },
+      "options": {
+        "width": 80,
+        "height": 50
+      }
+    },
+    {
+      "id": "slab",
+      "filter": "pad",
+      "inputs": {
+        "body": "part",
+        "profile": "outline"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "thickness": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "bore",
+      "filter": "circle",
+      "inputs": {
+        "body": "part"
+      },
+      "options": {
+        "radius": 3,
+        "centre": [
+          15,
+          10
+        ]
+      }
+    },
+    {
+      "id": "throughBore",
+      "filter": "pocket",
+      "inputs": {
+        "base": "slab",
+        "profile": "bore"
+      },
+      "options": {
+        "extent": "throughAll"
+      }
+    },
+    {
+      "id": "counterbore",
+      "filter": "circle",
+      "inputs": {
+        "body": "part"
+      },
+      "options": {
+        "centre": [
+          15,
+          10
+        ]
+      },
+      "drive": {
+        "radius": {
+          "terms": {
+            "counterboreRadius": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "finished",
+      "filter": "pocket",
+      "inputs": {
+        "base": "throughBore",
+        "profile": "counterbore"
+      },
+      "options": {
+        "extent": "length"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "counterboreDepth": 1
+          }
+        }
+      }
+    }
+  ],
+  "output": "finished",
+  "linearDeflection": 0.02
+}

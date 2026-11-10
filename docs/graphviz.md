@@ -120,6 +120,11 @@ correct IDs/pairs. `INVALID_GRAPH_NODE` means use distinct lowercase identifiers
 `NATIVE_LAYOUT_WARNING` requires inspection of retained stderr; warnings never
 silently count as verified. `VERIFICATION_FAILED` means retained evidence differs
 or violates geometry/topology checks; rerun into a fresh directory after repair.
+Reopening distinguishes malformed from unsupported evidence: retained JSON that is
+unreadable, over-nested or not a Graphviz version line is `VERIFICATION_FAILED`;
+a well-formed Graphviz identity for another version is `UNSUPPORTED_NATIVE_VERSION`,
+only for an intact retained identity consistent with its receipt. Genuine 16.1.0 receipts are
+unchanged.
 
 Official mapping: [DOT grammar](https://graphviz.org/doc/info/lang.html),
 [dot layout](https://graphviz.org/docs/layouts/dot/),

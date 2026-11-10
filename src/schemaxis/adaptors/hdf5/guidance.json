@@ -1,0 +1,3960 @@
+{
+ "version": "schemaxis.studio-guidance/1",
+ "operations": {
+  "createFile": {
+   "status": "reviewed",
+   "explanation": "Build a new HDF5 file from declared groups, typed datasets, attributes, units, dimension scales, chunked compression, fill values, resizable axes, links, committed datatypes, virtual datasets and external raw storage, with values from literals, documented generators, captured CSV/NPY/raw inputs or in-file copies.",
+   "sources": [
+    "docs/hdf5.md#operations"
+   ],
+   "pitfalls": [
+    "Every object is addressed by its absolute HDF5 path (Unicode names such as /Experiment 1/Temperature (°C) are ordinary); parent groups are created implicitly.",
+    "Values are flattened in row-major (C) order; floats are rounded once to the declared precision and out-of-range integers are refused.",
+    "Publication requires host expectations to agree with a fresh h5py readback and the HDF Group h5dump XML reading."
+   ]
+  },
+  "editFile": {
+   "status": "reviewed",
+   "explanation": "Apply ordered typed edits to a captured copy of an existing HDF5 file - create, delete, move, copy, link, set or delete attributes, write selections, resize, append, make/attach/detach dimension scales and change storage layout - optionally repacking into a fresh file to reclaim space.",
+   "sources": [
+    "docs/hdf5.md#operations"
+   ],
+   "pitfalls": [
+    "The source is captured and never modified; the edited copy is published under a new name.",
+    "Each edit is checked against the simulated state from the independent reading of the source before native work.",
+    "Copies re-attach dimension scales: scales inside the copied tree map to their copies, others stay shared.",
+    "copyChunks writes stored chunks unchanged; fresh chunk listings must show the source bytes in the target.",
+    "write with fields changes only those compound members; the other members of each record keep their stored values."
+   ]
+  },
+  "inspectFile": {
+   "status": "reviewed",
+   "explanation": "Inventory an existing HDF5 file - groups, datasets, types, shapes, layouts, filters, fill values, attributes, links, hard-link aliases, dimension scales, virtual and external storage - and decide typed expectations such as units, shapes, ranges, finiteness and compression as met or unmet.",
+   "sources": [
+    "docs/hdf5.md#operations"
+   ],
+   "pitfalls": [
+    "Read-only: the captured copy is read by h5py and h5dump, which must agree before anything is reported.",
+    "Expectations are decided by the host from observed values, never by the native process."
+   ]
+  },
+  "extractData": {
+   "status": "reviewed",
+   "explanation": "Read slices, strided block hyperslabs, point lists, compound fields or the rows meeting typed conditions of datasets in an existing HDF5 file into CSV tables (with dimension-scale coordinates and units in the header), NPY arrays or JSON for downstream tools.",
+   "sources": [
+    "docs/hdf5.md#operations"
+   ],
+   "pitfalls": [
+    "Selections are checked against the dataset shape; expected values are selected on the host from the independent h5dump reading.",
+    "access.memoryBytes streams each extract in bounded axis-0 blocks; parallel reads blocks on MPI ranks (local workstation qualification).",
+    "CSV rows follow axis 0; remaining axes are flattened in C order into columns.",
+    "where keeps axis-0 rows meeting typed conditions; h5py and the independent reading must choose the same rows.",
+    "A chunk index is checked by decoding every listed chunk from the file bytes on the host (gzip, shuffle, Fletcher-32)."
+   ]
+  },
+  "writeMeshFields": {
+   "status": "reviewed",
+   "explanation": "Write unstructured mesh points, cell connectivity and per-time-step point or cell fields to HDF5 with an XDMF 3 temporal description that visualisation tools such as ParaView can open.",
+   "sources": [
+    "docs/hdf5.md#operations"
+   ],
+   "pitfalls": [
+    "Connectivity is zero-based point indices; degenerate cells and out-of-range indices are refused.",
+    "The report includes an independent signed-volume/area total per block as an orientation check."
+   ]
+  },
+  "appendSeries": {
+   "status": "reviewed",
+   "explanation": "Append batches of sample rows to an unlimited chunked dataset in single-writer/multiple-reader (SWMR) mode while concurrent reader processes observe each flushed batch, for live acquisition and monitoring.",
+   "sources": [
+    "docs/hdf5.md#operations"
+   ],
+   "pitfalls": [
+    "Files are written with libver latest (HDF5 1.10+ readers); structure cannot change after SWMR starts.",
+    "Every reader observation must equal the independently computed flushed prefix."
+   ]
+  },
+  "compareFiles": {
+   "status": "reviewed",
+   "explanation": "Compare two HDF5 files object by object - presence, kinds, types, shapes, attributes, optional storage and numeric values within absolute and relative tolerances - as a regression check (h5diff semantics).",
+   "sources": [
+    "docs/hdf5.md#operations"
+   ],
+   "pitfalls": [
+    "A value differs when |a-b| > absolute + relative*|reference|; NaN equals NaN.",
+    "The native comparison must agree with an independent host comparison of the h5dump readings."
+   ]
+  },
+  "parallelWrite": {
+   "status": "reviewed",
+   "explanation": "Write integer or float datasets from several MPI ranks at once through parallel HDF5 (the mpio driver), each rank writing its block of axis-0 rows with collective or independent I/O, then reduce the file in parallel and verify it serially.",
+   "sources": [
+    "docs/hdf5.md#parallel-mpi-io-writes"
+   ],
+   "pitfalls": [
+    "Needs a separately built parallel h5py (HDF5_MPI=ON) and mpiexec from configuration; the serial wheel cannot do MPI-IO. Qualified on one local workstation only (Open MPI 4.1.7, 2-3 ranks, launched on localhost), not on a cluster.",
+    "Rank r writes rows [r*n/R, (r+1)*n/R); every rank receipt, the serial readback, h5dump and a parallel reduction must agree."
+   ]
+  }
+ },
+ "routes": {
+  "schemaxis.hdf5/1": {
+   "fields": {
+    "": {
+     "status": "reviewed",
+     "explanation": "An HDF5 document: one operation with its typed records.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/properties/version": {
+     "status": "reviewed",
+     "explanation": "Document contract version; always schemaxis.hdf5/1.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/properties/operation": {
+     "status": "reviewed",
+     "explanation": "What to do: createFile, editFile, inspectFile, extractData, writeMeshFields, appendSeries or compareFiles.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/properties/file": {
+     "status": "reviewed",
+     "explanation": "Settings of the file this operation writes.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/properties/inputs": {
+     "status": "reviewed",
+     "explanation": "Captured CSV, NPY or raw files that supply values.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/properties/inputs/items": {
+     "status": "reviewed",
+     "explanation": "A captured local file supplying dataset values: CSV with a header, a C-ordered .npy array or raw binary.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/input"
+     ]
+    },
+    "/properties/dependencies": {
+     "status": "reviewed",
+     "explanation": "Other files the result uses or reads, captured and published with it.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/properties/dependencies/items": {
+     "status": "reviewed",
+     "explanation": "Another file the result needs or reads: virtual sources, external link targets, raw storage, copy sources. It is captured and published beside the result.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/dependency"
+     ]
+    },
+    "/properties/objects": {
+     "status": "reviewed",
+     "explanation": "Groups, datasets and committed datatypes to create, by absolute path.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/properties/links": {
+     "status": "reviewed",
+     "explanation": "Soft, hard and external links to add.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/properties/links/items": {
+     "status": "reviewed",
+     "explanation": "A link name pointing at another object: soft (path text), hard (same object) or external (object in another file).",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types",
+      "guidance:/$defs/link"
+     ]
+    },
+    "/properties/extracts": {
+     "status": "reviewed",
+     "explanation": "Selections to publish as CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/properties/extracts/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/properties/extracts/anyOf/0/items": {
+     "status": "reviewed",
+     "explanation": "One selection to publish for other tools as CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction",
+      "guidance:/$defs/extract"
+     ]
+    },
+    "/properties/extracts/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/properties/extracts/anyOf/1/items": {
+     "status": "reviewed",
+     "explanation": "One selection to publish for other tools as CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction",
+      "guidance:/$defs/extract"
+     ]
+    },
+    "/properties/source": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the existing HDF5 file to read; it is captured and never modified.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "fileExtensions": [
+      ".h5",
+      ".hdf5",
+      ".he5",
+      ".nc"
+     ]
+    },
+    "/properties/sha256": {
+     "status": "reviewed",
+     "explanation": "Optional expected SHA-256 of the source; a mismatch refuses the run.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/properties/edits": {
+     "status": "reviewed",
+     "explanation": "Ordered edits applied to the captured copy.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/properties/edits/items": {
+     "status": "reviewed",
+     "explanation": "One ordered change to the captured copy; each edit is checked against the state left by the previous edits.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file",
+      "guidance:/$defs/edit"
+     ]
+    },
+    "/properties/repack": {
+     "status": "reviewed",
+     "explanation": "Rewrite into a fresh file after editing, reclaiming freed space and applying the file settings.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ],
+     "defaultMeaning": "false"
+    },
+    "/properties/expectations": {
+     "status": "reviewed",
+     "explanation": "Typed requirements decided as met or unmet.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/properties/expectations/items": {
+     "status": "reviewed",
+     "explanation": "A typed requirement on an inspected file, decided by the host as met or unmet with reasons.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison",
+      "guidance:/$defs/expectation"
+     ]
+    },
+    "/properties/preview": {
+     "status": "reviewed",
+     "explanation": "Maximum values shown per dataset or attribute in the inventory.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "defaultMeaning": "8"
+    },
+    "/properties/mesh": {
+     "status": "reviewed",
+     "explanation": "Mesh geometry and cell blocks.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/properties/fields": {
+     "status": "reviewed",
+     "explanation": "Point or cell fields, one record per time.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/properties/fields/items": {
+     "status": "reviewed",
+     "explanation": "A field defined on points or cells, with one data record per time.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf",
+      "guidance:/$defs/meshField"
+     ]
+    },
+    "/properties/times": {
+     "status": "reviewed",
+     "explanation": "Strictly increasing times of the steps.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/properties/times/items": {
+     "status": "reviewed",
+     "explanation": "One step time.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/properties/timeUnits": {
+     "status": "reviewed",
+     "explanation": "Units of the times.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ],
+     "defaultMeaning": "s"
+    },
+    "/properties/storage": {
+     "status": "reviewed",
+     "explanation": "Storage applied to mesh and field datasets.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/properties/series": {
+     "status": "reviewed",
+     "explanation": "The growing SWMR dataset.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ]
+    },
+    "/properties/batches": {
+     "status": "reviewed",
+     "explanation": "Sample batches appended and flushed in order.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ]
+    },
+    "/properties/batches/items": {
+     "status": "reviewed",
+     "explanation": "Where the element values come from. Values are row-major (C order) over the shape.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/data"
+     ]
+    },
+    "/properties/swmr": {
+     "status": "reviewed",
+     "explanation": "Enable SWMR so readers can open the file while it grows.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ],
+     "defaultMeaning": "true"
+    },
+    "/properties/readers": {
+     "status": "reviewed",
+     "explanation": "Number of concurrent reader processes that observe every batch (0-2).",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ],
+     "defaultMeaning": "1"
+    },
+    "/properties/reference": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the file the source is compared against.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "fileExtensions": [
+      ".h5",
+      ".hdf5",
+      ".he5",
+      ".nc"
+     ]
+    },
+    "/properties/referenceSha256": {
+     "status": "reviewed",
+     "explanation": "Optional expected SHA-256 of the reference file.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/properties/tolerance": {
+     "status": "reviewed",
+     "explanation": "Comparison tolerances and scope.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/scalarType": {
+     "status": "reviewed",
+     "explanation": "An element type that can appear inside a compound field, a vlen sequence, a series or an input: numbers, booleans, text or enumerated codes.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/scalarType/properties/class": {
+     "status": "reviewed",
+     "explanation": "The kind of element: float, int (signed), uint (unsigned), complex, bool, string or enum.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "pitfalls": [
+      "Choose uint only when negative values are impossible; out-of-range values are refused, not wrapped."
+     ]
+    },
+    "/$defs/scalarType/properties/bits": {
+     "status": "reviewed",
+     "explanation": "Storage width in bits: 8/16/32/64 for integers and enum bases, 16/32/64 for floats, 64 (two float32) or 128 (two float64) for complex.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "64 bits for int, uint, float; 128 for complex; 8 for enum.",
+     "examples": [
+      32
+     ]
+    },
+    "/$defs/scalarType/properties/order": {
+     "status": "reviewed",
+     "explanation": "Byte order of the stored element. Big-endian is common in instrument and legacy files; readers convert automatically.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "little-endian"
+    },
+    "/$defs/scalarType/properties/length": {
+     "status": "reviewed",
+     "explanation": "Fixed string length in encoded bytes; omit it for a variable-length string. Shorter text is NUL-padded.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "units": "bytes",
+     "pitfalls": [
+      "UTF-8 characters can take several bytes each."
+     ]
+    },
+    "/$defs/scalarType/properties/encoding": {
+     "status": "reviewed",
+     "explanation": "Character set of string elements: utf-8 for any text, ascii for plain 7-bit text that older tools expect.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "utf-8"
+    },
+    "/$defs/scalarType/properties/signed": {
+     "status": "reviewed",
+     "explanation": "Whether the enum base integer is signed; set true only when a member code is negative.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "unsigned base"
+    },
+    "/$defs/scalarType/properties/members": {
+     "status": "reviewed",
+     "explanation": "The named codes of an enum type, e.g. IDLE=0, ACQUIRE=1. Names and codes must be unique and fit the base integer.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/scalarType/properties/members/items": {
+     "status": "reviewed",
+     "explanation": "One named code of an enum type.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/member"
+     ]
+    },
+    "/$defs/scalarType/properties/dims": {
+     "status": "reviewed",
+     "explanation": "Fixed element shape for an array-valued compound field, e.g. [3] for an xyz vector stored in every record.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "examples": [
+      [
+       3
+      ]
+     ]
+    },
+    "/$defs/scalarType/properties/dims/items": {
+     "status": "reviewed",
+     "explanation": "Length of one element axis (1-4096).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/member": {
+     "status": "reviewed",
+     "explanation": "One named code of an enum type.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/member/properties/name": {
+     "status": "reviewed",
+     "explanation": "Member name used in values and shown by tools (letters, digits, underscore).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "examples": [
+      "ACQUIRE"
+     ]
+    },
+    "/$defs/member/properties/value": {
+     "status": "reviewed",
+     "explanation": "Integer code stored in the file for this member.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "examples": [
+      1
+     ]
+    },
+    "/$defs/field": {
+     "status": "reviewed",
+     "explanation": "One named member of a compound (record) type.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/field/properties/name": {
+     "status": "reviewed",
+     "explanation": "Field name; records list values in field order.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "examples": [
+      "level"
+     ]
+    },
+    "/$defs/field/properties/type": {
+     "status": "reviewed",
+     "explanation": "Element type of the field; may carry dims for a fixed-size vector.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/field/properties/units": {
+     "status": "reviewed",
+     "explanation": "Documented units of the field, kept with the plan for readers; HDF5 compound types have no per-field attributes.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/type": {
+     "status": "reviewed",
+     "explanation": "The element type of a dataset, attribute or committed datatype, including compound records, ragged vlen sequences, references, opaque bytes and named (committed) types.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/type/properties/bits": {
+     "status": "reviewed",
+     "explanation": "Storage width in bits for numeric, complex and enum classes.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "64 for int/uint/float, 128 for complex, 8 for enum"
+    },
+    "/$defs/type/properties/order": {
+     "status": "reviewed",
+     "explanation": "Byte order of numeric elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "little-endian"
+    },
+    "/$defs/type/properties/length": {
+     "status": "reviewed",
+     "explanation": "Fixed string length in encoded bytes; omit for variable-length text.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "units": "bytes"
+    },
+    "/$defs/type/properties/encoding": {
+     "status": "reviewed",
+     "explanation": "Character set of string elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "utf-8"
+    },
+    "/$defs/type/properties/signed": {
+     "status": "reviewed",
+     "explanation": "Whether the enum base integer is signed.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "unsigned"
+    },
+    "/$defs/type/properties/members": {
+     "status": "reviewed",
+     "explanation": "Named codes of an enum type.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/type/properties/members/items": {
+     "status": "reviewed",
+     "explanation": "One named code of an enum type.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/member"
+     ]
+    },
+    "/$defs/type/properties/dims": {
+     "status": "reviewed",
+     "explanation": "Not used at dataset level; vector-valued elements belong in compound fields. Leave unset.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/type/properties/dims/items": {
+     "status": "reviewed",
+     "explanation": "Length of one element axis.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/type/properties/class": {
+     "status": "reviewed",
+     "explanation": "The element kind. Beyond the scalar classes: compound (records with fields), vlen (ragged numeric sequences), reference (object or region pointers), opaque (tagged bytes) and named (reuse a committed datatype).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/type/properties/fields": {
+     "status": "reviewed",
+     "explanation": "The ordered fields of a compound record type; each record value lists one value per field.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/type/properties/fields/items": {
+     "status": "reviewed",
+     "explanation": "One named member of a compound (record) type.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/field"
+     ]
+    },
+    "/$defs/type/properties/base": {
+     "status": "reviewed",
+     "explanation": "Element type of a vlen sequence (numeric, bool or enum).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/type/properties/reference": {
+     "status": "reviewed",
+     "explanation": "Object references point at whole groups/datasets; region references at a selection inside one dataset.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ],
+     "defaultMeaning": "object"
+    },
+    "/$defs/type/properties/size": {
+     "status": "reviewed",
+     "explanation": "Size in bytes of each opaque element; values are lower-case hex of exactly this many bytes.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "units": "bytes"
+    },
+    "/$defs/type/properties/path": {
+     "status": "reviewed",
+     "explanation": "For class named: the absolute path of a committed datatype object declared earlier in the same file.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ],
+     "examples": [
+      "/types/reading"
+     ]
+    },
+    "/$defs/selectionSlice": {
+     "status": "reviewed",
+     "explanation": "A start/stop/step range along one axis.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selectionSlice/properties/start": {
+     "status": "reviewed",
+     "explanation": "First index (inclusive); negative counts from the end when the shape is known.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ],
+     "defaultMeaning": "0"
+    },
+    "/$defs/selectionSlice/properties/stop": {
+     "status": "reviewed",
+     "explanation": "End index (exclusive).",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ],
+     "defaultMeaning": "the axis length"
+    },
+    "/$defs/selectionSlice/properties/step": {
+     "status": "reviewed",
+     "explanation": "Stride between selected indices.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ],
+     "defaultMeaning": "1"
+    },
+    "/$defs/selection": {
+     "status": "reviewed",
+     "explanation": "Which elements of a dataset to read, write, reference or map: all, per-axis slices, a strided block hyperslab or explicit points.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/kind": {
+     "status": "reviewed",
+     "explanation": "all selects everything; slices uses one range per axis; hyperslab uses start/count/stride/block; points lists coordinates.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/slices": {
+     "status": "reviewed",
+     "explanation": "One range per leading axis; unspecified trailing axes are taken whole.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/slices/items": {
+     "status": "reviewed",
+     "explanation": "A start/stop/step range along one axis.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction",
+      "guidance:/$defs/selectionSlice"
+     ]
+    },
+    "/$defs/selection/properties/start": {
+     "status": "reviewed",
+     "explanation": "Hyperslab origin, one index per axis.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/start/items": {
+     "status": "reviewed",
+     "explanation": "Origin index along one axis.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/count": {
+     "status": "reviewed",
+     "explanation": "Number of blocks per axis.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/count/items": {
+     "status": "reviewed",
+     "explanation": "Block count along one axis.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/stride": {
+     "status": "reviewed",
+     "explanation": "Distance between block origins per axis; must be at least the block size when count > 1.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ],
+     "defaultMeaning": "1 on every axis"
+    },
+    "/$defs/selection/properties/stride/items": {
+     "status": "reviewed",
+     "explanation": "Stride along one axis.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/block": {
+     "status": "reviewed",
+     "explanation": "Block extent per axis; the selected size per axis is count x block.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ],
+     "defaultMeaning": "1 on every axis"
+    },
+    "/$defs/selection/properties/block/items": {
+     "status": "reviewed",
+     "explanation": "Block extent along one axis.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/points": {
+     "status": "reviewed",
+     "explanation": "Explicit element coordinates, one index per axis each, read in the listed order. Written point selections cannot repeat a coordinate.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/points/items": {
+     "status": "reviewed",
+     "explanation": "One element coordinate.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/selection/properties/points/items/items": {
+     "status": "reviewed",
+     "explanation": "Index along one axis.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/target": {
+     "status": "reviewed",
+     "explanation": "One reference target: an object path, plus a selection for region references.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/$defs/target/properties/path": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the referenced object in this file.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/$defs/target/properties/selection": {
+     "status": "reviewed",
+     "explanation": "For region references: the elements of the target dataset the reference designates.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/$defs/data": {
+     "status": "reviewed",
+     "explanation": "Where the element values come from. Values are row-major (C order) over the shape.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/source": {
+     "status": "reviewed",
+     "explanation": "values (literals), fill (the fill value), range (start + i*step), linspace (start..stop inclusive), input (captured CSV/NPY/raw), references or copy (another dataset).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values": {
+     "status": "reviewed",
+     "explanation": "Literal elements in row-major order: numbers, text, booleans, [re, im] pairs for complex, arrays for compound records or vlen elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "pitfalls": [
+      "The count must equal the product of the shape (or of the selected shape for writes)."
+     ]
+    },
+    "/$defs/data/properties/values/items": {
+     "status": "reviewed",
+     "explanation": "One element value.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3": {
+     "status": "reviewed",
+     "explanation": "A list: a compound record (one value per field), a complex [real, imaginary] pair, a vlen sequence or a vector field.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3/items": {
+     "status": "reviewed",
+     "explanation": "One element of the list.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3/items/anyOf/3": {
+     "status": "reviewed",
+     "explanation": "A list: a compound record (one value per field), a complex [real, imaginary] pair, a vlen sequence or a vector field.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3/items/anyOf/3/items": {
+     "status": "reviewed",
+     "explanation": "One element of the list.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3/items/anyOf/3/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3/items/anyOf/3/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/values/items/anyOf/3/items/anyOf/3/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/start": {
+     "status": "reviewed",
+     "explanation": "First generated value.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "examples": [
+      0
+     ]
+    },
+    "/$defs/data/properties/step": {
+     "status": "reviewed",
+     "explanation": "Increment of range; integer datasets need an integer step.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "examples": [
+      0.5
+     ]
+    },
+    "/$defs/data/properties/stop": {
+     "status": "reviewed",
+     "explanation": "Last value of linspace (included exactly).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/input": {
+     "status": "reviewed",
+     "explanation": "Id of a declared inputs[] record supplying the values.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/column": {
+     "status": "reviewed",
+     "explanation": "CSV column for a one-dimensional dataset.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/columns": {
+     "status": "reviewed",
+     "explanation": "CSV columns: one per compound field (in field order) or the columns of a [rows, columns] dataset.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/columns/items": {
+     "status": "reviewed",
+     "explanation": "Header name of one CSV column.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/data/properties/targets": {
+     "status": "reviewed",
+     "explanation": "One reference target per element, for reference-typed datasets.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/$defs/data/properties/targets/items": {
+     "status": "reviewed",
+     "explanation": "One reference target: an object path, plus a selection for region references.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types",
+      "guidance:/$defs/target"
+     ]
+    },
+    "/$defs/data/properties/dataset": {
+     "status": "reviewed",
+     "explanation": "Absolute path of another declared dataset with the same shape whose values are copied.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/externalSegment": {
+     "status": "reviewed",
+     "explanation": "One contiguous byte range of a raw file that holds part of the dataset, in order.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/externalSegment/properties/file": {
+     "status": "reviewed",
+     "explanation": "A rawStorage dependency id (existing bytes) or the name of a new .bin/.raw/.dat file written by this run.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/externalSegment/properties/offset": {
+     "status": "reviewed",
+     "explanation": "Byte offset of the segment in the raw file (skip headers here).",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ],
+     "units": "bytes",
+     "defaultMeaning": "0"
+    },
+    "/$defs/externalSegment/properties/size": {
+     "status": "reviewed",
+     "explanation": "Segment length in bytes; segments together must cover the dataset.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ],
+     "units": "bytes"
+    },
+    "/$defs/storage": {
+     "status": "reviewed",
+     "explanation": "How the dataset is laid out on disk: layout, chunking, compression filters, fill behaviour and raw external segments.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/storage/properties/layout": {
+     "status": "reviewed",
+     "explanation": "contiguous (one block), chunked (needed for filters and growth), compact (small data in the header), external (raw files) or virtual.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "inferred from the other fields"
+    },
+    "/$defs/storage/properties/chunks": {
+     "status": "reviewed",
+     "explanation": "Chunk shape per axis, or auto to let h5py choose. Chunks are the unit of compression and partial I/O.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "pitfalls": [
+      "Very small chunks inflate metadata; very large chunks make small reads slow."
+     ]
+    },
+    "/$defs/storage/properties/chunks/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "auto: let h5py choose a chunk shape from the dataset shape and element size.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/storage/properties/chunks/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "An explicit chunk shape, one extent per axis.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/storage/properties/chunks/anyOf/1/items": {
+     "status": "reviewed",
+     "explanation": "Chunk extent along one axis.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/storage/properties/compression": {
+     "status": "reviewed",
+     "explanation": "Compression filter: gzip (portable), lzf (fast, h5py-specific), szip, or none.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "none"
+    },
+    "/$defs/storage/properties/level": {
+     "status": "reviewed",
+     "explanation": "gzip level 0-9; higher is smaller and slower.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "4"
+    },
+    "/$defs/storage/properties/szipMethod": {
+     "status": "reviewed",
+     "explanation": "szip coding: nn (nearest neighbour, for smooth data) or ec (entropy coding).",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "nn"
+    },
+    "/$defs/storage/properties/szipPixels": {
+     "status": "reviewed",
+     "explanation": "szip pixels per block (even, 2-32).",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "8"
+    },
+    "/$defs/storage/properties/shuffle": {
+     "status": "reviewed",
+     "explanation": "Byte-shuffle before compression; usually improves compression of numeric data.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "off"
+    },
+    "/$defs/storage/properties/fletcher32": {
+     "status": "reviewed",
+     "explanation": "Store a checksum per chunk so corruption is detected on read.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "off"
+    },
+    "/$defs/storage/properties/scaleOffset": {
+     "status": "reviewed",
+     "explanation": "Scale-offset filter: for integers the minimum bits (0 = automatic, lossless); for floats the decimal digits kept (lossy).",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/storage/properties/fillValue": {
+     "status": "reviewed",
+     "explanation": "Value of elements never written, also used when a dataset grows.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "zero, empty text or false"
+    },
+    "/$defs/storage/properties/fillValue/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/storage/properties/fillValue/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/storage/properties/fillValue/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/storage/properties/fillTime": {
+     "status": "reviewed",
+     "explanation": "When fill values are written: ifSet (only if a fill value is set), alloc (on allocation) or never.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/storage/properties/allocTime": {
+     "status": "reviewed",
+     "explanation": "When storage is allocated: early (at creation), incremental (as chunks are written) or late.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/storage/properties/external": {
+     "status": "reviewed",
+     "explanation": "Raw byte segments that hold the dataset outside the HDF5 file.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/storage/properties/external/items": {
+     "status": "reviewed",
+     "explanation": "One contiguous byte range of a raw file that holds part of the dataset, in order.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/externalSegment"
+     ]
+    },
+    "/$defs/storage/properties/trackTimes": {
+     "status": "reviewed",
+     "explanation": "Record object modification times; off keeps files byte-reproducible.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "off"
+    },
+    "/$defs/virtualSource": {
+     "status": "reviewed",
+     "explanation": "One mapping of source elements into the virtual dataset.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/virtualSource/properties/file": {
+     "status": "reviewed",
+     "explanation": ". for this file or the id of a virtualSource dependency.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ],
+     "defaultMeaning": "."
+    },
+    "/$defs/virtualSource/properties/dataset": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the source dataset.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/virtualSource/properties/select": {
+     "status": "reviewed",
+     "explanation": "Elements of the source used (all, slices or hyperslab).",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ],
+     "defaultMeaning": "the whole source"
+    },
+    "/$defs/virtualSource/properties/at": {
+     "status": "reviewed",
+     "explanation": "Where those elements appear in the virtual dataset; must select the same number of elements.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ],
+     "defaultMeaning": "the whole virtual dataset"
+    },
+    "/$defs/virtual": {
+     "status": "reviewed",
+     "explanation": "Makes the dataset a virtual view assembled from other datasets, possibly in other files.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/virtual/properties/sources": {
+     "status": "reviewed",
+     "explanation": "Ordered source mappings; later mappings overwrite overlapping earlier ones.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/virtual/properties/sources/items": {
+     "status": "reviewed",
+     "explanation": "One mapping of source elements into the virtual dataset.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/virtualSource"
+     ]
+    },
+    "/$defs/virtual/properties/fill": {
+     "status": "reviewed",
+     "explanation": "Value read for elements no source maps.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ],
+     "defaultMeaning": "zero"
+    },
+    "/$defs/virtual/properties/fill/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/virtual/properties/fill/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/virtual/properties/fill/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute": {
+     "status": "reviewed",
+     "explanation": "A small named value attached to a group, dataset or the file: units, calibration, provenance or flags.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/attribute/properties/name": {
+     "status": "reviewed",
+     "explanation": "Attribute name (no / or NUL). Dimension-scale bookkeeping names are reserved.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "examples": [
+      "calibration"
+     ]
+    },
+    "/$defs/attribute/properties/type": {
+     "status": "reviewed",
+     "explanation": "Explicit element type; when omitted text becomes UTF-8 strings, integers int64 and numbers float64.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/attribute/properties/value": {
+     "status": "reviewed",
+     "explanation": "Scalar, text or list value. A list makes a one-dimensional attribute unless shape is given.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "examples": [
+      "kPa",
+      [
+       0.5,
+       1.0
+      ]
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3": {
+     "status": "reviewed",
+     "explanation": "A list: a compound record (one value per field), a complex [real, imaginary] pair, a vlen sequence or a vector field.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items": {
+     "status": "reviewed",
+     "explanation": "One attribute element.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3": {
+     "status": "reviewed",
+     "explanation": "A list: a compound record (one value per field), a complex [real, imaginary] pair, a vlen sequence or a vector field.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3/items": {
+     "status": "reviewed",
+     "explanation": "One element of the list.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3": {
+     "status": "reviewed",
+     "explanation": "A list: a compound record (one value per field), a complex [real, imaginary] pair, a vlen sequence or a vector field.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3/items": {
+     "status": "reviewed",
+     "explanation": "One element of the list.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/attribute/properties/shape": {
+     "status": "reviewed",
+     "explanation": "Attribute dataspace shape; [] is a scalar.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "defaultMeaning": "scalar for a single value, [n] for a list"
+    },
+    "/$defs/attribute/properties/shape/items": {
+     "status": "reviewed",
+     "explanation": "Extent of one axis.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/attribute/properties/empty": {
+     "status": "reviewed",
+     "explanation": "Write a null-dataspace attribute: it has a type but no value, for flags whose presence matters.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "defaultMeaning": "false"
+    },
+    "/$defs/dimension": {
+     "status": "reviewed",
+     "explanation": "Describes one axis of a dataset: its label and the dimension scales (coordinate datasets) attached to it.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/dimension/properties/axis": {
+     "status": "reviewed",
+     "explanation": "Zero-based axis index.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/dimension/properties/label": {
+     "status": "reviewed",
+     "explanation": "Human-readable axis label such as time or channel.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/dimension/properties/scales": {
+     "status": "reviewed",
+     "explanation": "Paths of one-dimensional scale datasets of exactly this axis length.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/dimension/properties/scales/items": {
+     "status": "reviewed",
+     "explanation": "Absolute path of one scale dataset.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/object": {
+     "status": "reviewed",
+     "explanation": "A group, dataset or committed datatype to create, addressed by absolute path.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/object/properties/path": {
+     "status": "reviewed",
+     "explanation": "Absolute HDF5 path; segments are Unicode link names (spaces, units, punctuation, brackets and leading dots allowed; no control characters or ./..); missing parent groups are created.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "examples": [
+      "/run/raw/counts"
+     ]
+    },
+    "/$defs/object/properties/kind": {
+     "status": "reviewed",
+     "explanation": "dataset (typed array), group (container) or datatype (a committed type other datasets can share).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "dataset"
+    },
+    "/$defs/object/properties/type": {
+     "status": "reviewed",
+     "explanation": "Element type of a dataset or committed datatype.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/object/properties/shape": {
+     "status": "reviewed",
+     "explanation": "Dataset extent per axis; [] is a scalar.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/object/properties/shape/items": {
+     "status": "reviewed",
+     "explanation": "Extent of one axis.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/object/properties/maxshape": {
+     "status": "reviewed",
+     "explanation": "Maximum extent per axis, or unlimited, so the dataset can grow; growth needs chunked storage.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "equal to shape (fixed size)"
+    },
+    "/$defs/object/properties/maxshape/items": {
+     "status": "reviewed",
+     "explanation": "Maximum extent of one axis or unlimited.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/object/properties/maxshape/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A fixed maximum extent for this axis.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/object/properties/maxshape/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "unlimited: the axis can grow without bound (needs chunking).",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/$defs/object/properties/data": {
+     "status": "reviewed",
+     "explanation": "Source of the dataset values.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "fill"
+    },
+    "/$defs/object/properties/storage": {
+     "status": "reviewed",
+     "explanation": "Layout, chunking, filters and fill behaviour.",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ],
+     "defaultMeaning": "contiguous without filters"
+    },
+    "/$defs/object/properties/virtual": {
+     "status": "reviewed",
+     "explanation": "Assemble this dataset from source selections instead of storing values.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/object/properties/attributes": {
+     "status": "reviewed",
+     "explanation": "Attributes attached to this object.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/object/properties/attributes/items": {
+     "status": "reviewed",
+     "explanation": "A small named value attached to a group, dataset or the file: units, calibration, provenance or flags.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales",
+      "guidance:/$defs/attribute"
+     ]
+    },
+    "/$defs/object/properties/units": {
+     "status": "reviewed",
+     "explanation": "Shorthand for a text units attribute (kept exactly, carried into CSV headers).",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "examples": [
+      "kPa"
+     ]
+    },
+    "/$defs/object/properties/scale": {
+     "status": "reviewed",
+     "explanation": "Make this one-dimensional dataset a dimension scale with this name (may be empty).",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "examples": [
+      "time"
+     ]
+    },
+    "/$defs/object/properties/dimensions": {
+     "status": "reviewed",
+     "explanation": "Axis labels and attached dimension scales.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/object/properties/dimensions/items": {
+     "status": "reviewed",
+     "explanation": "Describes one axis of a dataset: its label and the dimension scales (coordinate datasets) attached to it.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales",
+      "guidance:/$defs/dimension"
+     ]
+    },
+    "/$defs/object/properties/trackOrder": {
+     "status": "reviewed",
+     "explanation": "Track creation order: for groups, links and attributes list in the order they were added; for datasets, attributes do. Tracking objects store attributes densely, so attributes larger than 64 KiB need it (or file libver v108+).",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/link": {
+     "status": "reviewed",
+     "explanation": "A link name pointing at another object: soft (path text), hard (same object) or external (object in another file).",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/$defs/link/properties/path": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the new link.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/$defs/link/properties/kind": {
+     "status": "reviewed",
+     "explanation": "soft, hard or external.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/$defs/link/properties/target": {
+     "status": "reviewed",
+     "explanation": "Target path; soft links store it as text and may dangle, hard links need an existing object.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/$defs/link/properties/file": {
+     "status": "reviewed",
+     "explanation": "External links only: a relative file name or an externalLink dependency id.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/$defs/input": {
+     "status": "reviewed",
+     "explanation": "A captured local file supplying dataset values: CSV with a header, a C-ordered .npy array or raw binary.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/input/properties/id": {
+     "status": "reviewed",
+     "explanation": "Identifier referenced by data.input.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "examples": [
+      "temps"
+     ]
+    },
+    "/$defs/input/properties/path": {
+     "status": "reviewed",
+     "explanation": "Absolute local path; the bytes are captured into the run.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "fileExtensions": [
+      ".csv",
+      ".npy",
+      ".bin",
+      ".raw",
+      ".dat"
+     ]
+    },
+    "/$defs/input/properties/format": {
+     "status": "reviewed",
+     "explanation": "csv (header row, typed by the target dataset), npy (bool/int/float arrays) or raw (declared type and shape).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/input/properties/sha256": {
+     "status": "reviewed",
+     "explanation": "Optional expected SHA-256 of the input; a mismatch refuses the run.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/input/properties/type": {
+     "status": "reviewed",
+     "explanation": "Raw inputs only: element type of the raw bytes.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/input/properties/shape": {
+     "status": "reviewed",
+     "explanation": "Raw inputs only: element shape of the raw data.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/input/properties/shape/items": {
+     "status": "reviewed",
+     "explanation": "Extent of one axis.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/input/properties/offset": {
+     "status": "reviewed",
+     "explanation": "Raw inputs only: bytes to skip before the data.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "units": "bytes",
+     "defaultMeaning": "0"
+    },
+    "/$defs/input/properties/delimiter": {
+     "status": "reviewed",
+     "explanation": "CSV field delimiter.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "defaultMeaning": "comma"
+    },
+    "/$defs/dependency": {
+     "status": "reviewed",
+     "explanation": "Another file the result needs or reads: virtual sources, external link targets, raw storage, copy sources. It is captured and published beside the result.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/dependency/properties/id": {
+     "status": "reviewed",
+     "explanation": "Identifier used by virtual sources, external segments, links and copy edits.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/dependency/properties/path": {
+     "status": "reviewed",
+     "explanation": "Absolute local path; captured, never modified.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ],
+     "fileExtensions": [
+      ".h5",
+      ".hdf5",
+      ".he5",
+      ".nc",
+      ".bin",
+      ".raw",
+      ".dat"
+     ]
+    },
+    "/$defs/dependency/properties/sha256": {
+     "status": "reviewed",
+     "explanation": "Optional expected SHA-256; a mismatch refuses the run.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/dependency/properties/role": {
+     "status": "reviewed",
+     "explanation": "virtualSource, externalLink, rawStorage, copySource or reference: how the result uses the file.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/$defs/dependency/properties/name": {
+     "status": "reviewed",
+     "explanation": "File name inside the published bundle (relative references use it).",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ],
+     "defaultMeaning": "the source file name"
+    },
+    "/$defs/file": {
+     "status": "reviewed",
+     "explanation": "Settings of the file being written: name, format compatibility bounds, user block, link order, driver and file-space strategy.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/$defs/file/properties/name": {
+     "status": "reviewed",
+     "explanation": "Output file name (.h5, .hdf5 or .he5).",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/$defs/file/properties/libver": {
+     "status": "reviewed",
+     "explanation": "Oldest HDF5 format the file must stay readable by: earliest gives superblock 0 for any HDF5 1.x reader; v110 or later gives superblock 3 and newer object headers.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ],
+     "defaultMeaning": "earliest"
+    },
+    "/$defs/file/properties/libverHigh": {
+     "status": "reviewed",
+     "explanation": "Newest format features allowed.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ],
+     "defaultMeaning": "latest"
+    },
+    "/$defs/file/properties/userblock": {
+     "status": "reviewed",
+     "explanation": "Bytes reserved at the start of the file for other tools (0 or a power of two >= 512).",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ],
+     "units": "bytes",
+     "defaultMeaning": "0"
+    },
+    "/$defs/file/properties/trackOrder": {
+     "status": "reviewed",
+     "explanation": "Remember creation order of root-group links and attributes.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ],
+     "defaultMeaning": "off"
+    },
+    "/$defs/file/properties/driver": {
+     "status": "reviewed",
+     "explanation": "sec2 (default POSIX), stdio, core (build in memory, write at close), family (fixed-size member files) or split (separate -m metadata and -r raw files).",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ],
+     "defaultMeaning": "sec2"
+    },
+    "/$defs/file/properties/memberBytes": {
+     "status": "reviewed",
+     "explanation": "Family driver only: size of each member file.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ],
+     "units": "bytes"
+    },
+    "/$defs/file/properties/spaceStrategy": {
+     "status": "reviewed",
+     "explanation": "File-space management: page enables paged aggregation for cloud-friendly reads (needs v110+).",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ],
+     "defaultMeaning": "HDF5 default"
+    },
+    "/$defs/file/properties/pageBytes": {
+     "status": "reviewed",
+     "explanation": "Page size for the paged strategy.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ],
+     "units": "bytes",
+     "defaultMeaning": "4096"
+    },
+    "/$defs/file/properties/attributes": {
+     "status": "reviewed",
+     "explanation": "Attributes on the root group (file-level metadata such as title or campaign).",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/file/properties/attributes/items": {
+     "status": "reviewed",
+     "explanation": "A small named value attached to a group, dataset or the file: units, calibration, provenance or flags.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales",
+      "guidance:/$defs/attribute"
+     ]
+    },
+    "/$defs/extract": {
+     "status": "reviewed",
+     "explanation": "One selection to publish for other tools as CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/extract/properties/id": {
+     "status": "reviewed",
+     "explanation": "Identifier and output file stem.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/extract/properties/dataset": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the dataset to read.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/extract/properties/selection": {
+     "status": "reviewed",
+     "explanation": "Elements to read.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ],
+     "defaultMeaning": "all"
+    },
+    "/$defs/extract/properties/fields": {
+     "status": "reviewed",
+     "explanation": "Compound fields to keep, in output order (CSV columns and JSON records follow this order).",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/extract/properties/fields/items": {
+     "status": "reviewed",
+     "explanation": "One compound field name: unique text without control characters or surrounding spaces (for example \"Druck, kPa\").",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/extract/properties/format": {
+     "status": "reviewed",
+     "explanation": "csv (rows along axis 0), npy (exact binary array), json (natural numbers with a type descriptor) or chunks (an index of every allocated chunk: position, file offset, size, filter mask and digest, checked by decoding the stored bytes on the host).",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction",
+      "docs/hdf5.md#chunk-indexes"
+     ],
+     "defaultMeaning": "csv"
+    },
+    "/$defs/extract/properties/coordinates": {
+     "status": "reviewed",
+     "explanation": "Add the axis-0 dimension scale as the first CSV column.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ],
+     "defaultMeaning": "true"
+    },
+    "/$defs/extract/properties/columns": {
+     "status": "reviewed",
+     "explanation": "CSV header names for the flattened trailing axes.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ],
+     "defaultMeaning": "<dataset>_0, <dataset>_1, ..."
+    },
+    "/$defs/extract/properties/columns/items": {
+     "status": "reviewed",
+     "explanation": "One column header.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/expectation": {
+     "status": "reviewed",
+     "explanation": "A typed requirement on an inspected file, decided by the host as met or unmet with reasons.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/id": {
+     "status": "reviewed",
+     "explanation": "Identifier of the decision.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/path": {
+     "status": "reviewed",
+     "explanation": "Object or link path the requirement is about (/ for the file).",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/present": {
+     "status": "reviewed",
+     "explanation": "false requires the path to be absent.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "defaultMeaning": "true"
+    },
+    "/$defs/expectation/properties/kind": {
+     "status": "reviewed",
+     "explanation": "Required object kind: group, dataset, datatype, softLink or externalLink.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/class": {
+     "status": "reviewed",
+     "explanation": "Required element class.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/bits": {
+     "status": "reviewed",
+     "explanation": "Required element width.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/shape": {
+     "status": "reviewed",
+     "explanation": "Required dataset shape.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/shape/items": {
+     "status": "reviewed",
+     "explanation": "Extent of one axis.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/units": {
+     "status": "reviewed",
+     "explanation": "Required units attribute text (exact).",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/attribute": {
+     "status": "reviewed",
+     "explanation": "Name of a required attribute.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/value": {
+     "status": "reviewed",
+     "explanation": "Required attribute value (exact; floats compared after conversion).",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3": {
+     "status": "reviewed",
+     "explanation": "A list: a compound record (one value per field), a complex [real, imaginary] pair, a vlen sequence or a vector field.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items": {
+     "status": "reviewed",
+     "explanation": "One element of the required value.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3": {
+     "status": "reviewed",
+     "explanation": "A list: a compound record (one value per field), a complex [real, imaginary] pair, a vlen sequence or a vector field.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3/items": {
+     "status": "reviewed",
+     "explanation": "One element of the list.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3": {
+     "status": "reviewed",
+     "explanation": "A list: a compound record (one value per field), a complex [real, imaginary] pair, a vlen sequence or a vector field.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3/items": {
+     "status": "reviewed",
+     "explanation": "One element of the list.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A numeric value (integer or real, interpreted by the declared type).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: a string element, an enum member name, lower-case hex for opaque elements, or nan/inf/-inf for floats.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/value/anyOf/3/items/anyOf/3/items/anyOf/3/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "A boolean value for bool elements.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/$defs/expectation/properties/minimum": {
+     "status": "reviewed",
+     "explanation": "All finite values must be at least this.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/maximum": {
+     "status": "reviewed",
+     "explanation": "All finite values must be at most this.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/finite": {
+     "status": "reviewed",
+     "explanation": "true requires every element to be finite (no NaN or infinity).",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/expectation/properties/compression": {
+     "status": "reviewed",
+     "explanation": "Required compression filter (none, gzip, lzf, szip).",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/edit": {
+     "status": "reviewed",
+     "explanation": "One ordered change to the captured copy; each edit is checked against the state left by the previous edits.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/action": {
+     "status": "reviewed",
+     "explanation": "create, delete, move, copy, link, setAttribute, deleteAttribute, renameAttribute, write, resize, append, makeScale, attachScale, detachScale, relayout or copyChunks (stored chunks copied unchanged between datasets with the same layout).",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/path": {
+     "status": "reviewed",
+     "explanation": "Path the action applies to (the source path for move, copy and copyChunks).",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/to": {
+     "status": "reviewed",
+     "explanation": "Destination path for move or copy, or the existing target dataset for copyChunks.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/object": {
+     "status": "reviewed",
+     "explanation": "For create: the new object.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/link": {
+     "status": "reviewed",
+     "explanation": "For link: the new link.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/attribute": {
+     "status": "reviewed",
+     "explanation": "For setAttribute: the attribute to create or replace.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/name": {
+     "status": "reviewed",
+     "explanation": "Attribute name for deleteAttribute and renameAttribute (the current name); scale name for makeScale.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/selection": {
+     "status": "reviewed",
+     "explanation": "For write: the elements overwritten.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ],
+     "defaultMeaning": "all"
+    },
+    "/$defs/edit/properties/data": {
+     "status": "reviewed",
+     "explanation": "For write and append: the new values.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/shape": {
+     "status": "reviewed",
+     "explanation": "New shape for resize; appended block shape for append.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/shape/items": {
+     "status": "reviewed",
+     "explanation": "Extent of one axis.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/axis": {
+     "status": "reviewed",
+     "explanation": "Axis for append, attachScale and detachScale.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/scale": {
+     "status": "reviewed",
+     "explanation": "Scale dataset path for attachScale or detachScale.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/storage": {
+     "status": "reviewed",
+     "explanation": "For relayout: the new storage.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/from": {
+     "status": "reviewed",
+     "explanation": "For copy: a copySource dependency id to copy from another file.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/$defs/edit/properties/shallow": {
+     "status": "reviewed",
+     "explanation": "Copy only the immediate members of a group.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ],
+     "defaultMeaning": "false"
+    },
+    "/$defs/edit/properties/withoutAttributes": {
+     "status": "reviewed",
+     "explanation": "Copy without attributes (also detaches scales).",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ],
+     "defaultMeaning": "false"
+    },
+    "/$defs/edit/properties/expandSoft": {
+     "status": "reviewed",
+     "explanation": "Replace soft links in the copied tree by copies of their targets.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ],
+     "defaultMeaning": "false"
+    },
+    "/$defs/edit/properties/expandExternal": {
+     "status": "reviewed",
+     "explanation": "Refused: results would depend on files outside the verified copy.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ],
+     "defaultMeaning": "false"
+    },
+    "/$defs/edit/properties/expandReferences": {
+     "status": "reviewed",
+     "explanation": "Refused: results would depend on objects outside the verified copy.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ],
+     "defaultMeaning": "false"
+    },
+    "/$defs/cells": {
+     "status": "reviewed",
+     "explanation": "One block of cells of a single type.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/cells/properties/type": {
+     "status": "reviewed",
+     "explanation": "Cell type: vertex, line, triangle, quadrilateral, tetrahedron, pyramid, wedge or hexahedron.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/cells/properties/connectivity": {
+     "status": "reviewed",
+     "explanation": "Zero-based point indices, nodes-per-cell values per cell.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/cells/properties/name": {
+     "status": "reviewed",
+     "explanation": "Block name (defaults to the cell type).",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/cells/properties/count": {
+     "status": "reviewed",
+     "explanation": "Number of cells; required when connectivity comes from an input or generator.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/mesh": {
+     "status": "reviewed",
+     "explanation": "The unstructured mesh geometry and cell blocks.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/mesh/properties/points": {
+     "status": "reviewed",
+     "explanation": "Point coordinates, dimension values per point.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/mesh/properties/dimension": {
+     "status": "reviewed",
+     "explanation": "2 for XY or 3 for XYZ coordinates.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ],
+     "defaultMeaning": "3"
+    },
+    "/$defs/mesh/properties/pointCount": {
+     "status": "reviewed",
+     "explanation": "Number of points; required when points come from an input or generator.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/mesh/properties/cells": {
+     "status": "reviewed",
+     "explanation": "One or more cell blocks.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/mesh/properties/cells/items": {
+     "status": "reviewed",
+     "explanation": "One block of cells of a single type.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf",
+      "guidance:/$defs/cells"
+     ]
+    },
+    "/$defs/mesh/properties/units": {
+     "status": "reviewed",
+     "explanation": "Length unit of the coordinates.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ],
+     "defaultMeaning": "m"
+    },
+    "/$defs/meshField": {
+     "status": "reviewed",
+     "explanation": "A field defined on points or cells, with one data record per time.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/meshField/properties/name": {
+     "status": "reviewed",
+     "explanation": "Field name shown by visualisation tools.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/meshField/properties/association": {
+     "status": "reviewed",
+     "explanation": "point (one value per point) or cell (one per cell, single block only).",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/meshField/properties/components": {
+     "status": "reviewed",
+     "explanation": "1 scalar, 3 vector, 6 symmetric tensor or 9 full tensor.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ],
+     "defaultMeaning": "1"
+    },
+    "/$defs/meshField/properties/units": {
+     "status": "reviewed",
+     "explanation": "Physical units of the field.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/meshField/properties/type": {
+     "status": "reviewed",
+     "explanation": "Element type of the stored field.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ],
+     "defaultMeaning": "float64"
+    },
+    "/$defs/meshField/properties/steps": {
+     "status": "reviewed",
+     "explanation": "One data record per entry of times.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/$defs/meshField/properties/steps/items": {
+     "status": "reviewed",
+     "explanation": "Where the element values come from. Values are row-major (C order) over the shape.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/data"
+     ]
+    },
+    "/$defs/series": {
+     "status": "reviewed",
+     "explanation": "The single growing dataset written in SWMR mode.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ]
+    },
+    "/$defs/series/properties/dataset": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the series dataset.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ]
+    },
+    "/$defs/series/properties/type": {
+     "status": "reviewed",
+     "explanation": "Integer or float sample type.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ],
+     "defaultMeaning": "float64"
+    },
+    "/$defs/series/properties/width": {
+     "status": "reviewed",
+     "explanation": "Samples per row (channels).",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ],
+     "defaultMeaning": "1"
+    },
+    "/$defs/series/properties/units": {
+     "status": "reviewed",
+     "explanation": "Units attribute of the samples.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ]
+    },
+    "/$defs/series/properties/chunkRows": {
+     "status": "reviewed",
+     "explanation": "Rows per chunk; readers see whole flushed chunks efficiently.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ],
+     "defaultMeaning": "64"
+    },
+    "/$defs/series/properties/compression": {
+     "status": "reviewed",
+     "explanation": "none, gzip or lzf for the chunks.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ],
+     "defaultMeaning": "none"
+    },
+    "/$defs/tolerance": {
+     "status": "reviewed",
+     "explanation": "Comparison rules for compareFiles.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/tolerance/properties/absolute": {
+     "status": "reviewed",
+     "explanation": "Absolute tolerance on numeric differences.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "defaultMeaning": "0"
+    },
+    "/$defs/tolerance/properties/relative": {
+     "status": "reviewed",
+     "explanation": "Relative tolerance, multiplied by |reference value|.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "defaultMeaning": "0"
+    },
+    "/$defs/tolerance/properties/paths": {
+     "status": "reviewed",
+     "explanation": "Restrict the comparison to these paths.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "defaultMeaning": "every path in either file"
+    },
+    "/$defs/tolerance/properties/paths/items": {
+     "status": "reviewed",
+     "explanation": "One path to compare.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/tolerance/properties/attributes": {
+     "status": "reviewed",
+     "explanation": "Also compare attributes.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "defaultMeaning": "true"
+    },
+    "/$defs/tolerance/properties/storage": {
+     "status": "reviewed",
+     "explanation": "Also compare layout, chunks and filters.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "defaultMeaning": "false"
+    },
+    "/oneOf/0": {
+     "status": "reviewed",
+     "explanation": "Create a new HDF5 file from declared objects, links and storage.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/0/properties/version": {
+     "status": "reviewed",
+     "explanation": "Document contract version; always schemaxis.hdf5/1.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/0/properties/operation": {
+     "status": "reviewed",
+     "explanation": "What to do: createFile, editFile, inspectFile, extractData, writeMeshFields, appendSeries or compareFiles.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/0/properties/file": {
+     "status": "reviewed",
+     "explanation": "Settings of the file this operation writes.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/0/properties/inputs": {
+     "status": "reviewed",
+     "explanation": "Captured CSV, NPY or raw files that supply values.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/oneOf/0/properties/inputs/items": {
+     "status": "reviewed",
+     "explanation": "A captured local file supplying dataset values: CSV with a header, a C-ordered .npy array or raw binary.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/input"
+     ]
+    },
+    "/oneOf/0/properties/dependencies": {
+     "status": "reviewed",
+     "explanation": "Other files the result uses or reads, captured and published with it.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/oneOf/0/properties/dependencies/items": {
+     "status": "reviewed",
+     "explanation": "Another file the result needs or reads: virtual sources, external link targets, raw storage, copy sources. It is captured and published beside the result.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/dependency"
+     ]
+    },
+    "/oneOf/0/properties/objects": {
+     "status": "reviewed",
+     "explanation": "Groups, datasets and committed datatypes to create, by absolute path.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/oneOf/0/properties/objects/items": {
+     "status": "reviewed",
+     "explanation": "A group, dataset or committed datatype to create, addressed by absolute path.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/object"
+     ]
+    },
+    "/oneOf/0/properties/links": {
+     "status": "reviewed",
+     "explanation": "Soft, hard and external links to add.",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types"
+     ]
+    },
+    "/oneOf/0/properties/links/items": {
+     "status": "reviewed",
+     "explanation": "A link name pointing at another object: soft (path text), hard (same object) or external (object in another file).",
+     "sources": [
+      "docs/hdf5.md#links-references-and-committed-types",
+      "guidance:/$defs/link"
+     ]
+    },
+    "/oneOf/0/properties/extracts": {
+     "status": "reviewed",
+     "explanation": "Selections to publish as CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/oneOf/0/properties/extracts/items": {
+     "status": "reviewed",
+     "explanation": "One selection to publish for other tools as CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction",
+      "guidance:/$defs/extract"
+     ]
+    },
+    "/oneOf/1": {
+     "status": "reviewed",
+     "explanation": "Edit a captured copy of an existing HDF5 file.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/1/properties/version": {
+     "status": "reviewed",
+     "explanation": "Document contract version; always schemaxis.hdf5/1.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/1/properties/operation": {
+     "status": "reviewed",
+     "explanation": "What to do: createFile, editFile, inspectFile, extractData, writeMeshFields, appendSeries or compareFiles.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/1/properties/source": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the existing HDF5 file to read; it is captured and never modified.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "fileExtensions": [
+      ".h5",
+      ".hdf5",
+      ".he5",
+      ".nc"
+     ]
+    },
+    "/oneOf/1/properties/sha256": {
+     "status": "reviewed",
+     "explanation": "Optional expected SHA-256 of the source; a mismatch refuses the run.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/oneOf/1/properties/file": {
+     "status": "reviewed",
+     "explanation": "Name and settings of the edited copy; drivers and format bounds apply only with repack.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/oneOf/1/properties/inputs": {
+     "status": "reviewed",
+     "explanation": "Captured CSV, NPY or raw files that supply values.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/oneOf/1/properties/inputs/items": {
+     "status": "reviewed",
+     "explanation": "A captured local file supplying dataset values: CSV with a header, a C-ordered .npy array or raw binary.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/input"
+     ]
+    },
+    "/oneOf/1/properties/dependencies": {
+     "status": "reviewed",
+     "explanation": "Other files the result uses or reads, captured and published with it.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/oneOf/1/properties/dependencies/items": {
+     "status": "reviewed",
+     "explanation": "Another file the result needs or reads: virtual sources, external link targets, raw storage, copy sources. It is captured and published beside the result.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/dependency"
+     ]
+    },
+    "/oneOf/1/properties/edits": {
+     "status": "reviewed",
+     "explanation": "Ordered edits applied to the captured copy.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/oneOf/1/properties/edits/items": {
+     "status": "reviewed",
+     "explanation": "One ordered change to the captured copy; each edit is checked against the state left by the previous edits.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file",
+      "guidance:/$defs/edit"
+     ]
+    },
+    "/oneOf/1/properties/repack": {
+     "status": "reviewed",
+     "explanation": "Rewrite into a fresh file after editing, reclaiming freed space and applying the file settings.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ],
+     "defaultMeaning": "false"
+    },
+    "/oneOf/1/properties/extracts": {
+     "status": "reviewed",
+     "explanation": "Selections to publish as CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/oneOf/1/properties/extracts/items": {
+     "status": "reviewed",
+     "explanation": "One selection to publish for other tools as CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction",
+      "guidance:/$defs/extract"
+     ]
+    },
+    "/oneOf/2": {
+     "status": "reviewed",
+     "explanation": "Inventory and audit an existing HDF5 file.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/2/properties/version": {
+     "status": "reviewed",
+     "explanation": "Document contract version; always schemaxis.hdf5/1.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/2/properties/operation": {
+     "status": "reviewed",
+     "explanation": "What to do: createFile, editFile, inspectFile, extractData, writeMeshFields, appendSeries or compareFiles.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/2/properties/source": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the existing HDF5 file to read; it is captured and never modified.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "fileExtensions": [
+      ".h5",
+      ".hdf5",
+      ".he5",
+      ".nc"
+     ]
+    },
+    "/oneOf/2/properties/sha256": {
+     "status": "reviewed",
+     "explanation": "Optional expected SHA-256 of the source; a mismatch refuses the run.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/oneOf/2/properties/dependencies": {
+     "status": "reviewed",
+     "explanation": "Other files the result uses or reads, captured and published with it.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/oneOf/2/properties/dependencies/items": {
+     "status": "reviewed",
+     "explanation": "Another file the result needs or reads: virtual sources, external link targets, raw storage, copy sources. It is captured and published beside the result.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/dependency"
+     ]
+    },
+    "/oneOf/2/properties/expectations": {
+     "status": "reviewed",
+     "explanation": "Typed requirements decided as met or unmet.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/oneOf/2/properties/expectations/items": {
+     "status": "reviewed",
+     "explanation": "A typed requirement on an inspected file, decided by the host as met or unmet with reasons.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison",
+      "guidance:/$defs/expectation"
+     ]
+    },
+    "/oneOf/2/properties/preview": {
+     "status": "reviewed",
+     "explanation": "Maximum values shown per dataset or attribute in the inventory.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "defaultMeaning": "8"
+    },
+    "/oneOf/3": {
+     "status": "reviewed",
+     "explanation": "Extract selections of an existing file to CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/3/properties/version": {
+     "status": "reviewed",
+     "explanation": "Document contract version; always schemaxis.hdf5/1.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/3/properties/operation": {
+     "status": "reviewed",
+     "explanation": "What to do: createFile, editFile, inspectFile, extractData, writeMeshFields, appendSeries or compareFiles.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/3/properties/source": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the existing HDF5 file to read; it is captured and never modified.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "fileExtensions": [
+      ".h5",
+      ".hdf5",
+      ".he5",
+      ".nc"
+     ]
+    },
+    "/oneOf/3/properties/sha256": {
+     "status": "reviewed",
+     "explanation": "Optional expected SHA-256 of the source; a mismatch refuses the run.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/oneOf/3/properties/dependencies": {
+     "status": "reviewed",
+     "explanation": "Other files the result uses or reads, captured and published with it.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/oneOf/3/properties/dependencies/items": {
+     "status": "reviewed",
+     "explanation": "Another file the result needs or reads: virtual sources, external link targets, raw storage, copy sources. It is captured and published beside the result.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/dependency"
+     ]
+    },
+    "/oneOf/3/properties/extracts": {
+     "status": "reviewed",
+     "explanation": "One or more selections to publish.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/oneOf/3/properties/extracts/items": {
+     "status": "reviewed",
+     "explanation": "One selection to publish for other tools as CSV, NPY or JSON.",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction",
+      "guidance:/$defs/extract"
+     ]
+    },
+    "/oneOf/4": {
+     "status": "reviewed",
+     "explanation": "Write mesh, field time series and XDMF.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/4/properties/version": {
+     "status": "reviewed",
+     "explanation": "Document contract version; always schemaxis.hdf5/1.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/4/properties/operation": {
+     "status": "reviewed",
+     "explanation": "What to do: createFile, editFile, inspectFile, extractData, writeMeshFields, appendSeries or compareFiles.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/4/properties/file": {
+     "status": "reviewed",
+     "explanation": "Name and format settings of the heavy-data HDF5 file referenced by the XDMF.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/oneOf/4/properties/inputs": {
+     "status": "reviewed",
+     "explanation": "Captured CSV, NPY or raw files that supply values.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/oneOf/4/properties/inputs/items": {
+     "status": "reviewed",
+     "explanation": "A captured local file supplying dataset values: CSV with a header, a C-ordered .npy array or raw binary.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/input"
+     ]
+    },
+    "/oneOf/4/properties/dependencies": {
+     "status": "reviewed",
+     "explanation": "Other files the result uses or reads, captured and published with it.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/oneOf/4/properties/dependencies/items": {
+     "status": "reviewed",
+     "explanation": "Another file the result needs or reads: virtual sources, external link targets, raw storage, copy sources. It is captured and published beside the result.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/dependency"
+     ]
+    },
+    "/oneOf/4/properties/mesh": {
+     "status": "reviewed",
+     "explanation": "Mesh geometry and cell blocks.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/oneOf/4/properties/fields": {
+     "status": "reviewed",
+     "explanation": "Point or cell fields, one record per time.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/oneOf/4/properties/fields/items": {
+     "status": "reviewed",
+     "explanation": "A field defined on points or cells, with one data record per time.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf",
+      "guidance:/$defs/meshField"
+     ]
+    },
+    "/oneOf/4/properties/times": {
+     "status": "reviewed",
+     "explanation": "Strictly increasing times of the steps.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/oneOf/4/properties/times/items": {
+     "status": "reviewed",
+     "explanation": "One step time.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/oneOf/4/properties/timeUnits": {
+     "status": "reviewed",
+     "explanation": "Units of the times.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ],
+     "defaultMeaning": "s"
+    },
+    "/oneOf/4/properties/storage": {
+     "status": "reviewed",
+     "explanation": "Storage applied to mesh and field datasets.",
+     "sources": [
+      "docs/hdf5.md#mesh-and-field-time-series-xdmf"
+     ]
+    },
+    "/oneOf/5": {
+     "status": "reviewed",
+     "explanation": "Append a SWMR series with concurrent readers.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/5/properties/version": {
+     "status": "reviewed",
+     "explanation": "Document contract version; always schemaxis.hdf5/1.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/5/properties/operation": {
+     "status": "reviewed",
+     "explanation": "What to do: createFile, editFile, inspectFile, extractData, writeMeshFields, appendSeries or compareFiles.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/5/properties/file": {
+     "status": "reviewed",
+     "explanation": "Name of the SWMR series file (written with libver latest).",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ]
+    },
+    "/oneOf/5/properties/inputs": {
+     "status": "reviewed",
+     "explanation": "Captured CSV, NPY or raw files that supply values.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/oneOf/5/properties/inputs/items": {
+     "status": "reviewed",
+     "explanation": "A captured local file supplying dataset values: CSV with a header, a C-ordered .npy array or raw binary.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/input"
+     ]
+    },
+    "/oneOf/5/properties/dependencies": {
+     "status": "reviewed",
+     "explanation": "Other files the result uses or reads, captured and published with it.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/oneOf/5/properties/dependencies/items": {
+     "status": "reviewed",
+     "explanation": "Another file the result needs or reads: virtual sources, external link targets, raw storage, copy sources. It is captured and published beside the result.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/dependency"
+     ]
+    },
+    "/oneOf/5/properties/series": {
+     "status": "reviewed",
+     "explanation": "The growing SWMR dataset.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ]
+    },
+    "/oneOf/5/properties/batches": {
+     "status": "reviewed",
+     "explanation": "Sample batches appended and flushed in order.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ]
+    },
+    "/oneOf/5/properties/batches/items": {
+     "status": "reviewed",
+     "explanation": "Where the element values come from. Values are row-major (C order) over the shape.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/data"
+     ]
+    },
+    "/oneOf/5/properties/swmr": {
+     "status": "reviewed",
+     "explanation": "Enable SWMR so readers can open the file while it grows.",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ],
+     "defaultMeaning": "true"
+    },
+    "/oneOf/5/properties/readers": {
+     "status": "reviewed",
+     "explanation": "Number of concurrent reader processes that observe every batch (0-2).",
+     "sources": [
+      "docs/hdf5.md#swmr-live-series"
+     ],
+     "defaultMeaning": "1"
+    },
+    "/oneOf/6": {
+     "status": "reviewed",
+     "explanation": "Compare two HDF5 files with tolerances.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/6/properties/version": {
+     "status": "reviewed",
+     "explanation": "Document contract version; always schemaxis.hdf5/1.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/6/properties/operation": {
+     "status": "reviewed",
+     "explanation": "What to do: createFile, editFile, inspectFile, extractData, writeMeshFields, appendSeries or compareFiles.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/6/properties/source": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the file being checked; it is captured and never modified.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "fileExtensions": [
+      ".h5",
+      ".hdf5",
+      ".he5",
+      ".nc"
+     ]
+    },
+    "/oneOf/6/properties/sha256": {
+     "status": "reviewed",
+     "explanation": "Optional expected SHA-256 of the source; a mismatch refuses the run.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/oneOf/6/properties/reference": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the file the source is compared against.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "fileExtensions": [
+      ".h5",
+      ".hdf5",
+      ".he5",
+      ".nc"
+     ]
+    },
+    "/oneOf/6/properties/referenceSha256": {
+     "status": "reviewed",
+     "explanation": "Optional expected SHA-256 of the reference file.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/oneOf/6/properties/dependencies": {
+     "status": "reviewed",
+     "explanation": "Other files the result uses or reads, captured and published with it.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files"
+     ]
+    },
+    "/oneOf/6/properties/dependencies/items": {
+     "status": "reviewed",
+     "explanation": "Another file the result needs or reads: virtual sources, external link targets, raw storage, copy sources. It is captured and published beside the result.",
+     "sources": [
+      "docs/hdf5.md#virtual-datasets-external-storage-and-dependent-files",
+      "guidance:/$defs/dependency"
+     ]
+    },
+    "/oneOf/6/properties/tolerance": {
+     "status": "reviewed",
+     "explanation": "Comparison tolerances and scope.",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/extract/properties/header": {
+     "status": "reviewed",
+     "explanation": "CSV header style: units writes name [units] (and the coordinate as time [s]); names writes bare names for consumers that require identifier headers, such as the NumPy adaptor.",
+     "defaultMeaning": "units",
+     "sources": [
+      "docs/hdf5.md#selections-and-extraction"
+     ]
+    },
+    "/$defs/storage/properties/nbit": {
+     "status": "reviewed",
+     "explanation": "N-bit filter: pack each element into its significant bits before other filters; lossless, useful with reduced-precision integer or float types. Not combinable with scaleOffset.",
+     "defaultMeaning": "off",
+     "sources": [
+      "docs/hdf5.md#storage-chunks-filters-fill-and-layouts"
+     ]
+    },
+    "/properties/objects/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "Objects of createFile: groups, datasets and committed datatypes (up to 256).",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ]
+    },
+    "/properties/objects/anyOf/0/items": {
+     "status": "reviewed",
+     "explanation": "A group, dataset or committed datatype to create, addressed by absolute path.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/object"
+     ]
+    },
+    "/properties/objects/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Objects of parallelWrite: groups and integer/float datasets written by MPI ranks (up to 32).",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ]
+    },
+    "/properties/objects/anyOf/1/items": {
+     "status": "reviewed",
+     "explanation": "A group, dataset or committed datatype to create, addressed by absolute path.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/object"
+     ]
+    },
+    "/properties/ranks": {
+     "status": "reviewed",
+     "explanation": "Number of MPI processes (2-4); dataset axis 0 is split into contiguous row blocks, one per rank.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ],
+     "defaultMeaning": "2"
+    },
+    "/properties/io": {
+     "status": "reviewed",
+     "explanation": "collective (all ranks write together; required for compressed or filtered datasets) or independent (each rank writes alone).",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ],
+     "defaultMeaning": "collective"
+    },
+    "/properties/reduce": {
+     "status": "reviewed",
+     "explanation": "After writing, read the file in parallel and reduce count, minimum, maximum and sum across ranks for comparison with the planned values.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ],
+     "defaultMeaning": "true"
+    },
+    "/oneOf/7": {
+     "status": "reviewed",
+     "explanation": "Write datasets from several MPI ranks with parallel HDF5.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ]
+    },
+    "/oneOf/7/properties/version": {
+     "status": "reviewed",
+     "explanation": "Document contract version; always schemaxis.hdf5/1.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/7/properties/operation": {
+     "status": "reviewed",
+     "explanation": "parallelWrite.",
+     "sources": [
+      "docs/hdf5.md#operations"
+     ]
+    },
+    "/oneOf/7/properties/file": {
+     "status": "reviewed",
+     "explanation": "Name, format bounds and root attributes of the parallel file (the mpio driver is chosen automatically).",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ]
+    },
+    "/oneOf/7/properties/objects": {
+     "status": "reviewed",
+     "explanation": "Groups and integer/float datasets written in parallel; datasets need at least one axis-0 row per rank.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ]
+    },
+    "/oneOf/7/properties/objects/items": {
+     "status": "reviewed",
+     "explanation": "A group, dataset or committed datatype to create, addressed by absolute path.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values",
+      "guidance:/$defs/object"
+     ]
+    },
+    "/oneOf/7/properties/ranks": {
+     "status": "reviewed",
+     "explanation": "Number of MPI processes (2-4); dataset axis 0 is split into contiguous row blocks, one per rank.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ],
+     "defaultMeaning": "2"
+    },
+    "/oneOf/7/properties/io": {
+     "status": "reviewed",
+     "explanation": "collective (all ranks write together; required for compressed or filtered datasets) or independent (each rank writes alone).",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ],
+     "defaultMeaning": "collective"
+    },
+    "/oneOf/7/properties/reduce": {
+     "status": "reviewed",
+     "explanation": "After writing, read the file in parallel and reduce count, minimum, maximum and sum across ranks for comparison with the planned values.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ],
+     "defaultMeaning": "true"
+    },
+    "/$defs/edit/properties/newName": {
+     "status": "reviewed",
+     "explanation": "For renameAttribute: the new attribute name; the stored type, shape and value are kept exactly.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    },
+    "/properties/access": {
+     "status": "reviewed",
+     "explanation": "Optional access tuning for this run (chunk cache, alignment, metadata block, page buffer, extraction memory budget).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/properties/parallel": {
+     "status": "reviewed",
+     "explanation": "Optional MPI parallel extraction with a configured parallel h5py runtime and mpiexec.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ]
+    },
+    "/$defs/access": {
+     "status": "reviewed",
+     "explanation": "File access tuning applied to every HDF5 open of this run and read back from the open file: chunk cache, page buffer, metadata block size and allocation alignment, plus a memory budget for streamed extraction.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/$defs/access/properties/chunkCache": {
+     "status": "reviewed",
+     "explanation": "Raw-data chunk cache used for every dataset read or written: size it to hold the chunks a selection touches repeatedly (for example one chunk row) so compressed chunks are not decompressed again.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/$defs/access/properties/chunkCache/properties/bytes": {
+     "status": "reviewed",
+     "explanation": "Cache size in bytes; 0 disables caching.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ],
+     "units": "bytes",
+     "defaultMeaning": "HDF5 default 1 MiB",
+     "examples": [
+      4194304
+     ]
+    },
+    "/$defs/access/properties/chunkCache/properties/slots": {
+     "status": "reviewed",
+     "explanation": "Number of hash slots; a prime about 100 times the number of chunks that fit in the cache avoids collisions.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ],
+     "defaultMeaning": "12421"
+    },
+    "/$defs/access/properties/chunkCache/properties/preemption": {
+     "status": "reviewed",
+     "explanation": "Eviction preference between 0 and 1: 1 evicts fully read or written chunks first (good for one pass), 0 keeps least-recently used (good for revisits).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ],
+     "defaultMeaning": "0.75"
+    },
+    "/$defs/access/properties/pageBufferBytes": {
+     "status": "reviewed",
+     "explanation": "Page buffer for files written with spaceStrategy page; a whole multiple of the page size.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ],
+     "units": "bytes"
+    },
+    "/$defs/access/properties/metaBlockBytes": {
+     "status": "reviewed",
+     "explanation": "Minimum size of aggregated metadata blocks in a newly written file; larger blocks group metadata for fewer, larger reads.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ],
+     "units": "bytes",
+     "defaultMeaning": "2048"
+    },
+    "/$defs/access/properties/alignment": {
+     "status": "reviewed",
+     "explanation": "Allocation alignment of a newly written file: objects at least threshold bytes long start on interval boundaries (for example file-system or object-store block size). Verified through dataset offsets.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/$defs/access/properties/alignment/properties/threshold": {
+     "status": "reviewed",
+     "explanation": "Objects smaller than this many bytes are not aligned.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ],
+     "units": "bytes",
+     "defaultMeaning": "1 (align everything)"
+    },
+    "/$defs/access/properties/alignment/properties/interval": {
+     "status": "reviewed",
+     "explanation": "Alignment boundary; a user block must be at least this large.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ],
+     "units": "bytes",
+     "examples": [
+      4096
+     ]
+    },
+    "/$defs/access/properties/memoryBytes": {
+     "status": "reviewed",
+     "explanation": "Budget for extraction: each extract is read and written in axis-0 blocks whose raw size stays within this many bytes, so selections larger than memory can be exported. The measured peak memory growth is checked. Selected compound fields are read directly and records packed; variable-length strings, sequences and references are refused because their payload size is unknown before reading.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ],
+     "units": "bytes",
+     "examples": [
+      65536
+     ]
+    },
+    "/$defs/parallelRead": {
+     "status": "reviewed",
+     "explanation": "Read the selections with several MPI ranks through parallel HDF5: each rank reads its block of axis-0 rows and rank 0 gathers them in order and writes the extract files.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ]
+    },
+    "/$defs/parallelRead/properties/ranks": {
+     "status": "reviewed",
+     "explanation": "Number of MPI processes (2-4); each selection needs at least one axis-0 unit per rank.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ],
+     "defaultMeaning": "2"
+    },
+    "/$defs/parallelRead/properties/io": {
+     "status": "reviewed",
+     "explanation": "collective (all ranks read together) or independent reads.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ],
+     "defaultMeaning": "collective"
+    },
+    "/oneOf/0/properties/access": {
+     "status": "reviewed",
+     "explanation": "Optional access tuning for this run (chunk cache, alignment, metadata block, page buffer, extraction memory budget).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/oneOf/1/properties/access": {
+     "status": "reviewed",
+     "explanation": "Optional access tuning for this run (chunk cache, alignment, metadata block, page buffer, extraction memory budget).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/oneOf/2/properties/access": {
+     "status": "reviewed",
+     "explanation": "Optional access tuning for this run (chunk cache, alignment, metadata block, page buffer, extraction memory budget).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/oneOf/3/properties/access": {
+     "status": "reviewed",
+     "explanation": "Optional access tuning for this run (chunk cache, alignment, metadata block, page buffer, extraction memory budget).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/oneOf/3/properties/parallel": {
+     "status": "reviewed",
+     "explanation": "Optional MPI parallel extraction with a configured parallel h5py runtime and mpiexec.",
+     "sources": [
+      "docs/hdf5.md#parallel-mpi-io-writes"
+     ]
+    },
+    "/oneOf/4/properties/access": {
+     "status": "reviewed",
+     "explanation": "Optional access tuning for this run (chunk cache, alignment, metadata block, page buffer, extraction memory budget).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/oneOf/5/properties/access": {
+     "status": "reviewed",
+     "explanation": "Optional access tuning for this run (chunk cache, alignment, metadata block, page buffer, extraction memory budget).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/oneOf/6/properties/access": {
+     "status": "reviewed",
+     "explanation": "Optional access tuning for this run (chunk cache, alignment, metadata block, page buffer, extraction memory budget).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/oneOf/7/properties/access": {
+     "status": "reviewed",
+     "explanation": "Optional access tuning for this run (chunk cache, alignment, metadata block, page buffer, extraction memory budget).",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ]
+    },
+    "/$defs/expectation/properties/minCompressionRatio": {
+     "status": "reviewed",
+     "explanation": "Logical bytes divided by allocated bytes must be at least this; values below 1 mean storage is larger than the data (for example tiny compressed chunks).",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ],
+     "examples": [
+      2.0
+     ]
+    },
+    "/$defs/expectation/properties/maxAllocatedBytes": {
+     "status": "reviewed",
+     "explanation": "The dataset may occupy at most this many allocated bytes in the file.",
+     "units": "bytes",
+     "sources": [
+      "docs/hdf5.md#inspection-and-comparison"
+     ]
+    },
+    "/$defs/extract/properties/where": {
+     "status": "reviewed",
+     "explanation": "Keep only the axis-0 rows of an existing dataset for which every condition holds (AND). Rows are chosen independently by h5py and from the h5dump reading and must agree; not combined with selection or parallel.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ],
+     "examples": [
+      [
+       {
+        "dataset": "/run/state",
+        "op": "eq",
+        "value": "ACQUIRE"
+       },
+       {
+        "dataset": "/run/calibrated/pressure",
+        "op": "finite"
+       }
+      ]
+     ]
+    },
+    "/$defs/extract/properties/where/items": {
+     "status": "reviewed",
+     "explanation": "One row condition.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/condition": {
+     "status": "reviewed",
+     "explanation": "A typed row condition: read one value per axis-0 row from a one-dimensional dataset (optionally one compound field) and compare it with op. There is no expression language.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/condition/properties/dataset": {
+     "status": "reviewed",
+     "explanation": "Absolute path of the one-dimensional dataset holding one value per row; defaults to the extracted dataset itself.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ],
+     "examples": [
+      "/run/state"
+     ]
+    },
+    "/$defs/condition/properties/field": {
+     "status": "reviewed",
+     "explanation": "Compound member to compare when the condition dataset is a record table.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ],
+     "examples": [
+      "level"
+     ]
+    },
+    "/$defs/condition/properties/op": {
+     "status": "reviewed",
+     "explanation": "Comparison: eq, ne, lt, le, gt, ge, between (value <= x <= upper), in (one of values), finite or nan (floats). Comparisons use the exact stored values; NaN satisfies only ne and nan.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/condition/properties/value": {
+     "status": "reviewed",
+     "explanation": "Operand of eq, ne, lt, le, gt, ge and the lower bound of between.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ],
+     "examples": [
+      101.305,
+      "ACQUIRE"
+     ]
+    },
+    "/$defs/condition/properties/value/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A number compared with a numeric dataset (integers for integer datasets, within the type range).",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/condition/properties/value/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: an enum member name or a string element.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/condition/properties/value/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "true or false, for bool datasets.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/condition/properties/upper": {
+     "status": "reviewed",
+     "explanation": "Inclusive upper bound for between.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ],
+     "examples": [
+      2.5
+     ]
+    },
+    "/$defs/condition/properties/values": {
+     "status": "reviewed",
+     "explanation": "Accepted values for in (1-256).",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ],
+     "examples": [
+      [
+       "ACQUIRE",
+       "FAULT"
+      ]
+     ]
+    },
+    "/$defs/condition/properties/values/items": {
+     "status": "reviewed",
+     "explanation": "One accepted value.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/condition/properties/values/items/anyOf/0": {
+     "status": "reviewed",
+     "explanation": "A number compared with a numeric dataset (integers for integer datasets, within the type range).",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/condition/properties/values/items/anyOf/1": {
+     "status": "reviewed",
+     "explanation": "Text: an enum member name or a string element.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/condition/properties/values/items/anyOf/2": {
+     "status": "reviewed",
+     "explanation": "true or false, for bool datasets.",
+     "sources": [
+      "docs/hdf5.md#filtering-rows-with-where"
+     ]
+    },
+    "/$defs/access/properties/sieveBufferBytes": {
+     "status": "reviewed",
+     "explanation": "Size of the raw-data sieve buffer (512 B to 256 MiB, HDF5 default 64 KiB) that combines the small I/O of partial selections of contiguous datasets into larger blocks. Applied to every open and read back from the file access property list.",
+     "sources": [
+      "docs/hdf5.md#access-tuning-and-memory-bounded-reads"
+     ],
+     "examples": [
+      1048576
+     ]
+    },
+    "/$defs/generated": {
+     "status": "reviewed",
+     "explanation": "Documented generator filling a numeric attribute over its declared shape (row-major): range (start + i*step) or linspace (start to stop inclusive).",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/generated/properties/source": {
+     "status": "reviewed",
+     "explanation": "range or linspace.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ]
+    },
+    "/$defs/generated/properties/start": {
+     "status": "reviewed",
+     "explanation": "First value.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "examples": [
+      0
+     ]
+    },
+    "/$defs/generated/properties/step": {
+     "status": "reviewed",
+     "explanation": "Increment between consecutive values (range).",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "examples": [
+      0.5
+     ]
+    },
+    "/$defs/generated/properties/stop": {
+     "status": "reviewed",
+     "explanation": "Last value (linspace, inclusive).",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "examples": [
+      1
+     ]
+    },
+    "/$defs/attribute/properties/data": {
+     "status": "reviewed",
+     "explanation": "Generated values for a numeric attribute (instead of value); needs type and shape. Useful for large lookup tables; attributes above 63 KiB need trackOrder on their object or libver v108+.",
+     "sources": [
+      "docs/hdf5.md#attributes-units-and-dimension-scales"
+     ],
+     "examples": [
+      {
+       "source": "linspace",
+       "start": 0,
+       "stop": 1
+      }
+     ]
+    },
+    "/$defs/object/properties/empty": {
+     "status": "reviewed",
+     "explanation": "Create a null-dataspace dataset (h5py.Empty): an element type and attributes with no shape, extent or elements - distinct from shape [] (one scalar element) and [0] (empty extent). Takes type, attributes, units and trackOrder only.",
+     "sources": [
+      "docs/hdf5.md#paths-types-and-values"
+     ],
+     "examples": [
+      true
+     ]
+    },
+    "/$defs/edit/properties/fields": {
+     "status": "reviewed",
+     "explanation": "For write on a compound dataset: the members to write, in the order the values list them. Other members of the selected records keep their stored values.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ],
+     "examples": [
+      [
+       "temperature"
+      ],
+      [
+       "code",
+       "sample"
+      ]
+     ]
+    },
+    "/$defs/edit/properties/fields/items": {
+     "status": "reviewed",
+     "explanation": "One compound member name of the written dataset.",
+     "sources": [
+      "docs/hdf5.md#editing-an-existing-file"
+     ]
+    }
+   }
+  }
+ }
+}

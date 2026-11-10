@@ -1,0 +1,399 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.opensees/1": {
+      "guide": "docs/opensees.md",
+      "context": {
+        "purpose": "Assess planar pin-jointed elastic networks and named serviceability measurements from editable physical intent.",
+        "assumptions": "SI m/N/Pa/m²; zero Cartesian restraints, straight axial bars, small deformation/strain; OpenSees3.8.0 through isolated OpenSeesPy3.8.0.0.",
+        "constraints": "2..40 nodes,1..80 members; independent stability and small-strain limits; no frames/nonlinearity/buckling/dynamics/general FEA.",
+        "inspection": "Inspect signed member force/stress, displacement/reaction tables and named margins. Independent direct stiffness and global equilibrium verify every native response, with fresh-process retained-model reconstruction.",
+        "recovery": "Correct located physical input, brace mechanisms, inspect native logs, revise explicit unmet measured limits/design, and use a fresh output directory; modified evidence fails verification."
+      },
+      "examples": [
+        {
+          "id": "triangle",
+          "reference": "examples/schemaxis/opensees-triangle.json"
+        },
+        {
+          "id": "stiffness",
+          "reference": "examples/schemaxis/opensees-stiffness.json"
+        },
+        {
+          "id": "reverse",
+          "reference": "examples/schemaxis/opensees-reverse.json"
+        },
+        {
+          "id": "unmet",
+          "reference": "examples/schemaxis/opensees-unmet.json"
+        },
+        {
+          "id": "invalid",
+          "reference": "examples/schemaxis/opensees-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_TRUSS"
+        },
+        {
+          "id": "unstable",
+          "reference": "examples/schemaxis/opensees-unstable.json",
+          "expect": "invalid",
+          "fault": "UNSTABLE_TRUSS"
+        },
+        {
+          "id": "redundant",
+          "reference": "examples/schemaxis/opensees-redundant.json"
+        },
+        {
+          "id": "double-pin",
+          "reference": "examples/schemaxis/opensees-double-pin.json"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_opensees.py"
+      ],
+      "acceptance": [
+        "tools/qualify_opensees.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified editable physical model, numeric node/member tables and assessment; self-contained input identity and saved verification control reuse.",
+          "references": [
+            "docs/opensees.md",
+            "tools/qualify_opensees.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared expressions resolve before physical validation.",
+          "references": [
+            "docs/opensees.md",
+            "tests/unit/test_opensees.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://openseespydoc.readthedocs.io/en/latest/src/trussEle.html",
+          "https://openseespydoc.readthedocs.io/en/latest/src/truss.html",
+          "https://openseespydoc.readthedocs.io/en/latest/src/outputcmds.html",
+          "https://openseespydoc.readthedocs.io/en/latest/src/printModel.html"
+        ],
+        "lifecycle": {
+          "timeout": "One finite deadline covers both isolated native reconstructions; bounded host stiffness checks precede execution.",
+          "cancellation": "Shared process-tree cancellation and postverification gate retain incomplete/failure evidence.",
+          "logs": "build/reopen stdout,stderr and submission JSON; authored,plan,model,worker and native readback retained.",
+          "verification": "Inspect signed member force/stress, displacement/reaction tables and named margins. Independent direct stiffness and global equilibrium verify every native response, with fresh-process retained-model reconstruction."
+        },
+        "data": [
+          {
+            "id": "model",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis planar truss JSON",
+            "traits": {
+              "units": "SI"
+            },
+            "losses": [
+              "No native database persistence or arbitrary imported model compatibility."
+            ],
+            "scope": "Editable complete physical model records."
+          },
+          {
+            "id": "displacements",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV",
+            "traits": {
+              "units": "m N"
+            },
+            "losses": [
+              "Numeric indices require the retained model to recover authored IDs."
+            ],
+            "scope": "Every node translation and support reaction."
+          },
+          {
+            "id": "members",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV",
+            "traits": {
+              "units": "m N Pa"
+            },
+            "losses": [
+              "Uniform axial response only; no bending or stability."
+            ],
+            "scope": "Every member signed axial force,stress,strain and length."
+          },
+          {
+            "id": "assessment",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.opensees.assessment/1",
+            "traits": {
+              "units": "SI"
+            },
+            "losses": [
+              "No structural safety or code certification."
+            ],
+            "scope": "Full identities, numerical checks and named measured requirement margins."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "Inspect native node/member numeric responses.",
+            "limits": "Preserve physical model for ID/index mapping and units."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect editable model and accountable measured assessment.",
+            "limits": "No native editor, database restore or safety certification."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "triangle",
+          "reuse": "Edit physical JSON records with shared pointers; replan and run fresh. Verified self-contained identity supports workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Publish verified numeric tables, editable physical model and assessment; full evidence verification governs scheduler reuse."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Resolve shared authored expressions before physical planning."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Self-contained JSON has no external resources; exact effective identity controls whole-job reuse."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared source drafts and full document validation."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Atomic JSON pointer edits and undo trigger complete replanning."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial solver only."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Retained batch readback only; no interactive native hook."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "One static increment only."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Fresh isolated model reconstruction; no persistent native handles."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Editable physical JSON is a publication; no native solver database save/restore hook."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No arbitrary model import or format conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "triangle",
+            "example": "triangle",
+            "edits": [],
+            "scope": "Independent triangle equilibrium and virtual-work/compatibility literals: diagonal -500sqrt(2)N, uxC=PL/(4EA), uyC=-(sqrt(2)+0.5)P/(EA); area doubling halves displacement.",
+            "checks": [
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/2/displacement_m/0",
+                "expected": 2.5e-06,
+                "absolute": 1e-12,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/2/displacement_m/1",
+                "expected": -9.571067811865475e-06,
+                "absolute": 1e-12,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/members/1/force_N",
+                "expected": -707.1067811865476,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/0/reaction_N/1",
+                "expected": 500,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "stiffness",
+            "example": "stiffness",
+            "edits": [],
+            "scope": "Independent triangle equilibrium and virtual-work/compatibility literals: diagonal -500sqrt(2)N, uxC=PL/(4EA), uyC=-(sqrt(2)+0.5)P/(EA); area doubling halves displacement.",
+            "checks": [
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/2/displacement_m/0",
+                "expected": 1.25e-06,
+                "absolute": 1e-12,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/2/displacement_m/1",
+                "expected": -4.785533905932738e-06,
+                "absolute": 1e-12,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/members/1/force_N",
+                "expected": -707.1067811865476,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/0/reaction_N/1",
+                "expected": 500,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "reverse",
+            "example": "reverse",
+            "edits": [],
+            "scope": "Independent global statics: sum Fx/Fy and support moment about A determine pin/roller reactions. Double-pin symmetry gives zero bottom-bar force and apex deflection -P sqrt(2)/(EA), testing zero-force stiffness readback. Full displacement/member response additionally checked by independent direct stiffness.",
+            "checks": [
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/0/reaction_N/0",
+                "expected": -200,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/0/reaction_N/1",
+                "expected": -600,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/1/reaction_N/1",
+                "expected": -400,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/members/0/force_N",
+                "expected": -400,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "redundant",
+            "example": "redundant",
+            "edits": [],
+            "scope": "Independent global statics: sum Fx/Fy and support moment about A determine pin/roller reactions. Double-pin symmetry gives zero bottom-bar force and apex deflection -P sqrt(2)/(EA), testing zero-force stiffness readback. Full displacement/member response additionally checked by independent direct stiffness.",
+            "checks": [
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/0/reaction_N/0",
+                "expected": -200,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/0/reaction_N/1",
+                "expected": -100,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/1/reaction_N/1",
+                "expected": 1100,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "double-pin",
+            "example": "double-pin",
+            "edits": [],
+            "scope": "Independent global statics: sum Fx/Fy and support moment about A determine pin/roller reactions. Double-pin symmetry gives zero bottom-bar force and apex deflection -P sqrt(2)/(EA), testing zero-force stiffness readback. Full displacement/member response additionally checked by independent direct stiffness.",
+            "checks": [
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/members/0/force_N",
+                "expected": 0,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "truss-assessment.json",
+                "format": "json",
+                "pointer": "/results/nodes/2/displacement_m/1",
+                "expected": -7.071067811865475e-06,
+                "absolute": 1e-12,
+                "relative": 1e-08
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "New complete bounded planar elastic truss product; all declared fields, Studio/search/help, independently verified native results, changed/negative cases and lifecycle. Whole OpenSees exclusions remain explicit.",
+        "review": [
+          "verification/2026-11-04-opensees-completion.md",
+          "verification/2026-11-04-native-evidence-types.md"
+        ],
+        "notApplicable": {
+          "mpi": "Serial solver only.",
+          "native-inspection": "Retained batch readback only; no interactive native hook.",
+          "time-batches": "One static increment only.",
+          "live-editing": "Fresh isolated model reconstruction; no persistent native handles.",
+          "native-save": "Editable physical JSON is a publication; no native solver database save/restore hook.",
+          "conversion": "No arbitrary model import or format conversion."
+        }
+      }
+    }
+  }
+}

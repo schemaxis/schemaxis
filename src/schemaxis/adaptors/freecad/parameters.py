@@ -15,12 +15,28 @@ OBJECT_LABEL = 'Design parameters'
 BASE_PROPERTIES = {'ExpressionEngine', 'Label', 'Label2', 'Visibility'}
 TARGETS = {'box': {'length': 'Length', 'width': 'Width', 'height': 'Height'},
            'cylinder': {'radius': 'Radius', 'height': 'Height'},
-           'extrude': {'length': 'LengthFwd'}, 'pad': {'length':'Length'},
+           'extrude': {'length': 'LengthFwd'}, 'pad': {'length':'Length'}, 'pocket': {'length':'Length'},
            'rectangle':{'width':'.Constraints.width','height':'.Constraints.height'},
-           'circle':{'radius':'.Constraints.radius'}}
+           'circle':{'radius':'.Constraints.radius'},'slot':{'length':'.Constraints.span','radius':'.Constraints.radius'}}
+TARGETS.update({'hole':{'diameter':'Diameter','depth':'Depth','recessDiameter':'HoleCutDiameter','recessDepth':'HoleCutDepth'},'boltGrid':{'xPitch':'.Constraints.xPitch','yPitch':'.Constraints.yPitch'},'boltCircle':{'radius':'.Constraints.pitchRadius'}})
+TARGETS['shell']={'thickness':'Value'}
+TARGETS['arcPath']={'bendRadius':'.Constraints.bendRadius'}
+for _helix in ('additiveHelix','subtractiveHelix'):
+    TARGETS[_helix]={'pitch':'Pitch','height':'Height'}
 NUMBER = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
 TERM = re.compile(r'(' + NUMBER + r') \* SchemaxisParameters\.dim_([A-Za-z][A-Za-z0-9_]{0,63})')
 OFFSET = re.compile(r'(' + NUMBER + r') mm')
+
+
+def object_type(prepared):
+    return 'Spreadsheet::Sheet' if 'spreadsheet' in prepared else 'App::VarSet'
+
+
+def object_label(prepared):
+    if 'spreadsheet' in prepared:
+        from .spreadsheet import LABEL
+        return LABEL
+    return OBJECT_LABEL
 
 
 def numeric(value, location):
@@ -81,7 +97,7 @@ def evaluate(binding, values, location='$'):
         fail('INVALID_BINDING', 'Affine arithmetic is nonfinite or exceeds numeric limits', location, detail=str(error))
 
 
-def drive(node, parameters, used):
+def drive(node, parameters, used, *, spreadsheet=None):
     raw = node.get('drive')
     location = '$.nodes.' + str(node.get('id')) + '.drive'
     if not isinstance(raw, dict) or not raw:
@@ -96,7 +112,7 @@ def drive(node, parameters, used):
     for option, binding in sorted(raw.items()):
         where = location + '.' + str(option)
         if option not in allowed:
-            fail('INVALID_BINDING', 'Drive declared primitive, sketch or Pad length dimensions only', where)
+            fail('INVALID_BINDING', 'Drive declared primitive, sketch, Pad or finite-depth Pocket length dimensions only', where)
         if option in options:
             fail('CONFLICTING_BINDING', 'Omit the driven option from options, even when its value agrees', where)
         keys(binding, ('terms', 'offset'), where)
@@ -115,10 +131,14 @@ def drive(node, parameters, used):
         if abs(offset) > 1000000:
             fail('INVALID_BINDING', 'Offset magnitude must not exceed 1000000 mm', where)
         prepared = {'terms': canonical, 'offset': offset}
+        interval = prepared
+        if spreadsheet is not None:
+            from .spreadsheet import expand
+            interval = expand(prepared, spreadsheet)
         extrema = []
         for minimum in (True, False):
-            values = {k: parameters[k]['minimum' if (c > 0) == minimum else 'maximum'] for k,c in canonical.items()}
-            extrema.append(evaluate(prepared, values, where))
+            values = {k: parameters[k]['minimum' if (c > 0) == minimum else 'maximum'] for k,c in interval['terms'].items()}
+            extrema.append(evaluate(interval, values, where))
         if not 0 < extrema[0] <= extrema[1] <= 100000:
             fail('INVALID_BINDING', 'Every value across the declared independent parameter bounds must be a positive length <= 100000 mm', where)
         # A coefficient that vanishes numerically cannot establish a native relationship.
@@ -156,6 +176,10 @@ def check_expression(text, binding, location, object_name=OBJECT_NAME):
 
 def expected_expressions(node):
     result = {TARGETS[node['filter']][option]: binding for option,binding in node.get('drive', {}).items()}
+    if node['filter']=='bodySeed':result['Placement']=node['seed']['source']+'.Placement'
+    from .drilling import PROFILES as drilling_profiles,expressions as drilling_expressions
+    if node['filter'] in drilling_profiles:result.update(drilling_expressions(node['filter'],node['options']))
+    if node['filter']=='slot':result['.Constraints.anchorX']='-.Constraints.span / 2'
     if node['filter'] == 'rectangle':
         result.update({'.Constraints.anchorX': '-.Constraints.width / 2',
                        '.Constraints.anchorY': '-.Constraints.height / 2'})
@@ -191,22 +215,38 @@ def check_engines(prepared, engines, auxiliaries=None):
                 check_expression(actual[target], binding, node['id'] + '.' + target)
 
 
-def verify_observation(prepared, observation):
+def quantity_agrees(actual, expected):
+    # Native expression serialization uses15 significant digits. Bound arithmetic
+    # readback to64 binary ULPs; this does not relax any geometry/export check.
+    return (type(actual) in (int,float) and math.isfinite(actual)
+            and abs(actual-expected)<=64*max(math.ulp(actual),math.ulp(expected),math.ulp(1.0)))
+
+
+def verify_observation(prepared, observation, *, saved=False):
+    sheet = 'spreadsheet' in prepared
     fields={'object','parameters','expressions','targets'}|({'auxiliaries'} if 'partDesign' in prepared else set())
+    if sheet and not saved:fields.add('spreadsheet')
     if not isinstance(observation, dict) or set(observation) != fields:
         fail('VERIFICATION_FAILED', 'Native parameter observation is absent or malformed')
     params = prepared['parameters']
-    expected_properties = sorted(BASE_PROPERTIES | {property_name(k) for k in params})
-    if observation['object'] != {'name':OBJECT_NAME, 'label':OBJECT_LABEL, 'type':'App::VarSet', 'properties':expected_properties, 'visibility':False}:
+    if sheet:
+        from . import spreadsheet
+        expected_properties=sorted(spreadsheet.PERSISTENT)
+        if not saved:spreadsheet.verify_native(prepared,observation['spreadsheet'])
+    else:expected_properties=sorted(BASE_PROPERTIES | {property_name(k) for k in params})
+    if observation['object'] != {'name':OBJECT_NAME, 'label':object_label(prepared), 'type':object_type(prepared), 'properties':expected_properties, 'visibility':False}:
         fail('VERIFICATION_FAILED', 'Native parameter object or property membership differs')
     if not isinstance(observation['parameters'], dict) or set(observation['parameters']) != set(params):
         fail('VERIFICATION_FAILED', 'Native parameter membership differs')
     for identity,param in params.items():
         observed = observation['parameters'][identity]
-        if (not isinstance(observed, dict) or set(observed) != {'property','type','value'}
-                or observed['property'] != property_name(identity) or observed['type'] != 'App::PropertyLength'
-                or type(observed.get('value')) not in (int,float) or observed['value'] <= 0
-                or observed['value'] not in (param['value'],saved_length(param['value']))):
+        wanted={'property','type','value'}|({'unit'} if sheet else set())
+        if (not isinstance(observed, dict) or set(observed)!=wanted
+                or observed['property']!=property_name(identity)
+                or observed['type']!=('Spreadsheet::PropertySpreadsheetQuantity' if sheet else 'App::PropertyLength')
+                or type(observed.get('value')) not in (int,float) or observed['value']<=0
+                or (not quantity_agrees(observed['value'],param['value']) if sheet else observed['value'] not in (param['value'],saved_length(param['value'])))
+                or (sheet and observed['unit']!=spreadsheet.LENGTH_UNIT)):
             fail('VERIFICATION_FAILED', 'Native parameter setting, type or readable name differs', identity)
     check_engines(prepared, observation['expressions'],observation.get('auxiliaries'))
     expected_targets = {node['id'] + '.' + option: node['options'][option]
@@ -223,7 +263,7 @@ def verify_saved(prepared, path):
         from .adaptor import DECLARATIONS
         xml=Document(path)
         from .operations import extra_objects
-        expected_types={OBJECT_NAME:'App::VarSet',**{'N'+str(i):DECLARATIONS[n['filter']]['native'] for i,n in enumerate(prepared['nodes'])},
+        expected_types={OBJECT_NAME:object_type(prepared),**{'N'+str(i):DECLARATIONS[n['filter']]['native'] for i,n in enumerate(prepared['nodes'])},
                         **extra_objects(prepared)}
         extra={}
         if 'partDesign' in prepared:
@@ -233,19 +273,30 @@ def verify_saved(prepared, path):
             expected_types.update(verify_auxiliaries(prepared,extra['auxiliaries']))
         if xml.types!=expected_types:raise ValueError('saved object membership or type differs')
         xml.string(OBJECT_NAME,'Label2')
+        sheet='spreadsheet' in prepared
+        if sheet:
+            from . import spreadsheet
+            spreadsheet.verify_saved_object(prepared['spreadsheet'],xml.root.find("./ObjectData/Object[@name='"+OBJECT_NAME+"']"))
+            # Sheet quantities are native NoPersist properties. Their saved
+            # authority is the exact checked cell grammar, not an invented cache.
+            # Values below are the host evaluation of that bound typed graph;
+            # actual native computed values are checked separately on both runs.
         observations={'object':{'name':OBJECT_NAME,'label':xml.string(OBJECT_NAME,'Label'),'type':xml.types[OBJECT_NAME],
             'properties':sorted(xml.properties[OBJECT_NAME]),'visibility':xml.boolean(OBJECT_NAME,'Visibility')},
-            'parameters':{k:{'property':property_name(k),'type':xml.properties[OBJECT_NAME][property_name(k)].get('type'),
-                             'value':xml.number(OBJECT_NAME,property_name(k))} for k in prepared['parameters']},
+            'parameters':{k:({'property':property_name(k),'type':'Spreadsheet::PropertySpreadsheetQuantity',
+                              'value':v['value'],'unit':spreadsheet.LENGTH_UNIT} if sheet else
+                             {'property':property_name(k),'type':xml.properties[OBJECT_NAME][property_name(k)].get('type'),
+                              'value':xml.number(OBJECT_NAME,property_name(k))}) for k,v in prepared['parameters'].items()},
             'expressions':{name:xml.engine(name) for name in xml.types},'targets':{},**extra}
         for index,node in enumerate(prepared['nodes']):
             name='N'+str(index)
             if xml.string(name,'Label')!=node['id']:raise ValueError('saved feature label differs')
             for option in node.get('drive',{}):
-                if node['filter'] in ('rectangle','circle'):value=xml.constraint(name,option)
-                else:value=xml.number(name,TARGETS[node['filter']][option],'App::PropertyDistance' if node['filter']=='extrude' else 'App::PropertyLength')
+                target=TARGETS[node['filter']][option]
+                if target.startswith('.Constraints.'):value=xml.constraint(name,target.removeprefix('.Constraints.'))
+                else:value=xml.number(name,target,'App::PropertyDistance' if node['filter']=='extrude' else 'App::PropertyLength')
                 observations['targets'][node['id']+'.'+option]=value
-        verify_observation(prepared,observations)
+        verify_observation(prepared,observations,saved=True)
         return observations
     except (OSError,ValueError,KeyError,AttributeError,TypeError,*ARCHIVE_ERRORS) as error:
         fail('VERIFICATION_FAILED','Saved native parameter definition is missing or invalid',str(path),detail=str(error))

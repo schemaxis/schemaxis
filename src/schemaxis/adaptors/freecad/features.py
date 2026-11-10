@@ -15,8 +15,21 @@ def input_property(kind, port):
     return ('Base' if kind=='extrude' else 'Source') if port=='profile' else port.title()
 
 
-def configure(obj, node, objects, sources):
+def configure(obj, node, objects, sources, prepared=None):
     kind, options = node['filter'], node['options']
+    if kind=='draftProfile':
+        from .drafting_native import configure as configure_drafting
+        return configure_drafting(obj,node)
+    if prepared and prepared.get('partDesign',{}).get('generation')==2 and (kind in ('body','rectangle','circle','polygon','sketch','slot') or node['id'] in prepared['partDesign']['owners']):
+        from .history_native import configure as configure_history
+        return configure_history(obj,node,objects,centroid_native=prepared['partDesign'].get('centroidAttachment')=='native-centre-of-mass')
+    if kind in ('sketch','slot') or kind in ('rectangle','circle','polygon') and 'frame' in options:
+        from .history_native import configure_profile
+        return configure_profile(obj,node)
+    if kind == 'importMesh':
+        from .mesh_native import configure as configure_mesh
+        configure_mesh(obj,node,sources)
+        return
     if kind == 'importSTEP':
         from .step_import_native import configure as configure_import
         configure_import(obj, node, sources)
@@ -76,9 +89,20 @@ def configure(obj, node, objects, sources):
         obj.addProperty('App::PropertyString','SourceSHA256','Schemaxis');obj.SourceSHA256=record['sha256']
 
 
-def check(obj,node,close,sources,names=None):
+def check(obj,node,close,sources,names=None,prepared=None):
     """`names` maps node IDs to their output objects when an import adds a refine output."""
     kind,options=node['filter'],node['options']
+    if kind=='draftProfile':
+        from .drafting_native import observe as observe_drafting
+        observe_drafting(obj,node)
+        return
+    if prepared and prepared.get('partDesign',{}).get('generation')==2 and (kind in ('body','rectangle','circle','polygon','sketch','slot') or node['id'] in prepared['partDesign']['owners']):return
+    if kind in ('sketch','slot') or kind in ('rectangle','circle','polygon') and 'frame' in options:
+        from .history_native import geometry,placement
+        from .sketch import verify_geometry
+        verify_geometry(node,geometry(obj))
+        if not close(list(obj.Placement.toMatrix().A),list(placement(options).toMatrix().A)) or obj.solve()!=0 or not obj.FullyConstrained:fail('VERIFICATION_FAILED','Native sketch geometry/frame/constraints differ',node['id'])
+        return
     if kind in ('body','pad','pocket'):return
     def require(condition,property):
         if not condition:fail('VERIFICATION_FAILED','native CAD feature setting differs',node['id'],property=property)
@@ -123,4 +147,4 @@ def check(obj,node,close,sources,names=None):
             from .selections import native_edges, resolve
             indices = resolve(indices, native_edges(obj.Base.Shape), node['id'])
         require(close([list(edge) for edge in obj.Edges],[[index,radius,radius] for index in indices]),'edges')
-    elif kind in ('readSTEP','importSTEP'):require(obj.SourceSHA256==sources[node['id']]['sha256'],'sourceDigest')
+    elif kind in ('readSTEP','importSTEP','importMesh'):require(obj.SourceSHA256==sources[node['id']]['sha256'],'sourceDigest')

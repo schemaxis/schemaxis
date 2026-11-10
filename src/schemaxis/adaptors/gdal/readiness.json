@@ -4,11 +4,11 @@
     "schemaxis.gdal/1": {
       "guide": "docs/gdal.md",
       "context": {
-        "purpose": "Extract georeferenced raster windows and resize their grid with nearest-neighbour sampling while retaining explicit CRS, band units and nodata.",
+        "purpose": "Extract georeferenced raster windows and resize their grid with nearest-neighbour sampling while retaining explicit CRS, band units and nodata. zonalSummary summarises declared pixel-aligned rectangular zones of the captured grid (valid/missing count, coverage, minimum, maximum, sum, mean) into a typed CSV for Calc.",
         "assumptions": "North-up PixelIsArea single-band uncompressed UInt16/Int16/finite Float32 GeoTIFF; GDAL 3.13.3 isolated Python on POSIX.",
         "constraints": "262144 source/output pixels, 4096 per axis, 8 MiB file; EPSG:4326 longitude/latitude degrees or 3857 metres; units m, K, 1. No reprojection/bilinear/masks/overviews/extra metadata.",
-        "inspection": "Stdlib GeoTIFF parser compares every output pixel, geotransform, CRS, units and nodata to an independent centre-sampling oracle, then compares fresh GDAL reopening.",
-        "recovery": "INVALID_RASTER_CONTENT: inspect declared metadata and supported subset; RASTER_PIXEL_LIMIT: reduce dimensions; INTERPRETER_NOT_FOUND: configure isolated GDAL 3.13.3 interpreter."
+        "inspection": "Stdlib GeoTIFF parser compares every output pixel, geotransform, CRS, units and nodata to an independent centre-sampling oracle, then compares fresh GDAL reopening. zonalSummary: a stdlib oracle visits every included pixel and regenerates the zone geometry; native GDAL zonal-stats output and a fresh OGR reopening must match exactly (counts, extrema) or within a stated roundoff bound (sum, mean).",
+        "recovery": "INVALID_RASTER_CONTENT: inspect declared metadata and supported subset; RASTER_EXTENT_INVALID: EPSG:4326 window latitude outside -90..90, fix mislabelled georeferencing or crop inside range; RASTER_PIXEL_LIMIT: reduce dimensions; INTERPRETER_NOT_FOUND: configure isolated GDAL 3.13.3 interpreter. INVALID_ZONE: re-author the rectangle inside the current grid with a unique ID; ZONE_MISSING_VALUES: use missing exclude or fix nodata; ZONE_SUM_UNRESOLVABLE: positive and negative values cancel so the derived native roundoff allowance exceeds 2**-26 of the exact sum, choose a different zone."
       },
       "examples": [
         {
@@ -29,20 +29,40 @@
           "expect": "invalid",
           "fault": "INVALID_ARGUMENT",
           "schemaValid": false
+        },
+        {
+          "id": "zonal",
+          "reference": "examples/schemaxis/gdal-zonal.json"
+        },
+        {
+          "id": "zonal-temperature",
+          "reference": "examples/schemaxis/gdal-zonal-temperature.json"
+        },
+        {
+          "id": "zonal-duplicate-id-invalid",
+          "reference": "examples/schemaxis/gdal-zonal-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ZONE",
+          "schemaValid": true
         }
       ],
       "conformance": [
-        "tests/unit/test_gdal.py"
+        "tests/unit/test_gdal.py",
+        "tests/unit/test_gdal_allocation.py",
+        "tests/unit/test_gdal_zonal.py"
       ],
       "acceptance": [
-        "tools/qualify_gdal.py"
+        "tools/qualify_gdal.py",
+        "tools/qualify_gdal_zonal.py",
+        "tools/qualify_gdal_public.py"
       ],
       "profiles": {
         "workflow": {
-          "scope": "Verified image artifact handoffs, pixel-window chains and source-byte reuse identity.",
+          "scope": "Verified image artifact handoffs, pixel-window chains and source-byte reuse identity. A verified window image can feed zonalSummary, whose typed CSV table feeds Calc readTypedCSV.",
           "references": [
             "docs/gdal.md",
-            "tools/qualify_gdal.py"
+            "tools/qualify_gdal.py",
+            "tools/qualify_gdal_zonal.py"
           ]
         },
         "composition": {
@@ -58,7 +78,9 @@
           "https://gdal.org/en/stable/api/python/utilities.html",
           "https://gdal.org/en/stable/drivers/raster/gtiff.html",
           "https://gdal.org/en/stable/tutorials/geotransforms_tut.html",
-          "https://gdal.org/en/stable/programs/gdal_translate.html"
+          "https://gdal.org/en/stable/programs/gdal_translate.html",
+          "https://gdal.org/en/stable/programs/gdal_raster_zonal_stats.html",
+          "https://gdal.org/en/stable/api/python/utilities.html#osgeo.gdal.Run"
         ],
         "lifecycle": {
           "timeout": "One total deadline; shared owned process-tree runner; native AS2 GiB/CPU60 s/FSIZE16 MiB caps.",
@@ -95,6 +117,22 @@
               "TIFF strip layout, byte order and descriptive CRS citations may change."
             ],
             "scope": "Extent-preserving north-up grid and source-bound statistical summary."
+          },
+          {
+            "id": "zonal-table",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV",
+            "traits": {
+              "columns": 8,
+              "nullToken": "\\N",
+              "typed": true
+            },
+            "losses": [
+              "Rectangles, units, CRS and missing policy are not CSV columns; they are in zones-summary.json and publication metadata.",
+              "Overlapping zones are independent summaries, not unique pixels; sum is not an area integral."
+            ],
+            "scope": "Fixed typed CSV, one row per authored zone, in authored order."
           }
         ],
         "inspection": [
@@ -102,6 +140,11 @@
             "panel": "text",
             "scope": "raster-summary.json CRS/units/nodata/affine corners/statistics and native logs.",
             "limits": "Use GIS software for georeferenced display; Studio image preview may lack GeoTIFF support."
+          },
+          {
+            "panel": "text",
+            "scope": "zones-summary.json zones, units, CRS, rectangle corners and native evidence; zones-summary.csv typed table.",
+            "limits": "No geospatial rendering; zones are pixel rectangles, not polygons."
           }
         ],
         "authoring": {
@@ -112,7 +155,7 @@
         "features": {
           "workflow": {
             "status": "supported",
-            "scope": "Verified GeoTIFF handoffs to further raster windows."
+            "scope": "Verified GeoTIFF handoffs to further raster windows. zonalSummary table handoff to Calc readTypedCSV."
           },
           "composition": {
             "status": "supported",
@@ -278,13 +321,333 @@
                 "relative": 1e-13
               }
             ]
+          },
+          {
+            "id": "zonal",
+            "example": "zonal",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gdal/elevation.tif"
+            },
+            "scope": "Four literal zones, one overlapping and one all-missing, on the Int16 nonzero-origin fixture; exact counts, extrema, sums and means.",
+            "checks": [
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/valid",
+                "expected": 5
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/minimum",
+                "expected": 11
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/maximum",
+                "expected": 23
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/sum",
+                "expected": 80
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/mean",
+                "expected": 16
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/corners",
+                "expected": [
+                  [
+                    500010,
+                    5500000
+                  ],
+                  [
+                    500040,
+                    5499960
+                  ]
+                ]
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/1/valid",
+                "expected": 0
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/sum",
+                "expected": 75
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/mean",
+                "expected": 12.5
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/3/valid",
+                "expected": 11
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/3/sum",
+                "expected": 526
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/units",
+                "expected": "m"
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/1/missing",
+                "expected": 1
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/1/coverage",
+                "expected": 0
+              }
+            ]
+          },
+          {
+            "id": "zonal-geographic",
+            "example": "zonal-temperature",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gdal/temperature.tif"
+            },
+            "scope": "Big-endian Float32 Kelvin zones on an EPSG:4326 angular grid with refuse policy; exact Float32 sums and means.",
+            "checks": [
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/epsg",
+                "expected": 4326
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/units",
+                "expected": "K"
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/sum",
+                "expected": 1096.5
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/mean",
+                "expected": 274.125
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/1/maximum",
+                "expected": 280.5
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/mean",
+                "expected": 279.875
+              }
+            ]
+          },
+          {
+            "id": "zonal-taller-north",
+            "example": "zonal",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/zones/2/height",
+                "value": 2
+              }
+            ],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gdal/elevation.tif"
+            },
+            "scope": "Edit the north rectangle from one to two rows on the Int16 fixture: the zone gains row 2 (20,21,[nodata],23,24,25), so its valid count, missing count, coverage, extrema, sum and mean change, while the overlapping zone 007 keeps its independent summary.",
+            "checks": [
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/valid",
+                "expected": 11
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/missing",
+                "expected": 1
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/minimum",
+                "expected": 10
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/maximum",
+                "expected": 25
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/sum",
+                "expected": 188
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/mean",
+                "expected": 17.09090909090909,
+                "relative": 1e-13
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/2/coverage",
+                "expected": 0.9166666666666666,
+                "relative": 1e-13
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/sum",
+                "expected": 80
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/0/valid",
+                "expected": 5
+              }
+            ]
+          },
+          {
+            "id": "zonal-added-east",
+            "example": "zonal",
+            "edits": [
+              {
+                "op": "add",
+                "path": "/zones/4",
+                "value": {
+                  "id": "east",
+                  "x": 4,
+                  "y": 0,
+                  "width": 2,
+                  "height": 5
+                }
+              }
+            ],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gdal/elevation.tif"
+            },
+            "scope": "Add a fifth rectangle covering the two easternmost columns, which contain the second nodata pixel: ten pixels, nine valid, summed and averaged by hand from the fixture values; the new zone is appended after the four authored zones.",
+            "checks": [
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/4/zone",
+                "expected": "east"
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/4/valid",
+                "expected": 9
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/4/missing",
+                "expected": 1
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/4/minimum",
+                "expected": 14
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/4/maximum",
+                "expected": 55
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/4/sum",
+                "expected": 301
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/4/mean",
+                "expected": 33.44444444444444,
+                "relative": 1e-13
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/4/coverage",
+                "expected": 0.9,
+                "relative": 1e-13
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/4/corners",
+                "expected": [
+                  [
+                    500040,
+                    5500000
+                  ],
+                  [
+                    500060,
+                    5499900
+                  ]
+                ]
+              },
+              {
+                "file": "zones-summary.json",
+                "format": "json",
+                "pointer": "/zones/3/sum",
+                "expected": 526
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Initial GDAL window route: typed metadata, independently verified raster sampling and isolated lifecycle.",
+        "scope": "Initial GDAL window route: typed metadata, independently verified raster sampling and isolated lifecycle. Allocation review 2026-10-24 covers only the added spatial-extent refusal. Zonal summary addition (2026-10-26): operation zonalSummary, its fields, typed CSV/JSON publications and Calc handoff are covered by verification/2026-10-26-gdal-zonal-completion.md; unrelated legacy window behaviour is not re-reviewed.",
         "review": [
-          "verification/2026-10-17-gdal-completion.md"
+          "verification/2026-10-17-gdal-completion.md",
+          "verification/2026-10-24-gdal-allocation.md",
+          "verification/2026-10-26-gdal-zonal-completion.md"
         ],
         "notApplicable": {
           "conversion": "GeoTIFF input/output only; reprojection and alternate formats deferred.",

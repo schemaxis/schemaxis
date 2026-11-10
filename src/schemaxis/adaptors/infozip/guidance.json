@@ -1,0 +1,116 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "bundle": {
+      "status": "reviewed",
+      "explanation": "Package the individual files you choose (captions, transcripts, audio, reports, images) under safe flat names into one portable ZIP for handoff. The host captures every file, writes a manifest.json inventory of names, sizes and SHA-256 digests, asks the trusted Info-ZIP zip to store the members, and then reads the whole archive back with an independent strict reader so that every archive byte is compared with the captured bytes. Choose it to deliver a set of finished publication files together; it does not preserve or restore a whole case, compress, sanitise or authenticate anything.",
+      "sources": [
+        "docs/infozip.md#what-the-fields-mean",
+        "docs/infozip.md#verification-contract"
+      ],
+      "pitfalls": [
+        "Only the files you list are packaged: run directories, receipts, logs and other evidence are never added automatically, and leaving them out is not privacy sanitisation. For whole-case preservation use the core storage preservation action.",
+        "Members are stored without compression, so the ZIP is not smaller than its contents and no compression ratio is claimed. Contents are opaque: no media, accessibility, security or privacy check is made.",
+        "manifest.json is an unsigned inventory, not a signature; a coherent rewrite of the archive and its retained captures verifies as a new archive."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/infozip-baseline.json",
+          "purpose": "Bundle a text report, an SRT caption file and a JSON note under chosen names."
+        },
+        {
+          "reference": "examples/schemaxis/infozip-variant.json",
+          "purpose": "Bundle a small WAV, an empty text file and an HTML page, including binary and empty members."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
+    }
+  },
+  "routes": {
+    "schemaxis.infozip/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Describe one publication bundle: a list of individually chosen files, each with the safe flat name it will have inside the ZIP. Every file is captured as immutable evidence before the native zip runs; the output is bundle.zip plus a JSON summary of members, sizes, CRC-32 and SHA-256 values.",
+          "pitfalls": [
+            "There are no compression, password, directory, glob or recursive options in this contract."
+          ],
+          "sources": [
+            "docs/infozip.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the publication bundle document contract. This identifies the authored structure, not the installed Info-ZIP release (Zip 3.0 is observed and checked at run time).",
+          "pitfalls": [
+            "Use schemaxis.infozip/1."
+          ],
+          "sources": [
+            "docs/infozip.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The only operation is bundle: package the listed files into one stored ZIP and verify it.",
+          "pitfalls": [
+            "Extraction, listing, encryption and compression settings are outside this contract."
+          ],
+          "sources": [
+            "docs/infozip.md#what-the-fields-mean"
+          ]
+        },
+        "/properties/files": {
+          "status": "reviewed",
+          "explanation": "One to sixteen files to package, in the order they will appear in the archive (manifest.json is always added last). Each entry names the member and its source file. A verified file, text or image artifact from an earlier workflow step can be bound to an entry source.",
+          "pitfalls": [
+            "At most 32 MiB per file and 64 MiB in total; empty files are allowed. Duplicate names are refused."
+          ],
+          "sources": [
+            "docs/infozip.md#what-the-fields-mean"
+          ]
+        },
+        "/properties/files/items": {
+          "status": "reviewed",
+          "explanation": "One member of the bundle: the safe name it will have in the ZIP and the local file whose bytes are stored under that name.",
+          "sources": [
+            "docs/infozip.md#what-the-fields-mean"
+          ]
+        },
+        "/properties/files/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Choose the member name inside the ZIP: a flat lowercase ASCII name (a letter, then letters, digits, underscore or hyphen, at most 48 characters) with exactly one extension from txt, json, srt, vtt, wav, flac, m4a, png, html, docx, epub or pdf. The name is a delivery label only; it does not change how the bytes are treated.",
+          "pitfalls": [
+            "manifest.json is reserved for the host inventory. Uppercase letters, dots other than the extension, leading dashes, slashes, backslashes, spaces, Unicode and duplicates are refused."
+          ],
+          "fileExtensions": [
+            ".txt",
+            ".json",
+            ".srt",
+            ".vtt",
+            ".wav",
+            ".flac",
+            ".m4a",
+            ".png",
+            ".html",
+            ".docx",
+            ".epub",
+            ".pdf"
+          ],
+          "sources": [
+            "docs/infozip.md#supported-subset-and-refusals"
+          ]
+        },
+        "/properties/files/items/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose one absolute local regular file whose bytes become the member. A verified file, text or image artifact from an earlier workflow step can be bound here. The bytes are captured before packaging and decide scheduler reuse; the original path, timestamp and permissions are not published.",
+          "pitfalls": [
+            "Relative paths, URLs, directories, symbolic links, FIFOs and devices are refused. The extension of the source does not have to match the member name, and the content is not checked against it."
+          ],
+          "sources": [
+            "docs/infozip.md#supported-subset-and-refusals"
+          ]
+        }
+      }
+    }
+  }
+}

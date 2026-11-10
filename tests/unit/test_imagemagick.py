@@ -75,10 +75,14 @@ class ImageMagickContract(unittest.TestCase):
 
     def test_png_malformed_metadata_and_decompression_boundaries(self):
         good=image(b'\0'+bytes(8),height=1)
-        for bad in [good[:-1],good+b'x',good.replace(b'IDAT',b'JUNK'),good[:-12],good[:-12]+chunk(b'IDAT',b'x')+good[-12:],image(b'\0'+bytes(9),height=1),image(b'\5'+bytes(8),height=1),image(b'\0'+bytes(8),height=1,depth=16),image(b'\0'+bytes(8),height=1,colour=3),image(b'\0'+bytes(8),height=1,interlace=1),image(b'',width=4096,height=4096)]:
+        for bad in [good[:-1],good+b'x',good.replace(b'IDAT',b'JUNK'),good[:-12],good[:-12]+chunk(b'IDAT',b'x')+good[-12:],image(b'\0'+bytes(9),height=1),image(b'\5'+bytes(8),height=1)]:
             self.fault(lambda:png.decode(bad),'INVALID_RASTER_PNG')
-        for kind,value in [(b'iCCP',b'ICC\0\0bad'),(b'acTL',bytes(8)),(b'zTXt',b'bad'),(b'tRNS',bytes(6)),(b'gAMA',struct.pack('>I',100000)),(b'gAMA',struct.pack('>I',45455)),(b'sRGB',b'\4')]:
-            self.fault(lambda:png.decode(image(b'\0'+bytes(8),height=1,extra=chunk(kind,value))),'INVALID_RASTER_PNG')
+        # Well-formed but outside the supported subset is a distinct, non-corruption fault.
+        for bad in [image(b'\0'+bytes(8),height=1,depth=16),image(b'\0'+bytes(8),height=1,colour=3),image(b'\0'+bytes(8),height=1,interlace=1),image(b'',width=4096,height=4096)]:
+            self.fault(lambda:png.decode(bad),'UNSUPPORTED_RASTER_PNG')
+        for kind,value in [(b'iCCP',b'ICC\0\0bad'),(b'acTL',bytes(8)),(b'zTXt',b'bad'),(b'tRNS',bytes(6)),(b'gAMA',struct.pack('>I',100000)),(b'gAMA',struct.pack('>I',45455))]:
+            self.fault(lambda:png.decode(image(b'\0'+bytes(8),height=1,extra=chunk(kind,value))),'UNSUPPORTED_RASTER_PNG')
+        self.fault(lambda:png.decode(image(b'\0'+bytes(8),height=1,extra=chunk(b'sRGB',b'\4'))),'INVALID_RASTER_PNG')
         self.assertEqual(png.decode(image(b'\0'+bytes(8),height=1,extra=chunk(b'sRGB',b'\0')))[3],'sRGB chunk')
         # Valid zlib stream with excessive output must stop at the expected row budget.
         self.fault(lambda:png.decode(image(b'\0'+bytes(1024*1024),height=1)),'INVALID_RASTER_PNG')

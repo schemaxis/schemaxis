@@ -98,6 +98,8 @@ def fake_run(test, name='particles', edits=None, mutate=None):
         result = adaptor.run(d, temp/'run', executable='/bin/true', jar=str(jar))
     return temp/'run', result
 
+REGION_ITEMS = ('region-series', 'overlapping-regions')
+
 
 class ImageJAdmissionTests(unittest.TestCase):
     def test_host_conformance(self):
@@ -321,7 +323,8 @@ class ImageJAdmissionTests(unittest.TestCase):
         for group in ('templates', 'snippets'):
             for item in library[group]:
                 with self.subTest(item=item['id']):
-                    self.assertEqual(registry.plan(instantiate_item(library, item, provider='imagej'))['operation'], 'analyzeParticles')
+                    expected = 'measureRegions' if item['id'] in REGION_ITEMS else 'analyzeParticles'
+                    self.assertEqual(registry.plan(instantiate_item(library, item, provider='imagej'))['operation'], expected)
                     with self.assertRaises(SchemaxisError):
                         registry.plan(instantiate_item(library, item, provider='imagej', filled=False))
         report = check_cases(CapabilityCatalogue(['imagej']), 'imagej')
@@ -330,6 +333,7 @@ class ImageJAdmissionTests(unittest.TestCase):
     def test_studio_templates_bind_both_sixteen_bit_threshold_bounds(self):
         library = load_library('imagej')
         for template in library['templates']:
+            if template['id'] in REGION_ITEMS: continue  # region series have no threshold; see test_imagej_regions
             item = copy.deepcopy(template)
             item['testValues'].update(image=str(FIXTURES/'particles-16bit.tif'), lower=18000, upper=65535)
             with self.subTest(template=item['id']):

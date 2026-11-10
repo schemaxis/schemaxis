@@ -1,0 +1,587 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.espeakng/1": {
+      "guide": "docs/espeakng.md",
+      "context": {
+        "purpose": "Turn a short plain-text script into a synthetic voiceover draft: a canonical PCM16 mono 22050 Hz WAV from the fixed offline eSpeak NG en-us voice or one explicitly selected voice (en-gb, fr-fr or es), proven by a fresh native re-synthesis of the captured text. Complements audio preparation (SoX), transcription (whisper.cpp) and archiving (FLAC), which cannot create narration. Unsuitable for human-quality voice, other voices, languages, variants or accents, translation, SSML or phoneme control, long scripts, and any claim of intelligibility, pronunciation or accessibility.",
+        "assumptions": "A script of at most 1024 Unicode code points and 8 KiB, a literal string or an absolute local UTF-8 .txt file or artifact, within the documented Unicode profile, with native controls, markup and phoneme escapes refused. A configured eSpeak NG 1.52.0 espeak-ng executable with its matching native data; the host has no speech synthesizer. The finished narration must stay within 120 seconds and 8 MiB.",
+        "constraints": "One operation, narrate. The voice (en-us unless the optional voice selects en-us, en-gb, fr-fr or es), pitch (50), amplitude (100), input encoding (UTF-8, -b1) and output (PCM16 mono 22050 Hz, 44-byte header) are fixed; only rateWpm (integer 120-240, default 175) and the optional voice are authored; an absent voice keeps the original en-us plans and receipts unchanged. Control characters, [[ ]] phoneme escapes, markup, text without a letter or digit, silent output and unsupported runtimes are refused. The narration is synthetic, not a human recording.",
+        "inspection": "Inspect narration.wav (listen to it) and espeakng-summary.json (script bytes, SHA-256, code points and lines, requested voice with its listed name and file, rate, audio geometry and duration, PCM SHA-256, peak and nonzero samples, runtime identity and native-data fingerprint). verify needs the trusted espeak-ng (SCHEMAXIS_ESPEAKNG or a stored espeakng location; --espeakng belongs to run): it re-synthesises the captured text in a private directory and compares every PCM byte; there is no host speech synthesizer. Read the words as well as listening.",
+        "recovery": "INVALID_ESPEAKNG_SOURCE: author exactly one of text and source; source is an absolute regular local .txt file. INVALID_ESPEAKNG_TEXT: remove the named control character, [[ ]] phoneme escape or markup, use UTF-8 and line feeds, and write at least one word. ESPEAKNG_BUDGET: shorten the script below 1024 code points and 8 KiB, or shorten or speed up a narration over 120 s or 8 MiB. ESPEAKNG_SILENT_OUTPUT: write words the selected voice can speak. ESPEAKNG_OUTPUT_REJECTED: the native WAV is not canonical PCM16 mono 22050 Hz; use eSpeak NG 1.52.0. INTERPRETER_NOT_FOUND: configure espeak-ng (--espeakng, SCHEMAXIS_ESPEAKNG or a stored location). UNSUPPORTED_RUNTIME: use eSpeak NG 1.52.0 with its matching native data and the selected voice listed exactly (en-us, en-gb, fr-fr or es): a runtime that lists another voice, or none, is refused rather than allowed to fall back. VERIFICATION_FAILED: the published bytes, retained evidence, JSON types, or the verifying runtime or native data differ; verify with the matching runtime and data or run again into a fresh directory."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/espeakng-baseline.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/espeakng-variant.json"
+        },
+        {
+          "id": "fast",
+          "reference": "examples/schemaxis/espeakng-fast.json"
+        },
+        {
+          "id": "voice-en-gb",
+          "reference": "examples/schemaxis/espeakng-voice-en-gb.json"
+        },
+        {
+          "id": "voice-fr-fr",
+          "reference": "examples/schemaxis/espeakng-voice-fr-fr.json"
+        },
+        {
+          "id": "voice-es",
+          "reference": "examples/schemaxis/espeakng-voice-es.json"
+        },
+        {
+          "id": "invalid-phoneme",
+          "reference": "examples/schemaxis/espeakng-invalid-phoneme.json",
+          "expect": "invalid",
+          "fault": "INVALID_ESPEAKNG_TEXT",
+          "schemaValid": true
+        },
+        {
+          "id": "invalid-source",
+          "reference": "examples/schemaxis/espeakng-invalid-source.json",
+          "expect": "invalid",
+          "fault": "INVALID_ESPEAKNG_SOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "voice-invalid",
+          "reference": "examples/schemaxis/espeakng-voice-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_espeakng.py",
+        "tests/unit/test_espeakng_native_boundary.py",
+        "tests/unit/test_espeakng_voices.py"
+      ],
+      "acceptance": [
+        "tools/qualify_espeakng.py",
+        "tools/qualify_espeakng_voices.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "A verified file or text artifact (for example a whisper.cpp transcript.txt) can be the source; the WAV and summary publish through the normal scheduler with provenance. The narration feeds SoX conform and FLAC encodeLossless. A French narration can be conformed with SoX and archived as lossless FLAC (examples/schemaxis/espeakng-voice-archive-workflow.json).",
+          "references": [
+            "docs/espeakng.md",
+            "tools/qualify_espeakng.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure expressions and finite studies resolve before the native recipe.",
+          "references": [
+            "docs/espeakng.md",
+            "tools/qualify_espeakng.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/espeak-ng/espeak-ng/releases/latest",
+          "https://api.github.com/repos/espeak-ng/espeak-ng/releases/latest",
+          "https://github.com/espeak-ng/espeak-ng/blob/1.52.0/src/espeak-ng.1.ronn",
+          "https://github.com/espeak-ng/espeak-ng/blob/1.52.0/docs/guide.md",
+          "https://github.com/espeak-ng/espeak-ng/blob/1.52.0/src/include/espeak-ng/speak_lib.h"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers the version probe, voice query, native narration and the fresh verification re-synthesis. Each child CPU 60 s, address space 2 GiB, output size capped at 16 MiB (a runaway guard; the 120 s and 8 MiB budgets are judged on the finished file); standalone verify has a 180 s budget.",
+          "cancellation": "Shared owned process-group cancellation; serial children and a final cancellation/deadline check before publication. A failed run removes its unverified publications.",
+          "logs": "Authored/effective plan, captured script and byte binding, native WAV, exact launchers, input hashes, stage stdout/stderr/submissions (the version output names a private data directory and stays private) and an independently computed summary.",
+          "verification": "The captured script is re-checked against the plain-text profile, then the trusted espeak-ng re-synthesises it in a private directory outside the run with the declared rate; every PCM byte, the sample count, rate and channels are compared with the published WAV, and the host rebuilds the canonical WAV with struct and wave. Runtime identity and native-data fingerprint must match the recorded ones. Not a host synthesizer: espeak-ng is the oracle, and a coherent rewrite of the captured text is an unauthenticated trust anchor."
+        },
+        "data": [
+          {
+            "id": "script-text",
+            "direction": "input",
+            "kind": "text",
+            "format": "UTF-8 plain text",
+            "traits": {
+              "codePoints": "1-1024",
+              "bytes": "at most 8192"
+            },
+            "losses": [
+              "Control characters, phoneme escapes and markup are refused, not removed; the synthesizer may skip or expand characters by its own rules."
+            ],
+            "scope": "Literal script in the document."
+          },
+          {
+            "id": "script-file",
+            "direction": "input",
+            "kind": "file",
+            "format": "UTF-8 plain text (.txt)",
+            "traits": {
+              "codePoints": "1-1024",
+              "bytes": "at most 8192",
+              "lineEndings": "line feed only"
+            },
+            "losses": [
+              "The file is captured byte for byte; nothing is normalised and nothing but the words is carried."
+            ],
+            "scope": "Captured regular local .txt file or artifact."
+          },
+          {
+            "id": "narration-output",
+            "direction": "output",
+            "kind": "file",
+            "format": "PCM16 WAV",
+            "traits": {
+              "channels": "1",
+              "sampleRate": "22050 Hz",
+              "header": "canonical 44 bytes",
+              "voice": "eSpeak NG en-us by default, or the explicitly selected en-us, en-gb, fr-fr or es, requested"
+            },
+            "losses": [
+              "Synthetic speech: no prosody control, only four voices (en-us default, en-gb, fr-fr, es), no translation or language detection; not a human recording; accent, pronunciation and intelligibility are not certified."
+            ],
+            "scope": "One narration.wav of at most 120 seconds and 8 MiB, then a text summary."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "JSON script hashes and counts, requested voice and rate, audio geometry, duration, PCM hash and peaks, runtime identity and data fingerprint.",
+            "limits": "Host-authored summary recomputed during verification; no playback and no host speech synthesizer."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Change the text, or the absolute source file, or rateWpm. Retain source bytes for provenance; same-path byte changes invalidate scheduler reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "A verified file or text artifact (for example a whisper.cpp transcript.txt) can be the source; narration.wav and the summary publish through the normal scheduler with provenance and feed SoX conform or FLAC."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure expressions and finite studies resolve before the native recipe."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "A source file path and its captured byte digest participate in reuse identity; a literal text has no external input."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable JSON text or source with common undo and validation."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Common pointer forms expose text, source and rateWpm; the contract has no other authored properties."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "narrate creates a synthetic draft from text; it is not a named format conversion and no automatic conversion is inserted. Use SoX conform and FLAC encodeLossless as explicit downstream steps."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native inspection; the WAV and its JSON summary are ordinary publications."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The recipe is serial; each native process is a single thread."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No temporal batching; common finite studies remain available."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No persistent native session; edit JSON then create a new bounded run."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "WAV and summary publications are supported; there is no application session or project save."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Literal 16-word, 91-character ASCII script at the default 175 words per minute. The code point, byte, line and format expectations are hand-counted from the text, and the duration is the independent words/rate estimate (16 words at 175 wpm = 5.49 s) with a deliberately wide 15 percent tolerance because the synthesizer adds its own pauses; nothing is copied from the observed output. The decision is the fresh native re-synthesis compared byte for byte with the published PCM.",
+            "checks": [
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/kind",
+                "expected": "literal",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/codePoints",
+                "expected": 91,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/bytes",
+                "expected": 91,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/lines",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/rateWpm",
+                "expected": 175,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/pitch",
+                "expected": 50,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/amplitude",
+                "expected": 100,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/listing/file",
+                "expected": "gmw/en-US",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/sampleRate",
+                "expected": 22050,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/bitsPerSample",
+                "expected": 16,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/durationSeconds",
+                "expected": 5.485714285714286,
+                "absolute": 0,
+                "relative": 0.15
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/runtime/identity",
+                "expected": "eSpeak NG 1.52.0",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/readback/pcmIdentical",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/espeakng/script-numbered.txt"
+            },
+            "scope": "Three-line UTF-8 file (30 words, 169 code points, 173 bytes because four letters carry accents) at 140 words per minute, so the explicit UTF-8 input path and the file source are exercised. Counts are hand-derived from the fixture; the duration estimate is 30 words at 140 wpm = 12.86 s within 15 percent. The decision is the fresh native re-synthesis compared byte for byte.",
+            "checks": [
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/kind",
+                "expected": "file",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/codePoints",
+                "expected": 169,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/bytes",
+                "expected": 173,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/lines",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/rateWpm",
+                "expected": 140,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/pitch",
+                "expected": 50,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/amplitude",
+                "expected": 100,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/listing/file",
+                "expected": "gmw/en-US",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/sampleRate",
+                "expected": 22050,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/bitsPerSample",
+                "expected": 16,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/durationSeconds",
+                "expected": 12.857142857142858,
+                "absolute": 0,
+                "relative": 0.15
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/runtime/identity",
+                "expected": "eSpeak NG 1.52.0",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/readback/pcmIdentical",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "fast",
+            "example": "fast",
+            "edits": [],
+            "scope": "Literal 16-word script with digits at the 240 words per minute maximum (80 characters). Counts are hand-derived; the duration estimate is 16 words at 240 wpm = 4.0 s within 15 percent (digits expand to spoken words). The decision is the fresh native re-synthesis compared byte for byte.",
+            "checks": [
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/kind",
+                "expected": "literal",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/codePoints",
+                "expected": 80,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/bytes",
+                "expected": 80,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/source/lines",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/rateWpm",
+                "expected": 240,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/pitch",
+                "expected": 50,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/amplitude",
+                "expected": 100,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/voice/listing/file",
+                "expected": "gmw/en-US",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/sampleRate",
+                "expected": 22050,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/bitsPerSample",
+                "expected": 16,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/audio/durationSeconds",
+                "expected": 4.0,
+                "absolute": 0,
+                "relative": 0.15
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/runtime/identity",
+                "expected": "eSpeak NG 1.52.0",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "espeakng-summary.json",
+                "format": "json",
+                "pointer": "/readback/pcmIdentical",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "New adaptor 2026-10-25: schemaxis.espeakng/1 narrate route, plain-text profile, fixed native eSpeak NG 1.52.0 en-us stages, canonical PCM16 WAV reader and writer, fresh trusted native re-synthesis verification, discovery, guidance, Studio starters and bounded native acceptance. Allocation 57 (2026-10-25) adds the optional closed voice choice en-us, en-gb, fr-fr or es with exact per-voice listing checks, per-voice native-data fingerprints and conditional voice bindings; an absent voice keeps the original plans, launchers, summaries and receipts.",
+        "review": [
+          "verification/2026-10-25-espeakng.md",
+          "verification/2026-10-25-espeakng-57.md"
+        ],
+        "notApplicable": {
+          "conversion": "narrate creates a synthetic draft from text; it is not a named format conversion and no automatic conversion is inserted. Use SoX conform and FLAC encodeLossless as explicit downstream steps.",
+          "native-inspection": "No interactive native inspection; the WAV and its JSON summary are ordinary publications.",
+          "mpi": "The recipe is serial; each native process is a single thread.",
+          "time-batches": "No temporal batching; common finite studies remain available.",
+          "live-editing": "No persistent native session; edit JSON then create a new bounded run.",
+          "native-save": "WAV and summary publications are supported; there is no application session or project save."
+        }
+      }
+    }
+  }
+}

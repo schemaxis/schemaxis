@@ -82,9 +82,11 @@ def plan(document):
     columns = ([('$.rowKey', p['rowKey'])] if 'rowKey' in p else []) + [(f'$.channels[{i}]', c) for i, c in enumerate(p['channels'])]
     for at, column in columns:
         name = column['name']
-        if not IDENTIFIER.fullmatch(name) or RESERVED.fullmatch(name) or name in seen:
+        # A keyless run publishes its key column as `row`, so a row key may take that name to consume it.
+        if not IDENTIFIER.fullmatch(name) or (RESERVED.fullmatch(name) and not (at == '$.rowKey' and name == 'row')) or name in seen:
             located('PCA_INVALID_CONTRACT', 'names are distinct identifiers (letter then letters, digits or _; at most 40) '
-                    'and not row, component, channelIndex or PC<n>', at + '.name', 'rename the CSV column and its declaration')
+                    'and not row (except as the row key), component, channelIndex or PC<n>', at + '.name',
+                    'rename the CSV column and its declaration')
         if not UNIT_TEXT.fullmatch(column['unit']):
             located('PCA_INVALID_CONTRACT', 'units are plain text of at most 32 characters', at + '.unit')
         seen.add(name)

@@ -1,0 +1,127 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.ifcopenshell/1",
+    "operation": "scheduleWalls",
+    "source": {
+      "path": "/replace/with/walls.ifc"
+    },
+    "class": "IfcWall",
+    "columns": [
+      {
+        "name": "Fire rating",
+        "source": "property",
+        "set": "Pset_WallCommon",
+        "property": "FireRating",
+        "valueType": "text"
+      },
+      {
+        "name": "Length (m)",
+        "source": "quantity",
+        "set": "Qto_WallBaseQuantities",
+        "quantityName": "Length",
+        "quantity": "length"
+      }
+    ],
+    "missing": "refuse",
+    "inheritance": "occurrence-only"
+  },
+  "categories": [
+    {
+      "id": "schedule",
+      "title": "Wall schedule",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "baseline",
+      "title": "Schedule walls with properties and quantities",
+      "description": "Choose one small ASCII IFC4 file, name the property and quantity columns, and decide how missing values and wall-type inheritance are treated. Each cell records its origin. The result is a typed CSV and JSON schedule for coordination review, not a geometry check or model certification. Replace the path before execution.",
+      "document": {
+        "version": "schemaxis.ifcopenshell/1",
+        "operation": "scheduleWalls",
+        "source": {
+          "path": "/replace/with/walls.ifc"
+        },
+        "class": "IfcWall",
+        "columns": [
+          {
+            "name": "Fire rating",
+            "source": "property",
+            "set": "Pset_WallCommon",
+            "property": "FireRating",
+            "valueType": "text"
+          },
+          {
+            "name": "External",
+            "source": "property",
+            "set": "Pset_WallCommon",
+            "property": "IsExternal",
+            "valueType": "boolean"
+          },
+          {
+            "name": "Note",
+            "source": "property",
+            "set": "Pset_ScheduleNotes",
+            "property": "Note",
+            "valueType": "text"
+          },
+          {
+            "name": "Length (m)",
+            "source": "quantity",
+            "set": "Qto_WallBaseQuantities",
+            "quantityName": "Length",
+            "quantity": "length"
+          },
+          {
+            "name": "Height (m)",
+            "source": "quantity",
+            "set": "Qto_WallBaseQuantities",
+            "quantityName": "Height",
+            "quantity": "length"
+          }
+        ],
+        "missing": "null",
+        "inheritance": "occurrence-overrides-type",
+        "zeroQuantity": "accept"
+      }
+    },
+    {
+      "id": "variant",
+      "title": "Schedule only quantities in metres",
+      "description": "Quantity columns come from the wall itself and are converted from the project SI unit to metres, square metres or cubic metres. Missing values are refused with the wall GlobalId named.",
+      "document": {
+        "version": "schemaxis.ifcopenshell/1",
+        "operation": "scheduleWalls",
+        "source": {
+          "path": "/replace/with/walls.ifc"
+        },
+        "class": "IfcWall",
+        "columns": [
+          {
+            "name": "Length (m)",
+            "source": "quantity",
+            "set": "Qto_WallBaseQuantities",
+            "quantityName": "Length",
+            "quantity": "length"
+          },
+          {
+            "name": "Height (m)",
+            "source": "quantity",
+            "set": "Qto_WallBaseQuantities",
+            "quantityName": "Height",
+            "quantity": "length"
+          }
+        ],
+        "missing": "refuse",
+        "inheritance": "occurrence-only",
+        "zeroQuantity": "accept"
+      }
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

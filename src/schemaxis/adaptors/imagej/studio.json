@@ -33,6 +33,11 @@
       "id": "filters",
       "title": "Particle filters",
       "icon": "layers"
+    },
+    {
+      "id": "regions",
+      "title": "Region series",
+      "icon": "layers"
     }
   ],
   "templates": [
@@ -167,6 +172,266 @@
         "unit": "um",
         "lower": 100,
         "upper": 255
+      },
+      "requires": "Java 11+ with jdk.compiler and ImageJ 1.54 ij.jar for native execution."
+    },
+    {
+      "id": "region-series",
+      "title": "Region measurements across two frames",
+      "description": "Measure one named rectangle in two captured grayscale frames with declared times and calibration: pixel count, calibrated area and raw mean/min/max per frame.",
+      "file": "studio/templates/region-series.json",
+      "fields": {
+        "image1": {
+          "label": "First frame (.pgm, .tif)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "description": "Absolute path to one captured 8- or 16-bit unsigned grayscale plane; every frame must share width, height and bit depth."
+        },
+        "image2": {
+          "label": "Second frame (.pgm, .tif)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "description": "Absolute path to one captured 8- or 16-bit unsigned grayscale plane; every frame must share width, height and bit depth."
+        },
+        "time2": {
+          "label": "Second frame time (s)",
+          "type": "number",
+          "required": true,
+          "default": 30,
+          "minimum": 1e-06,
+          "maximum": 1000000000.0,
+          "description": "Declared seconds since the series origin; must exceed the previous frame time."
+        },
+        "x": {
+          "label": "Rectangle left (x)",
+          "type": "integer",
+          "required": true,
+          "default": 2,
+          "minimum": 0,
+          "maximum": 2048,
+          "description": "Zero-based left pixel column of the rectangle."
+        },
+        "y": {
+          "label": "Rectangle top (y)",
+          "type": "integer",
+          "required": true,
+          "default": 1,
+          "minimum": 0,
+          "maximum": 2048,
+          "description": "Zero-based top pixel row of the rectangle."
+        },
+        "width": {
+          "label": "Rectangle width",
+          "type": "integer",
+          "required": true,
+          "default": 4,
+          "minimum": 1,
+          "maximum": 2048,
+          "description": "Pixel columns included, at least 1; x + width must not exceed the image width."
+        },
+        "height": {
+          "label": "Rectangle height",
+          "type": "integer",
+          "required": true,
+          "default": 3,
+          "minimum": 1,
+          "maximum": 2048,
+          "description": "Pixel rows included, at least 1; y + height must not exceed the image height."
+        },
+        "size": {
+          "label": "Pixel size",
+          "type": "number",
+          "required": true,
+          "default": 0.5,
+          "minimum": 1e-06,
+          "maximum": 1000000.0,
+          "description": "Width and height of one pixel in the selected unit (square pixels); edit the document for rectangular pixels."
+        },
+        "unit": {
+          "label": "Length unit",
+          "type": "enum",
+          "required": true,
+          "default": "um",
+          "values": [
+            "nm",
+            "um",
+            "mm",
+            "cm",
+            "m"
+          ]
+        }
+      },
+      "testValues": {
+        "image1": "/replace-with-your-input/series/ramp8-t0.pgm",
+        "image2": "/replace-with-your-input/series/ramp8-t1.pgm",
+        "time2": 30,
+        "x": 2,
+        "y": 1,
+        "width": 4,
+        "height": 3,
+        "size": 0.5,
+        "unit": "um"
+      },
+      "requires": "Java 11+ with jdk.compiler and ImageJ 1.54 ij.jar for native execution."
+    },
+    {
+      "id": "overlapping-regions",
+      "title": "Whole frame and inner rectangle over three frames",
+      "description": "Measure the whole frame and an overlapping inner rectangle in three captured frames. The rectangles are independent measurements, not a partition.",
+      "file": "studio/templates/overlapping-regions.json",
+      "fields": {
+        "image1": {
+          "label": "First frame (.pgm, .tif)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "description": "Absolute path to one captured 8- or 16-bit unsigned grayscale plane; every frame must share width, height and bit depth."
+        },
+        "image2": {
+          "label": "Second frame (.pgm, .tif)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "description": "Absolute path to one captured 8- or 16-bit unsigned grayscale plane; every frame must share width, height and bit depth."
+        },
+        "image3": {
+          "label": "Third frame (.pgm, .tif)",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "description": "Absolute path to one captured 8- or 16-bit unsigned grayscale plane; every frame must share width, height and bit depth."
+        },
+        "time2": {
+          "label": "Second frame time (s)",
+          "type": "number",
+          "required": true,
+          "default": 30,
+          "minimum": 1e-06,
+          "maximum": 1000000000.0,
+          "description": "Declared seconds since the series origin; must exceed the previous frame time."
+        },
+        "time3": {
+          "label": "Third frame time (s)",
+          "type": "number",
+          "required": true,
+          "default": 60,
+          "minimum": 1e-06,
+          "maximum": 1000000000.0,
+          "description": "Declared seconds since the series origin; must exceed the previous frame time."
+        },
+        "width": {
+          "label": "Image width (px)",
+          "type": "integer",
+          "required": true,
+          "default": 12,
+          "minimum": 1,
+          "maximum": 2048,
+          "description": "Width of every frame in pixels; the whole-frame rectangle covers it."
+        },
+        "height": {
+          "label": "Image height (px)",
+          "type": "integer",
+          "required": true,
+          "default": 8,
+          "minimum": 1,
+          "maximum": 2048,
+          "description": "Height of every frame in pixels."
+        },
+        "x": {
+          "label": "Rectangle left (x)",
+          "type": "integer",
+          "required": true,
+          "default": 2,
+          "minimum": 0,
+          "maximum": 2048,
+          "description": "Zero-based left pixel column of the rectangle."
+        },
+        "y": {
+          "label": "Rectangle top (y)",
+          "type": "integer",
+          "required": true,
+          "default": 1,
+          "minimum": 0,
+          "maximum": 2048,
+          "description": "Zero-based top pixel row of the rectangle."
+        },
+        "innerWidth": {
+          "label": "Inner rectangle width",
+          "type": "integer",
+          "required": true,
+          "default": 4,
+          "minimum": 1,
+          "maximum": 2048,
+          "description": "Pixel columns included, at least 1; x + width must not exceed the image width."
+        },
+        "innerHeight": {
+          "label": "Inner rectangle height",
+          "type": "integer",
+          "required": true,
+          "default": 3,
+          "minimum": 1,
+          "maximum": 2048,
+          "description": "Pixel rows included, at least 1; y + height must not exceed the image height."
+        },
+        "size": {
+          "label": "Pixel size",
+          "type": "number",
+          "required": true,
+          "default": 0.5,
+          "minimum": 1e-06,
+          "maximum": 1000000.0,
+          "description": "Width and height of one pixel in the selected unit (square pixels); edit the document for rectangular pixels."
+        },
+        "unit": {
+          "label": "Length unit",
+          "type": "enum",
+          "required": true,
+          "default": "um",
+          "values": [
+            "nm",
+            "um",
+            "mm",
+            "cm",
+            "m"
+          ]
+        }
+      },
+      "testValues": {
+        "image1": "/replace-with-your-input/series/ramp8-t0.pgm",
+        "image2": "/replace-with-your-input/series/ramp8-t1.pgm",
+        "image3": "/replace-with-your-input/series/ramp8-t2.pgm",
+        "time2": 30,
+        "time3": 60,
+        "width": 12,
+        "height": 8,
+        "x": 2,
+        "y": 1,
+        "innerWidth": 4,
+        "innerHeight": 3,
+        "size": 0.5,
+        "unit": "um"
       },
       "requires": "Java 11+ with jdk.compiler and ImageJ 1.54 ij.jar for native execution."
     }

@@ -8,7 +8,7 @@ RECOVERY = {
     'INVALID_MODEL': 'Export one closed, consistently oriented, non-degenerate triangle mesh; this adaptor does not repair meshes.',
     'INPUT_DIGEST_MISMATCH': 'The STL bytes differ from the declared sha256. Restore the intended file or deliberately update model.sha256.',
     'MODEL_OUT_OF_BOUNDS': 'Move placement.centre_mm, enlarge the declared bed/height if the machine really allows it, or scale the model before slicing.',
-    'UNSUPPORTED_RUNTIME': 'Configure an absolute PrusaSlicer 2.9.6 console executable; other releases need separate acceptance.',
+    'UNSUPPORTED_RUNTIME': 'Configure an absolute PrusaSlicer 2.9.6 console executable (its --help must report PrusaSlicer-2.9.6); other releases need separate acceptance. The slice was not attempted.',
     'PERFORMANCE_NOT_MET': 'Inspect the native estimates and signed margins; change the profile or revise the declared limit, then run a fresh attempt.',
     'VERIFICATION_FAILED': 'Preserve the failed evidence and rerun the unchanged document in a fresh output directory.',
 }

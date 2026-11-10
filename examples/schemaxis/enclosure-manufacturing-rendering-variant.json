@@ -1,0 +1,778 @@
+{
+  "version": "schemaxis.workflow/1",
+  "execution": {
+    "maxWorkers": 1,
+    "cpus": 2,
+    "memoryMB": 4096,
+    "gpus": 0
+  },
+  "operations": [
+    {
+      "id": "housing",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "parameters": {
+          "$document": "/definitions/partParameters",
+          "scope": "workflow"
+        },
+        "nodes": {
+          "$document": "/definitions/partHistory",
+          "scope": "workflow"
+        },
+        "output": "finished"
+      }
+    },
+    {
+      "id": "lid",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "parameters": {
+          "$document": "/definitions/partParameters",
+          "scope": "workflow"
+        },
+        "nodes": {
+          "$document": "/definitions/partHistory",
+          "scope": "workflow"
+        },
+        "output": "lidFinished"
+      }
+    },
+    {
+      "id": "analysisMesh",
+      "document": {
+        "version": "schemaxis.gmsh/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "source",
+            "filter": "readSTEP",
+            "options": {
+              "file": {
+                "$artifact": "housing",
+                "index": 0
+              }
+            }
+          },
+          {
+            "id": "tetrahedra",
+            "filter": "tetrahedral",
+            "inputs": {
+              "input": "source"
+            },
+            "options": {
+              "size": 1.6,
+              "volumeName": "housing",
+              "boundaryName": "walls",
+              "volumeTolerance": 0.003,
+              "faceGroups": [
+                {
+                  "name": "mountingFloor",
+                  "axis": "z",
+                  "coordinate": 0,
+                  "areaTolerance": 0.002
+                },
+                {
+                  "name": "lidRim",
+                  "axis": "z",
+                  "coordinate": 22
+                }
+              ]
+            }
+          }
+        ],
+        "output": "tetrahedra"
+      }
+    },
+    {
+      "id": "manufacturingDrawing",
+      "document": {
+        "version": "schemaxis.freecad.drawing/1",
+        "source": {
+          "file": {
+            "$artifact": "housing",
+            "index": 0
+          },
+          "units": "mm",
+          "expect": {
+            "volume": 10375.86281798667,
+            "bounds": [
+              -20,
+              20,
+              -15,
+              15,
+              0,
+              22
+            ],
+            "centreOfMass": [
+              0,
+              0,
+              8.214094041591283
+            ]
+          }
+        },
+        "sheet": {
+          "size": "A4",
+          "title": "Parametric enclosure - housing",
+          "revision": "B",
+          "scale": "fit"
+        },
+        "views": [
+          "front",
+          "top",
+          "right",
+          "isometric"
+        ],
+        "dimensioning": [
+          {
+            "id": "width",
+            "view": "top",
+            "type": "overallWidth"
+          },
+          {
+            "id": "height",
+            "view": "front",
+            "type": "overallHeight"
+          },
+          {
+            "id": "wall",
+            "view": "top",
+            "type": "horizontal",
+            "from": {
+              "point": [
+                20,
+                15,
+                22
+              ],
+              "on": "vertex"
+            },
+            "to": {
+              "point": [
+                17.5,
+                12.5,
+                22
+              ],
+              "on": "vertex"
+            }
+          }
+        ],
+        "notes": [
+          "Dimensions in mm; editable source model retained.",
+          "Geometry handoff; manufacturing tolerances require design review."
+        ]
+      }
+    },
+    {
+      "id": "structuralAnalysis",
+      "document": {
+        "version": "schemaxis.freecad.analysis/1",
+        "source": {
+          "$document": "/source",
+          "operation": "manufacturingDrawing"
+        },
+        "material": {
+          "name": "Demonstration aluminium",
+          "youngModulusMPa": 70000,
+          "poissonRatio": 0.3,
+          "densityKgPerM3": 2700
+        },
+        "mesh": {
+          "sizeMM": 2,
+          "order": 2,
+          "volumeTolerance": 0.003
+        },
+        "supports": [
+          {
+            "id": "bottom-clamp",
+            "face": {
+              "face": "bottom"
+            }
+          }
+        ],
+        "loads": [
+          {
+            "id": "rim-pressure",
+            "kind": "pressure",
+            "face": {
+              "face": "top"
+            },
+            "pressureMPa": 0.1
+          }
+        ],
+        "limits": []
+      }
+    },
+    {
+      "id": "productRendering",
+      "document": {
+        "version": "schemaxis.blender.production/1",
+        "id": "product",
+        "size": [
+          640,
+          480
+        ],
+        "cameras": [
+          {
+            "direction": [
+              1,
+              -1.4,
+              1.1
+            ],
+            "padding": 0.15
+          }
+        ],
+        "render": {
+          "threads": 2,
+          "samples": 32,
+          "denoise": true,
+          "worldStrength": 0.2,
+          "lightPosition": [
+            0.1,
+            -0.15,
+            0.2
+          ],
+          "lightEnergy": 1,
+          "lightSize": 0.12
+        },
+        "production": {
+          "frameStart": 1,
+          "frameEnd": 13,
+          "currentFrame": 1,
+          "fps": 24,
+          "units": "metres",
+          "intents": [
+            {
+              "id": "inspection",
+              "kind": "turntable",
+              "objects": [
+                "housing",
+                "lid"
+              ],
+              "axis": "Z",
+              "angleDegrees": 180
+            }
+          ],
+          "renderFrames": [
+            1,
+            7,
+            13
+          ],
+          "exports": [
+            {
+              "id": "inspectionAsset",
+              "format": "glb",
+              "objects": [
+                "housing",
+                "lid"
+              ],
+              "frame": 7
+            }
+          ],
+          "assets": [
+            {
+              "id": "housing",
+              "file": {
+                "$artifact": "housing",
+                "index": 1
+              },
+              "format": "stl",
+              "sourceUnits": "millimetres"
+            },
+            {
+              "id": "lid",
+              "file": {
+                "$artifact": "lid",
+                "index": 1
+              },
+              "format": "stl",
+              "sourceUnits": "millimetres",
+              "location": [
+                -0.06,
+                0,
+                0.029
+              ]
+            }
+          ],
+          "materialGraphs": [
+            {
+              "id": "finish",
+              "nodes": [
+                {
+                  "id": "paint",
+                  "kind": "principled",
+                  "values": {
+                    "colour": [
+                      0.075,
+                      0.22,
+                      0.34,
+                      1
+                    ],
+                    "metallic": 0.25,
+                    "roughness": 0.3
+                  }
+                },
+                {
+                  "id": "surface",
+                  "kind": "output"
+                }
+              ],
+              "links": [
+                {
+                  "from": {
+                    "node": "paint",
+                    "socket": "shader"
+                  },
+                  "to": {
+                    "node": "surface",
+                    "socket": "surface"
+                  }
+                }
+              ]
+            }
+          ],
+          "materialBindings": [
+            {
+              "object": "housing",
+              "material": "finish"
+            },
+            {
+              "object": "lid",
+              "material": "finish"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "partParameters": {
+      "wall": {
+        "kind": "length",
+        "value": 2.5,
+        "minimum": 2,
+        "maximum": 3.5
+      },
+      "floor": {
+        "kind": "length",
+        "value": 3.5,
+        "minimum": 2,
+        "maximum": 4
+      },
+      "height": {
+        "kind": "length",
+        "value": 22,
+        "minimum": 18,
+        "maximum": 24
+      },
+      "bossHeight": {
+        "kind": "length",
+        "value": 5.5,
+        "minimum": 4,
+        "maximum": 8
+      }
+    },
+    "partHistory": [
+      {
+        "id": "enclosure",
+        "filter": "body"
+      },
+      {
+        "id": "outline",
+        "filter": "rectangle",
+        "options": {
+          "width": 40,
+          "height": 30
+        },
+        "inputs": {
+          "body": "enclosure"
+        }
+      },
+      {
+        "id": "stock",
+        "filter": "pad",
+        "inputs": {
+          "body": "enclosure",
+          "profile": "outline"
+        },
+        "drive": {
+          "length": {
+            "terms": {
+              "height": 1
+            }
+          }
+        }
+      },
+      {
+        "id": "cavityProfile",
+        "filter": "rectangle",
+        "options": {
+          "onFace": {
+            "face": "top"
+          }
+        },
+        "inputs": {
+          "body": "enclosure",
+          "support": "stock"
+        },
+        "drive": {
+          "width": {
+            "terms": {
+              "wall": -2
+            },
+            "offset": 40
+          },
+          "height": {
+            "terms": {
+              "wall": -2
+            },
+            "offset": 30
+          }
+        }
+      },
+      {
+        "id": "cavity",
+        "filter": "pocket",
+        "options": {
+          "extent": "length",
+          "direction": "backward"
+        },
+        "inputs": {
+          "base": "stock",
+          "profile": "cavityProfile"
+        },
+        "drive": {
+          "length": {
+            "terms": {
+              "height": 1,
+              "floor": -1
+            }
+          }
+        }
+      },
+      {
+        "id": "bossProfile1",
+        "filter": "circle",
+        "options": {
+          "radius": 2,
+          "centre": [
+            -14,
+            -9
+          ],
+          "onFace": {
+            "face": "top",
+            "position": "innermost"
+          }
+        },
+        "inputs": {
+          "body": "enclosure",
+          "support": "cavity"
+        }
+      },
+      {
+        "id": "boss1",
+        "filter": "pad",
+        "inputs": {
+          "body": "enclosure",
+          "base": "cavity",
+          "profile": "bossProfile1"
+        },
+        "drive": {
+          "length": {
+            "terms": {
+              "bossHeight": 1
+            }
+          }
+        }
+      },
+      {
+        "id": "bossProfile2",
+        "filter": "circle",
+        "options": {
+          "radius": 2,
+          "centre": [
+            14,
+            -9
+          ],
+          "onFace": {
+            "face": "top",
+            "position": "innermost"
+          }
+        },
+        "inputs": {
+          "body": "enclosure",
+          "support": "boss1"
+        }
+      },
+      {
+        "id": "boss2",
+        "filter": "pad",
+        "inputs": {
+          "body": "enclosure",
+          "base": "boss1",
+          "profile": "bossProfile2"
+        },
+        "drive": {
+          "length": {
+            "terms": {
+              "bossHeight": 1
+            }
+          }
+        }
+      },
+      {
+        "id": "bossProfile3",
+        "filter": "circle",
+        "options": {
+          "radius": 2,
+          "centre": [
+            14,
+            9
+          ],
+          "onFace": {
+            "face": "top",
+            "position": "innermost"
+          }
+        },
+        "inputs": {
+          "body": "enclosure",
+          "support": "boss2"
+        }
+      },
+      {
+        "id": "boss3",
+        "filter": "pad",
+        "inputs": {
+          "body": "enclosure",
+          "base": "boss2",
+          "profile": "bossProfile3"
+        },
+        "drive": {
+          "length": {
+            "terms": {
+              "bossHeight": 1
+            }
+          }
+        }
+      },
+      {
+        "id": "bossProfile4",
+        "filter": "circle",
+        "options": {
+          "radius": 2,
+          "centre": [
+            -14,
+            9
+          ],
+          "onFace": {
+            "face": "top",
+            "position": "innermost"
+          }
+        },
+        "inputs": {
+          "body": "enclosure",
+          "support": "boss3"
+        }
+      },
+      {
+        "id": "boss4",
+        "filter": "pad",
+        "inputs": {
+          "body": "enclosure",
+          "base": "boss3",
+          "profile": "bossProfile4"
+        },
+        "drive": {
+          "length": {
+            "terms": {
+              "bossHeight": 1
+            }
+          }
+        }
+      },
+      {
+        "id": "boreProfile1",
+        "filter": "circle",
+        "options": {
+          "radius": 1,
+          "centre": [
+            -14,
+            -9
+          ],
+          "onFace": {
+            "face": "top"
+          }
+        },
+        "inputs": {
+          "body": "enclosure",
+          "support": "boss4"
+        }
+      },
+      {
+        "id": "bore1",
+        "filter": "pocket",
+        "options": {
+          "extent": "throughAll",
+          "direction": "backward"
+        },
+        "inputs": {
+          "base": "boss4",
+          "profile": "boreProfile1"
+        }
+      },
+      {
+        "id": "boreProfile2",
+        "filter": "circle",
+        "options": {
+          "radius": 1,
+          "centre": [
+            14,
+            -9
+          ],
+          "onFace": {
+            "face": "top"
+          }
+        },
+        "inputs": {
+          "body": "enclosure",
+          "support": "bore1"
+        }
+      },
+      {
+        "id": "bore2",
+        "filter": "pocket",
+        "options": {
+          "extent": "throughAll",
+          "direction": "backward"
+        },
+        "inputs": {
+          "base": "bore1",
+          "profile": "boreProfile2"
+        }
+      },
+      {
+        "id": "boreProfile3",
+        "filter": "circle",
+        "options": {
+          "radius": 1,
+          "centre": [
+            14,
+            9
+          ],
+          "onFace": {
+            "face": "top"
+          }
+        },
+        "inputs": {
+          "body": "enclosure",
+          "support": "bore2"
+        }
+      },
+      {
+        "id": "bore3",
+        "filter": "pocket",
+        "options": {
+          "extent": "throughAll",
+          "direction": "backward"
+        },
+        "inputs": {
+          "base": "bore2",
+          "profile": "boreProfile3"
+        }
+      },
+      {
+        "id": "boreProfile4",
+        "filter": "circle",
+        "options": {
+          "radius": 1,
+          "centre": [
+            -14,
+            9
+          ],
+          "onFace": {
+            "face": "top"
+          }
+        },
+        "inputs": {
+          "body": "enclosure",
+          "support": "bore3"
+        }
+      },
+      {
+        "id": "finished",
+        "filter": "pocket",
+        "options": {
+          "extent": "throughAll",
+          "direction": "backward"
+        },
+        "inputs": {
+          "base": "bore3",
+          "profile": "boreProfile4"
+        }
+      },
+      {
+        "id": "lid",
+        "filter": "body"
+      },
+      {
+        "id": "lidOutline",
+        "filter": "rectangle",
+        "options": {
+          "width": 40,
+          "height": 30,
+          "origin": [
+            60,
+            0,
+            0
+          ]
+        },
+        "inputs": {
+          "body": "lid"
+        }
+      },
+      {
+        "id": "lidStock",
+        "filter": "pad",
+        "inputs": {
+          "body": "lid",
+          "profile": "lidOutline"
+        },
+        "drive": {
+          "length": {
+            "terms": {
+              "floor": 1
+            }
+          }
+        }
+      },
+      {
+        "id": "ventProfile",
+        "filter": "slot",
+        "options": {
+          "length": 12,
+          "radius": 1,
+          "onFace": {
+            "face": "top",
+            "anchor": "centroid"
+          }
+        },
+        "inputs": {
+          "body": "lid",
+          "support": "lidStock"
+        }
+      },
+      {
+        "id": "lidFinished",
+        "filter": "pocket",
+        "options": {
+          "extent": "throughAll",
+          "direction": "backward"
+        },
+        "inputs": {
+          "base": "lidStock",
+          "profile": "ventProfile"
+        }
+      }
+    ]
+  }
+}

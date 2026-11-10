@@ -53,7 +53,7 @@ class ConsoleSessionTests(unittest.TestCase):
     def test_common_console_opens_and_plans_all_adaptors(self):
         root = Path(__file__).resolve().parents[2] / 'examples' / 'schemaxis'
         examples = {'freecad': root / 'freecad-bracket.json',
-                    'blender': root / 'blender-showcase.json',
+                    'blender': root / 'blender-primitives.json',
                     'paraview': root / 'branching.json'}
         for provider, path in examples.items():
             with self.subTest(provider=provider):

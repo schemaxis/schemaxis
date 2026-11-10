@@ -116,6 +116,7 @@ for (const theme of ['light', 'dark']) {
         })()`, 'visible section ghost');
         assert.equal(await session.evaluate(`${editor}.getValue()`), before);
         await screenshot(session, 'section-ghost', theme);
+        await session.evaluate(`document.querySelector('${visible} .library-more[aria-expanded=false]')?.click()`);
         await session.clickSelector(`${visible} .library-category[data-category="slicing"]`);
         await session.wait(`document.querySelector('.library-popover [data-library="xyz-slice-arrays"]')`,
           'slice category popover');
@@ -181,6 +182,7 @@ for (const theme of ['light', 'dark']) {
         await session.evaluate(`studio.windows.open('schema-editor', {document:${JSON.stringify(documentId)}})`);
         const schemaCategory = `${visible} .schema-main .library-category[data-category="slicing"]`;
         await session.wait(`document.querySelector('${schemaCategory}')`, 'Schema Editor snippet bar');
+        await session.evaluate(`document.querySelector('${visible} .schema-main .library-more[aria-expanded=false]')?.click()`);
         await session.clickSelector(schemaCategory);
         await session.wait(`document.querySelector('.library-popover [data-library="xyz-slice-arrays"]')`,
           'Schema Editor category content');

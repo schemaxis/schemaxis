@@ -309,6 +309,33 @@ class RuntimeContextTests(unittest.TestCase):
                 self.assertEqual(dispatch.remaining_timeout(1000), 9)
             self.assertEqual(dispatch.remaining_timeout(1000), 1000)
 
+    def test_parent_budget_opt_in_preserves_nested_deadlines_and_standalone_default(self):
+        clock = [100.0]
+        with patch('schemaxis.dispatch._clock', side_effect=lambda: clock[0]):
+            with dispatch.execution_deadline(900):
+                self.assertEqual(dispatch.remaining_timeout(), 300)
+                self.assertEqual(dispatch.remaining_timeout(use_parent_budget=True), 900)
+                clock[0] = 150.0
+                with dispatch.execution_deadline(1200):
+                    self.assertEqual(dispatch.remaining_timeout(use_parent_budget=True), 850)
+                with dispatch.execution_deadline(20):
+                    self.assertEqual(dispatch.remaining_timeout(use_parent_budget=True), 20)
+                clock[0] = 1001.0
+                with self.assertRaises(SchemaxisError) as caught:
+                    dispatch.remaining_timeout(use_parent_budget=True)
+                self.assertEqual(caught.exception.fault.code, 'RUNNER_TIMED_OUT')
+            self.assertEqual(dispatch.remaining_timeout(use_parent_budget=True), 300)
+
+    def test_parent_budget_opt_in_still_checks_cancellation_and_argument_types(self):
+        cancel = threading.Event()
+        cancel.set()
+        with dispatch.allocation({}, cancel), self.assertRaises(SchemaxisError) as caught:
+            dispatch.remaining_timeout(use_parent_budget=True)
+        self.assertEqual(caught.exception.fault.code, 'RUNNER_CANCELLED')
+        with self.assertRaises(SchemaxisError) as caught:
+            dispatch.remaining_timeout(use_parent_budget=1)
+        self.assertEqual(caught.exception.fault.code, 'INVALID_TIMEOUT')
+
     def test_missing_standalone_configuration_does_not_trust_receipt(self):
         registry.run(self.document(), self.root/'saved')
         (self.root/'config.json').unlink()

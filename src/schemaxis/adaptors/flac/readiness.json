@@ -1,0 +1,685 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.flac/1": {
+      "guide": "docs/flac.md",
+      "context": {
+        "purpose": "Archive a bounded PCM16 WAV recording as native lossless FLAC, or decode a native FLAC recording into the canonical PCM16 WAV that speech preparation (SoX conform, transcription) accepts, with every PCM byte proven by a fresh native decode. Optionally the archive carries up to three author-declared labels (title, artist, description) as native Vorbis comments so a recording keeps its name with its audio. Unsuitable for lossy audio, 24-bit or multichannel material, editing, tagging or proving a recording is authentic.",
+        "assumptions": "Captured local PCM16 mono or stereo audio at 8000-192000 Hz, at most 600 seconds and a 32 MiB canonical WAV. A configured FLAC 1.5 flac executable; the host never decodes FLAC frames itself and only checks STREAMINFO, metadata framing and the first frame header.",
+        "constraints": "Native FLAC only (no Ogg, no ID3 prefix); STREAMINFO exactly once and first, nonzero sample count and nonzero MD5. Fixed encoder -8 with verification, no padding and no seek table; no authored flags. Without authored labels the Vorbis comment is empty. Labels are optional, encodeLossless only, closed to title/artist/description, nonempty visible plain UTF-8 stored exactly as authored. Pictures, other tags, seek tables, padding and WAV LIST/JUNK chunks are never carried, and decodePCM16 drops tags. FLAC MD5 agreement is file consistency, not authenticity.",
+        "inspection": "Inspect the audio file and flac-summary.json (geometry, durations, PCM bytes, SHA-256, MD5, per-channel peaks, STREAMINFO, metadata blocks, dropped chunks and, for a labelled archive, the metadata record read back from the published VORBIS_COMMENT). verify needs the trusted flac (SCHEMAXIS_FLAC or a stored flac location; --flac belongs to run): it re-decodes the actual FLAC bytes in a private directory and compares every PCM byte; there is no host FLAC decoder.",
+        "recovery": "INVALID_FLAC_SOURCE: absolute regular local .wav (encode) or .flac (decode). INVALID_FLAC_METADATA: write nonempty visible plain-text title, artist or description labels within 200/200/1000 code points and 512/512/3000 UTF-8 bytes (no control, bidirectional, surrogate, private-use or invisible characters); UNKNOWN_ARGUMENT: labels are not accepted by decodePCM16 and no other metadata field exists. INVALID_FLAC_WAV: corrupt or outside the PCM16 mono/stereo subset. INVALID_FLAC_STREAM: malformed FLAC framing or STREAMINFO; re-export. UNSUPPORTED_FLAC_FORMAT: Ogg, ID3-prefixed, non-16-bit, more than two channels, rate outside 8000-192000 Hz, unknown length or zero MD5; convert first. FLAC_BUDGET: shorten below 600 s or 32 MiB. FLAC_STREAM_REJECTED: damaged frames or a sample count/MD5 mismatch found by the native decode. INTERPRETER_NOT_FOUND: configure flac (--flac, SCHEMAXIS_FLAC or a stored location). UNSUPPORTED_RUNTIME: use FLAC 1.5. VERIFICATION_FAILED: the published bytes, retained evidence or its JSON types changed; rerun into a fresh directory."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/flac-baseline.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/flac-variant.json"
+        },
+        {
+          "id": "decode",
+          "reference": "examples/schemaxis/flac-decode.json"
+        },
+        {
+          "id": "decode-tagged",
+          "reference": "examples/schemaxis/flac-decode-tagged.json"
+        },
+        {
+          "id": "tag-archive",
+          "reference": "examples/schemaxis/flac-tag-archive.json"
+        },
+        {
+          "id": "tag-unicode",
+          "reference": "examples/schemaxis/flac-tag-unicode.json"
+        },
+        {
+          "id": "invalid-source",
+          "reference": "examples/schemaxis/flac-invalid-source.json",
+          "expect": "invalid",
+          "fault": "INVALID_FLAC_SOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "tag-invalid-label",
+          "reference": "examples/schemaxis/flac-tag-invalid-label.json",
+          "expect": "invalid",
+          "fault": "INVALID_FLAC_METADATA",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_flac.py",
+        "tests/unit/test_flac_native_boundary.py",
+        "tests/unit/test_flac_tags.py"
+      ],
+      "acceptance": [
+        "tools/qualify_flac.py",
+        "tools/qualify_flac_tags.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "A verified file artifact (a SoX output or a FLAC/WAV publication) can be the source; the audio file and summary publish through the normal scheduler with provenance. A decodePCM16 output feeds SoX conform.",
+          "references": [
+            "docs/flac.md",
+            "tools/qualify_flac.py",
+            "examples/schemaxis/flac-tag-workflow.json",
+            "tools/qualify_flac_tags.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure expressions and finite studies resolve before the native recipe.",
+          "references": [
+            "docs/flac.md",
+            "tools/qualify_flac.py",
+            "tools/qualify_flac_tags.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://xiph.org/flac/documentation_tools_flac.html",
+          "https://www.rfc-editor.org/rfc/rfc9639.html",
+          "https://xiph.org/flac/changelog.html",
+          "https://github.com/xiph/flac/releases",
+          "https://ftp.osuosl.org/pub/xiph/releases/flac/"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers the version probe, encode, run readback decode and the fresh verification decode. Each child CPU 180 s, address space 2 GiB, output size capped to the expected PCM plus 1 MiB; standalone verify has a 300 s budget.",
+          "cancellation": "Shared owned process-group cancellation; serial children and a final cancellation/deadline check before publication.",
+          "logs": "Authored/effective plan, captured input and byte binding (with the authored labels when present), raw PCM bridge, run readback, exact launchers, input hashes, stage stdout/stderr/submissions and an independently computed summary.",
+          "verification": "Host STREAMINFO, metadata framing and first-frame checks, plus a fresh trusted flac decode of a private copy of the actual FLAC bytes compared byte for byte (encode: with the captured WAV PCM; decode: with the published WAV), the STREAMINFO MD5 and sample count recomputed by the host. Not an independent decoder: flac is the oracle. For a labelled archive the host also parses the actual published VORBIS_COMMENT (little-endian lengths, vendor, count, entries) and requires exactly the authored fixed-field entries in fixed order."
+        },
+        "data": [
+          {
+            "id": "wav-input",
+            "direction": "input",
+            "kind": "file",
+            "format": "PCM16 WAV",
+            "traits": {
+              "channels": "mono or stereo",
+              "sampleRate": "8000-192000 Hz"
+            },
+            "losses": [
+              "LIST and JUNK chunks are dropped (their text is not used as labels); no other chunk is accepted."
+            ],
+            "scope": "Captured regular local WAV within 600 seconds and 32 MiB."
+          },
+          {
+            "id": "flac-output",
+            "direction": "output",
+            "kind": "file",
+            "format": "FLAC",
+            "traits": {
+              "bitsPerSample": "16",
+              "container": "native FLAC, STREAMINFO plus a Vorbis comment: empty, or exactly the authored title/artist/description labels"
+            },
+            "losses": [
+              "Lossless for samples; only authored title, artist and description labels are carried (as declared text, not provenance); no pictures or cue points; the file may be larger than the WAV for noise-like audio."
+            ],
+            "scope": "One audio.flac then a text summary."
+          },
+          {
+            "id": "flac-input",
+            "direction": "input",
+            "kind": "file",
+            "format": "FLAC",
+            "traits": {
+              "bitsPerSample": "16",
+              "channels": "mono or stereo"
+            },
+            "losses": [
+              "Tags (including authored labels from an earlier archive), pictures, seek tables, padding, application blocks and cue sheets are dropped and listed."
+            ],
+            "scope": "Captured regular local native FLAC with a known sample count and MD5, within 600 seconds."
+          },
+          {
+            "id": "wav-output",
+            "direction": "output",
+            "kind": "file",
+            "format": "PCM16 WAV",
+            "traits": {
+              "header": "canonical 44 bytes"
+            },
+            "losses": [
+              "The WAV carries no metadata; its size is at most 32 MiB so SoX conform accepts it."
+            ],
+            "scope": "One audio.wav then a text summary."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "JSON geometry, byte counts, hashes, peaks, STREAMINFO, metadata and dropped chunks.",
+            "limits": "Host-authored summary recomputed during verification; no playback and no independent FLAC decoder."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "decode",
+          "reuse": "Change the absolute source. Retain source bytes for provenance; same-path byte changes invalidate scheduler reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "A verified file artifact (SoX output or FLAC/WAV publication) can be the source; decodePCM16 output feeds SoX conform through the normal scheduler."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure expressions and finite studies resolve before the native recipe."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The absolute source path and captured byte digest participate in reuse identity."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable JSON source with common undo and validation."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Common pointer forms expose the source field and, for encodeLossless, the optional closed metadata object (title, artist, description); the contract has no other authored properties."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Two named operations: encodeLossless (WAV to FLAC) and decodePCM16 (FLAC to canonical PCM16 WAV) with explicit losses and native readback acceptance. No other format or lossy conversion."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native inspection; the audio file and its JSON summary are ordinary publications."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The recipe is serial; each native process is a single thread."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No temporal batching; common finite studies remain available."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No persistent native session; edit JSON then create a new bounded run."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "FLAC and WAV publications are supported; there is no application session or project save."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/flac/stereo-48000.wav"
+            },
+            "scope": "Hand-built 48 kHz stereo WAV, 4099 frames (odd, spanning two FLAC blocks) with pinned asymmetric extrema: left -32768..32767, right -32768..20000. Counts and peaks are literal expectations from the fixture recipe, independent of the adaptor. The decision is the fresh native flac decode compared byte for byte with the captured PCM.",
+            "checks": [
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/frames",
+                "expected": 4099,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/channels",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/sampleRate",
+                "expected": 48000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/bytes",
+                "expected": 16396,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/peakMin",
+                "expected": [
+                  -32768,
+                  -32768
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/peakMax",
+                "expected": [
+                  32767,
+                  20000
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/flac/mono-8000.wav"
+            },
+            "scope": "Hand-built 8 kHz mono WAV, 1001 frames with a LIST chunk (dropped and listed) and extrema -32768 and 32767 plus 0, 1 and -1 at the start. Literal expectations; fresh native decode compared byte for byte.",
+            "checks": [
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/frames",
+                "expected": 1001,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/bytes",
+                "expected": 2002,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/peakMin",
+                "expected": [
+                  -32768
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/peakMax",
+                "expected": [
+                  32767
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/source/droppedChunks",
+                "expected": [
+                  "LIST"
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "tag-archive",
+            "example": "tag-archive",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/flac/mono-8000.wav"
+            },
+            "scope": "The 8 kHz mono LIST-bearing fixture archived with all three ASCII labels, one value containing \"=\". The published VORBIS_COMMENT must hold exactly TITLE, ARTIST and DESCRIPTION in that order (hand-counted block size 152 bytes: 32-byte libFLAC vendor string plus three length-prefixed entries); the fresh native decode must still equal the captured PCM byte for byte.",
+            "checks": [
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/frames",
+                "expected": 1001,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/bytes",
+                "expected": 2002,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/source/droppedChunks",
+                "expected": [
+                  "LIST"
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/mode",
+                "expected": "authoredLabels",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/0/field",
+                "expected": "TITLE",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/0/value",
+                "expected": "Site visit, north bank",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/1/field",
+                "expected": "ARTIST",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/1/value",
+                "expected": "A. Reviewer",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/2/field",
+                "expected": "DESCRIPTION",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/2/value",
+                "expected": "Field note A=B; recorded before the repair",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/vorbisCommentBytes",
+                "expected": 152,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/readback/exactPcm",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "tag-unicode",
+            "example": "tag-unicode",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/flac/stereo-16000.wav"
+            },
+            "scope": "The 16 kHz stereo fixture archived with non-ASCII labels (accents, an en dash, Japanese, an arrow and a check mark). Values are preserved as exact UTF-8 bytes (36, 12 and 35 bytes for 22, 9 and 28 code points; block size 160) without normalisation, and the PCM identity is unchanged.",
+            "checks": [
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/frames",
+                "expected": 2049,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/bytes",
+                "expected": 8196,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/0/value",
+                "expected": "Café du Müller – 日本語メモ",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/0/utf8Bytes",
+                "expected": 36,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/1/value",
+                "expected": "Zoë Núñez",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/1/utf8Bytes",
+                "expected": 12,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/2/value",
+                "expected": "Entrevue n° 3 → à vérifier ✓",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/comments/2/utf8Bytes",
+                "expected": 35,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/metadata/vorbisCommentBytes",
+                "expected": 160,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/peakMax",
+                "expected": [
+                  32766,
+                  32767
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "decode",
+            "example": "decode",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/flac/stereo-16000.flac"
+            },
+            "scope": "Native FLAC of a hand-built 16 kHz stereo recording of 2049 frames with literal extrema left -32768..32766 and right -32767..32767. The decoded WAV payload must reproduce the STREAMINFO MD5 and sample count and equal the fresh native decode.",
+            "checks": [
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/frames",
+                "expected": 2049,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/sampleRate",
+                "expected": 16000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/bytes",
+                "expected": 8196,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/peakMin",
+                "expected": [
+                  -32768,
+                  -32767
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/peakMax",
+                "expected": [
+                  32766,
+                  32767
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/wav/bytes",
+                "expected": 8240,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/readback/streaminfoMd5Matches",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "decode-tagged",
+            "example": "decode-tagged",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/flac/tagged-stereo-16000.flac"
+            },
+            "scope": "The same 16 kHz stereo audio in a FLAC that also carries a seek table, Vorbis comments and padding: the metadata is dropped and listed, and the decoded PCM is identical to the untagged case.",
+            "checks": [
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/audio/frames",
+                "expected": 2049,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/source/droppedMetadataBlocks",
+                "expected": [
+                  "SEEKTABLE",
+                  "VORBIS_COMMENT",
+                  "PADDING"
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/pcm/peakMax",
+                "expected": [
+                  32766,
+                  32767
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "flac-summary.json",
+                "format": "json",
+                "pointer": "/wav/bytes",
+                "expected": 8240,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "New adaptor 2026-10-25: schemaxis.flac/1 encodeLossless and decodePCM16 routes, independent PCM16 WAV reader and writer, STREAMINFO/metadata/first-frame checks, fixed native flac 1.5 stages, fresh trusted native decode verification, discovery, guidance, Studio starters and bounded native acceptance against FLAC 1.5.0.",
+        "review": [
+          "verification/2026-10-25-flac.md",
+          "verification/2026-10-25-flac-55.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native inspection; the audio file and its JSON summary are ordinary publications.",
+          "mpi": "The recipe is serial; each native process is a single thread.",
+          "time-batches": "No temporal batching; common finite studies remain available.",
+          "live-editing": "No persistent native session; edit JSON then create a new bounded run.",
+          "native-save": "FLAC and WAV publications are supported; there is no application session or project save."
+        }
+      }
+    }
+  }
+}

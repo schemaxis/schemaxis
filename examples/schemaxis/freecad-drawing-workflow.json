@@ -1,0 +1,76 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "model",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "nodes": [
+          {
+            "id": "stock",
+            "filter": "box",
+            "options": {
+              "length": 40,
+              "width": 30,
+              "height": 10
+            }
+          }
+        ],
+        "output": "stock"
+      }
+    },
+    {
+      "id": "drawing",
+      "document": {
+        "version": "schemaxis.freecad.drawing/1",
+        "source": {
+          "file": {
+            "$artifact": "model",
+            "index": 2
+          },
+          "object": "stock",
+          "units": "mm",
+          "expect": {
+            "volume": 12000,
+            "bounds": [
+              0,
+              40,
+              0,
+              30,
+              0,
+              10
+            ],
+            "centreOfMass": [
+              20,
+              15,
+              5
+            ]
+          }
+        },
+        "sheet": {
+          "title": "Machining stock - model to technical drawing"
+        },
+        "views": [
+          "front",
+          "top",
+          "right"
+        ],
+        "dimensioning": [
+          {
+            "id": "length",
+            "view": "front",
+            "type": "overallWidth"
+          },
+          {
+            "id": "thickness",
+            "view": "right",
+            "type": "overallHeight"
+          }
+        ],
+        "notes": [
+          "All dimensions in mm"
+        ]
+      }
+    }
+  ]
+}

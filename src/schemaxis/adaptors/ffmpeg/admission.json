@@ -1,0 +1,110 @@
+{
+  "protocol": "schemaxis.file-admission/1",
+  "routes": {
+    "schemaxis.ffmpeg/1": {
+      "operations": "catalogue",
+      "operationSelectors": [
+        "/nodes/*/filter"
+      ],
+      "fileSlots": [
+        {
+          "pointer": "/nodes/*/options/files/*",
+          "suffixes": [
+            ".png"
+          ],
+          "maxBytes": 33554432,
+          "contentPolicy": "native"
+        },
+        {
+          "pointer": "/nodes/*/options/metadata",
+          "suffixes": [
+            ".json"
+          ],
+          "maxBytes": 33554432,
+          "contentPolicy": "native"
+        },
+        {
+          "pointer": "/nodes/*/options/video",
+          "suffixes": [
+            ".mkv"
+          ],
+          "maxBytes": 33554432,
+          "contentPolicy": "native"
+        },
+        {
+          "pointer": "/nodes/*/options/audio",
+          "suffixes": [
+            ".wav"
+          ],
+          "maxBytes": 33554432,
+          "contentPolicy": "native"
+        },
+        {
+          "pointer": "/nodes/*/options/captions",
+          "suffixes": [
+            ".srt"
+          ],
+          "maxBytes": 1048576,
+          "contentPolicy": "native"
+        },
+        {
+          "pointer": "/nodes/*/options/file",
+          "suffixes": [
+            ".png"
+          ],
+          "maxBytes": 33554432,
+          "when": {
+            "/nodes/*/filter": "encodeSheet"
+          },
+          "contentPolicy": "native"
+        },
+        {
+          "pointer": "/nodes/*/options/file",
+          "suffixes": [
+            ".mp4",
+            ".mkv"
+          ],
+          "maxBytes": 33554432,
+          "when": {
+            "/nodes/*/filter": "encodeVideo"
+          },
+          "contentPolicy": "native"
+        },
+        {
+          "pointer": "/nodes/*/options/file",
+          "suffixes": [
+            ".mp4",
+            ".m4a"
+          ],
+          "maxBytes": 67108864,
+          "when": {
+            "/nodes/*/filter": "extractAudio"
+          },
+          "contentPolicy": "native"
+        },
+        {
+          "pointer": "/nodes/*/options/file",
+          "suffixes": [
+            ".wav"
+          ],
+          "maxBytes": 33554432,
+          "when": {
+            "/nodes/*/filter": "encodeAudio"
+          },
+          "contentPolicy": "native"
+        }
+      ],
+      "forbiddenPointers": [],
+      "qualification": [
+        "verification/2026-10-17-ffmpeg-completion.md",
+        "verification/2026-10-25-ffmpeg-34.md",
+        "verification/2026-10-25-ffmpeg-39.md",
+        "verification/2026-10-25-ffmpeg-audio-publish-56.md"
+      ],
+      "scope": "All six declared media publication operations with explicit captured sources and their canonical option contracts.",
+      "limitations": [
+        "At most 64 distinct captures and 256 slots; byte budgets remain enforced by both capture policy and native verification."
+      ]
+    }
+  }
+}

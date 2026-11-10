@@ -23,6 +23,10 @@ SELECTOR = {'type': 'object', 'properties': {
     'expect': {'type': 'integer', 'minimum': 1, 'maximum': 1000, 'required': True},
     'tolerance': {'type': 'number', 'minimum': 1e-9, 'maximum': .01, 'default': 1e-6},
     'angularTolerance': {'type': 'number', 'minimum': 1e-9, 'maximum': .01, 'default': 1e-6}}}
+# Degenerated topology (sphere poles, pointed-cone apex) is valid. OCC cannot distinguish edges
+# shorter than its 1e-7 mm confusion tolerance, and the curve of such an edge may be undefined.
+DEGENERATE = 'Degenerate'
+DEGENERATE_LENGTH_MM = 1e-7
 EDGES = {'type': 'union', 'options': [INDEX_LIST, SELECTOR], 'default': [1]}
 
 
@@ -46,8 +50,17 @@ def native_edges(shape):
     result = []
     for index, edge in enumerate(shape.Edges):
         b = edge.optimalBoundingBox(False, False)
-        result.append({'index': index+1, 'curve': type(edge.Curve).__name__,
-                       'lengthMM': edge.Length, 'centreMM': list(edge.CenterOfMass),
+        length = edge.Length
+        if length <= DEGENERATE_LENGTH_MM:
+            curve = DEGENERATE
+        else:
+            try:
+                curve = type(edge.Curve).__name__
+            except TypeError:
+                fail('UNSUPPORTED_EDGE', 'source edge has no analytic curve type; select explicit indices that avoid it '
+                     'or simplify the source solid', 'edge', index=index+1, lengthMM=length)
+        result.append({'index': index+1, 'curve': curve,
+                       'lengthMM': length, 'centreMM': list(edge.CenterOfMass),
                        'boundsMM': [b.XMin, b.XMax, b.YMin, b.YMax, b.ZMin, b.ZMax],
                        'verticesMM': [list(v.Point) for v in edge.Vertexes]})
     return result
@@ -60,7 +73,8 @@ def resolve(selector, edges, location='$'):
     for index, edge in enumerate(edges):
         if (not isinstance(edge,dict) or set(edge) != {'index', 'curve', 'lengthMM', 'centreMM', 'boundsMM', 'verticesMM'}
                 or type(edge['index']) is not int or edge['index'] != index+1 or not isinstance(edge['curve'], str)
-                or type(edge['lengthMM']) not in (int,float) or not math.isfinite(edge['lengthMM']) or edge['lengthMM'] <= 0):
+                or type(edge['lengthMM']) not in (int,float) or not math.isfinite(edge['lengthMM'])
+                or not (0 <= edge['lengthMM'] <= DEGENERATE_LENGTH_MM if edge['curve'] == DEGENERATE else edge['lengthMM'] > 0)):
             fail('VERIFICATION_FAILED', 'invalid edge measurement', location)
         arrays = [(edge['centreMM'], 3), (edge['boundsMM'], 6)]
         if not isinstance(edge['verticesMM'], list) or len(edge['verticesMM']) > 2:
@@ -76,6 +90,7 @@ def resolve(selector, edges, location='$'):
     where, tolerance = selector['where'], selector['tolerance']
     selected = []
     for edge in edges:
+        if edge['curve'] == DEGENERATE: continue
         if 'curve' in where and edge['curve'] != {'line':'Line', 'circle':'Circle'}[where['curve']]: continue
         if 'onPlane' in where:
             plane = where['onPlane']; axis = 2*'xyz'.index(plane['axis'])

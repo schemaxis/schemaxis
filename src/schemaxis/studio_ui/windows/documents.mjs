@@ -7,6 +7,7 @@ import {avatar, identity} from '../shell/providers.mjs';
 import {expandFields, markers} from '../editor/insert-fields.mjs';
 import {templateGallery} from './template-gallery.mjs';
 import {searchAdaptors} from '../lib/search.mjs';
+import {pickFile} from './workbench/input-browser.mjs';
 
 const NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
@@ -14,6 +15,21 @@ export function installDocumentActions(ctx) {
   ctx.bus.on('new-design', () => newDesign(ctx));
   ctx.bus.on('new-instance', (detail) => newInstance(ctx, detail || {}));
   ctx.bus.on('open-operation', (detail) => ctx.windows.open('workbench', detail));
+  ctx.bus.on('open-file', (detail) => openFile(ctx, detail || {}));
+}
+
+/** Open a saved input or design file. It joins the workspace, or its existing document is shown. */
+export async function openFile(ctx, {provider} = {}) {
+  const file = await ctx.call(() => pickFile(ctx, {label: 'input file', extensions: ['.json', '.yaml', '.yml']}),
+    {title: 'Could not choose a file'});
+  if (!file) return null;
+  const result = await ctx.call(() => ctx.api.post('/api/documents', {action: 'open', file, ...(provider ? {provider} : {})}),
+    {title: 'Could not open the file'});
+  if (result) {
+    await ctx.refresh();
+    ctx.openDocument(result.id);
+  }
+  return result;
 }
 
 async function create(ctx, request, {fill = false} = {}) {
@@ -47,11 +63,12 @@ export async function newDesign(ctx) {
 /** Choose an adaptor, name the instance, optionally start from a template. */
 export async function newInstance(ctx, {provider: preset} = {}) {
   const adaptors = ctx.store.get().adaptors.filter((item) => !item.hostOnly);
-  let selected = preset || null;
+  let selected = adaptors.some((item) => item.id === preset) ? preset : null;
   const search = h('input', {class: 'input', placeholder: 'Search by name, purpose or operation…',
     'aria-label': 'Search adaptors'});
   const list = h('ul', {class: 'list', role: 'listbox', style: {maxHeight: '260px', overflow: 'auto'}});
-  const instance = h('input', {class: 'input', placeholder: 'e.g. geometry, mesher, slices'});
+  const instance = h('input', {class: 'input', placeholder: 'e.g. geometry, mesher, slices',
+    'aria-label': 'Instance name', value: selected || ''});
   const instanceError = h('div', {class: 'error-text'});
   const templates = h('select', {class: 'select'});
   const gallery = templateGallery(templates);
@@ -69,6 +86,8 @@ export async function newInstance(ctx, {provider: preset} = {}) {
   const renderList = () => {
     const query = search.value.trim().toLowerCase();
     const matches = searchAdaptors(adaptors, query, (item) => identity(item.id).name);
+    // Keep the selected app visible even when it would be below the list's scroll fold.
+    if (!query) matches.sort((a, b) => Number(b.id === selected) - Number(a.id === selected));
     mount(list, matches.map((item) => h('li', {
       class: 'list-item', role: 'option', 'aria-selected': String(item.id === selected),
       onClick: () => {
@@ -94,6 +113,7 @@ export async function newInstance(ctx, {provider: preset} = {}) {
   const result = await openDialog({
     title: 'New adaptor instance',
     wide: true,
+    initialFocus: selected ? '[aria-label="Instance name"]' : '[aria-label="Search adaptors"]',
     content: h('div', {class: 'new-instance-content', style: {display: 'grid', gap: 'var(--sp-4)'}},
       h('div', {class: 'field'}, h('label', {}, 'Adaptor'), search, list),
       h('div', {style: {display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 'var(--sp-3)'}},
@@ -131,7 +151,7 @@ export async function newInstance(ctx, {provider: preset} = {}) {
 }
 
 /** A list of existing documents of some kinds, with a create button. Used by chooser views. */
-export function documentChooser(ctx, {title, description, providers, createLabel, onCreate, emptyIcon}) {
+export function documentChooser(ctx, {title, description, providers, createLabel, onCreate, emptyIcon, onOpen}) {
   const list = h('ul', {class: 'list'});
   const render = () => {
     const server = ctx.store.get().server;
@@ -146,7 +166,7 @@ export function documentChooser(ctx, {title, description, providers, createLabel
       },
     }, avatar(record.provider), h('div', {class: 'grow'},
       h('div', {class: 'title'}, record.name),
-      h('div', {class: 'subtitle'}, `${identity(record.provider).name} · revision ${record.revision}`)),
+      h('div', {class: 'subtitle'}, `${identity(record.provider).name} · ${record.file || 'not saved to a file yet'}`)),
     record.valid ? null : h('span', {class: 'badge error'}, 'Invalid draft'),
     icon('chevron-right'))) : h('li', {class: 'empty-state'}, icon(emptyIcon || 'file'), 'Nothing here yet.'));
   };
@@ -155,7 +175,10 @@ export function documentChooser(ctx, {title, description, providers, createLabel
   const element = h('div', {class: 'chooser'},
     h('div', {class: 'chooser-header'},
       h('div', {}, h('h2', {}, title), h('p', {class: 'secondary-text'}, description)),
-      h('button', {class: 'button primary', onClick: onCreate}, icon('plus'), createLabel)),
+      h('div', {class: 'start-app-actions'},
+        h('button', {class: 'button', dataset: {action: 'open-file'}, title: 'Open a saved input file from disk',
+          onClick: onOpen || (() => ctx.bus.emit('open-file'))}, icon('folder'), 'Open…'),
+        h('button', {class: 'button primary', onClick: onCreate}, icon('plus'), createLabel))),
     h('div', {class: 'card'}, list));
   return {element, dispose: unsubscribe};
 }

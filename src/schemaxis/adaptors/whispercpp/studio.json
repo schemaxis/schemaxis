@@ -1,0 +1,124 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.whispercpp/1",
+    "operation": "transcribe",
+    "audio": {
+      "path": "/replace/with/speech.wav"
+    },
+    "model": {
+      "path": "/replace/with/ggml-model.bin",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "language": "en"
+  },
+  "categories": [
+    {
+      "id": "speech",
+      "title": "Speech transcription",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "transcribe",
+      "title": "Transcribe speech",
+      "description": "Pinned local WAV and model to checked transcript and captions; replace paths and model hash. Output needs human review.",
+      "document": {
+        "version": "schemaxis.whispercpp/1",
+        "operation": "transcribe",
+        "audio": {
+          "path": "/replace/with/speech.wav"
+        },
+        "model": {
+          "path": "/replace/with/ggml-model.bin",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "language": "en"
+      }
+    },
+    {
+      "id": "correct-transcript",
+      "title": "Correct a transcript draft (host-only)",
+      "description": "Pin a retained machine segments.json and replace cue text with a declared review status and note; replace the path, digest and edits. The status is your declaration, not verified.",
+      "document": {
+        "version": "schemaxis.whispercpp.correct/1",
+        "draft": {
+          "path": "/replace/with/segments.json"
+        },
+        "basisSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "review": {
+          "status": "human-corrected",
+          "note": "Describe what was reviewed and against what."
+        },
+        "corrections": [
+          {
+            "index": 0,
+            "text": "Replacement cue text"
+          }
+        ]
+      }
+    },
+    {
+      "id": "delete-transcript-cues",
+      "title": "Delete cues from a transcript draft (host-only)",
+      "description": "Pin a retained machine segments.json and delete whole cues by source index, optionally replacing others; replace the path, digest, indices and note. The status is your declaration, not verified; deleting every cue publishes an empty transcript.",
+      "document": {
+        "version": "schemaxis.whispercpp.correct/2",
+        "draft": {
+          "path": "/replace/with/segments.json"
+        },
+        "basisSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "review": {
+          "status": "human-corrected",
+          "note": "Describe what was reviewed and why the cue was removed."
+        },
+        "deletions": [
+          0
+        ]
+      }
+    },
+    {
+      "id": "retime-transcript-cues",
+      "title": "Retime cues of a transcript draft (host-only)",
+      "description": "Pin a retained machine segments.json and state new start and end times for cues by source index, optionally replacing or deleting others; replace the path, digest, indices, times and note. The status and the times are your declaration, not verified against the audio.",
+      "document": {
+        "version": "schemaxis.whispercpp.correct/3",
+        "draft": {
+          "path": "/replace/with/segments.json"
+        },
+        "basisSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "review": {
+          "status": "human-corrected",
+          "note": "Describe what was reviewed and why the times were changed."
+        },
+        "timings": [
+          {
+            "index": 0,
+            "startMs": 0,
+            "endMs": 1000
+          }
+        ]
+      }
+    },
+    {
+      "id": "layout-captions",
+      "title": "Lay out caption lines (host-only)",
+      "description": "Pin a retained timed transcript and break each cue into explicit SRT and WebVTT lines at word boundaries; replace the path and digest and choose the bounds. Words and times are unchanged, a longer unbreakable run or too many lines is refused, and the source status is carried unchanged, not verified.",
+      "document": {
+        "version": "schemaxis.whispercpp.captions/1",
+        "operation": "layout",
+        "source": {
+          "path": "/replace/with/segments.json"
+        },
+        "sourceSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "maxLineCodePoints": 42,
+        "maxLines": 2
+      }
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

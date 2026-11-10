@@ -3,6 +3,20 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {validate} from '../editor/schema-validate.mjs';
 
+test('incompatible closed field sets get a whole-object diagnostic without guessing a branch', () => {
+  const choice = {type: 'object', properties: {sources: {anyOf: [
+    {type: 'object', properties: {items: {}}, required: ['items'], additionalProperties: false},
+    {type: 'object', properties: {folder: {}}, required: ['folder'], additionalProperties: false},
+  ]}}};
+  for (const sources of [{items: []}, {folder: {}}]) assert.deepEqual(validate(choice, {sources}), []);
+  assert.deepEqual(validate(choice, {sources: {items: [], folder: {}}}), [{pointer: '/sources',
+    message: 'Properties cannot be combined in one object alternative', severity: 'warning'}]);
+  assert.deepEqual(validate(choice, {sources: {}}), [], 'missing choices stay conservative');
+  assert.deepEqual(validate(choice, {sources: {$document: '/source'}}), [], 'composition markers stay deferred');
+  const open = {anyOf: [...choice.properties.sources.anyOf, {type: 'object'}]};
+  assert.deepEqual(validate(open, {items: [], folder: {}}), [], 'an open alternative can admit the fields');
+});
+
 // Synthetic schemas shaped like heterogeneous alternatives: tagged constructor branches (if/then/else:false on `type`)
 // beside an untagged closed branch, optionally wrapped with composition-marker branches. Nothing names an adaptor.
 const marker = {type: 'object', properties: {$document: {type: 'string'}}, required: ['$document']};
@@ -101,7 +115,8 @@ test('closed alternatives without conditionals are told apart by the fields they
   assert.deepEqual(report({b: 'x'}, schema), ['/b: Expected at least 2 characters']);
   assert.deepEqual(report({a: 1}, schema), []);
   assert.deepEqual(report({}, schema), []);
-  assert.deepEqual(report({a: 9, b: 'x'}, schema), [], 'both alternatives forbid a present field');
+  assert.deepEqual(report({a: 9, b: 'x'}, schema), [': Properties cannot be combined in one object alternative'],
+    'the impossible field combination is known without attributing either value to a branch');
 });
 
 test('declared keys anywhere in a branch tree are never treated as forbidden', () => {
@@ -306,4 +321,17 @@ test('an ordinary if/then/else with a real else branch is not mistaken for a tag
   ]};
   // The condition fails, so the else side applies and its own bound is reported.
   assert.deepEqual(report({type: 'box', options: 'toolong'}, schema), ['/options: Expected at most 2 characters']);
+});
+
+test('a const-selected closed alternative retains value and unknown-key diagnostics', () => {
+  const node = (filter, options) => ({type: 'object', additionalProperties: false,
+    required: ['filter', 'options'], properties: {filter: {const: filter},
+      options: {type: 'object', properties: options, additionalProperties: false}}});
+  const schema = {oneOf: [node('box', {length: {type: 'number', exclusiveMinimum: 0}}),
+    node('sphere', {radius: {type: 'number', exclusiveMinimum: 0}})]};
+  const value = {filter: 'box', options: {length: -1}, inptus: []};
+  assert.deepEqual(validate(schema, value).map(({pointer, message}) => [pointer, message]), [
+    ['/options/length', 'Must be greater than 0'],
+    ['/inptus', 'Property "inptus" is not allowed'],
+  ]);
 });

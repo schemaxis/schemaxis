@@ -3,5 +3,8 @@
 import json
 from importlib.resources import files
 
+
 def catalogue():
-    return json.loads(files(__package__).joinpath("capabilities.json").read_text())
+    value = json.loads(files(__package__).joinpath("capabilities.json").read_text())
+    value["searchCases"] = json.loads(files(__package__).joinpath("search-cases.json").read_text())
+    return value

@@ -272,6 +272,12 @@ def _prepare(document, allowed, version):
             workflow.validate(body, allow_unfilled=True)
         else:
             workflow.inspect_plan(body)
+    elif not find_unfilled(body):
+        # Values and sweeps may precede operations, but still obey the shared
+        # authoring, cycle, axis and expansion-limit contracts. Draft expressions
+        # containing placeholders remain deferred, as they do with operations.
+        from .adaptor_runtime import InputProgram
+        InputProgram(body, workflow=True)
     resolved = workflow_inputs(body, defer_unfilled=True)
     inputs = _inputs(body, resolved)
     by_id = {effective['id']: operation for operation, effective in zip(operations, resolved['operations'])}
@@ -535,7 +541,7 @@ def _template_parts(document, body):
     manifest = {'version': workflow_templates.TEMPLATE_VERSION, 'id': 'design', 'revision': 1, 'title': 'Design',
                 'workflow': 'workflow.json', 'parameters': parameters, 'outputs': outputs}
     try:
-        workflow_templates._validate(manifest, body, allow_unfilled=True)
+        workflow_templates._validate(manifest, body, allow_unfilled=True, allow_empty_design=not body['operations'])
     except SchemaxisError as error:
         fault = error.fault
         location = fault.location.replace('$.template.', '$.', 1)

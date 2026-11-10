@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -22,6 +23,20 @@ from schemaxis.adaptors.registry import load_registry
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT/'tests/fixtures/plugin_adaptor'
 PACKAGE = 'schemaxis_fixture_plugin'
+
+
+def framework_document_stems(source):
+    """Read canonical framework sources, rather than copies embedded in Help."""
+    found = set()
+    for path in source.rglob('*'):
+        parts = path.relative_to(source).parts
+        if (path.suffix not in ('.py', '.json', '.mjs') or 'tests' in parts
+                or parts[0] == 'adaptors' and len(parts) > 2
+                or parts[:2] == ('studio_ui', 'help')):
+            continue
+        found.update(re.findall(r'[\'"](schemaxis\.[a-z][a-z0-9.-]*)/[0-9]+[\'"]',
+                                path.read_text(errors='ignore')))
+    return found
 
 
 def entry(name, value=PACKAGE, dist='schemaxis-fixture-plugin'):
@@ -203,6 +218,20 @@ class AdaptorPluginTests(unittest.TestCase):
             with self.subTest(identity=identity):
                 fault = self.fault([entry(identity, self.variant(lambda m: m.update(id=identity)))])
                 self.assertIn('reserved', fault.message)
+        # A plugin named after a framework protocol may not claim its document,
+        # even though the version would otherwise sit in its own namespace.
+        for identity, version in (('compatibility', 'schemaxis.compatibility/1'),
+                                  ('resource', 'schemaxis.resource.adoption/1'),
+                                  ('study', 'schemaxis.study.plan/1'),
+                                  ('feedback', 'schemaxis.feedback.report/1'),
+                                  ('tool', 'schemaxis.tool/1')):
+            with self.subTest(framework_document=version):
+                def reserved(manifest):
+                    route(version)(manifest)
+                    manifest['id'] = identity
+                fault = self.fault([entry(identity, self.variant(reserved))])
+                self.assertIn('document version', fault.message)
+                self.assertIn('reserved', fault.message)
         for version in ('schemaxis.fixtureplugin/2', 'schemaxis.fixtureplugin.extra/1', 'acme.fixture/1'):
             with self.subTest(allowed=version):
                 self.assertIn(version, self.admitted(route(version))['routes'])
@@ -263,15 +292,29 @@ class AdaptorPluginTests(unittest.TestCase):
                     self.assertIn(action.dest, registry.FRAMEWORK_DESTS, name)
 
     def test_reserved_documents_cover_framework_versions(self):
-        import re
-        source, found = ROOT/'src/schemaxis', set()
-        for path in source.rglob('*'):
-            parts = path.relative_to(source).parts
-            if path.suffix not in ('.py', '.json', '.mjs') or 'tests' in parts or parts[0] == 'adaptors' and len(parts) > 2:
-                continue
-            found.update(re.findall(r'[\'"](schemaxis\.[a-z][a-z0-9-]*)/[0-9]+[\'"]', path.read_text(errors='ignore')))
+        found = framework_document_stems(ROOT/'src/schemaxis')
         routed = {version.partition('/')[0] for version in registry.routes()}
         self.assertEqual(found - routed - registry.FRAMEWORK_DOCUMENTS, set(), 'reserve new framework documents')
+
+    def test_framework_protocol_scan_uses_canonical_sources(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)
+            fixtures = {
+                'protocol.py': "VERSION = 'schemaxis.scan-python/1'",
+                'protocol.json': '{"version": "schemaxis.scan-json/1"}',
+                'protocol.mjs': 'const version = "schemaxis.scan-browser/1";',
+                'adaptors/example/adaptor.py': "VERSION = 'schemaxis.scan-adaptor/1'",
+                'studio_ui/help/example.json': json.dumps({
+                    'source': 'src/schemaxis/adaptors/example/adaptor.py',
+                    'body': "VERSION = 'schemaxis.scan-adaptor/1'"}),
+                'tests/example.py': "VERSION = 'schemaxis.scan-test/1'",
+            }
+            for name, text in fixtures.items():
+                path = source/name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text)
+            self.assertEqual(framework_document_stems(source), {
+                'schemaxis.scan-python', 'schemaxis.scan-json', 'schemaxis.scan-browser'})
 
     def test_failing_declarations_binding_is_excluded_at_first_use(self):
         from schemaxis.capabilities import CapabilityCatalogue

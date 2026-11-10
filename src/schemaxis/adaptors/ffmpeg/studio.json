@@ -28,6 +28,16 @@
       "id": "sources",
       "title": "Images & existing video",
       "icon": "layers"
+    },
+    {
+      "id": "review",
+      "title": "Review movie",
+      "icon": "layers"
+    },
+    {
+      "id": "audio",
+      "title": "Audio extraction",
+      "icon": "layers"
     }
   ],
   "snippets": [
@@ -309,6 +319,206 @@
       ],
       "complexity": "composite",
       "requires": "Supported silent video with uniform integer-rate presentation timestamps."
+    },
+    {
+      "id": "add-review-movie",
+      "title": "Review movie with audio and captions",
+      "category": "review",
+      "icon": "layers",
+      "description": "Replace the document with a muxReview publication: silent FFV1 Matroska video, PCM16 WAV and strict SRT in one verified three-stream Matroska file. Captions stay a declared machine draft.",
+      "fields": {
+        "video": {
+          "label": "Silent FFV1 video",
+          "type": "path",
+          "required": true,
+          "default": "/data/silent.mkv",
+          "extensions": [
+            "mkv"
+          ]
+        },
+        "audio": {
+          "label": "Speech WAV (PCM16)",
+          "type": "path",
+          "required": true,
+          "default": "/data/speech.wav",
+          "extensions": [
+            "wav"
+          ]
+        },
+        "captions": {
+          "label": "Captions (SRT)",
+          "type": "path",
+          "required": true,
+          "default": "/data/captions.srt",
+          "extensions": [
+            "srt"
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ffmpeg/1",
+              "nodes": [
+                {
+                  "id": "review",
+                  "filter": "muxReview",
+                  "options": {
+                    "video": {
+                      "$fill": "video"
+                    },
+                    "audio": {
+                      "$fill": "audio"
+                    },
+                    "captions": {
+                      "$fill": "captions"
+                    },
+                    "captionStatus": "machineDraft",
+                    "threads": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "A silent single-stream Matroska/FFV1 bgr0 video, canonical PCM16 WAV within one video frame of its duration, and plain-text SRT inside the video."
+    },
+    {
+      "id": "add-extract-audio",
+      "title": "Extract audio from an MP4/M4A recording",
+      "category": "audio",
+      "icon": "layers",
+      "description": "Replace the document with an extractAudio publication: one AAC-LC audio stream decoded to a verified canonical PCM16 WAV at the recording's own rate. AAC is lossy and the result is a machine draft.",
+      "fields": {
+        "file": {
+          "label": "AAC recording (MP4 or M4A)",
+          "type": "path",
+          "required": true,
+          "default": "/data/voice-note.m4a",
+          "extensions": [
+            "m4a",
+            "mp4"
+          ]
+        },
+        "streamIndex": {
+          "label": "Audio stream index (global)",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 15
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ffmpeg/1",
+              "nodes": [
+                {
+                  "id": "speech",
+                  "filter": "extractAudio",
+                  "options": {
+                    "file": {
+                      "$fill": "file"
+                    },
+                    "streamIndex": {
+                      "$fill": "streamIndex"
+                    },
+                    "threads": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "One local MP4/M4A with a single AAC-LC mono or stereo audio stream (8-96 kHz, up to 600 s and 64 MiB) and at most one H.264 video stream; the audio stream's global index."
+    },
+    {
+      "id": "add-encode-audio",
+      "title": "Publish a prepared WAV as AAC/M4A",
+      "category": "audio",
+      "icon": "layers",
+      "description": "Replace the document with an encodeAudio publication: a prepared PCM16 WAV encoded to AAC-LC/M4A and verified by a fresh native decode against a byte budget and an exact mean waveform error budget. AAC is lossy; the budget is not a listening-quality measure.",
+      "fields": {
+        "file": {
+          "label": "Prepared PCM16 WAV",
+          "type": "path",
+          "required": true,
+          "default": "/data/prepared-narration.wav",
+          "extensions": [
+            "wav"
+          ]
+        },
+        "bitrateKbps": {
+          "label": "AAC target bitrate (kbit/s)",
+          "type": "enum",
+          "required": true,
+          "default": 96,
+          "values": [
+            64,
+            96,
+            128,
+            192
+          ]
+        },
+        "maxBytes": {
+          "label": "Maximum file size (bytes)",
+          "type": "integer",
+          "required": true,
+          "default": 8388608,
+          "minimum": 1,
+          "maximum": 33554432
+        },
+        "maxMeanPCMError": {
+          "label": "Maximum mean sample error (PCM16 units)",
+          "type": "number",
+          "required": true,
+          "default": 2000,
+          "minimum": 0,
+          "maximum": 65535
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.ffmpeg/1",
+              "nodes": [
+                {
+                  "id": "shareable",
+                  "filter": "encodeAudio",
+                  "options": {
+                    "file": {
+                      "$fill": "file"
+                    },
+                    "bitrateKbps": {
+                      "$fill": "bitrateKbps"
+                    },
+                    "maxBytes": {
+                      "$fill": "maxBytes"
+                    },
+                    "maxMeanPCMError": {
+                      "$fill": "maxMeanPCMError"
+                    },
+                    "threads": 1
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "One local canonical PCM16 WAV (mono or stereo, 16000, 22050, 44100 or 48000 Hz, up to 600 s and 32 MiB), for example from SoX conform or eSpeak NG; FFmpeg with ffprobe beside it."
     }
   ],
   "templates": [
@@ -391,6 +601,69 @@
         }
       },
       "requires": "Supported silent constant-rate MP4/H264 or MKV/FFV1; whole source <=600 frames and32 MiB."
+    },
+    {
+      "id": "review-movie",
+      "title": "Review movie with audio and captions",
+      "description": "Mux a silent FFV1 video, PCM16 speech WAV and strict SRT into one verified Matroska review movie; captions are a declared machine draft.",
+      "file": "studio/templates/review-movie.json",
+      "fields": {
+        "video": {
+          "label": "Silent FFV1 video",
+          "type": "path",
+          "required": true,
+          "default": "/data/silent.mkv",
+          "extensions": [
+            "mkv"
+          ]
+        },
+        "audio": {
+          "label": "Speech WAV (PCM16)",
+          "type": "path",
+          "required": true,
+          "default": "/data/speech.wav",
+          "extensions": [
+            "wav"
+          ]
+        },
+        "captions": {
+          "label": "Captions (SRT)",
+          "type": "path",
+          "required": true,
+          "default": "/data/captions.srt",
+          "extensions": [
+            "srt"
+          ]
+        }
+      },
+      "requires": "Supported silent Matroska/FFV1 video; canonical PCM16 WAV and plain-text SRT matching its duration."
+    },
+    {
+      "id": "extract-audio",
+      "title": "Extract audio from an MP4/M4A recording",
+      "description": "Decode one AAC-LC audio stream to a verified canonical PCM16 WAV for SoX, FLAC or whisper.cpp; lossy, machine draft.",
+      "file": "studio/templates/extract-audio.json",
+      "fields": {
+        "file": {
+          "label": "AAC recording (MP4 or M4A)",
+          "type": "path",
+          "required": true,
+          "default": "/data/voice-note.m4a",
+          "extensions": [
+            "m4a",
+            "mp4"
+          ]
+        },
+        "streamIndex": {
+          "label": "Audio stream index (global)",
+          "type": "integer",
+          "required": true,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 15
+        }
+      },
+      "requires": "A single AAC-LC audio stream in an intact MP4/M4A; set streamIndex to its global index."
     }
   ],
   "viewers": [

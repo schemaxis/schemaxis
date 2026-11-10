@@ -1,0 +1,290 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "id": "scientific-bundle",
+  "size": [
+    128,
+    128
+  ],
+  "render": {
+    "renderer": {
+      "kind": "cycles"
+    },
+    "samples": 8,
+    "threads": 2,
+    "worldStrength": 0,
+    "lightEnergy": 0,
+    "colourManagement": {
+      "view": {
+        "kind": "standard"
+      }
+    }
+  },
+  "production": {
+    "units": "metres",
+    "frameStart": 1,
+    "frameEnd": 12,
+    "currentFrame": 1,
+    "objects": [
+      {
+        "id": "panel",
+        "kind": "mesh",
+        "material": "finish",
+        "vertices": [
+          [
+            -2,
+            -2,
+            0
+          ],
+          [
+            2,
+            -2,
+            0
+          ],
+          [
+            2,
+            2,
+            0
+          ],
+          [
+            -2,
+            2,
+            0
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ],
+        "rotation": [
+          0,
+          0.5235987755982988,
+          0
+        ]
+      },
+      {
+        "id": "shot",
+        "kind": "camera",
+        "location": [
+          5,
+          0,
+          3
+        ],
+        "rotation": [
+          0,
+          1.0303768265243125,
+          0
+        ],
+        "lens": 28
+      }
+    ],
+    "camera": "shot",
+    "surfaceMaterials": [
+      {
+        "id": "finish",
+        "baseColour": {
+          "kind": "constant",
+          "value": [
+            0,
+            0,
+            0
+          ]
+        },
+        "roughness": {
+          "kind": "constant",
+          "value": 0.375
+        },
+        "emission": {
+          "colour": {
+            "kind": "constant",
+            "value": [
+              1,
+              0.125,
+              0.5
+            ]
+          },
+          "strength": {
+            "kind": "constant",
+            "value": 1
+          }
+        }
+      }
+    ],
+    "meshData": [
+      {
+        "object": "panel",
+        "attributes": [
+          {
+            "name": "sx_temperature",
+            "kind": "float",
+            "domain": "POINT",
+            "mode": "dense",
+            "values": [
+              300,
+              300,
+              300,
+              300
+            ]
+          }
+        ]
+      }
+    ],
+    "tracks": [
+      {
+        "object": "panel",
+        "channel": "location",
+        "interpolation": "LINEAR",
+        "keys": [
+          {
+            "frame": 1,
+            "value": [
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "frame": 12,
+            "value": [
+              0,
+              0,
+              0.5
+            ]
+          }
+        ]
+      }
+    ],
+    "viewLayers": [
+      {
+        "id": "analysis",
+        "passes": [
+          "combined",
+          "depth",
+          "position",
+          "normal"
+        ],
+        "aovs": [
+          "temperature"
+        ],
+        "cryptomatte": {
+          "object": true,
+          "material": true,
+          "levels": 4
+        }
+      }
+    ],
+    "renderAovs": [
+      {
+        "id": "temperature",
+        "type": "value"
+      }
+    ],
+    "materialAovs": [
+      {
+        "id": "temperatureWriter",
+        "aov": "temperature",
+        "target": {
+          "kind": "material",
+          "material": "finish"
+        },
+        "source": {
+          "kind": "attribute",
+          "name": "sx_temperature",
+          "channel": "factor",
+          "missing": "error"
+        }
+      }
+    ],
+    "renderBundles": [
+      {
+        "id": "science",
+        "frames": [
+          1,
+          12
+        ],
+        "camera": "shot",
+        "outputs": [
+          {
+            "kind": "image",
+            "id": "preview",
+            "source": {
+              "kind": "pass",
+              "layer": "analysis",
+              "pass": "combined"
+            },
+            "encoding": {
+              "kind": "png"
+            }
+          },
+          {
+            "kind": "multilayer",
+            "id": "numeric",
+            "precision": "float",
+            "compression": "zip",
+            "layers": [
+              {
+                "id": "combined",
+                "source": {
+                  "kind": "pass",
+                  "layer": "analysis",
+                  "pass": "combined"
+                }
+              },
+              {
+                "id": "depth",
+                "source": {
+                  "kind": "pass",
+                  "layer": "analysis",
+                  "pass": "depth"
+                }
+              },
+              {
+                "id": "position",
+                "source": {
+                  "kind": "pass",
+                  "layer": "analysis",
+                  "pass": "position"
+                }
+              },
+              {
+                "id": "normal",
+                "source": {
+                  "kind": "pass",
+                  "layer": "analysis",
+                  "pass": "normal"
+                }
+              },
+              {
+                "id": "temperature",
+                "source": {
+                  "kind": "aov",
+                  "layer": "analysis",
+                  "aov": "temperature"
+                }
+              },
+              {
+                "id": "objectMatte",
+                "source": {
+                  "kind": "cryptomatte",
+                  "layer": "analysis",
+                  "matte": "object"
+                }
+              },
+              {
+                "id": "materialMatte",
+                "source": {
+                  "kind": "cryptomatte",
+                  "layer": "analysis",
+                  "matte": "material"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

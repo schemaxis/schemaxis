@@ -7,12 +7,16 @@
     "pattern": "gmsh-(\\d+\\.\\d+\\.\\d+)-Linux64"
   },
   "releaseNotes": "https://gmsh.info/doc/texinfo/#Version-history",
-  "scope": "Bounded serial single-solid box/STEP tetrahedral meshing, MSH physical names, independently verified VTU conversion, FreeCAD and ParaView handoffs on 4.15.2. Named disjoint planar faces, independent triangle membership/area checks and remainder groups are qualified on the same runtime.",
+  "scope": "Bounded serial single-solid box/STEP tetrahedral meshing, MSH physical names, independently verified VTU conversion, FreeCAD and ParaView handoffs on 4.15.2. Named disjoint planar faces, independent triangle membership/area checks and remainder groups are qualified on the same runtime. Expanded supported primitive family: full axis-aligned cylinders, annular sleeves via a single-solid cut, and complete spheres; analytic CAD/node/surface checks; explicit planar cap area budgets and Delaunay/HXT plus optimisation readback. Named whole analytic cylindrical walls (typed OpenCASCADE cylinders on a world axis, inner/outer side) with independent host classification, material-side proof, unrolled area and chord deviation, plus a CAD surface inventory and adopted STEP inputs, are qualified on the same runtime. General CSG, other curved-wall families and surface/high-order meshing remain excluded.",
   "evidence": [
     "verification/2026-09-28-gmsh-growth.md",
-    "verification/2026-09-28-gmsh-face-groups.md"
+    "verification/2026-09-28-gmsh-face-groups.md",
+    "verification/2026-11-03-gmsh-primitives.md",
+    "verification/2026-11-10-gmsh-cylinders.md"
   ],
   "acceptance": [
-    "Run tools/qualify_gmsh.py with the target Gmsh Python and configured FreeCAD/ParaView; verify analytic meshes, STEP handoff, VTU readback, invalid sources and all kit integrity/lifecycle checks."
+    "Run tools/qualify_gmsh.py with the target Gmsh Python and configured FreeCAD/ParaView; verify analytic meshes, STEP handoff, VTU readback, invalid sources and all kit integrity/lifecycle checks.",
+    "Run tools/qualify_gmsh_primitives.py with the target Gmsh Python, then source-current native conformance: primitive baseline/changed dimensions, circular STEP caps, strict/tight budget refusals, rehashed CAD/settings/boundary perturbation and lifecycle challenges.",
+    "Run tools/qualify_gmsh_cylinders.py with the target Gmsh Python, FreeCAD and meshio: literal sleeve, changed-radius/axis, FreeCAD two-bore plate with stale-selector recovery, deviation-driven refinement, adopted STEP with tamper/missing-capture cases, meshio consumption and refreshed-evidence adversaries."
   ]
 }

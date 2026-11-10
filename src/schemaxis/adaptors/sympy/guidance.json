@@ -1,0 +1,81 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "isolateRealRoots": {
+      "status": "reviewed",
+      "explanation": "Find every real root of one univariate polynomial with exact rational coefficients. SymPy isolates the roots with sympy.intervals(strict=True); the result is a list of disjoint closed rational intervals, each holding exactly one distinct root, with its multiplicity. A rational root is published as an exact point interval. The host then re-proves completeness, disjointness, width and multiplicity from the coefficients alone using a square-free decomposition and Sturm sequences, so a missing or mislabelled root is refused.",
+      "sources": [
+        "docs/sympy.md#start-with-the-square-root-of-two"
+      ],
+      "pitfalls": [
+        "Coefficients are literal exact fractions in descending powers; there is no expression syntax, so write x^2 - 2 as [\"1\", \"0\", \"-2\"], including the zero coefficients.",
+        "An interval is not a decimal approximation of the root unless you choose to read it as one; a point interval means the root is exactly that rational number.",
+        "Complex roots are counted but never located, and nothing is claimed about the numerical conditioning of whatever problem produced the coefficients.",
+        "Only SymPy 1.14.0 is accepted; a different release is refused rather than assumed compatible."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/sympy-sqrt2.json",
+          "purpose": "The two irrational roots of x^2 - 2 isolated to width 1/1000."
+        },
+        {
+          "reference": "examples/schemaxis/sympy-repeated-roots.json",
+          "purpose": "Exact point roots -2 (multiplicity 2) and 1 (multiplicity 3) plus a complex pair."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.sympy/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Isolate all real roots of one rational polynomial. Give the coefficients as exact fraction strings from the highest power down and, optionally, the widest isolating interval you accept. Results are a table of rational intervals with multiplicities, a native summary and an independent host verification record.",
+          "sources": [
+            "docs/sympy.md#coefficients-and-width"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Required Schemaxis document contract schemaxis.sympy/1. It is an input-format version, separate from the qualified native SymPy 1.14.0 runtime.",
+          "sources": [
+            "docs/sympy.md#runtime-public-api-and-maintenance"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose isolateRealRoots, the only operation: exact real-root isolation with multiplicities and a host-checked certificate.",
+          "sources": [
+            "docs/sympy.md#start-with-the-square-root-of-two"
+          ]
+        },
+        "/properties/coefficients": {
+          "status": "reviewed",
+          "explanation": "Required list of 2 to 13 exact rational coefficients in descending powers, so the list length is the degree plus one (degree 1 to 12). The first entry multiplies x^degree and must be nonzero; interior zero coefficients are written out (\"0\"). Each entry is a string of an optional sign, digits and an optional /denominator, at most 40 digits each, for example \"-3/2\" or \"7\". Fractions need not be reduced; the plan shows them reduced.",
+          "sources": [
+            "docs/sympy.md#coefficients-and-width"
+          ],
+          "units": "Dimensionless exact rational numbers.",
+          "defaultMeaning": "There is no default: the coefficients are required."
+        },
+        "/properties/coefficients/items": {
+          "status": "reviewed",
+          "explanation": "One exact rational coefficient. Decimals (0.5), exponents (1e3), names (x, pi, sqrt(2)), arithmetic (1+1), spaces and non-ASCII digits are refused as invalid data; they are never evaluated. Write 1/2, not 0.5.",
+          "sources": [
+            "docs/sympy.md#coefficients-and-width"
+          ],
+          "units": "Dimensionless exact rational number."
+        },
+        "/properties/maximumIntervalWidth": {
+          "status": "reviewed",
+          "explanation": "Largest allowed width of each published interval, as an exact positive fraction between 1/10^30 and 1. Narrower intervals take slightly more native work and have longer endpoints. Exact point roots have width zero whatever you choose. The host rejects any interval wider than this.",
+          "sources": [
+            "docs/sympy.md#coefficients-and-width"
+          ],
+          "units": "Same units as the root (x has no unit here).",
+          "defaultMeaning": "Omitted means 1/1000."
+        }
+      }
+    }
+  }
+}

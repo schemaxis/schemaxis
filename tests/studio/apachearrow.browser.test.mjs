@@ -122,3 +122,47 @@ test('Arrow Studio discovers nullable tables and authors typed selection with va
     assert.deepEqual(s.exceptions, []);
   } finally {await s.close();}
 });
+
+test('Arrow Studio opts in to typed CSV publication with field Help, host validation and undo', {timeout:120000}, async()=>{
+  const document=JSON.parse(await readFile(new URL('../../examples/schemaxis/apachearrow-measurements.json',import.meta.url),'utf8'));
+  document.source=fileURLToPath(new URL('../../examples/schemaxis/fixtures/apachearrow/measurements.csv',import.meta.url));
+  const s=await launch({provider:'apachearrow'});
+  try {
+    await s.wait('window.studio?.store.get().server', 'Studio ready');
+    await s.evaluate(`(async()=>{const c=window.studio;const r=await c.api.post('/api/documents',
+      {action:'new',provider:'apachearrow',name:'Typed CSV',document:${JSON.stringify(document)}});
+      await c.refresh();c.windows.open('workbench',{document:r.id});})()`);
+    await s.wait('document.querySelector("[data-add=all]")', 'Workbench ready');
+    const source=()=>s.evaluate('window.studio.windows.active().window.editor.getValue()');
+    const initial=await source();
+    assert.equal(JSON.parse(initial).publishCSV, undefined);
+
+    await add(s, 'document:publishCSV', 'publishCSV');
+    await revealAndClick(s, 'Help for publishCSV');
+    const help=await s.evaluate(`document.querySelector('[aria-label="Help for publishCSV"]')
+      .closest('.operation-field').querySelector('.operation-field-help').textContent`);
+    assert.match(help, /declare the identical column types/);
+    assert.match(help, /not sanitised/);
+    assert.match(help, /no workbook is created/);
+    await button(s, 'Cancel');
+    assert.equal(await source(), initial);
+
+    await add(s, 'document:publishCSV', 'publishCSV');
+    await field(s, 'publishCSV', '0'); // choice index 0 is true; '' would leave a Fill later placeholder
+    await button(s, 'Add operation');
+    await s.wait('JSON.parse(window.studio.windows.active().window.editor.getValue()).publishCSV===true', 'publishCSV inserted');
+    const changed=JSON.parse(await source());
+    assert.deepEqual(changed, {...document, publishCSV:true});
+    const checked=await s.evaluate(`window.studio.api.post('/api/validate',{provider:'apachearrow',source:${JSON.stringify(JSON.stringify(changed))}})`);
+    assert.equal(checked.valid, true);
+    assert.deepEqual(checked.diagnostics, []);
+    const rejected=await s.evaluate(`window.studio.api.post('/api/validate',{provider:'apachearrow',source:${JSON.stringify(JSON.stringify({...changed,publishCSV:'yes'}))}})`);
+    assert.equal(rejected.valid, false);
+    assert.equal(rejected.diagnostics[0].pointer, '/publishCSV');
+    await s.evaluate('window.studio.windows.active().window.editor.focus()');
+    await s.key('z', {modifiers:2});
+    await s.wait('JSON.parse(window.studio.windows.active().window.editor.getValue()).publishCSV===undefined', 'publishCSV undo');
+    assert.equal(await source(), initial);
+    assert.deepEqual(s.exceptions, []);
+  } finally {await s.close();}
+});

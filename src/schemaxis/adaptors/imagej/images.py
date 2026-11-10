@@ -9,6 +9,8 @@ native tables, labels and summaries can be checked against an unrelated path.
 """
 from array import array
 from collections import deque
+import re
+import math
 import struct
 
 from schemaxis.errors import fail
@@ -79,6 +81,51 @@ TIFF_TYPES = {1: (1, 'B'), 2: (1, 'B'), 3: (2, 'H'), 4: (4, 'I'), 5: (8, 'II')}
 TIFF_ALLOWED = {254, 256, 257, 258, 259, 262, 266, 270, 273, 274, 277, 278, 279, 282, 283, 284, 296, 305, 306, 339}
 
 
+def _number(value):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
+
+
+def description_properties(text):
+    """Key/value lines of an ImageJ-authored description, as ImageJ's java.util.Properties reader sees them.
+
+    Only the plain `key=value`, `key: value` and `key value` line forms are read; the last repeat wins.
+    """
+    properties = {}
+    for line in re.split(r'\r\n|\r|\n', text):
+        line = line.lstrip(' \t\f')
+        if not line or line[0] in '#!': continue
+        found = re.match(r'([^=: \t\f]*)[ \t\f]*[=:]?[ \t\f]*(.*)', line)
+        properties[found[1]] = found[2].rstrip()
+    return properties
+
+
+def check_description(text):
+    """Reject ImageJ metadata that makes ImageJ open more than one plane or rescale raw intensities.
+
+    ImageJ interprets only descriptions that begin with `ImageJ`: `images` above one makes a
+    single-directory file a stack, and `vunit` with a numeric calibration function `cf` (and `c0`/`c1`
+    coefficients, or optical density) installs a density calibration. Other keys either only matter
+    once `images` exceeds one or are replaced by the declared calibration, so they are accepted.
+    """
+    if not text.startswith('ImageJ'): return
+    properties = description_properties(text)
+    count = _number(properties.get('images'))
+    if count is not None and count > 1:
+        _unsupported('the TIFF ImageDescription declares an ImageJ stack (images>1); supply exactly one plane',
+                     tag=270, key='images', value=properties['images'])
+    function = _number(properties.get('cf'))
+    if function is not None and math.isfinite(function) and 'vunit' in properties:
+        code = int(function)
+        if code == 21 or (0 <= code <= 13 and all(_number(properties.get(c)) is not None for c in ('c0', 'c1'))):
+            _unsupported('the TIFF ImageDescription declares a density calibration (cf with vunit); ImageJ would '
+                         'report calibrated values instead of raw intensities. Re-save without the calibration function',
+                         tag=270, key='cf', value=properties['cf'])
+
+
 def read_tiff(data):
     """Single-IFD, uncompressed, single-sample BlackIsZero 8/16-bit unsigned TIFF."""
     if data[:4] == b'II*\x00': order = '<'
@@ -91,7 +138,7 @@ def read_tiff(data):
     (offset,) = unpack('I', 4)
     (count,) = unpack('H', offset)
     if not 1 <= count <= 64: _invalid('TIFF directory entry count is outside 1..64')
-    tags = {}
+    tags, description = {}, ''
     for index in range(count):
         tag, kind, number, value = unpack('HHII', offset+2+12*index)
         if tag in tags: _invalid('repeated TIFF tag', tag=tag)
@@ -104,8 +151,14 @@ def read_tiff(data):
             tags[tag] = list(unpack(code[0]*number if number < 8 else f'{number}{code}', start))
         else:
             tags[tag] = None
+            if tag == 270:
+                if kind != 2: _invalid('TIFF ImageDescription must be ASCII', tag=tag)
+                if start+number > len(data) or data[start+number-1] != 0:
+                    _invalid('TIFF ImageDescription is outside the file or not NUL-terminated', tag=tag)
+                description = data[start:start+number-1].decode('latin-1')
     (following,) = unpack('I', offset+2+12*count)
     if following != 0: _unsupported('multi-page TIFF files are unsupported; supply exactly one image')
+    check_description(description)
     def one(tag, default=None):
         value = tags.get(tag, None if default is None else [default])
         if value is None or len(value) != 1: _invalid('required single-valued TIFF tag is absent or invalid', tag=tag)

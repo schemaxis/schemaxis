@@ -4,11 +4,11 @@
     "schemaxis.sox/1": {
       "guide": "docs/sox.md",
       "context": {
-        "purpose": "Assemble excerpts of PCM16 recordings with frame-accurate cuts, gains and nonoverlapping linear fades.",
-        "assumptions": "Absolute canonical PCM16 little-endian WAV files, mono/stereo and identical sample rates/channels; latest stable SoX 14.4.2.",
-        "constraints": "Eight clips, 262144 total output frames, 4MiB total source bytes, 1048576 combined scalar samples. No clipping, resampling, mix, crossfade or authored effects.",
-        "inspection": "Reopen native audio.wav and per-clip WAVs; standard-library wave/struct and analytic frame envelopes independently check every sample. Summary is host inspection.",
-        "recovery": "INVALID_AUDIO_FADE: shorten fades. AUDIO_SOURCE_BOUNDS: choose a trim inside source frames. AUDIO_CLIPPING: lower gain before fades. AUDIO_FORMAT_MISMATCH: supply equal rate/channels. INTERPRETER_NOT_FOUND: configure SoX 14.4.2."
+        "purpose": "Assemble excerpts of PCM16 recordings with frame-accurate cuts, gains and nonoverlapping linear fades (assemble), or conform one recording to PCM16 mono 16000 Hz for speech recognition (conform), or normalise one recording to an explicit peak level with a measured gain (normalise), or mix a narration and a background recording with explicit gains, sample-frame placements and a duration policy (mix).",
+        "assumptions": "Absolute canonical PCM16 little-endian WAV files, mono/stereo, 8000–192000 Hz; assemble needs identical sample rates/channels across clips; conform takes one file and an explicit channelPolicy; latest stable SoX 14.4.2. Normalise takes one file, an integer targetPeak in PCM16 sample units (1 to 32767) and a maxGain boost ceiling (1 to 16). Mix takes two such files with identical rate and channels, a gain 0–4 with at most four decimals and an offsetFrames placement for each, and a required durationPolicy (longest or narration).",
+        "constraints": "Assemble: eight clips, 262144 total output frames, 4MiB total source bytes, 1048576 combined scalar samples; no clipping, resampling, mix, crossfade or authored effects. Conform: one source <=32MiB and <=600 seconds, output always PCM16 mono 16000 Hz, no other rates, gain, normalisation, noise reduction or authored options. Normalise: one source <=32MiB and <=600 seconds; the output keeps the source rate, channels and frame count; peak scaling by one exact rational gain only, with no decibel target, loudness/RMS/EBU R128/true-peak control, mixing, resampling, trimming, fades, dither, limiter or authored options. Mix: two sources, 4MiB total source bytes, 262144 output frames, 1048576 combined scalar samples; no resampling, channel conversion, ducking, crossfade, loudness control, limiter, other track counts or authored options; any gained term or exact sum outside PCM16 is refused rather than clipped.",
+        "inspection": "Reopen native audio.wav (and assemble per-clip WAVs); standard-library wave/struct and analytic frame envelopes independently check every assemble sample, canonical native output headers and run-directory membership. Conform recomputes same-rate channel conversion exactly, compares resampled output with the source in a declared 0-0.6 Nyquist band through one independent physical-time low-pass at bounded interior instants (not a bit-exact or full-band oracle; SoX's transition/stop band, edges and instants touching native clipping are not compared), and checks rate, channels, frame count, diagnostics and membership. Summaries state exact rate, channels, frames and duration; assemble states segment maps and loses original timestamps, conform keeps the time axis. Normalise: the host measures the peak over all samples, derives the exact gain fraction and refuses silence or over-maxGain boost before SoX starts, then compares every output scalar sample with the exact rational sample*targetPeak/peak (nearest PCM16 integer), requires the output peak to equal targetPeak, empty native stdout/stderr and exact membership; the summary reports the exact gain, headroom, exact maximum error, claims and limits. Mix: the host reopens both captures, both padded intermediates (exact offset silence plus captured samples) and audio.wav, recomputes every output scalar sample as the exact gained sum with integer arithmetic and requires the nearest PCM16 integer (exact ties either way), the policy-implied frame count, empty native stdout/stderr and exact membership; the summary reports tracks, intervals, overlap, peaks and the maximum error.",
+        "recovery": "INVALID_AUDIO_FADE: shorten fades. AUDIO_SOURCE_BOUNDS: choose a trim inside source frames, or supply a longer source to conform. AUDIO_CLIPPING: lower gain before fades. AUDIO_FORMAT_MISMATCH: supply equal rate/channels. AUDIO_CHANNEL_POLICY: right was chosen for a mono source; use average or left. MISSING_ARGUMENT/INVALID_ARGUMENT at channelPolicy: choose average, left or right. INVALID_AUDIO_DATA: re-export canonical PCM16. AUDIO_RESOURCE_LIMIT: split the work. INTERPRETER_NOT_FOUND: configure SoX 14.4.2. VERIFICATION_FAILED: injected chunks, unreferenced files, forged summaries/receipts/results or output beyond the declared fidelity limit; rerun from declared input into a fresh directory. AUDIO_SILENT_SOURCE: choose a recording that contains signal. AUDIO_GAIN_LIMIT: lower targetPeak, raise maxGain deliberately or supply a louder recording. INVALID_ARGUMENT/MISSING_ARGUMENT at targetPeak or maxGain: supply an integer 1-32767 and a number 1-16. Mix: AUDIO_FORMAT_MISMATCH: conform one recording or record both alike. AUDIO_CLIPPING: lower a gain or source level. AUDIO_SOURCE_BOUNDS: under durationPolicy narration the background starts at or after the narration end. MISSING_ARGUMENT/INVALID_ARGUMENT at durationPolicy: choose longest or narration. INVALID_ARGUMENT at gain: use 0–4 with at most four decimals."
       },
       "examples": [
         {
@@ -37,20 +37,93 @@
           "expect": "invalid",
           "fault": "INVALID_AUDIO_FADE",
           "schemaValid": true
+        },
+        {
+          "id": "conform-speech",
+          "reference": "examples/schemaxis/sox-conform-speech.json"
+        },
+        {
+          "id": "conform-left",
+          "reference": "examples/schemaxis/sox-conform-left.json"
+        },
+        {
+          "id": "conform-same-rate",
+          "reference": "examples/schemaxis/sox-conform-same-rate.json"
+        },
+        {
+          "id": "conform-mono",
+          "reference": "examples/schemaxis/sox-conform-mono.json"
+        },
+        {
+          "id": "conform-invalid-policy",
+          "reference": "examples/schemaxis/sox-conform-invalid-policy.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "normalise-boost",
+          "reference": "examples/schemaxis/sox-normalise-boost.json"
+        },
+        {
+          "id": "normalise-attenuate",
+          "reference": "examples/schemaxis/sox-normalise-attenuate.json"
+        },
+        {
+          "id": "normalise-negative-fullscale",
+          "reference": "examples/schemaxis/sox-normalise-negative-fullscale.json"
+        },
+        {
+          "id": "normalise-invalid-target",
+          "reference": "examples/schemaxis/sox-normalise-invalid-target.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "mix-baseline",
+          "reference": "examples/schemaxis/sox-mix-baseline.json"
+        },
+        {
+          "id": "mix-narration-policy",
+          "reference": "examples/schemaxis/sox-mix-narration-policy.json"
+        },
+        {
+          "id": "mix-invalid-gain",
+          "reference": "examples/schemaxis/sox-mix-invalid-gain.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": true
+        },
+        {
+          "id": "mix-invalid-policy",
+          "reference": "examples/schemaxis/sox-mix-invalid-policy.json",
+          "expect": "invalid",
+          "fault": "MISSING_ARGUMENT",
+          "schemaValid": false
         }
       ],
       "conformance": [
-        "tests/unit/test_sox.py"
+        "tests/unit/test_sox.py",
+        "tests/unit/test_sox_allocation.py",
+        "tests/unit/test_sox_conform.py",
+        "tests/unit/test_sox_normalise.py",
+        "tests/unit/test_sox_mix.py"
       ],
       "acceptance": [
-        "tools/qualify_sox.py"
+        "tools/qualify_sox.py",
+        "tools/qualify_sox_normalise.py",
+        "tools/qualify_sox_mix.py"
       ],
       "profiles": {
         "workflow": {
-          "scope": "Isolated audio jobs support source-byte reuse invalidation and verified WAV artifacts.",
+          "scope": "Isolated audio jobs support source-byte reuse invalidation and verified WAV artifacts; a conform, normalise or mix source accepts a verified file artifact handoff, and a normalise result can feed lossless FLAC archiving.",
           "references": [
             "docs/sox.md",
-            "tools/qualify_sox.py"
+            "examples/schemaxis/sox-normalise-flac-workflow.json",
+            "tools/qualify_sox.py",
+            "tools/qualify_sox_normalise.py",
+            "tools/qualify_sox_mix.py"
           ]
         },
         "composition": {
@@ -67,10 +140,10 @@
           "https://sourceforge.net/projects/sox/files/sox/14.4.2/"
         ],
         "lifecycle": {
-          "timeout": "One total deadline includes capture, version, every clip, concatenation and verification; CPU 30s, address space 512MiB, file 8MiB per native process.",
+          "timeout": "One total deadline includes capture, version, every native stage and verification; CPU 30s and address space 512MiB per native process; file size 8MiB for assemble and mix, 24MiB for conform and 32MiB for normalise.",
           "cancellation": "Shared tracked process-group cancellation terminates owned native jobs; cancellation is checked before publication.",
-          "logs": "Authored/effective plans, WAV captures, input hashes, trusted launchers, submissions/stdout/stderr, per-clip WAVs and final audio retained.",
-          "verification": "Strict RIFF and wave/struct reopening, analytic trim/gain/fade samples within 0.5001 PCM16 LSB (one quantisation plus sub-LSB PCM32 effects), exact integer concatenation, exact command/input/evidence/publication binding."
+          "logs": "Authored/effective plans, WAV captures, input hashes, trusted launchers, submissions/stdout/stderr, assemble per-clip WAVs or the conform or normalise stage files, and final audio retained. Mix also retains captured-1.wav and the pad-0.wav and pad-1.wav stage files.",
+          "verification": "Strict RIFF and wave/struct reopening, canonical fmt+data native outputs, analytic trim/gain/fade samples within 0.5001 PCM16 LSB (one quantisation plus sub-LSB PCM32 effects), exact integer concatenation, exact command/input/evidence/publication/receipt/result binding and no unreferenced audio or stage files. Conform: strict header and canonical output, exact round-half-up frame count, exact integer channel conversion at 16000 Hz, band-limited projection comparison (0-0.6 Nyquist, bounded interior instants, declared analytic limit; not bit-exact) otherwise, empty stdout, clipping-only stderr, saturation/cancellation/silence warnings, streaming reads with no sample lists. Normalise: strict header, canonical output with the source rate/channels/frames, exact rational comparison of every scalar sample (nearest PCM16 integer, exact integer arithmetic), output peak equal to targetPeak, empty stdout and stderr, bounded pair set and streaming reads with no sample lists. Mix: exact padded-intermediate reopening, exact integer comparison of every output scalar sample with the gained sum (nearest PCM16, ties either way), empty native stdout/stderr and policy-implied frame count."
         },
         "data": [
           {
@@ -80,12 +153,12 @@
             "format": "PCM16 WAV",
             "traits": {
               "channels": "mono or stereo",
-              "sampleRate": "8000\u2013192000 Hz"
+              "sampleRate": "8000–192000 Hz"
             },
             "losses": [
-              "Metadata retention/stripping is outside the verified contract; no resampling, channel conversion or compressed audio."
+              "Metadata retention/stripping is outside the verified contract; assemble does no resampling, channel conversion or compressed audio. Conform alone converts rate and channels."
             ],
-            "scope": "Captured canonical RIFF PCM16, common rate/channels and bounded bytes/sample counts."
+            "scope": "Captured canonical RIFF PCM16; assemble needs common rate/channels and bounded bytes/sample counts; conform takes one file up to 32MiB and 600 seconds; normalise takes one file up to 32MiB and 600 seconds."
           },
           {
             "id": "audio",
@@ -98,13 +171,59 @@
             "losses": [
               "Single per-clip quantisation; concatenation exact."
             ],
-            "scope": "Every native sample independently checked."
+            "scope": "Every native sample independently checked; output is canonical fmt+data PCM16 with a summary of exact timebase and half-open segment origins (assemble)."
+          },
+          {
+            "id": "speech-audio",
+            "direction": "output",
+            "kind": "file",
+            "format": "PCM16 WAV",
+            "traits": {
+              "channels": "mono",
+              "sampleRate": "16000 Hz"
+            },
+            "losses": [
+              "Channel choice is explicit (average, left or right) and discards the other channel.",
+              "Same-rate conversion is exact. For resampling, independently low-pass-projected source/output values are compared at bounded interior instants in the declared band; other frequencies, edges, unsampled passages and below-margin changes are not certified.",
+              "Resampling can saturate full-scale material; counts are reported, never corrected."
+            ],
+            "scope": "Conform output: one canonical PCM16 mono 16000 Hz WAV that keeps the recording time axis, with a summary of source facts, conversion rule, fidelity limit and warnings."
+          },
+          {
+            "id": "headroom-audio",
+            "direction": "output",
+            "kind": "file",
+            "format": "PCM16 WAV",
+            "traits": {
+              "channels": "same as source",
+              "sampleRate": "same as source"
+            },
+            "losses": [
+              "Every sample is multiplied by one exact gain and rounded to a PCM16 integer; boosts raise the noise floor by the same ratio.",
+              "Peak scaling in sample units only: no loudness, true-peak or inter-sample control, and no certification of content or authenticity."
+            ],
+            "scope": "Normalise output: one canonical PCM16 WAV with the source rate, channels and frames, whose largest absolute sample equals targetPeak, with a summary of the exact gain fraction, source peak, headroom, exact maximum rounding error, claims and limits."
+          },
+          {
+            "id": "mix-audio",
+            "direction": "output",
+            "kind": "file",
+            "format": "PCM16 WAV",
+            "traits": {
+              "channels": "same as both sources",
+              "sampleRate": "same as both sources"
+            },
+            "losses": [
+              "Each sample is the exact gained sum of the two tracks rounded to a PCM16 integer; nothing is clipped (clipping is refused).",
+              "Source metadata chunks are not carried over; no loudness, intelligibility, quality or balance claim."
+            ],
+            "scope": "Mix output: one canonical PCM16 WAV whose length follows durationPolicy, with a summary of tracks, placements, overlap, peak, maximum rounding distance, timeline and limits."
           }
         ],
         "inspection": [
           {
             "panel": "text",
-            "scope": "Inspect audio-summary.json and retained frame edit decisions.",
+            "scope": "Inspect audio-summary.json and retained frame edit decisions (assemble) or the conform source/conversion/fidelity/warning summary or the normalise gain/headroom/claims summary.",
             "limits": "No playback or interactive native session; use external audio tools for listening."
           }
         ],
@@ -155,8 +274,8 @@
             "scope": "The bounded serial PCM audio edit-decision route does not implement native-save."
           },
           "conversion": {
-            "status": "unsupported",
-            "scope": "The bounded serial PCM audio edit-decision route does not implement conversion."
+            "status": "supported",
+            "scope": "The conform operation is a named PCM16 conversion (any supported rate and channel count to mono 16000 Hz) with explicit losses and native acceptance; no other conversion exists."
           }
         },
         "cases": [
@@ -297,21 +416,358 @@
                 "relative": 0
               }
             ]
+          },
+          {
+            "id": "conform-stereo-44k",
+            "example": "conform-speech",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/sox-conform-fixtures/stereo44k.wav"
+            },
+            "scope": "Native SoX 14.4.2 averages 44100 Hz stereo and resamples to 16000 Hz; host checks header, round-half-up frame count, loudness and an independent band-limited projection comparison within the declared limit.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 3200,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/rate",
+                "expected": 16000,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "conform-left-48k",
+            "example": "conform-left",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/sox-conform-fixtures/stereo48k.wav"
+            },
+            "scope": "Left channel of a 48000 Hz asymmetric stereo file; the right channel has different content, so a wrong channel fails the independent spot check.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 3200,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/rate",
+                "expected": 16000,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "conform-same-rate",
+            "example": "conform-same-rate",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/sox-conform-fixtures/stereo16k.wav"
+            },
+            "scope": "16000 Hz stereo with PCM16 extrema: every output sample is recomputed exactly as (left+right+1)>>1 by the host.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 4000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/rate",
+                "expected": 16000,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "conform-mono-8k",
+            "example": "conform-mono",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/sox-conform-fixtures/mono8k.wav"
+            },
+            "scope": "8000 Hz mono upsampled to 16000 Hz with an explicit average policy.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 8000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/rate",
+                "expected": 16000,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "normalise-boost",
+            "example": "normalise-boost",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/sox-normalise-fixtures/quiet-stereo16k.wav"
+            },
+            "scope": "Native SoX 14.4.2 boosts a quiet 16000 Hz stereo recording by the exact gain 20/3 to a peak of 20000; the host compares every one of 8000 scalar samples with the exact rational value.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 4000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/peakPCM16",
+                "expected": 20000,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "normalise-attenuate",
+            "example": "normalise-attenuate",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/sox-normalise-fixtures/loud-mono8k.wav"
+            },
+            "scope": "Native SoX 14.4.2 attenuates a loud 8000 Hz mono recording by 1024/1875 to a peak of 16384; every sample is compared with the exact rational value.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 1600,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/peakPCM16",
+                "expected": 16384,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "normalise-negative-fullscale",
+            "example": "normalise-negative-fullscale",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/sox-normalise-fixtures/negative-fullscale-mono8k.wav"
+            },
+            "scope": "A -32768 sample gives the source peak 32768, so the recording is attenuated by 32767/32768 to peak 32767; every sample is compared exactly.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 1200,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/peakPCM16",
+                "expected": 32767,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "mix-baseline",
+            "example": "mix-baseline",
+            "edits": [],
+            "resources": {
+              "/narration/source": "examples/schemaxis/sox-mix-fixtures/narration-mono8k.wav",
+              "/background/source": "examples/schemaxis/sox-mix-fixtures/background-mono8k.wav"
+            },
+            "scope": "Native SoX 14.4.2 pads a mono narration by 200 frames and mixes it with a quarter-level mono background under durationPolicy longest; the host compares every one of 1200 scalar samples with the exact gained sum.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 1200,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/samplesCompared",
+                "expected": 1200,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/overlapFrames",
+                "expected": 800,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "mix-narration-policy",
+            "example": "mix-narration-policy",
+            "edits": [],
+            "resources": {
+              "/narration/source": "examples/schemaxis/sox-mix-fixtures/narration-stereo16k.wav",
+              "/background/source": "examples/schemaxis/sox-mix-fixtures/background-stereo16k.wav"
+            },
+            "scope": "Native SoX 14.4.2 mixes two stereo 16000 Hz tracks with gains 0.8 and 0.3333 and cuts the background at the narration end (frame 650); the host compares every one of 1300 scalar samples with the exact gained sum.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 650,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/channels",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/samplesCompared",
+                "expected": 1300,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/tracks/1/truncatedSourceFrames",
+                "expected": 250,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Initial sample-frame trim/gain/linear fade/concatenation route, all fields, independent PCM verification and source-byte reuse.",
+        "scope": "Addition of the conform operation (explicit channel policy, fixed rate -v 16000 resampling to PCM16 mono 16000 Hz) with new source/channelPolicy fields, schema branch, guidance, discovery, examples, host tests and a bounded native acceptance tool. The assemble operation, effective plan, schema branch, launchers and receipts are unchanged and keep their earlier review. Addition of the normalise operation (measured exact peak gain with an explicit maxGain ceiling, new source/targetPeak/maxGain fields, schema branch, guidance, discovery, examples, host tests and a bounded native acceptance tool); assemble and conform plans, losses, commands, results and receipts are unchanged. Addition of the mix operation (two-track narration/background overlay with explicit per-track gain and sample-frame offsetFrames, required durationPolicy, same-format requirement and clipping refusal; new narration, background and durationPolicy fields, schema branch, guidance, discovery, examples, host tests and a bounded native acceptance tool); assemble, conform and normalise plans, losses, commands, results and receipts are unchanged.",
         "review": [
-          "verification/2026-10-17-sox-completion.md"
+          "verification/2026-10-17-sox-completion.md",
+          "verification/2026-10-24-sox-audio-preparation.md",
+          "verification/2026-10-24-sox-allocation.md",
+          "verification/2026-10-25-sox-31.md",
+          "verification/2026-10-25-sox-58.md",
+          "verification/2026-10-26-sox-mix.md"
         ],
         "notApplicable": {
           "native-inspection": "The bounded serial PCM audio edit-decision route does not implement native-inspection.",
           "mpi": "The bounded serial PCM audio edit-decision route does not implement mpi.",
           "time-batches": "The bounded serial PCM audio edit-decision route does not implement time-batches.",
           "live-editing": "The bounded serial PCM audio edit-decision route does not implement live-editing.",
-          "native-save": "The bounded serial PCM audio edit-decision route does not implement native-save.",
-          "conversion": "The bounded serial PCM audio edit-decision route does not implement conversion."
+          "native-save": "The bounded serial PCM audio edit-decision route does not implement native-save."
         }
       }
     }

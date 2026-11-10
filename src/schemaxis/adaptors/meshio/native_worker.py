@@ -30,7 +30,7 @@ def canonical(mesh):
         raise ValueError('MESH_POINTS_INVALID')
     cells = []
     for block in mesh.cells:
-        if block.type not in ('triangle', 'tetra'):
+        if block.type not in ('triangle', 'tetra', 'hexahedron'):
             raise ValueError('MESH_UNSUPPORTED_CELL')
         for row in block.data.tolist(): cells.append([block.type, row])
     if not 1 <= len(cells) <= 100000: raise ValueError('MESH_CELL_LIMIT')

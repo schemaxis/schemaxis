@@ -174,6 +174,18 @@ function forbidsPresentKey(context, schema, instance, only = null, depth = 0) {
 
 const ANNOTATION = /^(x-|\$comment$|title$|description$)/;
 
+// A whole object can be rejected without choosing a branch when every plain,
+// closed alternative forbids at least one of its present keys. Constraints or
+// composition that could declare more keys keep the existing conservative path.
+function incompatibleClosedFields(branches, instance) {
+  if (!isObject(instance) || branches.length < 2) return false;
+  return branches.every((branch) => isObject(branch) && branch.additionalProperties === false
+    && isObject(branch.properties)
+    && Object.keys(branch).every((key) => ['properties', 'required', 'additionalProperties'].includes(key)
+      || (key === 'type' && branch.type === 'object') || ANNOTATION.test(key))
+    && Object.keys(instance).some((key) => !hasOwn(branch.properties, key)));
+}
+
 /** A value set a tag may take: a const, an enum, or the const-or-marker `anyOf` that generated schemas emit. */
 function isTagValueSet(schema) {
   if (!isObject(schema) || !Object.keys(schema).every((name) => ['const', 'enum', 'anyOf'].includes(name) || ANNOTATION.test(name))) {
@@ -434,6 +446,12 @@ class Validator {
       return;
     }
     let candidates = viable.length === 1 ? viable : viable.filter((branch) => plausible(context, branch, instance));
+    const excluded = branches.filter((branch) => isMarkerSchema(context, branch));
+    if (candidates.length !== 1 && excluded.every((branch) => !matches(context, branch, instance))
+      && incompatibleClosedFields(viable, instance)) {
+      this.report(pointer, 'Properties cannot be combined in one object alternative');
+      return;
+    }
     if (candidates.length > 1) {
       candidates = narrowCandidates(context, candidates, instance);
     }

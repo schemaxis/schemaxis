@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Schemaxis whispercpp-correct-deletion literal settings",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.whispercpp.correct/2"
+    },
+    "draft": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ]
+    },
+    "basisSha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "human-corrected",
+            "human-reviewed-unchanged"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "note"
+      ]
+    },
+    "corrections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "text"
+        ]
+      },
+      "maxItems": 512
+    },
+    "deletions": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 511
+      },
+      "maxItems": 512
+    },
+    "captionReview": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "draft",
+    "basisSha256",
+    "review"
+  ]
+}

@@ -1,5 +1,6 @@
 # Copyright (C) 2026 David L F Gaden
 """Host checks for app-owned named-boundary sizing readback."""
+from . import groups
 from .mesh import check
 
 
@@ -12,7 +13,7 @@ def verify(built, settings):
     check(saved['combinedType'] == ('Min' if rules else None)
           and saved['combinedFields'] == [2*i+2 for i in range(len(rules))], 'native sizing combination differs')
     check(len(saved['rules']) == len(rules), 'native sizing rules differ')
-    names = {settings['boundaryName']: 2, **{g['name']: i+3 for i,g in enumerate(settings['faceGroups'])}}
+    names = groups.tags(settings)
     for index, (actual, rule) in enumerate(zip(saved['rules'], rules)):
         entities = actual.get('entities')
         check(isinstance(entities, list) and entities and all(type(v) is int and v > 0 for v in entities)

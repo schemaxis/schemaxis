@@ -97,7 +97,10 @@ def unique_object(pairs):
         if k in result:raise ValueError('duplicate JSON key '+k)
         result[k]=v
     return result
-def read(directory,name):return json.loads(bounded(directory/name),object_pairs_hook=unique_object,parse_constant=lambda x:(_ for _ in ()).throw(ValueError('nonfinite JSON '+x)))
+def read(directory,name):
+    data=bounded(directory/name)
+    try:return json.loads(data,object_pairs_hook=unique_object,parse_constant=lambda x:(_ for _ in ()).throw(ValueError('nonfinite JSON '+x)))
+    except RecursionError:fail('VERIFICATION_FAILED','retained JSON nesting exceeds the readable limit; rerun into a fresh directory',str(directory/name))
 def digest(directory,name):return hashlib.sha256(bounded(directory/name)).hexdigest()
 
 
@@ -126,9 +129,17 @@ def launcher(directory,stage,command):
 def artifacts(directory):
     return [{'file':str(directory/n),'kind':kind,'sha256':digest(directory,n)} for n,kind in [('graph.svg','image'),('graph.dot','text'),('graph.plain','text'),('layout.json','text')]]
 def evidence_names():return {'authored.json','plan.json',*[s+x for s in ('version','layout') for x in ('-launcher.py','-inputs.json','-submission.json','.stdout','.stderr')]}
-def runtime_identity(directory):
-    text=bounded(directory/'version.stderr').decode().strip()
-    if bounded(directory/'version.stdout') or not re.fullmatch(r'dot - graphviz version 16\.1\.0 \([^\r\n]+\)',text):fail('UNSUPPORTED_NATIVE_VERSION','configure Graphviz dot 16.1.0; requalify other versions before execution')
+IDENTITY=re.compile(r'dot - graphviz version ([0-9]+\.[0-9]+\.[0-9]+) \([^\r\n]+\)')
+def runtime_identity(directory,retained=False):
+    """Run time: any non-16.1.0 executable is unsupported. On reopen, evidence that is
+    not a well-formed Graphviz identity is malformed; only a well-formed other
+    version is unsupported (requalify or use the retained release)."""
+    unsupported=lambda:fail('UNSUPPORTED_NATIVE_VERSION','configure Graphviz dot 16.1.0; requalify other versions before execution')
+    text=bounded(directory/'version.stderr').decode().strip();found=IDENTITY.fullmatch(text)
+    if bounded(directory/'version.stdout') or found is None:
+        if retained:fail('VERIFICATION_FAILED','retained Graphviz version evidence is malformed; rerun into a fresh directory','version.stderr')
+        unsupported()
+    if found.group(1)!='16.1.0':unsupported()
     return text
 
 
@@ -173,7 +184,11 @@ def verify(directory,require_result=True):
             if not isinstance(interpreter,str) or not Path(interpreter).is_absolute() or submission.get('nativeCommand')!=[interpreter,str(path)] or type(submission.get('exitCode')) is not int or submission['exitCode']!=0:fail('VERIFICATION_FAILED','native command/completion differs',stage)
             if bounded(path).decode()!=launcher(directory,stage,command):fail('VERIFICATION_FAILED','trusted native launcher differs',stage)
             if read(directory,stage+'-inputs.json')!={str(directory/n):digest(directory,n) for n in stage_inputs(stage)}:fail('VERIFICATION_FAILED','native inputs differ',stage)
-        runtime=runtime_identity(directory)
+        # Classify a retained version only after checking its receipt binding.
+        for n in ('version.stderr','version.stdout'):
+            if digest(directory,n)!=receipt['evidence'][n]:fail('VERIFICATION_FAILED','retained version evidence differs',n)
+        if bounded(directory/'version.stderr').decode().strip()!=receipt['runtime']:fail('VERIFICATION_FAILED','native Graphviz runtime identity differs')
+        runtime=runtime_identity(directory,retained=True)
         if receipt['runtime']!=runtime:fail('VERIFICATION_FAILED','native Graphviz runtime identity differs')
         if bounded(directory/'layout.stdout') or bounded(directory/'layout.stderr'):fail('VERIFICATION_FAILED','native layout warning/output differs')
         expected=inspect(directory,p,bounded,topology)
@@ -183,7 +198,7 @@ def verify(directory,require_result=True):
         for n in evidence_names():
             if digest(directory,n)!=receipt['evidence'][n]:fail('VERIFICATION_FAILED','retained native evidence differs',n)
         return {'verified':True,'artifacts':4,'runtime':runtime,'nodes':len(p['nodes']),'edges':len(p['edges'])}
-    except (OSError,ValueError,KeyError,TypeError,IndexError,AttributeError) as e:fail('VERIFICATION_FAILED','invalid retained graph evidence: '+str(e))
+    except (OSError,ValueError,KeyError,TypeError,IndexError,AttributeError,RecursionError) as e:fail('VERIFICATION_FAILED','invalid retained graph evidence: '+str(e))
 
 from schemaxis.adaptor_runtime import bind as _bind_runtime
 _bind_runtime(globals())

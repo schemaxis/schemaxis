@@ -5,8 +5,10 @@ model with R's public `stats::lm` API. Use it for numeric calibration or a bound
 regression study where declared training and separate held-out observations have
 known meaning. Optional [coefficient inference](#coefficient-inference) adds
 classical standard errors, t tests and confidence intervals under stated error
-assumptions. It does not assess causal effects, prediction intervals or future
-generalisation. No authored R scripts, formulas, native functions, external
+assumptions, and optional [prediction intervals](#prediction-intervals) report the
+uncertainty of the fitted mean or of one future observation at declared new
+predictor rows. It does not assess causal effects, validate a model or establish
+future generalisation. No authored R scripts, formulas, native functions, external
 packages or imported models are accepted.
 
 [Start with the calibration example](../examples/schemaxis/r-regression.json).
@@ -24,7 +26,20 @@ Declare `operation: "linearRegression"`, 1–8 `predictors`, a `response`, and
 and plain `unit` label; `intercept` is reserved as a coefficient label. Unit labels
 preserve interpretation, but do not convert units or validate calibration.
 Rows contain predictors in declared order followed by the observed response.
-Every cell must be finite and within ±1e9. No missing, categorical or text cells.
+Every cell must be a finite JSON number within ±1e9. Missing and non-numeric
+cells are rejected before native launch and are never dropped, imputed or coerced:
+
+| Cell | Fault | Recovery |
+| --- | --- | --- |
+| `null`, `NaN`, or text such as `"NA"`, `"N/A"`, `""` | `MISSING_VALUE` | Remove the incomplete row (a complete-case decision you document) or supply the measurement. |
+| Other text (including numeric strings such as `"1.5"`) or a boolean | `UNSUPPORTED_VALUE_TYPE` | Supply a plain number; categorical or boolean-coded predictors need an explicit numeric encoding this route does not choose. |
+| Infinity, or magnitude above 1e9 | `INVALID_ARGUMENT` | Supply a finite value within range. |
+
+The fault location is the cell (`$.training[i][j]`, zero-based row and column)
+and its observed detail names the predictor or response. The
+[missing-cell example](../examples/schemaxis/r-missing-invalid.json) shows the
+first case. Dropping rows changes the training sample, so check that the
+remaining rows still represent the design you intend.
 
 `intercept` defaults to true. The number of training rows must exceed the number
 of coefficients, and the chosen design must have full rank. Optional `heldout`
@@ -148,6 +163,90 @@ independent p-values at the ends of its t or F tolerance interval. Native
 inference values use 17 significant digits, and fresh-process RDS replay must
 reproduce them within 1e-12.
 
+## Prediction intervals
+
+`prediction` is an optional request for intervals at new rows whose responses are
+unknown:
+
+```json
+"prediction": {"interval": "individual", "level": 0.95, "newdata": [[0], [1], [3]]}
+```
+
+- `interval` is required and has no default: `confidence` bounds the fitted mean
+  response at the row, `individual` bounds one future observation there. Both are
+  always computed natively and verified; `interval` selects what is published.
+- `level` is a fraction in [0.5, 0.999], default 0.95, independent of
+  `inference.level`.
+- `newdata` holds 1–64 rows of predictor values only, in declared predictor order
+  and units. A response is never required or accepted (a wrong-width row is
+  `INVALID_TABLE` at `$.prediction.newdata[i]`). These rows are not held-out
+  validation; use `heldout` for observed rows.
+
+With fitted coefficients `b`, residual standard error `sigma`, residual degrees of
+freedom `df`, Student-t critical value `t` and leverage `h = x'(X'X)^-1 x`, the
+mean interval is `fit ± t·sigma·sqrt(h)` and the individual interval is
+`fit ± t·sigma·sqrt(1+h)`. This is distinct from the coefficient intervals of
+[inference](#coefficient-inference), which describe uncertainty in `b`, not in new
+responses. Native `stats::predict.lm` (both `interval = "confidence"` and
+`"prediction"`, `se.fit = TRUE`) runs on the genuine fitted model and again on the
+`model.rds` reopened in a fresh R process. The host recomputes everything
+independently from its column-scaled Householder QR (`h = |R^-T x_scaled|²`) and
+its Student-t bisection, not from native `predict`. Fit is compared with response
+roundoff scaled by the new point's design magnitude; `se.fit`, `sigma`, half widths
+and bounds are compared at 1e-5 relative, justified by the residual-variance guard
+that keeps roundoff below 1e-6·sigma; the critical value at 1e-10 relative; `df`,
+`level` and sample order exactly. Two separate limits refuse a new row with
+`UNSUPPORTED_PREDICTION` before any native process, both verification-resolution
+limits and neither a test of model validity. A leverage budget `h > 1e4` keeps the
+arithmetic well conditioned; it does not by itself make the interval types
+distinguishable, because the comparison allowance `tol*(1+sum|x_scaled|)` grows with
+the response magnitude and the design size. The per-row resolution guard therefore
+also compares the independently computed half widths with the actual comparison
+allowance and relative component: a row is supported only when
+`halfIndividual - halfConfidence > 4*(allowance + 1e-5*halfIndividual)`. Any
+native bound or half width inside `allowance + 1e-5*halfIndividual` of the
+independent value is accepted, and presenting one interval type as the other shifts
+each of them by exactly that gap, so the factor 4 is a margin over a swap that could
+not be detected. The fault is raised at `$.prediction.newdata[i]` with the
+observed gap, required gap, allowance and relative component. The usual cause is
+residual scatter that is small relative to the response magnitude and design scale
+(a large offset, uncentred predictors, many predictors with a far point); more
+scatter, a centred response, or a row nearer the training design resolves it. The
+type of a published interval cannot be verified for such a row, so none is
+published and no precision or confidence claim is made for it. Zero or roundoff-level
+residuals fail `NO_RESIDUAL_VARIANCE` at `$.prediction`; rank, conditioning and
+cell faults are those of the training fit.
+
+The new artifact `prediction.csv` is appended after `inference.csv` (or the
+summary), so every existing artifact index is unchanged and runs without
+`prediction` publish exactly what they did before. Its numeric columns are
+`sample,x1..xN,prediction,lower,upper,halfWidth`: `xK` is the K-th declared
+predictor, `halfWidth = (upper - lower)/2` is the symmetric error for plotting, and
+the first `sample` column is the zero-based row index. At eight predictors this is
+13 columns (the Gnuplot adaptor accepts at most 12, so an eight-predictor table is refused by that consumer; this is accepted and disclosed, not worked around). `regression-summary.json` gains a
+`prediction` block with row identity (named inputs with units), prediction, bounds,
+half width, `standardErrorOfFit`, `leverage`, `outsideTrainingRange`, `residualDF`,
+`criticalValue`, `residualStandardError` with units, the verified interval types,
+assumptions and limits.
+
+Assumptions: fixed predictors measured without error, a correct additive linear
+mean (including at the new rows), and independent, constant-variance, normal
+errors. The level is nominal, not a reliability or coverage guarantee, a
+calibration certificate, model selection, a causal claim or future
+generalisation. Rows outside the training predictor range are listed in
+`outsideTrainingRange`: extrapolation is observed, never validated or excluded.
+Examples: [individual](../examples/schemaxis/r-prediction.json),
+[mean confidence at level 0.9](../examples/schemaxis/r-prediction-variant.json),
+[exact fit](../examples/schemaxis/r-prediction-exact-invalid.json) and
+[response supplied](../examples/schemaxis/r-prediction-response-invalid.json).
+The closed-form check: the existing four-row calibration has `df = 2`,
+`sigma = sqrt(0.05)`, `h = 0.25 + x²/10` and `t = 0.95·sqrt(2/(1-0.95²))`.
+
+Primary references: the public
+[predict.lm documentation](https://stat.ethz.ch/R-manual/R-patched/library/stats/html/predict.lm.html)
+and the released R 4.6.1 `stats` `predict.lm` source (preferred over later patched
+behaviour). Upstream R source is not modified.
+
 ## Native model, inspection and trusted handoffs
 
 Configure an absolute Rscript executable; the qualified target is R 4.6.1 with
@@ -197,6 +296,11 @@ PYTHONPATH=src python3 -m schemaxis verify new-regression
 PYTHONPATH=src python3 tools/qualify_r.py --executable /absolute/Rscript \
   --calc /absolute/soffice --output-directory new-r-qualification
 ```
+
+Verification of a retained directory reports malformed, missing, oversized or
+unplannable retained evidence (including an `authored.json` that no longer plans,
+or pathologically nested JSON) as `VERIFICATION_FAILED`. The original planning fault
+is kept in `observed.authoredFault`; it is not reported as a fresh input fault.
 
 Planning/discovery use only the host standard library. Fit/reopen share one total
 native deadline, cancellation ownership and a final CPU-verification deadline

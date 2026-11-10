@@ -1,17 +1,23 @@
 // Copyright (C) 2026 David L F Gaden
 // Recursive literal schema forms. Unknown/free JSON remains editable; required
 // blanks become durable fill markers rather than plausible invented values.
-import {conceptHelp, nativeBinding} from './concept-help.mjs';
+import {conceptHelp, nativeBinding, correctionHelp, sameExplanation} from './concept-help.mjs';
+import {createViewer3d} from '../../viewers/viewer3d.mjs';
+import {readerSelection} from './reader-selection.mjs';
 import {inputBrowser} from './input-browser.mjs';
 import {selectLine} from './line-selector.mjs';
 import {initialOperation, identityPool, nextIdentity} from './authoring-defaults.mjs';
 import {referenceControl} from './pipeline-picker.mjs';
-import {blockControl} from './block-picker.mjs';
 import {h, mount} from '../../lib/dom.mjs';
 import {openDialog} from '../../shell/dialog.mjs';
 import {validate} from '../../editor/schema-validate.mjs';
-import {atPointer} from '../../editor/fill-data.mjs';
+import {atPointer, replacing} from '../../editor/fill-data.mjs';
+import {escapeSegment} from '../../editor/json-pointer.mjs';
+import {chooseValue, manageVariables} from '../variables/panel.mjs';
+import {preview as previewValue, GROUPS, scopes, ownerAt, equal, inspectionInput} from '../variables/model.mjs';
 import {markers} from '../../editor/insert-fields.mjs';
+import {isFill} from '../../editor/fill-data.mjs';
+import {entryName} from './authoring-defaults.mjs';
 import {contextTopic, decodePage} from '../help/model.mjs';
 import {renderPage} from '../help/render.mjs';
 
@@ -49,7 +55,26 @@ export function requiredTemplate(raw, definitions, label = 'value') {
   return marker(spec, label);
 }
 
-function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = null) {
+function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = null, path = '') {
+  const result = literalControl(raw, definitions, label, documentValue, seed, depth, ctx, path);
+  const spec = resolve(raw, definitions);
+  if (!ctx?.pickValue || !path || Object.hasOwn(spec, 'const') || /\/(id|filter|version)$/.test(path)
+      || /\/\d+(\/|$)/.test(path) || !['string', 'number', 'integer', 'boolean', 'array'].includes(spec.type)) return result;
+  let override;
+  const status = h('code', {class: 'variables-preview', hidden: true});
+  const reset = h('button', {type: 'button', class: 'button small', hidden: true, onClick: () => {
+    override = undefined; status.hidden = reset.hidden = true;
+  }}, 'Use typed value');
+  result.element.append(h('button', {type: 'button', class: 'button small', 'aria-label': `Value or expression for ${label}`,
+    onClick: () => ctx.call(async () => {
+      const value = await ctx.pickValue(path);
+      if (!value) return;
+      override = value.value; status.textContent = JSON.stringify(override); status.hidden = reset.hidden = false;
+    })}, 'Value or expression…'), status, reset);
+  return {...result, read: () => override === undefined ? result.read() : override};
+}
+
+function literalControl(raw, definitions, label, documentValue, seed, depth = 0, ctx = null, path = '') {
   const spec = resolve(raw, definitions);
   const constraints = [];
   if (spec.type) constraints.push(`Value type: ${[].concat(spec.type).join(' or ')}.`);
@@ -63,13 +88,13 @@ function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = 
   }
   if (spec.pattern) constraints.push(`Text must match ${spec.pattern}.`);
   const help = h('div', {class: 'operation-field-help', hidden: true},
-    conceptHelp(spec['x-studio-guide'], label, ctx),
+    conceptHelp(spec['x-studio-guide'], label, ctx, {shown: spec.description}),
     h('details', {}, h('summary', {}, 'Schema details'), constraints.map(text => h('p', {}, text)),
       h('pre', {}, JSON.stringify(spec, null, 2))));
   const body = h('div', {class: 'operation-control'});
   const element = h('div', {class: 'operation-field'}, h('div', {class: 'operation-field-label'},
     h('strong', {}, spec.title || label.split('.').at(-1)), h('button', {class: 'button quiet small', type: 'button',
-      'aria-label': `Help for ${label}`, onClick: () => { help.hidden = !help.hidden; }}, '?')), nativeBinding(spec['x-studio-guide']), spec.description && spec['x-studio-guide']?.status !== 'pending' ? h('p', {class: 'operation-field-description'}, spec.description) : null, help, body);
+      'aria-label': `Help for ${label}`, onClick: () => { help.hidden = !help.hidden; element.classList.toggle('help-open', !help.hidden); }}, '?')), nativeBinding(spec['x-studio-guide']), spec.description && spec['x-studio-guide']?.status !== 'pending' ? h('p', {class: 'operation-field-description'}, spec.description) : null, help, body);
   if (Object.hasOwn(spec, 'const') || spec.enum?.length === 1) {
     const value = Object.hasOwn(spec, 'const') ? spec.const : spec.enum[0];
     body.append(h('code', {}, JSON.stringify(value)));
@@ -82,8 +107,14 @@ function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = 
   if (label.endsWith('.id') && spec.type === 'string') {
     element.querySelector('strong').textContent = 'Name';
     const description = element.querySelector('.operation-field-description');
-    if (description) description.textContent = 'Assigned automatically. Rename it if useful.';
-    else element.insertBefore(h('p', {class: 'operation-field-description'}, 'Assigned automatically. Rename it if useful.'), help);
+    const note = ctx?.existing ? 'Other nodes refer to this name.' : 'Assigned automatically. Rename it if useful.';
+    if (description) description.textContent = note;
+    else element.insertBefore(h('p', {class: 'operation-field-description'}, note), help);
+  }
+  if (spec['x-studio-control']?.kind === 'reader-selection') {
+    const picker = readerSelection({initial, label, field: spec['x-studio-control'].field, inspect: live => ctx.inspectReader(live),
+      names: ctx.caseNames, fallback: spec.default});
+    body.append(picker.element); return {element, read: picker.read};
   }
   if (spec['x-studio-reference']) {
     const reference = spec['x-studio-reference'];
@@ -95,8 +126,17 @@ function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = 
     return {element, read: () => target.read() ?? marker(spec, label)};
   }
   if (spec['x-studio-control']?.kind === 'blocks') {
-    const picker = blockControl({initial, getInput: () => ctx?.inputReaders?.get(spec['x-studio-control'].input)?.(),
-      inspect: ctx?.inspectNode, subscribe: callback => ctx?.inputListeners?.push(callback)});
+    const getInput = () => ctx?.inputReaders?.get(spec['x-studio-control'].input)?.();
+    const picker = readerSelection({initial, label, field: 'regions', blocks: true, names: ctx?.caseNames,
+      required: () => marker(spec, label), inspect: async () => {
+        const reference = getInput();
+        if (!reference || !ctx?.inspectNode) throw Error('Choose the pipeline input first.');
+        const result = await ctx.inspectNode(reference, true);
+        const blocks = (result.assemblies?.Hierarchy || []).filter(block => block.depth > 0);
+        const parents = new Set(blocks.map(block => block.parent));
+        return {available: true, regions: blocks.filter(block => !parents.has(block.selector)).map(block => block.label),
+          scope: `Blocks reported by the application for ${typeof reference === 'string' ? reference : reference.node}.`};
+      }});
     body.append(picker.element); return {element, read: picker.read};
   }
   const branches = spec.oneOf || spec.anyOf;
@@ -111,7 +151,7 @@ function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = 
     choice.value = String(Math.max(0, index));
     const slot = h('div', {}); let nested;
     const refresh = () => {
-      nested = control(branches[Number(choice.value)], definitions, label, documentValue, initial, depth + 1, ctx);
+      nested = control(branches[Number(choice.value)], definitions, label, documentValue, initial, depth + 1, ctx, path);
       mount(slot, nested.element);
     };
     choice.addEventListener('change', refresh); refresh(); body.append(choice, slot);
@@ -127,7 +167,7 @@ function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = 
       const enabled = h('input', {type: 'checkbox', checked: required || Object.hasOwn(initial || {}, key)
         || Boolean(resolve(value, definitions)['x-studio-control']),
         disabled: required, 'aria-label': `Include ${label}.${key}`});
-      const nested = control(value, definitions, `${label}.${key}`, documentValue, initial?.[key], depth + 1, ctx);
+      const nested = control(value, definitions, `${label}.${key}`, documentValue, initial?.[key], depth + 1, ctx, `${path}/${escapeSegment(key)}`);
       nested.element.hidden = !enabled.checked;
       enabled.addEventListener('change', () => { nested.element.hidden = !enabled.checked; });
       return {key, enabled, nested, row: h('div', {class: 'operation-option'},
@@ -139,15 +179,17 @@ function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = 
       for (const row of controls) {
         if (row.key === 'filter' && Object.hasOwn(spec.properties.filter, 'const')) row.row.hidden = true;
         if ((row.key === 'id' || (row.key === 'name' && initial?.name)) && initial?.[row.key]) {
-          const details = h('details', {class: 'operation-identity'}, h('summary', {}, `Name: ${initial[row.key]}`), row.nested.element);
-          row.row = details;
+          row.row.classList.add('operation-identity');
         }
       }
     }
+    const identity = controls.filter(({enabled, key}) => enabled.disabled && ['id', 'name'].includes(key));
+    body.append(...(depth === 0 ? identity : []).map(({row}) => row));
     body.append(...controls.filter(({enabled, key}) => enabled.disabled && key !== 'id' && key !== 'name').map(({row}) => row));
-    body.append(...controls.filter(({enabled, key}) => enabled.disabled && ['id', 'name'].includes(key)).map(({row}) => row));
+    body.append(...(depth === 0 ? [] : identity).map(({row}) => row));
     const optional = controls.filter(({enabled}) => !enabled.disabled);
-    if (optional.length) body.append(h('details', {class: 'operation-optional'},
+    if (optional.length) body.append(h('details', {class: 'operation-optional',
+      open: optional.some(({nested}) => nested.element.querySelector('.reader-selection'))},
       h('summary', {}, `Optional settings (${optional.length})`), optional.map(({row}) => row)));
     const widget = spec['x-studio-control'];
     if (widget?.kind === 'line') body.prepend(h('button', {class: 'button small', type: 'button', onClick: async () => {
@@ -156,12 +198,12 @@ function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = 
       const selected = await selectLine({start: read(start), end: read(end), getContext: ctx?.getSpatialContext});
       if (!selected || !body.isConnected) return;
       for (const [row, value] of [[start, selected.start], [end, selected.end]]) {
-        const next = control(spec.properties[row.key], definitions, `${label}.${row.key}`, documentValue, value, depth + 1, ctx);
+        const next = control(spec.properties[row.key], definitions, `${label}.${row.key}`, documentValue, value, depth + 1, ctx, `${path}/${escapeSegment(row.key)}`);
         row.nested.element.replaceWith(next.element); row.nested = next; row.enabled.checked = true;
       }
     }}, 'Place line endpoints…'));
     return {element, read: () => Object.fromEntries(controls.filter(({enabled}) => enabled.checked)
-      .map(({key, nested}) => [key, nested.read()]))};
+      .map(({key, nested}) => [key, nested.read()]).filter(([, value]) => value !== undefined))};
   }
   if (spec.type === 'array' && spec.minItems === 3 && spec.maxItems === 3 && spec.items?.type === 'number') {
     const inputs = ['X', 'Y', 'Z'].map((axis, index) => h('input', {class: 'input', type: 'number', step: 'any',
@@ -172,7 +214,7 @@ function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = 
   if (spec.type === 'array' && spec.items && depth < 12) {
     const rows = []; const list = h('div', {});
     const add = (seed) => {
-      const nested = control(spec.items, definitions, `${label}[${rows.length}]`, documentValue, seed, depth + 1, ctx);
+      const nested = control(spec.items, definitions, `${label}[${rows.length}]`, documentValue, seed, depth + 1, ctx, `${path}/${rows.length}`);
       const row = {nested}; rows.push(row);
       const element = h('div', {class: 'operation-array-item'}, nested.element,
         h('button', {class: 'button quiet small', type: 'button', onClick: () => {
@@ -215,10 +257,68 @@ function control(raw, definitions, label, documentValue, seed, depth = 0, ctx = 
 
 export async function configureOperation(ctx, item, definitions, getDocument, getSpatialContext, options = {}) {
   const documentValue = getDocument();
-  const seed = initialOperation(item, documentValue, options.selected, options.operationKinds);
-  ctx = {...ctx, getSpatialContext, operationKinds: options.operationKinds,
+  const base = options.variableSnapshot?.base || '';
+  const originalRoot = options.variableSnapshot?.root || documentValue;
+  let stagedRoot = structuredClone(originalRoot);
+  const localDocument = () => atPointer(stagedRoot, base);
+  // The picker stages metadata in any scope; the synthetic operation only exists
+  // for destination-schema checking until the Add form is committed.
+  const copyMetadata = root => {
+    for (const scope of scopes(stagedRoot)) {
+      const source = atPointer(root, scope.base), target = atPointer(stagedRoot, scope.base);
+      for (const key of [...GROUPS, 'axes']) {
+        if (Object.hasOwn(source, key)) target[key] = structuredClone(source[key]);
+        else delete target[key];
+      }
+    }
+    if (Object.hasOwn(root, 'parameters')) stagedRoot.parameters = structuredClone(root.parameters);
+  };
+  const existing = options.existing || null;
+  const seed = existing ? structuredClone(existing.value) : initialOperation(item, documentValue, options.selected, options.operationKinds);
+  const withNode = node => existing ? replacing(documentValue, existing.pointer, node)
+    : {...documentValue, nodes: [...(documentValue.nodes || []), node]};
+  let caseData = null;
+  const nameListeners = new Set();
+  ctx = {...ctx, getSpatialContext, operationKinds: options.operationKinds, existing: Boolean(existing),
     usedNames: identityPool(documentValue), inputReaders: new Map(), inputListeners: []};
+  const reader = Boolean(item.schema['x-studio-prepare']);
+  const shared = reader ? null : options.caseData || null;
+  if (reader || shared) ctx.caseNames = {
+    get: () => caseData || shared?.get() || null,
+    subscribe: listener => { nameListeners.add(listener); return () => nameListeners.delete(listener); },
+    load: async live => {
+      caseData = reader ? await ctx.inspectReader(live) : await shared.load(live);
+      if (!caseData) throw Error('No names could be read. Add an OpenFOAM reader with its case file first.');
+      nameListeners.forEach(listener => listener(caseData));
+      return caseData;
+    }};
+  const expert = ctx.setting?.('help.expert') === true;
+  const expressionPaths = new Set();
+  ctx.pickValue = async path => {
+    const value = form.read(), at = existing ? existing.pointer : fillPath(item.at);
+    if (at.includes('{')) throw Error('Choose the target scene or input first.');
+    const parent = at.slice(0, at.lastIndexOf('/'));
+    const pointer = at.endsWith('/-') ? `${parent}/${(atPointer(localDocument(), parent) || []).length}` : at;
+    let root = structuredClone(localDocument());
+    if (at.endsWith('/-')) root = replacing(root, parent, [...(atPointer(root, parent) || []), value]);
+    else root = replacing(root, pointer, value);
+    root = replacing(stagedRoot, base, root);
+    const chosen = await chooseValue(ctx, {root, pointer: base + pointer + path});
+    if (chosen) {
+      copyMetadata(chosen.document);
+      expressionPaths.add(path);
+    }
+    return chosen;
+  };
   if (seed.id) ctx.usedNames.add(seed.id);
+  ctx.inspectReader = async live => {
+    const node = form.read();
+    const provider = ctx.store.get().adaptors.find(a => a.routes.includes(documentValue.version))?.id;
+    const input = inspectionInput(stagedRoot, withNode(node), base);
+    if (!live) return ctx.api.post('/api/peek-input', {provider, input, node: node.id});
+    const request = await ctx.api.post('/api/inspect-input', {provider, input, node: node.id, prepare: true});
+    return (await ctx.api.waitForJob(request.job)).result;
+  };
   let inspection = Promise.resolve(); const cache = new Map();
   ctx.inspectNode = async (reference, refresh = false) => {
     const node = typeof reference === 'string' ? reference : reference.node, port = reference.port || 0;
@@ -228,7 +328,7 @@ export async function configureOperation(ctx, item, definitions, getDocument, ge
     if (!cache.has(key)) {
       const result = inspection.catch(() => {}).then(async () => {
         const provider = ctx.store.get().adaptors.find(adaptor => adaptor.routes.includes(documentValue?.version))?.id;
-        const request = await ctx.api.post('/api/inspect-input', {provider, input: documentValue, node, port});
+        const request = await ctx.api.post('/api/inspect-input', {provider, input: inspectionInput(stagedRoot, documentValue, base), node, port});
         return (await ctx.api.waitForJob(request.job)).result;
       });
       inspection = result; cache.set(key, result); result.catch(() => cache.delete(key));
@@ -257,13 +357,14 @@ export async function configureOperation(ctx, item, definitions, getDocument, ge
   }
   refresh();
   const referenceBody = h('div', {class: 'operation-reference'});
-  const reference = item.operation ? h('details', {}, h('summary', {}, '? Operation reference'), referenceBody) : null;
-  let referenceLoaded = false;
+  const reference = item.operation ? h('details', {class: 'operation-about'}, h('summary', {}, '? Operation reference'), referenceBody) : null;
+  let referenceLoaded = false, referenceId;
   async function showReference(id) {
     referenceBody.textContent = 'Loading operation reference…';
     try {
       const page = await decodePage(await ctx.api.get(`/help/${id}.json`));
-      if (reference?.isConnected) mount(referenceBody, renderPage(page, (target) => showReference(target.id), ctx.notify));
+      if (reference?.isConnected) mount(referenceBody, renderPage(page, (target) => showReference(target.id), ctx.notify,
+        {omitParagraphs: id === referenceId ? [item.description, item.guidance?.explanation] : []}));
     } catch (fault) { referenceBody.textContent = fault.message; }
   }
   reference?.addEventListener('toggle', async () => {
@@ -273,6 +374,7 @@ export async function configureOperation(ctx, item, definitions, getDocument, ge
     try {
       const index = await ctx.api.get('/help/index.json');
       const topic = contextTopic(index, {provider, operation: item.operation});
+      referenceId = topic?.id;
       await showReference(topic?.id || index.home);
     } catch (fault) { referenceBody.textContent = fault.message; referenceLoaded = false; }
   });
@@ -283,52 +385,219 @@ export async function configureOperation(ctx, item, definitions, getDocument, ge
   };
   // The node's own description repeats the operation explanation shown above it.
   for (const paragraph of form.element.querySelectorAll('.operation-field-description')) {
-    if (paragraph.textContent === item.description) { paragraph.remove(); break; }
+    if (sameExplanation(paragraph.textContent, item.description)) { paragraph.remove(); break; }
   }
-  return openDialog({title: `Add ${item.title}`, wide: true,
-    content: h('div', {class: 'operation-form'}, h('p', {}, item.description),
-      item.schema['x-studio-prepare'] ? h('p', {class: 'wb-help'}, item.schema['x-studio-prepare']) : null,
-      item.coverage?.qualification ? h('p', {class: 'wb-help'}, `Native qualification: ${item.coverage.qualification}. ${item.coverage.defaults || ''}`) : null,
-      item.coverage?.gaps && Object.keys(item.coverage.gaps).length ? h('details', {}, h('summary', {}, 'Known coverage gaps'),
-        h('pre', {}, JSON.stringify(item.coverage.gaps, null, 2))) : null,
-      targets, form.element, error,
-      h('details', {}, h('summary', {}, 'About this operation'),
-        item.nativeDescription ? h('p', {class: 'wb-help'}, 'Application documentation: ', item.nativeDescription) : null,
-        conceptHelp(item.guidance, item.title, ctx), reference,
-        item.requirements?.length ? h('details', {}, h('summary', {}, 'Application conventions and prerequisites'),
-          h('ul', {}, item.requirements.map(text => h('li', {}, text)))) : null)),
+  let previewViewer;
+  const previewHost = h('div', {class: 'reader-preview-3d', hidden: true});
+  const previewState = h('p', {class: 'wb-help', role: 'status'});
+  const describeNames = data => !data ? (reader ? 'Choose the file, then press Load names to pick regions and arrays from a list.'
+    : 'Press Load names to list the regions and arrays of the case in this pipeline.')
+    : data.available === false ? data.reason || data.message || 'No names could be read from this case.'
+      : [`${data.regions?.length || 0} regions`, `${data.cellArrays?.length || 0} cell arrays`,
+        `${data.availableTimes?.length || 0} times`, data.caseType].filter(Boolean).join(' · ');
+  const loadNames = live => ctx.call(async () => {
+    previewState.textContent = live ? 'Asking the application…' : 'Reading case headers…';
+    try { await ctx.caseNames.load(live); }
+    catch (fault) { previewState.textContent = fault.message; }
+  });
+  const caseTools = ctx.caseNames ? h('div', {class: 'operation-case-tools', role: 'toolbar', 'aria-label': 'Case data'},
+      h('button', {class: 'button small', type: 'button', dataset: {action: 'load-case'},
+        title: 'Read the case headers for region, array and time names. No mesh is loaded.',
+        onClick: () => loadNames(false)}, 'Load names'),
+      reader ? h('button', {class: 'button small', type: 'button', title: 'Load this reader in the application and show its geometry.',
+        onClick: () => ctx.call(async () => {
+          previewState.textContent = 'Loading selected reader data…';
+          try {
+            const node = form.read(), input = inspectionInput(stagedRoot, withNode(node), base);
+            const provider = ctx.store.get().adaptors.find(a => a.routes.includes(documentValue.version))?.id;
+            const request = await ctx.api.post('/api/inspect-input', {provider, input, node: node.id, geometry: true});
+            const result = (await ctx.api.waitForJob(request.job)).result;
+            if (!previewHost.isConnected) return;
+            previewState.textContent = result.scope;
+            if (result.geometry) { previewHost.hidden = false; previewViewer ||= createViewer3d(previewHost); await previewViewer.load(result.geometry); }
+          } catch (fault) { previewState.textContent = fault.message; }
+        })}, 'Live data preview') : null) : null;
+  const readerPreview = ctx.caseNames ? h('div', {class: 'reader-preview'}, previewState, previewHost) : null;
+  ctx.caseNames?.subscribe(data => { previewState.textContent = describeNames(data); });
+  previewState.textContent = describeNames(ctx.caseNames?.get() || null);
+  const root = item.operation || item.title;
+  const nameInput = form.element.querySelector(`[aria-label="${CSS.escape(root + '.id')}"]`);
+  const fileInput = form.element.querySelector(`[aria-label="${CSS.escape(root + '.options.file')}"]`);
+  let assigned = nameInput?.value;
+  const fileChanged = () => {
+    if (ctx.caseNames && fileInput.value.trim()) ctx.caseNames.load(false).catch(() => {});
+    if (existing || !nameInput || nameInput.value !== assigned) return;
+    ctx.usedNames.delete(assigned);
+    const next = entryName(fileInput.value, ctx.usedNames);
+    if (next) nameInput.value = assigned = next;
+    ctx.usedNames.add(assigned);
+  };
+  fileInput?.addEventListener('change', fileChanged);
+  if (existing && ctx.caseNames && fileInput?.value.trim()) ctx.caseNames.load(false).catch(() => {});
+
+  // Final values: everything Settings left as a placeholder, answered in place.
+  const answers = new Map();
+  const answered = value => {
+    if (Array.isArray(value)) return value.map(answered);
+    if (isFill(value)) return answers.has(value.$fill) ? structuredClone(answers.get(value.$fill)) : value;
+    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, answered(child)]));
+    return value;
+  };
+  const pending = () => {
+    const seen = new Set();
+    return markers(form.read()).filter(({marker}) => !seen.has(marker.$fill) && seen.add(marker.$fill));
+  };
+  const finalBody = h('div', {class: 'operation-final'});
+  const finalField = ({pointer, marker: field}) => {
+    const current = answers.get(field.$fill);
+    const choices = field.type === 'enum' ? field.values : field.type === 'boolean' ? [true, false]
+      : field.type === 'nodeRef' ? (documentValue.nodes || []).map(node => node?.id).filter(id => typeof id === 'string') : null;
+    const numeric = ['number', 'integer'].includes(field.type);
+    const state = h('small', {class: 'operation-error'});
+    const names = !choices && !numeric && field.type !== 'json' && caseData?.available !== false
+      ? [...(caseData?.cellArrays || []), ...(caseData?.regions || [])] : [];
+    const list = names.length ? h('datalist', {id: 'final-names-' + Math.random().toString(36).slice(2)},
+      names.map(name => h('option', {value: name}))) : null;
+    const input = choices ? h('select', {class: 'input', 'aria-label': field.label || field.$fill},
+      h('option', {value: ''}, 'Fill later…'), choices.map((choice, index) => h('option', {value: String(index),
+        selected: JSON.stringify(choice) === JSON.stringify(current)}, typeof choice === 'string' ? choice : JSON.stringify(choice))))
+      : h(field.type === 'json' ? 'textarea' : 'input', {class: ['input', field.type === 'json' && 'mono'], 'aria-label': field.label || field.$fill,
+        ...(numeric ? {type: 'number', step: field.type === 'integer' ? '1' : 'any'} : {}), ...(list ? {list: list.id} : {}),
+        value: current === undefined ? '' : field.type === 'json' ? JSON.stringify(current) : String(current),
+        placeholder: field.type === 'json' ? 'A JSON value, or leave to fill later' : 'Leave empty to fill later'});
+    const update = () => {
+      state.textContent = '';
+      if (input.value === '') { answers.delete(field.$fill); return; }
+      try {
+        answers.set(field.$fill, choices ? choices[Number(input.value)] : numeric ? Number(input.value)
+          : field.type === 'json' ? JSON.parse(input.value) : input.value);
+      } catch { answers.delete(field.$fill); state.textContent = 'Not a complete JSON value yet.'; }
+    };
+    input.addEventListener('input', update);
+    input.addEventListener('change', update);
+    return h('div', {class: 'operation-final-field'}, h('strong', {}, field.label || field.$fill),
+      h('small', {class: 'wb-help mono'}, pointer), input, list,
+      field.type === 'path' ? inputBrowser(ctx, input, field.label || field.$fill) : null, state);
+  };
+  const steps = [['settings', 'Settings'], ['final', 'Final values']];
+  const navigation = () => h('nav', {class: 'wb-segmented operation-steps', 'aria-label': 'Screens'},
+    steps.map(([id, label], index) => h('button', {type: 'button', dataset: {step: id}, onClick: () => showStep(id)},
+      `${index + 1} · ${label}`)));
+  const navigations = [navigation(), navigation()];
+  const settingsStep = h('div', {class: 'operation-form operation-step'});
+  const finalStep = h('div', {class: 'operation-step', hidden: true},
+    h('p', {class: 'wb-help'}, 'Values that Settings left open. Anything left empty here stays a placeholder in the input and can be filled from the editor later.'),
+    finalBody);
+  const countPending = () => {
+    let count = '';
+    try { count = pending().filter(({marker}) => !answers.has(marker.$fill)).length; } catch { count = ''; }
+    navigations.forEach(nav => { nav.lastChild.textContent = `2 · Final values${count === '' ? '' : ` (${count})`}`; });
+  };
+  function showStep(id) {
+    if (id === 'final') {
+      error.textContent = '';
+      try {
+        const fields = pending();
+        mount(finalBody, fields.length ? fields.map(finalField) : h('p', {}, 'Nothing is left to fill. Every required value is set.'));
+      } catch (fault) { error.textContent = fault.message; return; }
+    }
+    settingsStep.hidden = id !== 'settings';
+    finalStep.hidden = id !== 'final';
+    navigations.forEach(nav => [...nav.children].forEach(button => button.setAttribute('aria-current', String(button.dataset.step === id))));
+    countPending();
+    requestAnimationFrame(() => {
+      const body = navigations[1].closest('.dialog-body');
+      navigations[1].hidden = false;
+      if (body) navigations[1].hidden = body.scrollHeight - navigations[1].offsetHeight <= body.clientHeight;
+    });
+  }
+  let counting = 0;
+  const recount = () => { clearTimeout(counting); counting = setTimeout(countPending, 250); };
+  for (const type of ['input', 'change', 'click']) settingsStep.addEventListener(type, recount);
+  finalStep.addEventListener('input', recount);
+  mount(settingsStep, h('p', {class: 'operation-intro'}, item.description),
+    h('button', {type: 'button', class: 'button small', onClick: () => ctx.call(() => manageVariables(ctx, {
+      root: stagedRoot, base, label: base ? 'Workflow values · shared changes save together with the new operation.'
+        : 'This adaptor input · changes are added with the operation.', commit: async value => { stagedRoot = value; },
+    }))}, 'Variables & expressions'),
+    item.schema['x-studio-prepare'] ? h('p', {class: 'wb-help operation-intro'}, item.schema['x-studio-prepare']) : null,
+    item.coverage?.qualification ? h('p', {class: 'wb-help operation-intro'}, `Native qualification: ${item.coverage.qualification}. ${item.coverage.defaults || ''}`) : null,
+    item.coverage?.gaps && Object.keys(item.coverage.gaps).length ? h('details', {class: 'operation-about'}, h('summary', {}, 'Known coverage gaps'),
+      h('pre', {}, JSON.stringify(item.coverage.gaps, null, 2))) : null,
+    targets, form.element,
+    h('details', {class: 'operation-about'}, h('summary', {}, 'About this operation'),
+      item.nativeDescription && !sameExplanation(item.nativeDescription, item.description)
+        ? h('p', {class: 'wb-help'}, 'Application documentation: ', item.nativeDescription) : null,
+      conceptHelp(item.guidance, item.title, ctx, {shown: item.description, correction: false}),
+      item.requirements?.length ? h('details', {}, h('summary', {}, 'Application conventions and prerequisites'),
+        h('ul', {}, item.requirements.map(text => h('li', {}, text)))) : null),
+    reference, correctionHelp(item.guidance, item.title, ctx));
+  const wizard = h('div', {class: ['operation-wizard', expert && 'expert']},
+    h('div', {class: 'operation-top'}, navigations[0], caseTools,
+      expert ? h('button', {class: 'button quiet small', type: 'button', 'aria-label': 'Show or hide the help text',
+        title: 'Expert mode hides the help text. Show or hide it here; each setting has its own ? as well.',
+        onClick: () => wizard.classList.toggle('help-open')}, '?') : null),
+    readerPreview, settingsStep, finalStep, error, navigations[1]);
+  showStep('settings');
+  if (existing) targets.hidden = true;
+  const answer = await openDialog({title: existing ? `Edit ${seed.id || item.title}` : `Add ${item.title}`, wide: true,
+    enterSubmits: false, className: 'operation-dialog',
+    content: wizard,
     actions: [{label: 'Cancel', run: () => null},
-      {label: 'Insert required placeholders', run: () => finish(required())},
-      {label: 'Add operation', primary: true, run: async () => {
+      ...(existing ? [] : [{label: 'Insert required placeholders', run: () => finish(required())}]),
+      {label: existing ? 'Apply changes' : 'Add operation', primary: true, run: async () => {
         if (preparing) return false;
+        preparing = true;
         try {
-          const value = form.read(), candidate = finish(value);
-          if (!candidate || !item.schema['x-studio-prepare'] || markers(value).length) return candidate;
-          preparing = true; error.textContent = 'Reading case settings…';
-          const provider = ctx.store.get().adaptors.find(adaptor => adaptor.routes.includes(documentValue?.version))?.id;
-          const request = await ctx.api.post('/api/inspect-input', {provider, input: {...documentValue, nodes: [...(documentValue.nodes || []), value]}, node: value.id, prepare: true});
-          const result = (await ctx.api.waitForJob(request.job)).result;
-          if (!form.element.isConnected) return false;
-          const prepared = finish(result.value);
-          if (prepared && result.times && !Object.hasOwn(documentValue, 'times')) prepared.inserts.push({at: '/times', values: [result.times]});
-          if (prepared) ctx.notify?.ok('Reader configured', {body: result.summary});
-          return prepared;
+          const value = answered(form.read());
+          let metadata;
+          const inspected = inspectionInput(stagedRoot, withNode(value), base);
+          if (!existing && item.schema['x-studio-prepare'] && typeof inspected.nodes.find(node => node.id === value.id)?.options?.file === 'string') {
+            const provider = ctx.store.get().adaptors.find(a => a.routes.includes(documentValue.version))?.id;
+            try {
+              metadata = await ctx.api.post('/api/peek-input', {provider, input: inspected, node: value.id});
+              if (!value.options.caseType && metadata.caseType) value.options.caseType = metadata.caseType;
+            } catch { /* Header preview is optional; explicit authored choices remain available. */ }
+          }
+          const candidate = finish(value);
+          if (candidate && !existing && metadata?.availableTimes?.length && !Object.hasOwn(documentValue, 'times')) candidate.inserts.push({at: '/times', values: [[metadata.availableTimes[0]]]});
+          return candidate;
         } catch (fault) { error.textContent = fault.message; return false; }
         finally { preparing = false; }
       }}]});
+  previewViewer?.destroy();
+  return answer;
   function finish(value) {
     if (getDocument() !== documentValue && JSON.stringify(getDocument()) !== JSON.stringify(documentValue)) {
       error.textContent = 'The input changed while configuring this operation. Reopen it to select current targets.'; return false;
     }
-    if (selectors.some(({select}) => !select.value)) {
+    if (!existing && selectors.some(({select}) => !select.value)) {
       error.textContent = 'Add the target scene, image or node first.'; return false;
     }
-    const diagnostics = validate({...item.schema, $defs: definitions}, value);
+    let literal = value;
+    for (const path of expressionPaths) {
+      const expression = atPointer(value, path);
+      if (expression === undefined) continue;
+      try { literal = replacing(literal, path, previewValue(stagedRoot, expression, ownerAt(stagedRoot, base))); }
+      catch (fault) {
+        if (!/Available when|Resolved by host|Preview needs/.test(fault.message)) { error.textContent = fault.message; return false; }
+        literal = replacing(literal, path, {$fill: 'runtimeValue'});
+      }
+    }
+    const diagnostics = validate({...item.schema, $defs: definitions}, literal);
     if (diagnostics.length) {
       error.textContent = diagnostics.map((item) => `${item.pointer || '/'}: ${item.message}`).join('\n'); return false;
     }
     const fields = Object.fromEntries(markers(value).map(({marker}) => [marker.$fill,
       Object.fromEntries(Object.entries(marker).filter(([key]) => key !== '$fill'))]));
-    return {id: item.id, title: item.title, fields, inserts: [{at: fillPath(item.at), values: [value]}]};
+    const staged = localDocument();
+    const additions = [...GROUPS, 'axes'].filter(group => JSON.stringify(staged[group]) !== JSON.stringify(documentValue[group])
+      && staged[group] !== undefined).map(group => ({at: '/' + group, values: [staged[group]]}));
+    const outsideChanged = !equal(replacing(stagedRoot, base, documentValue), originalRoot);
+    const removed = [...GROUPS, 'axes'].some(group => documentValue[group] !== undefined && staged[group] === undefined);
+    if (existing) return {id: item.id, title: item.title, fields, replace: {pointer: existing.pointer, value},
+      inserts: additions, ...(outsideChanged || removed ? {variableRoot: stagedRoot} : {})};
+    return {id: item.id, title: item.title, fields, inserts: [...additions, {at: fillPath(item.at), values: [value]}],
+      ...(outsideChanged || removed ? {variableRoot: stagedRoot} : {})};
   }
 }

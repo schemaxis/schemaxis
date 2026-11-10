@@ -6,6 +6,9 @@ from schemaxis.errors import fail
 
 
 def observation(prepared,xml):
+    if prepared['partDesign'].get('generation')==2:
+        from .history_saved import observation as observe
+        return observe(prepared,xml)
     mapped=policy.names(prepared);record=prepared['partDesign'];body=mapped[record['body']]
     origin=xml.link(body,'Origin')
     aux={'container':{'name':origin,'type':xml.types[origin]}}
@@ -17,7 +20,9 @@ def observation(prepared,xml):
     from .adaptor import DECLARATIONS
     expected={mapped[n['id']]:DECLARATIONS[n['filter']]['native'] for n in prepared['nodes']}
     expected.update(extra)
-    if 'parameters' in prepared:expected['SchemaxisParameters']='App::VarSet'
+    if 'parameters' in prepared:
+        from .parameters import object_type
+        expected['SchemaxisParameters']=object_type(prepared)
     if xml.types!=expected:raise ValueError('saved Body object membership/type differs')
     result={'body':{'name':body,'type':xml.types[body],'label':xml.string(body,'Label'),
                    'group':xml.links(body,'Group'),'tip':xml.link(body,'Tip'),
@@ -49,12 +54,13 @@ def observation(prepared,xml):
             profile=xml.child(name,'Profile','LinkSub','App::PropertyLinkSub')
             if len(profile) or profile.get('count')!='0':raise ValueError('saved profile subelement differs')
             pad=node['filter']=='pad'
+            finite=pad or node['options']['extent']=='length'
             result['features'][node['id']]={'owner':body,'profile':[profile.attrib['value'],[]],
-                'baseFeature':xml.link(name,'BaseFeature'),'type':enum(name,'Type',0 if pad else 1,'Length' if pad else 'ThroughAll'),
+                'baseFeature':xml.link(name,'BaseFeature'),'type':enum(name,'Type',0 if finite else 1,'Length' if finite else 'ThroughAll'),
                 'sideType':enum(name,'SideType',0,'One side'),'reversed':xml.boolean(name,'Reversed'),
                 'alongSketchNormal':xml.boolean(name,'AlongSketchNormal'),'customVector':xml.boolean(name,'UseCustomVector'),
                 'refine':xml.boolean(name,'Refine')}
-            if pad:result['features'][node['id']]['length']=xml.number(name,'Length')
+            if finite:result['features'][node['id']]['length']=xml.number(name,'Length')
     policy.verify_observation(prepared,result,saved=True)
     return result
 

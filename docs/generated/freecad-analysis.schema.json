@@ -1,0 +1,437 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Schemaxis freecad-analysis literal settings",
+  "$defs": {
+    "json": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.freecad.analysis/1"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "object": {
+          "type": "string",
+          "minLength": 1
+        },
+        "units": {
+          "enum": [
+            "mm",
+            "cm",
+            "m",
+            "inch"
+          ]
+        },
+        "expect": {
+          "type": "object",
+          "properties": {
+            "volume": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1e+18
+            },
+            "bounds": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 6,
+              "maxItems": 6
+            },
+            "centreOfMass": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "volume",
+            "bounds",
+            "centreOfMass"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "units",
+        "expect"
+      ]
+    },
+    "material": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "default": "Isotropic solid"
+        },
+        "youngModulusMPa": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000000000.0
+        },
+        "poissonRatio": {
+          "type": "number",
+          "exclusiveMinimum": -1,
+          "exclusiveMaximum": 0.5
+        },
+        "densityKgPerM3": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000000000.0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "youngModulusMPa",
+        "poissonRatio",
+        "densityKgPerM3"
+      ]
+    },
+    "mesh": {
+      "type": "object",
+      "properties": {
+        "sizeMM": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 100000
+        },
+        "order": {
+          "enum": [
+            1,
+            2
+          ],
+          "default": 2
+        },
+        "maxNodes": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 100000,
+          "default": 50000
+        },
+        "maxElements": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 500000,
+          "default": 200000
+        },
+        "volumeTolerance": {
+          "type": "number",
+          "minimum": 1e-06,
+          "maximum": 0.05,
+          "default": 0.01
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "sizeMM"
+      ]
+    },
+    "supports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "face": {
+            "type": "object",
+            "properties": {
+              "face": {
+                "enum": [
+                  "top",
+                  "bottom",
+                  "right",
+                  "left",
+                  "back",
+                  "front"
+                ]
+              },
+              "position": {
+                "enum": [
+                  "outermost",
+                  "innermost"
+                ],
+                "default": "outermost"
+              },
+              "anchor": {
+                "enum": [
+                  "projectOrigin",
+                  "centroid"
+                ],
+                "default": "projectOrigin"
+              },
+              "offset": {
+                "type": "number",
+                "minimum": -100000,
+                "maximum": 100000,
+                "default": 0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "face"
+            ]
+          },
+          "displacementMM": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": -1000000000.0,
+                  "maximum": 1000000000.0
+                },
+                {
+                  "enum": [
+                    null
+                  ]
+                }
+              ]
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "default": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "face"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 16
+    },
+    "loads": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "force"
+                ]
+              },
+              "face": {
+                "type": "object",
+                "properties": {
+                  "face": {
+                    "enum": [
+                      "top",
+                      "bottom",
+                      "right",
+                      "left",
+                      "back",
+                      "front"
+                    ]
+                  },
+                  "position": {
+                    "enum": [
+                      "outermost",
+                      "innermost"
+                    ],
+                    "default": "outermost"
+                  },
+                  "anchor": {
+                    "enum": [
+                      "projectOrigin",
+                      "centroid"
+                    ],
+                    "default": "projectOrigin"
+                  },
+                  "offset": {
+                    "type": "number",
+                    "minimum": -100000,
+                    "maximum": 100000,
+                    "default": 0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "face"
+                ]
+              },
+              "forceN": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1000000000.0,
+                  "maximum": 1000000000.0
+                },
+                "minItems": 3,
+                "maxItems": 3
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "face",
+              "forceN"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "pressure"
+                ]
+              },
+              "face": {
+                "type": "object",
+                "properties": {
+                  "face": {
+                    "enum": [
+                      "top",
+                      "bottom",
+                      "right",
+                      "left",
+                      "back",
+                      "front"
+                    ]
+                  },
+                  "position": {
+                    "enum": [
+                      "outermost",
+                      "innermost"
+                    ],
+                    "default": "outermost"
+                  },
+                  "anchor": {
+                    "enum": [
+                      "projectOrigin",
+                      "centroid"
+                    ],
+                    "default": "projectOrigin"
+                  },
+                  "offset": {
+                    "type": "number",
+                    "minimum": -100000,
+                    "maximum": 100000,
+                    "default": 0
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "face"
+                ]
+              },
+              "pressureMPa": {
+                "type": "number",
+                "minimum": -1000000000.0,
+                "maximum": 1000000000.0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "face",
+              "pressureMPa"
+            ]
+          }
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 16
+    },
+    "limits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "quantity": {
+            "enum": [
+              "maxDisplacementMM",
+              "maxVonMisesMPa"
+            ]
+          },
+          "maximum": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1000000000000.0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "quantity",
+          "maximum"
+        ]
+      },
+      "maxItems": 32,
+      "default": []
+    },
+    "definitions": {
+      "$ref": "#/$defs/json"
+    },
+    "dimensions": {
+      "$ref": "#/$defs/json"
+    },
+    "settings": {
+      "$ref": "#/$defs/json"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "source",
+    "material",
+    "mesh",
+    "supports",
+    "loads"
+  ]
+}

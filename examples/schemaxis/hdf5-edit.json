@@ -1,0 +1,108 @@
+{
+ "version": "schemaxis.hdf5/1",
+ "operation": "editFile",
+ "source": "/replace/with/hdf5-fixtures/vendor-export.h5",
+ "file": {
+  "name": "vendor-export-annotated.h5"
+ },
+ "edits": [
+  {
+   "action": "setAttribute",
+   "path": "/acquisition/frames",
+   "attribute": {
+    "name": "calibration",
+    "type": {
+     "class": "float",
+     "bits": 64
+    },
+    "value": [
+     0.5,
+     1.0
+    ]
+   }
+  },
+  {
+   "action": "write",
+   "path": "/acquisition/frames",
+   "selection": {
+    "kind": "hyperslab",
+    "start": [
+     2,
+     1,
+     0
+    ],
+    "count": [
+     1,
+     1,
+     3
+    ]
+   },
+   "data": {
+    "source": "values",
+    "values": [
+     1,
+     2,
+     3
+    ]
+   }
+  },
+  {
+   "action": "create",
+   "object": {
+    "path": "/analysis/mean_counts",
+    "type": {
+     "class": "float",
+     "bits": 64
+    },
+    "shape": [
+     4
+    ],
+    "data": {
+     "source": "values",
+     "values": [
+      25,
+      85,
+      145,
+      205
+     ]
+    },
+    "units": "counts"
+   }
+  },
+  {
+   "action": "attachScale",
+   "path": "/analysis/mean_counts",
+   "axis": 0,
+   "scale": "/acquisition/time"
+  },
+  {
+   "action": "copy",
+   "path": "/acquisition/log",
+   "to": "/analysis/log_copy"
+  },
+  {
+   "action": "move",
+   "path": "/latest_frames",
+   "to": "/links/latest_frames"
+  },
+  {
+   "action": "relayout",
+   "path": "/acquisition/log",
+   "storage": {
+    "layout": "compact"
+   }
+  },
+  {
+   "action": "renameAttribute",
+   "path": "/",
+   "name": "vendor",
+   "newName": "manufacturer"
+  }
+ ],
+ "extracts": [
+  {
+   "id": "mean_counts",
+   "dataset": "/analysis/mean_counts"
+  }
+ ]
+}

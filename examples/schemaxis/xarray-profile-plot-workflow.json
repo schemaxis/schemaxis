@@ -1,0 +1,92 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "profile",
+      "document": {
+        "version": "schemaxis.xarray/1",
+        "operation": "reduceProfile",
+        "source": "/replace/with/xarray-cube.nc",
+        "variable": {
+          "name": "temperature",
+          "unit": "K"
+        },
+        "coordinates": [
+          {
+            "name": "time",
+            "unit": "h"
+          },
+          {
+            "name": "depth",
+            "unit": "m"
+          },
+          {
+            "name": "station",
+            "unit": "km"
+          }
+        ],
+        "retain": "depth",
+        "missing": {
+          "value": -999.0,
+          "policy": "refuse"
+        }
+      }
+    },
+    {
+      "id": "plot",
+      "document": {
+        "version": "schemaxis.gnuplot/1",
+        "operation": "plot",
+        "title": "Mean temperature by depth",
+        "source": {
+          "$artifact": "profile",
+          "index": 1
+        },
+        "columns": [
+          {
+            "name": "depth",
+            "unit": "m"
+          },
+          {
+            "name": "temperature",
+            "unit": "K"
+          },
+          {
+            "name": "validCount",
+            "unit": "count"
+          },
+          {
+            "name": "missingCount",
+            "unit": "count"
+          }
+        ],
+        "series": [
+          {
+            "label": "Mean temperature",
+            "x": "depth",
+            "y": "temperature",
+            "colour": "blue"
+          }
+        ],
+        "xAxis": {
+          "label": "Depth",
+          "unit": "m",
+          "range": [
+            0,
+            30
+          ],
+          "scale": "linear"
+        },
+        "yAxis": {
+          "label": "Temperature",
+          "unit": "K",
+          "range": [
+            270,
+            300
+          ],
+          "scale": "linear"
+        }
+      }
+    }
+  ]
+}

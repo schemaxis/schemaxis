@@ -54,6 +54,9 @@ DECLARATIONS = {**{d['id']: d for d in (MATERIAL, CUBE, BEVEL, GLTF)}, **mesh_de
 
 
 def plan(document, declarations=None):
+    if isinstance(document,dict) and document.get('version')=='schemaxis.blender.production/1':
+        from .production_job import lower
+        document=lower(document)
     keys(document, ('version', 'nodes', 'axes', 'times', 'scenes', 'maxStates', 'maxPublications', 'definitions', 'dimensions', 'views', 'settings'), '$')
     if document.get('version') != 'schemaxis.blender/1':
         fail('UNSUPPORTED_VERSION', 'expected schemaxis.blender/1')
@@ -64,7 +67,7 @@ def plan(document, declarations=None):
     if not isinstance(output, list) or len(output) != 1:
         fail('INVALID_SCENE', 'initial Blender adaptor requires one scene')
     scene = output[0]
-    keys(scene, ('id', 'visible', 'images', 'render', 'prepareOnly', 'meshes'), '$.scenes')
+    keys(scene, ('id', 'visible', 'images', 'render', 'prepareOnly', 'meshes', 'production'), '$.scenes')
     if type(scene.get('prepareOnly', False)) is not bool:
         fail('INVALID_SCENE', 'prepareOnly must be boolean')
     from schemaxis.adaptors.blender.settings import render_settings
@@ -73,12 +76,27 @@ def plan(document, declarations=None):
     visible = scene.get('visible')
     if not isinstance(visible, list) or not visible or any(not isinstance(x, str) for x in visible):
         fail('INVALID_SCENE', 'visible must list mesh node identities')
+    production=None
+    if 'production' in scene:
+        from .production import validate as validate_production
+        production=validate_production(scene['production'],master.nodes)
+        scene['production']=production
+        from .surface_materials import applicability as surface_applicability
+        surface_applicability(production.get('surfaceMaterials',[]),render['renderer'])
+        from .surface_materials import graph_applicability
+        graph_applicability(production,render['renderer'])
+    from .production import graph_references
+    production_roots=graph_references(production,master.nodes) if production else []
     meshes=scene.get('meshes',[])
     if not isinstance(meshes,list) or any(not isinstance(n,str) for n in meshes) or len(set(meshes))!=len(meshes):
         fail('INVALID_PUBLICATION','meshes must list distinct mesh node identities')
-    selection = master.select([*visible,*meshes])
+    production_ids={o['id'] for o in production['objects']}|{a['id'] for a in production['assets']}|{r['id'] for r in production['rigs']} if production else set()
+    if any(n not in master.nodes and n not in production_ids for n in visible):fail('UNKNOWN_NODE','visible root must name a graph or production object')
+    graph_roots=list(dict.fromkeys([*(n for n in visible if n in master.nodes),*meshes,*production_roots]))
+    if not graph_roots:graph_roots=[next(iter(master.nodes))]
+    selection = master.select(graph_roots)
     for node in [*visible,*meshes]:
-        if master.nodes[node]['filter'] == 'material':
+        if node in master.nodes and master.nodes[node]['filter'] == 'material':
             fail('TYPE_MISMATCH', 'visible nodes must be meshes', node)
     images = scene.get('images')
     if not isinstance(images, list) or len(images) != 1:
@@ -97,7 +115,10 @@ def plan(document, declarations=None):
         late.extend(markers(camera))
         camera_values(camera, 'camera', deferred=True)
     master._check_markers(late, 'camera')
-    selection = master.select(list(dict.fromkeys([*visible, *meshes, *(m['$observe'] for m in late if '$observe' in m)])))
+    selection = master.select(list(dict.fromkeys([*graph_roots, *(m['$observe'] for m in late if '$observe' in m)])))
+    from .shader_budget import validate as validate_shader_budget
+    validate_shader_budget(production or {'materialGraphs':[],'nodeGroups':[]},
+        {identity:master.nodes[identity] for identity in selection.order},'$.scenes[0]')
     for marker in late:
         if '$sample' in marker:
             fail('UNSUPPORTED_EXPRESSION', 'Blender field sampling is not declared', 'camera')
@@ -109,6 +130,9 @@ def plan(document, declarations=None):
                                       'minItems': 2, 'maxItems': 2, 'default': [320, 240]}},
                               {'size': writer['size']} if 'size' in writer else {})['size']
     writer['size'] = size
+    if production:
+        from .render_features import applicability as feature_applicability
+        feature_applicability(production,render,size)
     for node in master.nodes.values():
         if any('$sample' in marker for marker in markers(node['options'])):
             fail('UNSUPPORTED_EXPRESSION', 'Blender field sampling is not declared', node['id'])
@@ -116,6 +140,11 @@ def plan(document, declarations=None):
     if type(maximum) is not int or maximum < 1:
         fail('INVALID_LIMIT', 'maxPublications must be a positive integer')
     publications = selection.count * ((1 if scene.get('prepareOnly') else 1 + len(cameras)) + len(meshes))
+    if production:
+        from .production_outputs import output_count
+        publications+=selection.count*output_count(production)
+        from .render_features import output_count as bundle_count
+        publications+=selection.count*bundle_count(production)
     if publications > maximum:
         fail('EXPANSION_TOO_LARGE', 'Blender publication budget exceeded')
     _check_lathe_profiles(master, selection, document)
@@ -130,8 +159,8 @@ def run(document, directory, *, executable=None, timeout=300):
     if not executable:
         fail('INTERPRETER_NOT_FOUND', 'set SCHEMAXIS_BLENDER or pass --blender to an explicit executable')
     runtime = Interpreter('blender', str(Path(executable).resolve())).probe()
-    if runtime.version != '5.2.2':
-        fail('UNSUPPORTED_RUNTIME', 'Blender adaptor requires the qualified 5.2.2 release', version=runtime.version)
+    if runtime.version != '5.2.3':
+        fail('UNSUPPORTED_RUNTIME', 'Blender adaptor requires the qualified 5.2.3 release', version=runtime.version)
     directory = Path(directory).expanduser().absolute()
     if directory.exists() or directory.is_symlink():
         fail('OUTPUT_EXISTS', 'choose a new output directory', str(directory))
@@ -140,8 +169,8 @@ def run(document, directory, *, executable=None, timeout=300):
     atomic_json(directory / 'plan.json', prepared)
     atomic_json(directory / 'analytic-bindings.json', master.analytic_bindings)
     # Retain the lowered graph in the adaptor's public version for replay.
-    lowered = {**master.document, 'version': 'schemaxis.blender/1'}
-    atomic_json(directory / 'input.json', lowered)
+    from .verification_input import lowered
+    atomic_json(directory / 'input.json', lowered(master))
     from .resources import capture
     capture(master,selection,directory)
     snapshot = runtime_archive()
@@ -163,7 +192,8 @@ def run(document, directory, *, executable=None, timeout=300):
     except Exception as error:
         from schemaxis.core.faults import SchemaxisError, Fault
         atomic_json(directory / 'submission-fault.json', error.to_dict() if hasattr(error, 'to_dict') else {'message': str(error)})
-        if (directory / 'native-fault.json').exists():
+        stopped=isinstance(error,SchemaxisError) and error.fault.code in ('RUNNER_CANCELLED','RUNNER_TIMED_OUT')
+        if not stopped and (directory / 'native-fault.json').exists():
             error = SchemaxisError(Fault(**json.loads((directory / 'native-fault.json').read_text())))
         atomic_json(directory / 'result.json', {'status': 'failed', 'verified': False,
                     'fault': error.fault.to_dict() if isinstance(error, SchemaxisError) else {'message': str(error)}})
@@ -182,9 +212,16 @@ def verify(directory, require_result=True):
 def _verify(directory, require_result=True):
     directory = Path(directory).resolve()
     saved = json.loads((directory / 'plan.json').read_text())
-    master, selection, prepared = plan(json.loads((directory / 'authored.json').read_text()), saved['pipeline']['declarations'])
+    authored=json.loads((directory / 'authored.json').read_text())
+    master, selection, prepared = plan(authored, saved['pipeline']['declarations'])
+    # Stored declarations retain historical receipt consistency, never native
+    # constructor authority. Current installed lowering comes from authored root.
+    canonical, canonical_selection, canonical_prepared=plan(authored)
+    from .verification_input import lowered,verify_lowered
+    trusted_input=lowered(canonical)
+    verify_lowered(directory,trusted_input)
     from .resources import verify as verify_sources
-    verify_sources(master,selection,directory)
+    verify_sources(canonical,canonical_selection,directory)
     if require_result:
         result = json.loads((directory / 'result.json').read_text())
         if result.get('status') != 'succeeded' or result.get('verified') is not True:
@@ -251,19 +288,32 @@ def _verify(directory, require_result=True):
     expected_order = [(index, 'image', ci) for index in range(len(visits)) for ci in range(len(writer['cameras']))]
     if master.document['scenes'][0].get('prepareOnly'):
         expected_order = []
-    actual_order = [(a.get('state'), a.get('kind'), a.get('cameraIndex')) for a in artifacts if a.get('kind') == 'image']
+    actual_order = [(a.get('state'), a.get('kind'), a.get('cameraIndex')) for a in artifacts if a.get('kind') == 'image' and not a.get('productionOutput')]
     if actual_order != expected_order or [(a.get('state'), a.get('kind')) for a in artifacts if a.get('kind') == 'scene'] != [(i, 'scene') for i in range(len(visits))]:
         fail('VERIFICATION_FAILED', 'Blender image/scene membership differs')
     meshes=master.document['scenes'][0].get('meshes',[])
     expected_meshes=[(i,node) for i in range(len(visits)) for node in meshes]
-    if [(a.get('state'),a.get('node')) for a in artifacts if a.get('kind')=='geometry']!=expected_meshes:
+    if [(a.get('state'),a.get('node')) for a in artifacts if a.get('kind')=='geometry' and not a.get('productionOutput')]!=expected_meshes:
         fail('VERIFICATION_FAILED','Blender mesh publication membership differs')
-    if reopened.get('meshes',[]) != [a['after'] for a in artifacts if a.get('kind')=='geometry']:
+    if reopened.get('meshes',[]) != [a['after'] for a in artifacts if a.get('kind')=='geometry' and not a.get('productionOutput')]:
         fail('VERIFICATION_FAILED','fresh-process STL reopening differs')
+    if 'production' in master.document['scenes'][0]:
+        from .production import verify_snapshot
+        from .production_outputs import verify_outputs
+        spec=master.document['scenes'][0]['production']
+        for i,state in enumerate(receipt['states']):
+            verify_snapshot(spec,state.get('production'),directory)
+            verify_outputs([a for a in artifacts if a.get('productionOutput') and a.get('state')==i],spec,directory,f'{i:04d}')
+            from .render_features import verify_cache_publications
+            verify_cache_publications(spec,[a for a in artifacts if a.get('kind')=='simulationCache' and a.get('state')==i],directory,i)
+            from .render_features import verify_bundle_publications
+            verify_bundle_publications(spec,[a for a in artifacts if a.get('kind')=='renderBundle' and a.get('state')==i],directory,i,writer['size'])
+        if reopened.get('production') != [s.get('production') for s in receipt['states']]:fail('VERIFICATION_FAILED','fresh native production readback differs')
+        if reopened.get('productionOutputs') != [a['after'] for a in artifacts if a.get('productionOutput')]:fail('VERIFICATION_FAILED','fresh native production output readback differs')
     from schemaxis.camera import camera_values
     seen = set()
     for artifact in artifacts:
-        if artifact.get('kind') == 'image':
+        if artifact.get('kind') == 'image' and not artifact.get('productionOutput'):
             state = receipt['states'][artifact['state']]
             visit = state['visit']
             expected = camera_values(evaluate(writer['cameras'][artifact['cameraIndex']], visit['axes'], state['observations'], visit['time'], 'camera'), 'camera')
@@ -286,7 +336,7 @@ def _verify(directory, require_result=True):
                 fail('VERIFICATION_FAILED', 'Blender native camera differs from authored framing')
             if actual['parallel'] != expected['parallel'] or not math.isclose(actual['scale'], expected.get('scale', diagonal*(1+expected['padding'])*(max(1,writer['size'][0]/writer['size'][1]) if receipt.get('framingVersion', 1) >= 2 else 1)), rel_tol=1e-5):
                 fail('VERIFICATION_FAILED', 'Blender native projection differs')
-        if artifact.get('kind')=='geometry':
+        if artifact.get('kind')=='geometry' and not artifact.get('productionOutput'):
             from .stl import file_snapshot
             path=directory/f"{artifact['state']:04d}-{artifact['node']}.stl"
             if artifact.get('file')!=str(path) or artifact.get('format')!='stl' or artifact.get('before')!=artifact.get('after') or file_snapshot(path)!=artifact.get('before'):
@@ -295,6 +345,12 @@ def _verify(directory, require_result=True):
         if not path.is_relative_to(directory) or path in seen or hashlib.sha256(path.read_bytes()).hexdigest() != artifact['sha256']:
             fail('VERIFICATION_FAILED', 'Blender artifact membership/hash differs', str(path))
         seen.add(path)
+    # Even an unassigned default surface is affected by renderer/camera state.
+    # Cached ordinary readbacks cannot authorise hidden native render settings.
+    if require_result:
+        from .production_verify import fresh_reopen
+        fresh=fresh_reopen(directory,trusted_input,canonical_prepared['pipeline']['digest'])
+        if fresh!=reopened:fail('VERIFICATION_FAILED','current native project/production output differs from retained readback')
     return {'verified': True, 'artifacts': len(artifacts), 'states': len(visits), 'runtime': json.loads((directory/'submission.json').read_text())['interpreter']}
 
 

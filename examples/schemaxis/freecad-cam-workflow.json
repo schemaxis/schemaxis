@@ -1,0 +1,129 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "enclosure",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "blank",
+            "filter": "box",
+            "options": {
+              "length": 40,
+              "width": 30,
+              "height": 20
+            }
+          },
+          {
+            "id": "cavityBlank",
+            "filter": "box",
+            "options": {
+              "length": 34,
+              "width": 24,
+              "height": 17,
+              "origin": [
+                3,
+                3,
+                3
+              ]
+            }
+          },
+          {
+            "id": "millableCavity",
+            "filter": "fillet",
+            "inputs": {
+              "base": "cavityBlank"
+            },
+            "options": {
+              "radius": 2,
+              "edges": {
+                "where": {
+                  "curve": "line",
+                  "parallelTo": [
+                    0,
+                    0,
+                    1
+                  ]
+                },
+                "expect": 4
+              }
+            }
+          },
+          {
+            "id": "enclosure",
+            "filter": "cut",
+            "inputs": {
+              "base": "blank",
+              "tool": "millableCavity"
+            }
+          }
+        ],
+        "output": "enclosure"
+      }
+    },
+    {
+      "id": "machining",
+      "document": {
+        "version": "schemaxis.freecad.cam/1",
+        "source": {
+          "file": {
+            "$artifact": "enclosure",
+            "index": 2
+          },
+          "object": "enclosure",
+          "units": "mm",
+          "expect": {
+            "volume": 10186.371699555895,
+            "bounds": [
+              0,
+              40,
+              0,
+              30,
+              0,
+              20
+            ],
+            "centreOfMass": [
+              20,
+              15,
+              7.965866251319936
+            ]
+          }
+        },
+        "stock": {
+          "top": 2
+        },
+        "tool": {
+          "diameter": 3,
+          "cuttingLength": 25,
+          "length": 50,
+          "shankDiameter": 3,
+          "flutes": 2,
+          "rpm": 10000,
+          "feed": 300,
+          "plunge": 100
+        },
+        "operations": [
+          {
+            "id": "face",
+            "operation": "faceStock",
+            "stepDown": 1,
+            "stepOver": 0.5
+          },
+          {
+            "id": "cavity",
+            "operation": "pocket",
+            "floor": [
+              20,
+              15,
+              3
+            ],
+            "stepDown": 2,
+            "stepOver": 0.5
+          }
+        ]
+      }
+    }
+  ]
+}

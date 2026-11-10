@@ -137,7 +137,9 @@ def _fault(
 
 
 def _normalise(vector: Sequence[float], location: str, role: str) -> tuple[float, float, float]:
-    length = math.sqrt(sum(component * component for component in vector))
+    # math.fsum is correctly rounded on every Python; built-in float sum() changed
+    # in 3.12, so host and native interpreters would otherwise disagree in the last bit.
+    length = math.sqrt(math.fsum(component * component for component in vector))
     if not math.isfinite(length) or length < _NEGLIGIBLE:
         raise _fault(
             DEGENERATE_DIRECTION, f"the {role} has no length", location,
@@ -156,12 +158,12 @@ def _cross(a: Sequence[float], b: Sequence[float]) -> tuple[float, float, float]
 
 
 def _dot(a: Sequence[float], b: Sequence[float]) -> float:
-    return sum(x * y for x, y in zip(a, b))
+    return math.fsum(x * y for x, y in zip(a, b))
 
 
 def _combine(*terms: tuple[float, Sequence[float]]) -> tuple[float, float, float]:
     return tuple(  # type: ignore[return-value]
-        sum(scale * vector[axis] for scale, vector in terms) for axis in range(3)
+        math.fsum(scale * vector[axis] for scale, vector in terms) for axis in range(3)
     )
 
 

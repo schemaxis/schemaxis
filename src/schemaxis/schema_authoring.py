@@ -229,6 +229,13 @@ def version_schema(version, *, authored=False, artifact=False, annotate=None):
         if routes()[version][1].get('graph'):
             _author_graph(result, version)
     if artifact: result['$defs']['artifact'] = object_schema({'$artifact': NAME, 'index': {'type': 'integer', 'minimum': 0}}, ['$artifact', 'index'])
+    hook = routes()[version][1].get('hooks', {}).get('capturedInputSchema')
+    if artifact and hook:
+        # Workflow scope only: the consuming adaptor names the reader positions
+        # that admit captured inputs, from the same policy as acceptResource.
+        from .captured_inputs import reference_schema
+        result['$defs']['capturedInput'] = reference_schema()
+        binding(hook)(result, ref('capturedInput'))
     result['$schema'] = DRAFT
     result['title'] = version + (' authored input' if authored else ' expanded input')
     result['description'] = ('Structural input contract. Reference targets, computed result types, graph dependencies, '
@@ -330,6 +337,10 @@ def workflow_schema(*, authored=True, annotate=None):
         properties.update({key: ref('authorData') for key in ('dimensions', 'definitions', 'settings')})
         properties['maxStates'] = {'type': 'integer', 'minimum': 1, 'maximum': 10000}
         properties['axes'] = array(_axis_schema())
+        # Shared definition owning Studio guidance; embedded adaptor documents
+        # reference their own copy only at adaptor-declared reader positions.
+        from .captured_inputs import reference_schema
+        defs['capturedInput'] = reference_schema()
     return {'$schema': DRAFT, 'title': 'Schemaxis workflow input', '$defs': defs,
             **object_schema(properties, ['version', 'operations'])}
 

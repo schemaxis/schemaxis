@@ -1,0 +1,207 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.zstandard/1",
+    "operation": "compress",
+    "source": "/replace/with/results.bin",
+    "level": 6
+  },
+  "categories": [
+    {
+      "id": "compression",
+      "title": "Compressed files and dictionaries",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "compress",
+      "title": "Compress",
+      "description": "Reduce a captured file using Zstandard or one of its four compatibility codecs, preserving every original byte.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "compress",
+        "source": "/replace/with/results.bin",
+        "level": 6
+      }
+    },
+    {
+      "id": "restore",
+      "title": "Restore",
+      "description": "Recover original bytes from a captured compressed stream with a bounded fresh native decoder.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "restore",
+        "source": "/replace/with/payload.zst"
+      }
+    },
+    {
+      "id": "inspect",
+      "title": "Inspect",
+      "description": "Inspect complete Zstandard frame boundaries, sizes, windows, dictionary identities and checksums, backed by actual decoding.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "inspect",
+        "source": "/replace/with/payload.zst"
+      }
+    },
+    {
+      "id": "encodeDelta",
+      "title": "Encode delta",
+      "description": "Compress a changed snapshot relative to a captured earlier snapshot, retaining the reference needed for restoration.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "encodeDelta",
+        "source": "/replace/with/new-snapshot.bin",
+        "reference": "/replace/with/old-snapshot.bin"
+      }
+    },
+    {
+      "id": "concatenate",
+      "title": "Concatenate",
+      "description": "Join complete Zstandard streams in a chosen order and prove that restoration yields the corresponding concatenated content.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "concatenate",
+        "sources": [
+          "/replace/with/first.zst",
+          "/replace/with/second.zst"
+        ]
+      }
+    },
+    {
+      "id": "compareProfiles",
+      "title": "Compare profiles",
+      "description": "Compare compressed sizes for several format and level choices while proving exact restoration of every candidate.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "compareProfiles",
+        "source": "/replace/with/results.bin",
+        "profiles": [
+          {
+            "id": "quick",
+            "level": 1
+          },
+          {
+            "id": "dense",
+            "level": 9
+          },
+          {
+            "id": "compatible",
+            "format": "gzip",
+            "level": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "trainDictionary",
+      "title": "Train dictionary",
+      "description": "Learn a reusable, explicitly identified compression dictionary from a captured corpus of related small files.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "trainDictionary",
+        "samples": [
+          "/replace/with/sample-0.json",
+          "/replace/with/sample-1.json",
+          "/replace/with/sample-2.json",
+          "/replace/with/sample-3.json",
+          "/replace/with/sample-4.json",
+          "/replace/with/sample-5.json",
+          "/replace/with/sample-6.json",
+          "/replace/with/sample-7.json",
+          "/replace/with/sample-8.json",
+          "/replace/with/sample-9.json",
+          "/replace/with/sample-10.json",
+          "/replace/with/sample-11.json",
+          "/replace/with/sample-12.json",
+          "/replace/with/sample-13.json",
+          "/replace/with/sample-14.json",
+          "/replace/with/sample-15.json"
+        ],
+        "maxDictionaryBytes": 1024,
+        "id": 50001
+      }
+    },
+    {
+      "id": "benchmark",
+      "title": "Benchmark",
+      "description": "Measure native in-memory compression and decompression throughput over captured representative content, with independently checked sizes and round trips.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "benchmark",
+        "source": "/replace/with/results.bin",
+        "firstLevel": 1,
+        "lastLevel": 3
+      }
+    },
+    {
+      "id": "benchmarkDecode",
+      "title": "Benchmark decode",
+      "description": "Measure native in-memory decompression throughput of an existing captured Zstandard stream with its exact dictionary.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "benchmarkDecode",
+        "source": "/replace/with/payload.zst",
+        "minimumSeconds": 1
+      }
+    },
+    {
+      "id": "inspectDictionary",
+      "title": "Inspect dictionary",
+      "description": "Inspect a captured external trained or raw dictionary, including exact identity and fresh native loading in both compressor and decoder.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "inspectDictionary",
+        "source": "/replace/with/dictionary.zdict",
+        "dictionaryMode": "trained"
+      }
+    },
+    {
+      "id": "compressFiles",
+      "title": "Compress files",
+      "description": "Compress a reusable named or recursively selected file set, preserving relative names with bounded captured inputs and collision checks.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "compressFiles",
+        "fileSet": {
+          "root": "/replace/with/source-directory",
+          "include": [
+            "*.bin",
+            "*.csv"
+          ],
+          "exclude": [
+            "temporary/*"
+          ]
+        },
+        "level": 6
+      }
+    },
+    {
+      "id": "restoreFiles",
+      "title": "Restore files",
+      "description": "Restore a captured compressed file set into collision-checked relative names under one aggregate decoded-output budget.",
+      "document": {
+        "version": "schemaxis.zstandard/1",
+        "operation": "restoreFiles",
+        "fileSet": {
+          "files": [
+            {
+              "source": "/replace/with/run-A.zst",
+              "name": "run-A/data.zst"
+            },
+            {
+              "source": "/replace/with/run-B.zst",
+              "name": "run-B/data.zst"
+            }
+          ]
+        },
+        "maxDecodedBytes": 67108864
+      }
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

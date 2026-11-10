@@ -112,9 +112,18 @@ insufficient. This is bounded verification, not qualification of all SQL feature
 `INVALID_TABLE_IDENTIFIER` asks for unique permitted identifiers;
 `INVALID_TABLE_KEY` asks for a nonnullable unique primary key and an earlier same-type
 parent; `INVALID_TABLE_QUERY` asks for qualified active columns and the exact declared
-FK join; `INVALID_TABLE_SOURCE` asks for a bounded local regular JSON file;
-`INVALID_TABLE_DATA` identifies type, null, column or key problems. Correct inputs
-and retry in a fresh output directory. `INTERPRETER_NOT_FOUND` requires an absolute
+FK join; `INVALID_TABLE_SOURCE` asks for a bounded local regular JSON file; `observed.reason`
+distinguishes `missing`, `symlink`, `not-regular`, `too-large` and `unreadable`.
+`INVALID_TABLE_DATA` is located at `$.tables[i].source` and its `observed.reason`
+separates `malformed-json` (including duplicate keys and non-finite numbers),
+`invalid-shape` (not an array, too many rows, wrong columns), `invalid-cell` (type, null,
+range or text problem, with `row` and `column`), `duplicate-key` and
+`orphan-foreign-key` (located at the declared foreign key, naming the table, column,
+row and value). Correct inputs and retry in a fresh output directory.
+`schemaxis verify` on a directory whose run failed or was interrupted reports
+`INCOMPLETE_EXECUTION` with the recorded `status` and `faultCode`; that is not tamper
+evidence, but the directory is never verified. A run recorded as succeeded whose receipt
+or evidence is missing or altered is refused (usually `VERIFICATION_FAILED`; malformed captured rows can report `INVALID_TABLE_DATA`). `INTERPRETER_NOT_FOUND` requires an absolute
 CLI executable; `UNSUPPORTED_NATIVE_VERSION` requires requalification before using
 another version. `VERIFICATION_FAILED` means retain the evidence and investigate;
 do not relabel the run as verified.

@@ -1,5 +1,10 @@
 # Storage inspection and portable case preservation
 
+For packaged application runtimes and saved downloads, use the separate
+[application module cache](application-modules.md#cache-inspection-and-cleanup).
+Its explicit ownership and execution leases allow reviewed removal of managed
+runtime references. The preservation commands below retain user case data.
+
 `schemaxis storage` inspects an explicitly selected output root, plans preservation
 of explicitly selected cases, creates verified backups/ZIP archives, and restores
 those bundles. Every case needs retained `authored.json`. Source cases,

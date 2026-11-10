@@ -1,0 +1,301 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.xarray/1": {
+      "guide": "docs/xarray.md",
+      "context": {
+        "purpose": "Reduce named dimensions of one captured classic NetCDF measurement cube to a coordinate-labelled profile with inclusive numeric range selection, asserted units and an explicit missing-value policy, published as a smaller NetCDF, a numeric CSV and a hashed summary.",
+        "assumptions": "Unweighted arithmetic mean of selected binary64 cells; strictly increasing finite double coordinates with declared units; dimensions declared in exact storage order; isolated xarray 2026.9.0 with SciPy 1.18.1 and NumPy 2.5.4 (engine scipy), one serial process.",
+        "constraints": "CDF-1 only, at most 4 MiB, 4 dimensions, 4096 values per axis, 262144 cells, 2-2048 profile points, magnitudes within 1e100, attribute allowlist units/_FillValue/long_name/title, one double variable and its coordinates.",
+        "inspection": "Inspect profile.nc, profile.csv and xarray-summary.json (source, axis and selection hashes, valid and missing counts, tolerance model).",
+        "recovery": "Correct located contract, structure, unit, coordinate, range and missing-policy faults; ill-conditioned or all-missing profiles are refused, not published; permuted storage order must be declared as stored. To plot the profile use the workflow example with Gnuplot source {\"$artifact\": id, \"index\": 1}; a propagate profile with an empty mean is refused by the consumer."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/xarray-profile.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/xarray-profile-variant.json"
+        },
+        {
+          "id": "retain-undeclared",
+          "reference": "examples/schemaxis/xarray-retain-invalid.json",
+          "expect": "invalid",
+          "fault": "XR_INVALID_CONTRACT",
+          "schemaValid": true
+        },
+        {
+          "id": "threshold-without-skip",
+          "reference": "examples/schemaxis/xarray-threshold-invalid.json",
+          "expect": "invalid",
+          "fault": "XR_INVALID_CONTRACT",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_xarray.py",
+        "tests/unit/test_xarray_native_boundary.py"
+      ],
+      "acceptance": [
+        "tools/qualify_xarray.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "The verified profile.nc file artifact can feed another xarray reduction; profile.csv (index 1, table) feeds the Gnuplot route through an authored {\"$artifact\": ..., \"index\": 1} workflow edge with byte-identical capture, normal workflow verification and independent chart checks (Gnuplot 6.0.2 locally, older than its absorbed 6.0.5, so not a source-current Gnuplot qualification).",
+          "references": [
+            "docs/xarray.md#gnuplot-handoff",
+            "examples/schemaxis/xarray-profile-plot-workflow.json",
+            "tools/qualify_xarray.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared references, expressions and finite studies resolve to the same literal reduction contract.",
+          "references": [
+            "docs/xarray.md",
+            "tools/qualify_xarray.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://docs.xarray.dev/en/stable/generated/xarray.Dataset.sel.html",
+          "https://docs.xarray.dev/en/stable/generated/xarray.DataArray.mean.html",
+          "https://docs.xarray.dev/en/stable/user-guide/io.html",
+          "https://docs.unidata.ucar.edu/netcdf-c/current/file_format_specifications.html",
+          "https://pypi.org/project/xarray/2026.9.0/"
+        ],
+        "lifecycle": {
+          "timeout": "Single total deadline (default 120 s) over host validation, both native stages and host verification; native CPU 120 s, address space 4 GiB, 64 MiB per file.",
+          "cancellation": "Owned process-group cancellation through the shared runner and a pre-publication check.",
+          "logs": "Captured source.nc, authored/plan/native configuration, worker and implementation fingerprints, consumed-input bindings, submissions, stdout/stderr, native result and readback record.",
+          "verification": "Independent standard-library bounded CDF-1 reader; Fraction/fsum oracle with a stated scale-aware tolerance; every coordinate, value, unit, count, attribute, CSV byte and summary field recomputed by saved verification."
+        },
+        "data": [
+          {
+            "id": "cube",
+            "direction": "input",
+            "kind": "file",
+            "format": "classic NetCDF CDF-1 (.nc)",
+            "traits": {
+              "dimensions": "fixed, storage order declared",
+              "units": "asserted per variable and coordinate"
+            },
+            "losses": [
+              "Only the allowlisted attributes; no record dimension, packing, calendars, strings or other variables."
+            ],
+            "scope": "Regular local capture <=4 MiB; complete independent host decoding before native launch."
+          },
+          {
+            "id": "profile-netcdf",
+            "direction": "output",
+            "kind": "file",
+            "format": "classic NetCDF CDF-1",
+            "traits": {
+              "variables": "retained coordinate, mean, validCount, missingCount"
+            },
+            "losses": [
+              "Unweighted mean only; units and allowlisted long_name/title preserved, other metadata never copied."
+            ],
+            "scope": "One retained dimension of 2-2048 points."
+          },
+          {
+            "id": "profile-csv",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV <dimension>,<variable>,validCount,missingCount",
+            "traits": {
+              "order": "increasing coordinate",
+              "missing": "empty mean cell under propagate only"
+            },
+            "losses": [
+              "Units are declared by the consumer, not in the file; shortest round-trip decimal text."
+            ],
+            "scope": "2-2048 rows; Gnuplot needs a no-missing profile; consumed through a workflow $artifact (index 1) edge."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect profile.csv, xarray-summary.json and the NetCDF publication.",
+            "limits": "No interactive native session or plot."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Source byte digest participates in reuse identity; same-path edits invalidate reuse."
+        },
+        "features": {
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native session; inspect the verified publications."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "One serial process; no MPI or Dask."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No time-list batches; use finite document studies."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No persistent native state or reverse editing."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No format conversion, regridding or interpolation; the route reduces one classic NetCDF cube."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "xarray has no application document to save; publications are inspectable NetCDF/CSV/JSON only (no pickle)."
+          },
+          "workflow": {
+            "status": "supported",
+            "scope": "profile.nc (file) and profile.csv (table, index 1) hand off by index; profile.csv feeds the Gnuplot route in examples/schemaxis/xarray-profile-plot-workflow.json."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared references, expressions and finite studies resolve to the same literal reduction contract."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Source byte digests participate in reuse identity; same-path edits invalidate reuse."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable variable, coordinate, range, retained dimension and missing-policy declarations with undo through common authoring."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Nested coordinate, range and missing fields are editable forms."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/xarray-cube.nc"
+            },
+            "scope": "Dyadic analytic cube v=280+5*depthIndex+0.5*timeIndex+0.25*stationIndex; means over time and station are exactly 280.625+5*depthIndex with 6 valid cells each.",
+            "checks": [
+              {
+                "file": "profile.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    0.0,
+                    280.625,
+                    6,
+                    0
+                  ],
+                  [
+                    10.0,
+                    285.625,
+                    6,
+                    0
+                  ],
+                  [
+                    20.0,
+                    290.625,
+                    6,
+                    0
+                  ],
+                  [
+                    30.0,
+                    295.625,
+                    6,
+                    0
+                  ]
+                ],
+                "relative": 1e-12,
+                "absolute": 0
+              },
+              {
+                "file": "xarray-summary.json",
+                "format": "json",
+                "pointer": "/totals",
+                "expected": {
+                  "selectedCells": 24,
+                  "validCells": 24,
+                  "missingCells": 0
+                },
+                "relative": 0,
+                "absolute": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/xarray-cube-missing.nc"
+            },
+            "scope": "Time [0,1] and depth [0,20] with skip and minimumValid 2; exact rational means of the valid cells with counts 4,3,3 valid and 0,1,1 missing.",
+            "checks": [
+              {
+                "file": "profile.csv",
+                "format": "csv",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    0.0,
+                    280.375,
+                    4,
+                    0
+                  ],
+                  [
+                    10.0,
+                    285.3333333333333,
+                    3,
+                    1
+                  ],
+                  [
+                    20.0,
+                    290.4166666666667,
+                    3,
+                    1
+                  ]
+                ],
+                "relative": 1e-12,
+                "absolute": 0
+              },
+              {
+                "file": "xarray-summary.json",
+                "format": "json",
+                "pointer": "/totals",
+                "expected": {
+                  "selectedCells": 12,
+                  "validCells": 10,
+                  "missingCells": 2
+                },
+                "relative": 0,
+                "absolute": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial reduceProfile route (allocation 66, host and bounded native acceptance pending parent review): all fields, bounded CDF-1 reader, units/order/coordinate/range/missing-policy contract, native xarray scipy engine, independent verification, Gnuplot CSV handoff.",
+        "review": [
+          "verification/2026-10-25-xarray-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native session; inspect the verified publications.",
+          "mpi": "One serial process; no MPI or Dask.",
+          "time-batches": "No time-list batches; use finite document studies.",
+          "live-editing": "No persistent native state or reverse editing.",
+          "conversion": "No format conversion, regridding or interpolation; the route reduces one classic NetCDF cube.",
+          "native-save": "xarray has no application document to save; publications are inspectable NetCDF/CSV/JSON only (no pickle)."
+        }
+      }
+    }
+  }
+}

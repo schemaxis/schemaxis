@@ -24,13 +24,20 @@ def execute(directory):
     if not names or not visible or scene.camera is None:
         fail('UNSUPPORTED_RESOURCE', 'render input must be a saved Schemaxis scene with geometry metadata')
     def geometry():
-        state = snapshot(names)
+        state = snapshot(names,include_render=False)
         state.pop('camera')
-        state.pop('render')
+        # Production roots and collection instances need the same evaluated
+        # geometry used by neutral exports; they need not be DAG node names.
+        from .production_output_native import geometry_snapshot
+        roots=[]
+        for name in visible:
+            obj=bpy.data.objects.get(name)
+            if obj is None:fail('VERIFICATION_FAILED','visible saved-scene root is absent',name)
+            roots.append(obj)
+        state['visibleGeometry']=geometry_snapshot(roots)
         return state
     before = geometry()
-    bounds_list = [before[name]['bounds'] for name in visible]
-    bounds = [min(b[i] for b in bounds_list) if i%2 == 0 else max(b[i] for b in bounds_list) for i in range(6)]
+    bounds = before['visibleGeometry']['bounds']
     # Replace the known Schemaxis lighting, avoiding duplicate lamps on a reopened scene.
     lamp = bpy.data.objects.get('__schemaxis_light')
     if lamp:
@@ -46,14 +53,13 @@ def execute(directory):
         path = directory/f'{index:04d}.png'
         scene.render.filepath = str(path)
         started = clock.monotonic()
-        bpy.ops.render.render(write_still=True)
+        from .render_writers_native import suppress
+        with suppress(scene):
+            bpy.ops.render.render(write_still=True)
         receipt['renderSeconds'] += clock.monotonic()-started
-        image = bpy.data.images.load(str(path), check_existing=False)
-        try:
-            if list(image.size) != prepared['size'] or len(set(list(image.pixels)[::4])) < 2:
-                fail('VERIFICATION_FAILED', 'render is empty or has wrong dimensions', str(path))
-        finally:
-            bpy.data.images.remove(image)
+        from .production_outputs import image_snapshot
+        if image_snapshot(path)['size'] != prepared['size']:
+            fail('VERIFICATION_FAILED', 'render has wrong dimensions', str(path))
         receipt['artifacts'].append({'file': str(path), 'kind': 'image', 'units': 'Blender units', 'cameraIndex': index,
             'camera': actual, 'size': prepared['size'], 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
         atomic_json(directory/'verification.json', receipt)

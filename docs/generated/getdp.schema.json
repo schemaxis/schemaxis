@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.getdp/1"
+    },
+    "operation": {
+      "enum": [
+        "steadyHeat",
+        "steadyCurrent"
+      ]
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 48
+          },
+          "thickness_m": {
+            "type": "number",
+            "minimum": 1e-05,
+            "maximum": 1000.0
+          },
+          "conductivity": {
+            "type": "number",
+            "minimum": 1e-05,
+            "maximum": 100000000.0
+          },
+          "source": {
+            "type": "number",
+            "minimum": -100000000.0,
+            "maximum": 100000000.0,
+            "default": 0
+          },
+          "cells": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 128,
+            "default": 16
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "thickness_m",
+          "conductivity"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 16
+    },
+    "left": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "value",
+            "flux",
+            "convection"
+          ]
+        },
+        "value": {
+          "type": "number",
+          "minimum": -100000000.0,
+          "maximum": 100000000.0
+        },
+        "coefficient": {
+          "type": "number",
+          "minimum": 1e-06,
+          "maximum": 100000000.0
+        },
+        "ambient": {
+          "type": "number",
+          "minimum": -100000000.0,
+          "maximum": 100000000.0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ]
+    },
+    "right": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "value",
+            "flux",
+            "convection"
+          ]
+        },
+        "value": {
+          "type": "number",
+          "minimum": -100000000.0,
+          "maximum": 100000000.0
+        },
+        "coefficient": {
+          "type": "number",
+          "minimum": 1e-06,
+          "maximum": 100000000.0
+        },
+        "ambient": {
+          "type": "number",
+          "minimum": -100000000.0,
+          "maximum": 100000000.0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ]
+    },
+    "area_m2": {
+      "type": "number",
+      "minimum": 1e-08,
+      "maximum": 1000000.0,
+      "default": 1
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "minimumField": {
+          "type": "number",
+          "minimum": -100000000.0,
+          "maximum": 100000000.0
+        },
+        "maximumField": {
+          "type": "number",
+          "minimum": -100000000.0,
+          "maximum": 100000000.0
+        },
+        "maxAbsFlux": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000000000.0
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "layers",
+    "left",
+    "right"
+  ]
+}

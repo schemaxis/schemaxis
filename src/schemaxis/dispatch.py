@@ -44,16 +44,22 @@ def execution_deadline(timeout):
         _deadline.reset(token)
 
 
-def remaining_timeout(default=300):
+def remaining_timeout(default=300, *, use_parent_budget=False):
     """Return a native-call budget or reject cancelled/expired verification.
 
     Standalone verification has no run scope and uses the supplied default.
+    Explicit opt-in uses the remaining enclosing budget rather than capping it
+    at default. This never changes or extends the enclosing deadline.
     """
     _valid_timeout(default)
+    if type(use_parent_budget) is not bool:
+        fail('INVALID_TIMEOUT', 'use_parent_budget must be a boolean')
     if cancellation_requested():
         fail('RUNNER_CANCELLED', 'execution cancelled before verification completed')
     deadline = _deadline.get()
-    remaining = default if deadline is None else min(default, deadline - _clock())
+    remaining = default if deadline is None else deadline - _clock()
+    if deadline is not None and not use_parent_budget:
+        remaining = min(default, remaining)
     if remaining <= 0:
         fail('RUNNER_TIMED_OUT', 'execution and verification exhausted the timeout')
     return remaining

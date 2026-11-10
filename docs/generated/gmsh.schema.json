@@ -167,6 +167,12 @@
                           "minimum": 1e-06,
                           "maximum": 0.001,
                           "default": 1e-06
+                        },
+                        "areaTolerance": {
+                          "type": "number",
+                          "minimum": 1e-10,
+                          "maximum": 0.02,
+                          "default": 1e-10
                         }
                       },
                       "additionalProperties": false,
@@ -178,6 +184,80 @@
                     },
                     "maxItems": 12,
                     "default": []
+                  },
+                  "cylinderGroups": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "axis": {
+                          "enum": [
+                            "x",
+                            "y",
+                            "z"
+                          ]
+                        },
+                        "centre": {
+                          "type": "array",
+                          "items": {
+                            "type": "number",
+                            "minimum": -100000,
+                            "maximum": 100000
+                          },
+                          "minItems": 3,
+                          "maxItems": 3
+                        },
+                        "radius": {
+                          "type": "number",
+                          "minimum": 0.001,
+                          "maximum": 100000
+                        },
+                        "side": {
+                          "enum": [
+                            "inner",
+                            "outer"
+                          ]
+                        },
+                        "tolerance": {
+                          "type": "number",
+                          "minimum": 1e-06,
+                          "maximum": 0.001,
+                          "default": 1e-06
+                        },
+                        "areaTolerance": {
+                          "type": "number",
+                          "minimum": 1e-10,
+                          "maximum": 0.02,
+                          "default": 1e-09
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name",
+                        "axis",
+                        "centre",
+                        "radius",
+                        "side"
+                      ]
+                    },
+                    "maxItems": 12,
+                    "default": []
+                  },
+                  "algorithm": {
+                    "enum": [
+                      "delaunay",
+                      "hxt"
+                    ],
+                    "default": "delaunay"
+                  },
+                  "optimise": {
+                    "type": "boolean",
+                    "default": true
                   },
                   "nearBoundaries": {
                     "type": "array",
@@ -238,6 +318,187 @@
               "id",
               "filter",
               "inputs"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "cylinder"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "origin": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -100000,
+                      "maximum": 100000
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "default": [
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "axis": {
+                    "enum": [
+                      "x",
+                      "y",
+                      "z"
+                    ],
+                    "default": "z"
+                  },
+                  "radius": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 100000,
+                    "default": 5
+                  },
+                  "height": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 100000,
+                    "default": 10
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "hollowCylinder"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "origin": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -100000,
+                      "maximum": 100000
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "default": [
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "axis": {
+                    "enum": [
+                      "x",
+                      "y",
+                      "z"
+                    ],
+                    "default": "z"
+                  },
+                  "radius": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 100000,
+                    "default": 5
+                  },
+                  "innerRadius": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 100000,
+                    "default": 3
+                  },
+                  "height": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 100000,
+                    "default": 10
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "filter": {
+                "const": "sphere"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "centre": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -100000,
+                      "maximum": 100000
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "default": [
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "radius": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 100000,
+                    "default": 5
+                  }
+                },
+                "additionalProperties": false
+              },
+              "inputs": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter"
             ]
           }
         ]
@@ -316,6 +577,31 @@
               },
               "minItems": 1,
               "maxItems": 13
+            },
+            "boundaryMaximumChordDeviation": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "boundary": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "maximum": {
+                    "type": "number",
+                    "minimum": 1e-06,
+                    "maximum": 100000
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "boundary",
+                  "maximum"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 12
             }
           },
           "additionalProperties": false,

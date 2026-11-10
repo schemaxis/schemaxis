@@ -1,0 +1,47 @@
+{
+  "version": "schemaxis.adaptor-assessment/1",
+  "rubric": "schemaxis.strength-rubric/1",
+  "assessmentVersion": "2026-10-26.1",
+  "assessedOn": "2026-10-26",
+  "assessor": "Schemaxis editorial assessment",
+  "provider": "xarray",
+  "providerVersion": "schemaxis.xarray/1",
+  "routes": [
+    "schemaxis.xarray/1"
+  ],
+  "sourceFingerprint": "sha256:6a32709258eb20fdf9bf40221feb88e9e76561a77754699de9f51ce9c783d81a",
+  "coverage": {
+    "percent": 5,
+    "status": "subjective",
+    "scope": {
+      "kind": "whole-application",
+      "description": "Whole xarray labelled-array and dataset functionality across data preparation, analysis and interchange.",
+      "denominator": "Labelled arrays and datasets, indexing and selection, named-dimension arithmetic and reduction, alignment and merging, grouping/resampling/rolling, coordinate and calendar handling, storage backends, lazy/distributed execution and scientific inspection."
+    },
+    "rationale": "One classic-NetCDF variable can be selected by named numeric coordinate ranges and reduced to an unweighted mean profile. Most labelled-array operations, dataset combinations, scientific metadata conventions and storage/execution backends remain outside this integration; a coarse 5% whole-application estimate reflects that narrow breadth.",
+    "confidence": "low"
+  },
+  "abstraction": {
+    "percent": 75,
+    "status": "subjective",
+    "scope": {
+      "kind": "declared-workflows",
+      "description": "Bounded local classic-NetCDF measurement-cube selection into a one-axis unweighted mean profile with declared variable, layout/unit assertions, coordinate ranges, missing-data policy and numeric plotting handoff.",
+      "denominator": "User intent and domain decisions within this one-variable profile workflow; general xarray analysis and excluded scientific conventions are outside this denominator."
+    },
+    "rationale": "Authors declare coordinates, selection, retained dimension and missingness rather than write array code or native serialization. Independent finite-array checks and a typed profile publication support reuse, but users still supply storage-order and unit assertions, choose the missing policy and arrange scientifically appropriate weighting or plotting outside the supported slice.",
+    "confidence": "medium"
+  },
+  "evidence": [
+    "src/schemaxis/adaptors/xarray/adaptor.json",
+    "src/schemaxis/adaptors/xarray/readiness.json",
+    "docs/xarray.md",
+    "verification/2026-10-25-xarray-completion.md"
+  ],
+  "limitations": [
+    "One bounded CDF-1 classic-NetCDF cube and one variable with strictly increasing numeric coordinates; selected retained profiles have at most 2048 points. No general CF/calendar, packed values, NetCDF4/HDF5, Zarr, remote or Dask workflow.",
+    "The reduction is an unweighted mean with explicit skip, propagate or refuse policy and conditioning refusal. No inferred units, alignment, interpolation, measurement uncertainty or scientific-validity certification.",
+    "Dimension-list order is a deliberate storage-layout assertion, although reduction uses named dimensions. A plotting consumer has its own row, finite-value, header and unit contract; artifact kind alone does not establish compatibility.",
+    "Subjective source-contract estimates rounded to five points, not exhaustive API measurements. Native runtime availability and source-bound qualification remain separate facts."
+  ]
+}

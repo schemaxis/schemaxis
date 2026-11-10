@@ -1,0 +1,78 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "fixed",
+      "document": {
+        "version": "schemaxis.freecad.assembly/1",
+        "parts": [
+          {
+            "id": "block",
+            "type": "box",
+            "options": {
+              "length": 10,
+              "width": 10,
+              "height": 10
+            }
+          }
+        ],
+        "components": [
+          {
+            "id": "base",
+            "part": "block",
+            "position": [
+              2,
+              3,
+              4
+            ],
+            "rotation": 90
+          },
+          {
+            "id": "arm",
+            "part": "block"
+          }
+        ],
+        "grounded": "base",
+        "joints": [
+          {
+            "id": "hinge",
+            "type": "fixed",
+            "parent": {
+              "component": "base",
+              "face": "top"
+            },
+            "child": {
+              "component": "arm",
+              "face": "bottom"
+            },
+            "offset": [
+              3,
+              4,
+              5
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "motion",
+      "document": {
+        "version": "schemaxis.freecad.mechanism/1",
+        "source": {
+          "$artifact": "fixed",
+          "index": 0
+        },
+        "durationSeconds": 2,
+        "intervals": 12,
+        "framesPerSecond": 24,
+        "motions": [
+          {
+            "joint": "hinge",
+            "kind": "rotation",
+            "end": 90
+          }
+        ]
+      }
+    }
+  ]
+}

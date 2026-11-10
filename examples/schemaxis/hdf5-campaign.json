@@ -1,0 +1,44 @@
+{
+  "version": "schemaxis.hdf5/1",
+  "operation": "createFile",
+  "file": {"name": "campaign.h5", "libver": "v110", "trackOrder": true,
+           "attributes": [{"name": "campaign", "value": "Thermal soak 2026-11"}]},
+  "inputs": [
+    {"id": "temps", "path": "/replace/with/hdf5-fixtures/temperatures.csv", "format": "csv"},
+    {"id": "matrix", "path": "/replace/with/hdf5-fixtures/matrix.npy", "format": "npy"}
+  ],
+  "dependencies": [
+    {"id": "runA", "path": "/replace/with/hdf5-fixtures/run-a.h5", "role": "virtualSource"},
+    {"id": "runB", "path": "/replace/with/hdf5-fixtures/run-b.h5", "role": "virtualSource"},
+    {"id": "probe", "path": "/replace/with/hdf5-fixtures/probe-counts.bin", "role": "rawStorage"}
+  ],
+  "objects": [
+    {"path": "/campaign/signal", "type": {"class": "float", "bits": 64}, "shape": [10], "units": "V",
+     "virtual": {"fill": -999.0, "sources": [
+       {"file": "runA", "dataset": "/signal", "at": {"kind": "slices", "slices": [{"start": 0, "stop": 4}]}},
+       {"file": "runB", "dataset": "/signal", "select": {"kind": "slices", "slices": [{"start": 1, "stop": 4}]},
+        "at": {"kind": "slices", "slices": [{"start": 5, "stop": 8}]}}]}},
+    {"path": "/campaign/probe_counts", "type": {"class": "int", "bits": 16, "order": "big"}, "shape": [8], "units": "count",
+     "storage": {"external": [{"file": "probe", "offset": 4, "size": 16}]}},
+    {"path": "/campaign/time", "type": {"class": "float", "bits": 64}, "shape": [4], "data": {"source": "input", "input": "temps", "column": "time"},
+     "units": "s", "scale": "time"},
+    {"path": "/campaign/temperature", "type": {"class": "float", "bits": 32}, "shape": [4], "data": {"source": "input", "input": "temps", "column": "temperature"},
+     "units": "K", "dimensions": [{"axis": 0, "label": "time", "scales": ["/campaign/time"]}],
+     "storage": {"chunks": [2], "compression": "szip", "szipMethod": "nn", "szipPixels": 2}},
+    {"path": "/campaign/samples", "type": {"class": "compound", "fields": [{"name": "time", "type": {"class": "float", "bits": 64}},
+        {"name": "temperature", "type": {"class": "float", "bits": 64}}, {"name": "valid", "type": {"class": "bool"}}]},
+     "shape": [4], "data": {"source": "input", "input": "temps", "columns": ["time", "temperature", "valid"]}},
+    {"path": "/campaign/gain_matrix", "type": {"class": "float", "bits": 64}, "shape": [2, 3], "data": {"source": "input", "input": "matrix"},
+     "storage": {"chunks": [1, 3], "scaleOffset": 2, "fillValue": 0}},
+    {"path": "/campaign/counter", "type": {"class": "uint", "bits": 32}, "shape": [6], "maxshape": [12],
+     "data": {"source": "range", "start": 100, "step": 25},
+     "storage": {"chunks": [3], "scaleOffset": 0, "fletcher32": true, "allocTime": "early", "fillTime": "alloc", "fillValue": 7}}
+  ],
+  "links": [
+    {"path": "/runs/a_signal", "kind": "external", "file": "run-a.h5", "target": "/signal"}
+  ],
+  "extracts": [
+    {"id": "stitched", "dataset": "/campaign/signal", "format": "json"},
+    {"id": "temperature", "dataset": "/campaign/temperature"}
+  ]
+}

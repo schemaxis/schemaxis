@@ -11,6 +11,7 @@ from pathlib import Path
 from schemaxis.artifacts import atomic_json
 from schemaxis.errors import fail
 from .assembly_sources import labels, mount_expressions, visibility, proxies
+from .source_bridge import requires_copy_regeneration
 
 
 def runtime():
@@ -32,7 +33,9 @@ def require(condition, message, **detail):
 def load(directory):
     from .assembly import plan
     directory = Path(directory)
-    prepared = plan(json.loads((directory/'authored.json').read_text()))
+    authored=json.loads((directory/'authored.json').read_text());saved=json.loads((directory/'plan.json').read_text())
+    from .source_bridge import replay_plan
+    prepared = replay_plan(directory,authored,saved)
     require(json.loads((directory/'plan.json').read_text()) == prepared, 'Saved plan differs from authored input')
     require(prepared.get('sourced') is True, 'Not a sourced assembly plan')
     return directory, prepared
@@ -79,6 +82,56 @@ def history(doc):
             for prop in HISTORY_SHAPES if prop in o.PropertiesList}
 
 
+def ordered_history(doc,mapping):
+    """Capture every indexed history element and each actual subelement consumer.
+
+    Persistent names may regenerate; an EdgeN/FaceN selection must still resolve
+    to the same indexed geometry. Keep ordering here, unlike the shape-level
+    recompute oracle's unordered vertex and face/edge inventories.
+    """
+    back={new:old for old,new in mapping.items()};shapes={};references={}
+    for old,new in mapping.items():
+        obj=doc.getObject(new)
+        for prop in HISTORY_SHAPES:
+            if prop not in obj.PropertiesList:continue
+            shape=getattr(obj,prop)
+            shapes[old+'.'+prop]=None if shape.isNull() else {
+                kind:[ordered_record(element) for element in getattr(shape,native)]
+                for kind,native in [('faces','Faces'),('edges','Edges'),('vertices','Vertexes')]}
+        for prop in obj.PropertiesList:
+            kind=obj.getTypeIdOfProperty(prop)
+            if kind not in ('App::PropertyLinkSub','App::PropertyLinkSubList'):continue
+            value=getattr(obj,prop)
+            links=([value] if value and value[0] else []) if kind=='App::PropertyLinkSub' else value
+            entries=[]
+            for target,subs in links:
+                require(target is not None and target.Document==doc and target.Name in back,
+                        'History subelement reference escapes its copied source',object=old,property=prop)
+                for sub in subs:
+                    if not sub:continue
+                    element=target.getSubObject(sub)
+                    require(element is not None and not element.isNull(),'History subelement is unresolved',object=old,property=prop)
+                    entries.append({'target':back[target.Name],'sub':sub,'shape':ordered_record(element)})
+            references[old+'.'+prop]=entries
+    return {'shapes':shapes,'references':references}
+
+
+def ordered_record(shape):
+    """Current source/copy geometry: enclosed material and finite orientation.
+
+    OCCT's default VolumeProperties also integrates open faces, where a result
+    is not enclosed material and can carry cancellation noise. Keep the old
+    shape-level receipt format unchanged; this record is freshly measured on
+    both sides of every current regeneration, never supplied by a receipt.
+    """
+    result=history_record(shape)
+    if result is None:return None
+    result['volume']=sum(solid.Volume for solid in shape.Solids)
+    result['orientation']=str(shape.Orientation)
+    require(result['orientation'] in ('Forward','Reversed','Internal','External'),'Unknown native history orientation')
+    return result
+
+
 def capture(directory):
     """Measure each retained source copy alone, then prove its stored history by recompute."""
     App, _ = runtime()
@@ -93,8 +146,10 @@ def capture(directory):
             require(not [o.Name for o in doc.Objects if any(s in o.State for s in ('Invalid', 'Error', 'Touched'))],
                     'Captured source opens invalid or out of date', part=part['id'])
             stored = history(doc)
+            ordered=ordered_history(doc,{o.Name:o.Name for o in doc.Objects}) if requires_copy_regeneration(part['source']) else None
+            from .body_seed_native import local_shape
             record = {'objects': dict(sorted((o.Name, o.TypeId) for o in doc.Objects)),
-                      'tip': body.Tip.Name if body.Tip else None, 'shape': shape_record(body.Shape)}
+                      'tip': body.Tip.Name if body.Tip else None, 'shape': shape_record(local_shape(body))}
             # Every stored history payload must be what the feature history reproduces.
             for obj in doc.Objects:
                 obj.touch()
@@ -102,6 +157,7 @@ def capture(directory):
             record['recomputeStates'] = {o.Name: list(o.State) for o in doc.Objects
                                          if any(s in o.State for s in ('Invalid', 'Error', 'Touched'))}
             record['history'] = {'stored': stored, 'recomputed': history(doc)}
+            if ordered is not None:record['orderedHistory']=ordered
             parts[part['id']] = record
         finally:
             App.closeDocument(doc.Name)
@@ -144,7 +200,8 @@ def snapshot(doc, prepared, renames):
         body = doc.getObject(mapped[facts['body']])
         varset = doc.getObject(mapped[facts['varset']]) if facts['varset'] else None
         out['sources'][part_id] = {'tip': body.Tip.Name if body.Tip else None, 'tipVolume': body.Shape.Volume,
-            'parameters': {p: float(getattr(varset, p).Value) for p in varset.PropertiesList if p.startswith('dim_')} if varset else {}}
+            'parameters': ({'dim_'+p:float(getattr(varset,'dim_'+p).Value) for p in facts['parameters']}
+                           if 'spreadsheet' in facts else {p: float(getattr(varset, p).Value) for p in varset.PropertiesList if p.startswith('dim_')}) if varset else {}}
     return out
 
 
@@ -177,8 +234,11 @@ def build(directory):
     doc = App.newDocument('SchemaxisAssembly')
     try:
         renames = {}
-        for part in prepared['parts']:
-            source = App.openDocument(str(directory/native['retained'][part['id']]))
+        for index,part in enumerate(prepared['parts']):
+            path=directory/native['retained'][part['id']]
+            from .source_assets_native import stage_copies
+            stage_copies(directory,path,part,index)
+            source = App.openDocument(str(path))
             try:
                 objects = list(source.Objects)
                 require({o.Name: o.TypeId for o in objects} == part['source']['objects'], 'Captured source membership differs', part=part['id'])
@@ -188,6 +248,8 @@ def build(directory):
                 renames[part['id']] = {s.Name: c.Name for s, c in zip(objects, copies)}
             finally:
                 App.closeDocument(source.Name)
+            from .source_assets_native import attach_copies
+            attach_copies(directory,doc,part,index,renames[part['id']])
             own = set(renames[part['id']].values())
             for name in own:
                 require(all(x.Document == doc and x.Name in own for x in doc.getObject(name).OutList),
@@ -198,6 +260,8 @@ def build(directory):
             if name in copied:
                 doc.getObject(name).Label = label
         doc.recompute()
+        copied_history={p['id']:ordered_history(doc,renames[p['id']]) for p in prepared['parts']
+                        if requires_copy_regeneration(p['source'])}
         bodies = {}
         for part in prepared['parts']:
             facts, mapped = part['source'], renames[part['id']]
@@ -251,6 +315,16 @@ def build(directory):
             for end in ('parent', 'child'):
                 datum = native['mounts'][part_of[joint[end]['component']]+'.'+joint[end]['mount']]
                 refs.append([components[joint[end]['component']], [datum+'.', datum+'.']])
+            # Choose the coincident-frame branch before the interactive
+            # presolver chooses the nearest parallel/antiparallel solution.
+            # This uses actual native datums; the host's independent oracle
+            # still checks every pose, and solve_probe subsequently perturbs
+            # all movable links without another presolve or analytic reset.
+            parent,child=joint['parent'],joint['child']
+            parent_datum=doc.getObject(native['mounts'][part_of[parent['component']]+'.'+parent['mount']])
+            child_datum=doc.getObject(native['mounts'][part_of[child['component']]+'.'+child['mount']])
+            components[child['component']].Placement=(components[parent['component']].Placement
+                .multiply(parent_datum.Placement).multiply(obj.Offset1).multiply(child_datum.Placement.inverse()))
             obj.Proxy.setJointConnectors(obj, refs)
         doc.recompute()
         require(assembly.solve() == 0, 'Initial native assembly solve failed')
@@ -265,7 +339,8 @@ def build(directory):
     from .gui_state import persist
     persist(directory/'model.FCStd', visibility(prepared, objects, renames), proxies(prepared))
     atomic_json(directory/'built.json', {'stage': 'build', 'pid': os.getpid(), 'runtime': App.Version(), 'definition': prepared,
-        'renames': renames, 'snapshots': {'initial': initial, 'solved': solved}, 'solver': solver})
+        'renames': renames, 'snapshots': {'initial': initial, 'solved': solved}, 'solver': solver,
+        'copiedHistory':copied_history})
 
 
 def _reopen(path, prepared, renames):
@@ -328,7 +403,12 @@ def edit_probe(directory):
         part = next(p for p in prepared['parts'] if p['id'] == request['part'])
         varset = doc.getObject(renames[part['id']][part['source']['varset']])
         before = snapshot(doc, prepared, renames)
-        setattr(varset, 'dim_'+request['parameter'], request['value'])
+        if 'spreadsheet' in part['source']:
+            table=part['source']['spreadsheet']
+            require(request['parameter'] in table['inputs'],'Only independent spreadsheet cells can be edited')
+            varset.set(table['cells'][request['parameter']],format(request['value'],'.17g')+' mm')
+        else:
+            setattr(varset, 'dim_'+request['parameter'], request['value'])
         doc.recompute()
         recomputed = snapshot(doc, prepared, renames)
         code = doc.getObject('Assembly').solve()

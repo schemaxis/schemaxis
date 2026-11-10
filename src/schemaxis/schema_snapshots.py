@@ -29,7 +29,7 @@ def _nonfinite(value):
 def _document(payload, version, location):
     try:
         schema = json.loads(payload.decode('utf-8'), parse_constant=_nonfinite)
-    except (UnicodeError, ValueError) as error:
+    except (UnicodeError, ValueError, RecursionError) as error:
         _invalid('schema is not finite UTF-8 JSON: ' + str(error), location)
     properties = schema.get('properties') if isinstance(schema, dict) else None
     selector = properties.get('version') if isinstance(properties, dict) else None
@@ -109,7 +109,7 @@ def read(path):
         if target.is_symlink() or not target.resolve().is_relative_to(path.parent.resolve()):
             _invalid('schema reference escapes the portable store', path)
         payload = target.read_bytes()
-    except (OSError, UnicodeError, ValueError) as error:
+    except (OSError, UnicodeError, ValueError, RecursionError) as error:
         _invalid('schema snapshot is missing or unreadable: ' + str(error), path)
     if len(payload) != manifest['bytes'] or hashlib.sha256(payload).hexdigest() != manifest['sha256']:
         _invalid('schema content hash or byte count differs', path)

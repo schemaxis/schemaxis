@@ -2,7 +2,7 @@
 // Schemaxis Studio JSON editor: textarea + highlight overlay, schema completion,
 // hover documentation, diagnostics and ghost previews. See createJsonEditor().
 
-import {dumpYaml} from './yaml-parse.mjs';
+import {dumpYaml, yamlRender} from './yaml-parse.mjs';
 import {formatJson} from './json-format.mjs';
 import {debounce} from '../lib/dom.mjs';
 import {parse, documentValue} from './json-parse.mjs';
@@ -256,6 +256,8 @@ export function createJsonEditor(container, options = {}) {
     element: view.root,
     textarea,
 
+    undo() { if (state.readOnly) return false; textarea.focus(); return document.execCommand('undo'); },
+    redo() { if (state.readOnly) return false; textarea.focus(); return document.execCommand('redo'); },
     getValue: () => textarea.value,
     getDocument: () => {
       const ast = ensureAst();
@@ -385,6 +387,13 @@ export function createJsonEditor(container, options = {}) {
     },
 
     getTextVersion: () => settling.version,
+    /** One undoable document edit, preserving the selected source format. */
+    replaceDocument(value) {
+      if (state.readOnly) throw Error('This editor is read-only.');
+      const ast = ensureAst();
+      replaceText(0, textarea.value.length, ast.format === 'yaml'
+        ? yamlRender(ast, value, state.options.indent) : JSON.stringify(value, null, state.options.indent));
+    },
     getSettledState: () => settling.snapshot(),
     onSettledState: (listener) => settling.subscribe(listener),
     flushDiagnostics() {

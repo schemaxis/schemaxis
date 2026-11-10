@@ -129,9 +129,19 @@ def _saved_exactly(prepared):
         elif isinstance(value, list):
             for i, item in enumerate(value):
                 leaves(f'{where}[{i}]', item)
+        elif isinstance(value, dict):
+            for key,item in value.items():
+                leaves(f'{where}.{key}', item)
     for key, parameter in sorted(prepared.get('parameters', {}).items()):
         for field in ('value', 'minimum', 'maximum'):
             leaves(f'parameters.{key}.{field}', parameter[field])
+    if 'spreadsheet' in prepared:
+        table=prepared['spreadsheet']
+        literals=[item['value'] for item in table['inputs'].values()]
+        literals.extend(item['offset']['value'] for item in table['formulas'].values())
+        literals.extend(value for item in table['formulas'].values() for value in item['terms'].values())
+        if any(expression_number(value)!=value for value in literals):
+            found.append('spreadsheet (expression literal precision)')
     for node in prepared['nodes']:
         for option, value in sorted(node['options'].items()):
             leaves(f"{node['id']}.{option}", value)
@@ -160,7 +170,10 @@ def admit(value, location):
         fail('UNSUPPORTED_SOURCE', 'source must come from the schemaxis.freecad/1 part route (no design study)', location)
     planned = _json(run/'plan.json', location)
     try:
-        prepared = part_plan(authored)
+        if any(isinstance(n,dict) and n.get('filter')=='bodySeed' for n in authored.get('nodes',[])):
+            from .source_bridge import EmbeddedSources
+            prepared=part_plan(authored,source=EmbeddedSources(path,planned))
+        else:prepared = part_plan(authored)
     except SchemaxisError as error:
         fail('UNSUPPORTED_SOURCE', 'source part input no longer plans', location, detail=error.fault.message)
     if planned != prepared:
@@ -171,9 +184,20 @@ def admit(value, location):
              'history would not reproduce on recompute; re-run the part with values of at most 15 significant digits',
              location, values=inexact[:8])
     body = prepared.get('partDesign')
-    if not body or body.get('tip') is None or prepared['output'] != body['tip']:
+    generation=body.get('generation',1) if body else 1
+    if generation==2:
+        selected=body['owners'].get(prepared['output'])
+        selected_record=body['bodies'].get(selected,{})
+        if selected_record.get('tip')!=prepared['output'] or selected is None:
+            fail('UNSUPPORTED_SOURCE','Source must publish a final solid Body tip',location)
+        if not body.get('seeds') and {n['id'] for n in prepared['nodes']} != set(body['owners'])|set(body['bodies']):
+            fail('UNSUPPORTED_SOURCE','Source histories must contain only their Bodies and owned members',location)
+        selected_body={'body':selected,**selected_record}
+    elif not body or body.get('tip') is None or prepared['output'] != body['tip']:
         fail('UNSUPPORTED_SOURCE', 'source must publish the solid tip of exactly one PartDesign Body', location)
-    if {n['id'] for n in prepared['nodes']} != set(body['members']) | {body['body']}:
+    else:
+        selected_body=body
+    if generation!=2 and {n['id'] for n in prepared['nodes']} != set(body['members']) | {body['body']}:
         fail('UNSUPPORTED_SOURCE', 'source document contains geometry outside its Body', location)
     result = _json(run/'result.json', location)
     if not isinstance(result, dict) or result.get('verified') is not True or result.get('status') != 'succeeded':
@@ -194,6 +218,13 @@ def admit(value, location):
     if publication.get('sha256') != sha256:
         fail('INPUT_CHANGED', 'source part bytes differ from its verified receipt', location, path=str(path))
     native = receipt.get('native', {})
+    from .body_seed import world_body
+    if body.get('seeds') or world_body(prepared,prepared['output']) is not None:
+        evidence=receipt.get('bodyLocalExportEvidence',{})
+        selected_index=next(i for i,n in enumerate(prepared['nodes']) if n['id']==selected_body['body'])
+        if evidence.get('frame')!='bodyLocal' or evidence.get('body')!='N'+str(selected_index):
+            fail('UNSUPPORTED_SOURCE','Placed source receipt lacks its explicit Body-local geometry witness',location)
+        native=evidence.get('shape',{})
     if (native.get('valid') is not True or native.get('solids') != 1 or not _finite(native.get('volume'))
             or native['volume'] <= 0 or not _finite(native.get('area')) or not _vector(native.get('bounds'), 6)):
         fail('UNSUPPORTED_SOURCE', 'source receipt lacks one valid positive-volume solid', location)
@@ -202,30 +233,43 @@ def admit(value, location):
     auxiliaries = observed.get('auxiliaries') if isinstance(observed, dict) else None
     from .part_design import verify_auxiliaries
     objects = {mapped[n['id']]: _native_type(n['filter']) for n in prepared['nodes']}
+    from .operations import extra_objects
+    objects.update(extra_objects(prepared))
     try:
         objects.update(verify_auxiliaries(prepared, auxiliaries))
     except SchemaxisError:
         fail('UNSUPPORTED_SOURCE', 'source receipt lacks its Body origin helpers', location)
     parameters = {}
     if 'parameters' in prepared:
-        objects['SchemaxisParameters'] = 'App::VarSet'
+        from .parameters import object_type
+        objects['SchemaxisParameters'] = object_type(prepared)
         parameters = {k: {'value': v['value'], 'minimum': v['minimum'], 'maximum': v['maximum']}
                       for k, v in prepared['parameters'].items()}
     # Closed host envelope of the saved source, before anything could open it natively.
     from . import source_envelope
-    envelope = source_envelope.inspect(path, {'objects': objects, 'parameters': parameters}, location)
-    pad = next(n for n in prepared['nodes'] if n['filter'] == 'pad')
-    profile = next(n for n in prepared['nodes'] if n['id'] == pad['inputs']['profile'])
+    sheet = {'spreadsheet':prepared['spreadsheet']} if 'spreadsheet' in prepared else {}
+    from .source_bridge import record as bridge_record
+    bridge=bridge_record(authored,prepared)
+    envelope = source_envelope.inspect(path, {'objects': objects, 'parameters': parameters,'generation':generation,**sheet,**bridge}, location)
+    if generation==2:
+        from .part_design_saved import verify as verify_history
+        verify_history(prepared,path)
+        plane=auxiliaries[selected_body['body']]['XY_Plane']['name']
+        profile_kind='designHistory'
+    else:
+        pad = next(n for n in prepared['nodes'] if n['filter'] == 'pad')
+        profile_kind=next(n for n in prepared['nodes'] if n['id'] == pad['inputs']['profile'])['filter']
+        plane=auxiliaries['XY_Plane']['name']
     return {'file': str(path), 'sha256': sha256, 'run': str(run), 'bytes': path.stat().st_size,
             'expandedBytes': envelope['expandedBytes'],
             'receiptSha256': hashlib.sha256(_read(receipt_path, RECEIPT_BYTES, location)).hexdigest(),
-            'body': mapped[body['body']], 'tip': mapped[body['tip']],
-            'members': [mapped[m] for m in body['members']],
+            'body': mapped[selected_body['body']], 'tip': mapped[selected_body['tip']],
+            'members': [mapped[m] for m in selected_body['members']],
             'labels': {mapped[n['id']]: n['id'] for n in prepared['nodes']},
-            'objects': dict(sorted(objects.items())), 'xyPlane': auxiliaries['XY_Plane']['name'],
+            'objects': dict(sorted(objects.items())), 'xyPlane': plane,
             'varset': 'SchemaxisParameters' if parameters else None, 'parameters': parameters,
             'volume': native['volume'], 'area': native['area'], 'bounds': list(native['bounds']),
-            'profile': profile['filter']}
+            'profile': profile_kind,**sheet,**bridge,**({'generation':2} if generation==2 else {})}
 
 
 def _native_type(kind):
@@ -405,7 +449,7 @@ def analytic(prepared):
 
 # ----------------------------------------------------------------------- plan
 
-def plan(document):
+def plan(document,*,source_facts=None):
     """Sourced-part plan; constructor documents never reach this function."""
     from .assembly import MAX_COMPONENTS, VECTOR, ANGLE, _array
     parts, part_ids, files = [], set(), {}
@@ -417,7 +461,8 @@ def plan(document):
         identity = name(item.get('id'), '$.parts.id')
         if identity in part_ids:
             fail('DUPLICATE_PART', 'Part ID is duplicated', identity)
-        facts = admit(item['source'], identity+'.source')
+        facts=(source_facts or {}).get(identity)
+        if facts is None:facts=admit(item['source'], identity+'.source')
         parts.append({'id': identity, 'source': facts, 'mounts': prepare_mounts(item.get('mounts'), facts, identity+'.mounts')})
         part_ids.add(identity)
     if sum(p['source']['bytes'] for p in parts) > TOTAL_SOURCE_BYTES or \
@@ -543,10 +588,8 @@ def reusable_inputs(prepared):
 def run(document, prepared, directory, *, executable, timeout, gui_executable=None):
     from schemaxis.artifacts import atomic_json, runtime_archive
     from schemaxis.core.runners import Interpreter
-    from schemaxis.dispatch import SubprocessRunner, cancellation_requested
-    if gui_executable:
-        fail('UNSUPPORTED_STAGE', 'The optional GUI capture stage would replace the verified first-open state of a sourced '
-             'assembly; omit the FreeCAD GUI launcher for this route')
+    from schemaxis.dispatch import cancellation_requested
+    from .process import SubprocessRunner
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
         fail('INVALID_EXECUTION', 'Assembly timeout must be finite and positive')
     executable = executable or os.environ.get('FREECAD_CMD')
@@ -570,6 +613,11 @@ def run(document, prepared, directory, *, executable, timeout, gui_executable=No
         (directory/'runtime.zip').write_bytes(snapshot)
         # The exact retained bytes that native stages open, checked immediately before launch.
         guard_retained(prepared, directory, 'UNSUPPORTED_SOURCE')
+        from .source_bridge import verify_before_open
+        from schemaxis.dispatch import execution_deadline
+        with execution_deadline(max(.001,deadline-time.monotonic())):
+            for part in prepared['parts']:
+                verify_before_open(directory/prepared['native']['retained'][part['id']],part['source'],executable=executable)
         runner = SubprocessRunner(Interpreter('freecad', str(Path(executable).resolve())), directory, timeout=timeout)
         for stage in ('capture', 'build', 'reopen'):
             runner.timeout = deadline-time.monotonic()
@@ -588,7 +636,17 @@ def run(document, prepared, directory, *, executable, timeout, gui_executable=No
             if stage == 'capture':
                 # Stored history must be what recompute reproduces before anything is built from it.
                 check_captured(prepared, directory)
-        result = verify(directory, require_result=False)
+        result = verify(directory, require_result=False,executable=executable,
+                        verification_timeout=max(.001,deadline-time.monotonic()))
+        if gui_executable:
+            # Complete admission above precedes EVERY GUI document restore.
+            # Inspect without saving: minimal visibility and proxy intent stay
+            # byte-identical to the verified native publication.
+            if cancellation_requested():fail('RUNNER_CANCELLED','Assembly GUI inspection cancelled before launch')
+            if time.monotonic()>=deadline:fail('RUNNER_TIMED_OUT','Assembly budget expired before GUI inspection')
+            from .assembly_sources_gui import inspect_verified
+            result['guiInspection']=inspect_verified(directory,prepared,gui_executable,max(.001,deadline-time.monotonic()),
+                                                     verified_sha256=result['nativeSha256'])
         # The whole-run budget and cancellation also cover the final host verification.
         if cancellation_requested():
             fail('RUNNER_CANCELLED', 'Assembly execution cancelled')
@@ -606,7 +664,11 @@ def run(document, prepared, directory, *, executable, timeout, gui_executable=No
 
 
 def envelope_facts(facts):
-    return {'objects': facts['objects'], 'parameters': facts['parameters']}
+    from .source_bridge import capability
+    key=capability(facts)
+    return {'objects': facts['objects'], 'parameters': facts['parameters'],'generation':facts.get('generation',1),
+            **({'spreadsheet':facts['spreadsheet']} if 'spreadsheet' in facts else {}),
+            **({key:facts[key],'sourceFrame':facts.get('sourceFrame')} if key else {})}
 
 
 def guard_retained(prepared, directory, code):
@@ -651,7 +713,22 @@ def close(a, b, rel=1e-7, absolute=1e-6):
     return _finite(a) and _finite(b) and math.isclose(a, b, rel_tol=rel, abs_tol=absolute)
 
 
-def verify(directory, require_result=True):
+def verify(directory, require_result=True,*,executable=None,verification_timeout=120):
+    """Share one verification budget across source admission and copied history.
+
+    A run can supply its remaining budget; a standalone call keeps the existing
+    120-second default. Neither case extends a tighter enclosing deadline.
+    """
+    from schemaxis.dispatch import execution_deadline,remaining_timeout
+    with execution_deadline(verification_timeout):
+        remaining_timeout(verification_timeout)
+        result=_verify(directory,require_result,executable=executable,
+                       verification_timeout=verification_timeout)
+        remaining_timeout(verification_timeout)
+        return result
+
+
+def _verify(directory, require_result=True,*,executable=None,verification_timeout=120):
     from .assembly import plan as assembly_plan
     from .adaptor import verify as verify_part
     from .assembly_sources_saved import verify_saved
@@ -661,7 +738,9 @@ def verify(directory, require_result=True):
         if not condition:
             fail('VERIFICATION_FAILED', message, str(directory), **detail)
     authored = json.loads((directory/'authored.json').read_text())
-    prepared = assembly_plan(authored)
+    stored=json.loads((directory/'plan.json').read_text())
+    from .source_bridge import replay_plan
+    prepared = replay_plan(directory,authored,stored)
     require(prepared.get('sourced') is True, 'Not a sourced assembly run')
     require(json.loads((directory/'plan.json').read_text()) == prepared, 'Assembly plan differs from authored input')
     if require_result:
@@ -675,11 +754,15 @@ def verify(directory, require_result=True):
         require(record == {'file': facts['file'], 'retained': str(retained), 'sha256': facts['sha256'],
                            'receiptSha256': facts['receiptSha256']}, 'Captured source provenance differs', part=part['id'])
         check_archive(retained, part['id'], code='VERIFICATION_FAILED')
-        if digest(retained) != facts['sha256'] or digest(facts['file']) != facts['sha256']:
+        from .source_bridge import capability
+        if digest(retained) != facts['sha256'] or not capability(facts) and digest(facts['file']) != facts['sha256']:
             fail('INPUT_CHANGED', 'Source part or its retained copy changed', part['id'])
-        verify_part(facts['run'])
+        if not capability(facts):verify_part(facts['run'])
         retained_paths[part['id']] = retained
     guard_retained(prepared, directory, 'VERIFICATION_FAILED')
+    from .source_bridge import verify_before_open
+    for part in prepared['parts']:
+        verify_before_open(retained_paths[part['id']],part['source'],executable=executable)
     captured = json.loads((directory/'capture.json').read_text())
     built = json.loads((directory/'built.json').read_text())
     reopened = json.loads((directory/'verification.json').read_text())
@@ -714,10 +797,18 @@ def verify(directory, require_result=True):
     require(artifact.get('file') == str(path) and artifact.get('kind') == 'cadScene' and artifact.get('units') == 'mm',
             'Assembly artifact metadata differs')
     require(artifact.get('sha256') == digest(path), 'Native assembly file changed')
-    verify_saved(prepared, path, renames, retained_paths)
+    from .source_bridge import requires_copy_regeneration
+    if any(requires_copy_regeneration(p['source']) for p in prepared['parts']):
+        from .history_copy_verify import regenerate
+        from schemaxis.dispatch import remaining_timeout
+        with regenerate(directory,prepared,retained_paths,executable=executable,
+                        timeout=remaining_timeout(verification_timeout)) as regenerated:
+            verify_saved(prepared,path,renames,retained_paths,regenerated)
+    else:
+        verify_saved(prepared, path, renames, retained_paths)
     return {'verified': True, 'artifacts': 1, 'components': len(prepared['components']), 'joints': len(prepared['joints']),
             'sourceParts': len(prepared['parts']), 'expectedDegreesOfFreedom': 0, 'runtime': reopened['runtime'],
-            'solver': 'FreeCAD built-in Assembly', 'nativeFile': str(path)}
+            'solver': 'FreeCAD built-in Assembly', 'nativeFile': str(path),'nativeSha256':artifact['sha256']}
 
 
 def check_captured(prepared, directory):

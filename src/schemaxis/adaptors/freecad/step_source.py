@@ -441,15 +441,15 @@ def admit(data, location, *, export=False):
 def read_bounded(path, location, *, limit=MAX_BYTES, code='RESOURCE_NOT_FOUND'):
     path = Path(path)
     if path.is_symlink():
-        fail('UNSUPPORTED_SOURCE', 'STEP source must be a regular file, not a symbolic link', location, path=str(path))
+        fail('UNSUPPORTED_SOURCE', 'Geometry source must be a regular file, not a symbolic link', location, path=str(path))
     if not path.is_file():
-        fail(code, 'STEP source file is absent', location, path=str(path))
+        fail(code, 'Geometry source file is absent', location, path=str(path))
     with path.open('rb') as handle:
         if os.fstat(handle.fileno()).st_size > limit:
-            fail('RESOURCE_LIMIT', 'STEP file exceeds the admitted size', location, limit=limit)
+            fail('RESOURCE_LIMIT', 'Geometry file exceeds the admitted size', location, limit=limit)
         data = handle.read(limit+1)
     if len(data) > limit:
-        fail('RESOURCE_LIMIT', 'STEP file exceeds the admitted size', location, limit=limit)
+        fail('RESOURCE_LIMIT', 'Geometry file exceeds the admitted size', location, limit=limit)
     return data
 
 
@@ -502,16 +502,16 @@ class CapturedSources:
     def record(self, identity, location):
         record = self.records.get(identity) if isinstance(self.records, dict) else None
         if not isinstance(record, dict) or not isinstance(record.get('sha256'), str) or not isinstance(record.get('retained'), str):
-            fail('VERIFICATION_FAILED', 'Captured STEP source record is missing or malformed', location)
+            fail('VERIFICATION_FAILED', 'Captured Geometry source record is missing or malformed', location)
         return record
 
     def read(self, value, identity, location):
         from schemaxis.run_paths import owned_path
         record = self.record(identity, location)
         if not consistent(value, record.get('file')):
-            fail('VERIFICATION_FAILED', 'Captured STEP source path does not match the authored file', location)
+            fail('VERIFICATION_FAILED', 'Captured Geometry source path does not match the authored file', location)
         retained = owned_path(self.directory, record['retained'])
         data = read_bounded(retained, location, code='VERIFICATION_FAILED')
         if hashlib.sha256(data).hexdigest() != record['sha256']:
-            fail('VERIFICATION_FAILED', 'Retained STEP copy differs from its capture record', location)
+            fail('VERIFICATION_FAILED', 'Retained geometry copy differs from its capture record', location)
         return record['file'], data

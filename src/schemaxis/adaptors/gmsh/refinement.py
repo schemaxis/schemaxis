@@ -8,7 +8,7 @@ from pathlib import Path
 from schemaxis import feedback
 from schemaxis.core.declarations import validate_arguments
 from schemaxis.errors import fail, keys
-from . import mesh
+from . import geometry, groups, mesh
 
 ARGUMENTS = {
     'maxIterations': {'type': 'integer', 'minimum': 1, 'maximum': 20, 'default': 4},
@@ -22,7 +22,11 @@ ARGUMENTS = {
         'boundaryMaximumEdgeLength': {'type': 'array', 'minItems': 1, 'maxItems': 13, 'items': {
             'type': 'object', 'properties': {
                 'boundary': {'type': 'string', 'minLength': 1, 'maxLength': 64, 'required': True},
-                'maximum': {'type': 'number', 'minimum': .001, 'maximum': 100000, 'required': True}}}}}}}
+                'maximum': {'type': 'number', 'minimum': .001, 'maximum': 100000, 'required': True}}}},
+        'boundaryMaximumChordDeviation': {'type': 'array', 'minItems': 1, 'maxItems': 12, 'items': {
+            'type': 'object', 'properties': {
+                'boundary': {'type': 'string', 'minLength': 1, 'maxLength': 64, 'required': True},
+                'maximum': {'type': 'number', 'minimum': .000001, 'maximum': 100000, 'required': True}}}}}}}
 
 
 def schema():
@@ -40,11 +44,21 @@ def prepare(raw, prepared):
     if result['minimumSize'] > prepared['nodes'][1]['options']['size']:
         fail('INVALID_STUDY', 'minimumSize must not exceed the initial mesh size', '$.refinement.minimumSize')
     settings = prepared['nodes'][1]['options']
-    names = {settings['boundaryName']} | {group['name'] for group in settings['faceGroups']}
+    names = groups.declared_names(settings)
+    source = prepared['nodes'][0]
+    if source['filter'] in geometry.PRIMITIVES and geometry.remainder_empty(source, settings):
+        names.discard(settings['boundaryName'])
     seen = set()
     for target in result['requirements'].get('boundaryMaximumEdgeLength', []):
         if target['boundary'] not in names or target['boundary'] in seen:
             fail('INVALID_SELECTION', 'boundary requirements need distinct declared boundary names')
+        seen.add(target['boundary'])
+    cylinders = {group['name'] for group in groups.cylinders(settings)}
+    seen = set()
+    for index, target in enumerate(result['requirements'].get('boundaryMaximumChordDeviation', [])):
+        if target['boundary'] not in cylinders or target['boundary'] in seen:
+            fail('INVALID_SELECTION', 'chord deviation requirements need distinct declared cylinder group names',
+                 '$.refinement.requirements.boundaryMaximumChordDeviation['+str(index)+'].boundary')
         seen.add(target['boundary'])
     return result
 
@@ -99,8 +113,16 @@ class Policy:
             elif name == 'boundaryMaximumEdgeLength':
                 boundaries = {b['name']: b for b in observation['quality']['boundaries']}
                 for target in requested:
+                    if target['boundary'] not in boundaries:
+                        fail('INVALID_SELECTION', 'boundary requirement names a boundary with no mesh faces; the remainder may be empty',
+                             '$.refinement.requirements.boundaryMaximumEdgeLength', boundary=target['boundary'])
                     check('boundaryMaximumEdgeLength:'+target['boundary'],
                           boundaries[target['boundary']]['maximumEdgeLength']['maximum'], '<=', target['maximum'], 'mm')
+            elif name == 'boundaryMaximumChordDeviation':
+                walls = {w['name']: w for w in observation.get('cylinderChecks', [])}
+                for target in requested:
+                    check('boundaryMaximumChordDeviation:'+target['boundary'],
+                          walls[target['boundary']]['maximumChordDeviation'], '<=', target['maximum'], 'mm')
         accepted = all(c['passed'] for c in checks)
         stop = 'cell_budget_exceeded' if not checks[0]['passed'] else None
         # Stop before proposing a candidate outside the native work estimate.

@@ -7,7 +7,7 @@ import {Store} from '../../lib/store.mjs';
 import {createJsonEditor} from '../../editor/editor.mjs';
 import {documentChooser} from '../documents.mjs';
 import {identity} from '../../shell/providers.mjs';
-import {confirmDialog} from '../../shell/dialog.mjs';
+import {confirmDialog, openMenu} from '../../shell/dialog.mjs';
 import {outline, mapDiagnostics, operationPointer, validationRequest, valueAt} from './model.mjs';
 import {createLibrary} from './library.mjs';
 import {createProperties} from './properties.mjs';
@@ -15,21 +15,39 @@ import {createViewers, VIEWER_LABELS} from './viewers.mjs';
 import {createActions} from './actions.mjs';
 import {commonProperties, nodeKinds, observationFields} from './guidance.mjs';
 import {backgroundValidation, reportDiagnostics} from '../../editor/settle-server.mjs';
+import {bindVariables} from '../variables/editor.mjs';
+import {replacing} from '../../editor/fill-data.mjs';
+import {equal} from '../variables/model.mjs';
+import {caseNames, createCaseData} from './case-data.mjs';
+
+const PREFERENCES = 'schemaxis.studio.workbench';
+
+function readPreferences() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PREFERENCES) || '{}');
+    return {sidebar: ['all', 'guide', 'library', 'hidden'].includes(value.sidebar) ? value.sidebar : 'all',
+      shown: ['all', 'guide', 'library'].includes(value.shown) ? value.shown : 'all', controls: value.controls !== false,
+      right: value.right === 'case' ? 'case' : 'properties'};
+  } catch {
+    return {sidebar: 'all', shown: 'all', controls: true, right: 'properties'};
+  }
+}
 
 function createWorkbench(ctx, params, host) {
   const store = new Store({record: null, provider: null, value: null, schema: null, selected: '', tab: 'input',
     dirty: false, busy: false, references: [], metadata: {templates: [], snippets: [], viewers: []}});
   let disposed = false;
   let loading = 0;
-  const title = h('h2', {}, 'Loading input…');
-  const subtitle = h('div', {class: 'subtitle'});
-  const status = h('span', {class: 'badge'});
+  let lastInspection;
+  const status = h('button', {class: 'badge', type: 'button', 'aria-label': 'Native application setup'});
   const saveState = h('span', {class: 'wb-help', role: 'status'});
-  const diagnosticState = h('span', {class: 'wb-help wb-diagnostic-state', role: 'status'});
+  const diagnosticState = h('button', {class: 'button ghost small wb-help wb-diagnostic-state', title: 'Show Problems',
+    onClick: () => ctx.store.set({panelOpen: true, panelTab: 'problems'})});
   const editorHost = h('div', {class: 'wb-editor-host'});
   const editor = createJsonEditor(editorHost, {value: '', readOnly: true,
     getFunctions: () => ctx.api.get('/api/functions'),
     commonProperties: (pointer, value) => commonProperties(store.get().metadata, value, pointer),
+    valueNames: (pointer) => caseNames(store.get().inspection, pointer),
     suggestions: ctx.setting('editor.suggestions') !== false,
     indent: ' '.repeat(ctx.setting('editor.tabSize') || 2), hover: ctx.setting('editor.hover') !== false});
   const tabs = h('div', {class: 'wb-tabs', role: 'tablist', 'aria-label': 'Workbench views'});
@@ -77,8 +95,8 @@ function createWorkbench(ctx, params, host) {
       }
     }
     store.set({tab});
-    editorTools.hidden = tab !== 'input';
-    library.bar.hidden = tab !== 'input';
+    authoringTools.hidden = tab !== 'input' || !preferences.controls;
+    controlsToggle.hidden = tab !== 'input';
     if (tab === 'input') library.updateSection();
     else library.section.hidden = true;
     [...panels.children].forEach((panel) => {
@@ -106,7 +124,20 @@ function createWorkbench(ctx, params, host) {
     if (store.get().record !== record) throw Error('The saved input changed while loading geometry.');
     return {data, label: `Native preview · saved revision ${record.revision}${dirty ? ' · draft has unsaved changes' : ''}`};
   }
+  // Names read from the case, shared by Properties, Case data and the settings windows.
+  const nameListeners = new Set();
+  const sharedNames = {
+    get: () => store.get().inspection || null,
+    subscribe: (listener) => { nameListeners.add(listener); return () => nameListeners.delete(listener); },
+    load: async (live) => {
+      const result = await actions.inspect(live);
+      if (!result) throw Error('No names could be read. Add an OpenFOAM reader with its case file first; details are in Problems.');
+      return result;
+    }};
   const properties = createProperties({ctx, getSpatialContext, getDocument: () => store.get().value,
+    caseNames: sharedNames, onEditSettings: (pointer) => library.editOperation(pointer),
+    hasSettings: (pointer) => library.hasSettings(pointer),
+    onChooseValue: pointer => variables.pick({pointer}),
     getOperationKinds: () => store.get().metadata.operationKinds,
     onFillRequired: (pointer) => {
       showTab('input');
@@ -126,21 +157,49 @@ function createWorkbench(ctx, params, host) {
   panels.append(properties.schemaElement);
   const viewers = createViewers({ctx, store, onTab: showTab,
     onObservation: (value) => editor.setOption('fillObservations', observationFields(value))});
-  const library = createLibrary({ctx, editor, getSpatialContext, getDocument: () => store.get().value,
+  const library = createLibrary({ctx, editor, getSpatialContext, getDocument: () => editor.getDocument(),
     getSelectedNode: () => valueAt(store.get().value, store.get().selected)?.id,
-    showInput: () => showTab('input'), changed});
-  const comprehension = createComprehension(editor, (pointer) => { showTab('input'); select(pointer); });
+    showInput: () => showTab('input'), changed, caseNames: sharedNames});
+  const comprehension = createComprehension(editor, (pointer) => { showTab('input'); select(pointer); },
+    (pointer) => library.editOperation(pointer));
   const actions = createActions({ctx, store, editor, params, load, viewers, showTab});
+  const variables = bindVariables(ctx, editor, {changed, snapshot: async () => {
+    const {record} = store.get(), version = editor.getTextVersion();
+    if (!record) throw Error('Wait for the input to load.');
+    const base = operationPointer(record, params.operation);
+    const root = base ? replacing(record.document, base, editor.getDocument()) : editor.getDocument();
+    return {root, base, label: `${record.name}${base ? ' · shared changes save this operation and its workflow together.' : ' · changes remain in the input draft until saved.'}`,
+      commit: async result => {
+        if (editor.getTextVersion() !== version || store.get().record !== record) throw Error('The input changed. Reopen Variables & expressions.');
+        if (base && !equal(replacing(result, base, valueAt(root, base)), root)) {
+          await ctx.api.post('/api/authoring', {action: 'patch', document: record.id, revision: record.revision,
+            edits: [{op: 'replace', path: '', value: result}]});
+          await load({force: true}); await ctx.refresh();
+        } else { editor.replaceDocument(base ? valueAt(result, base) : result); changed(); }
+      }};
+  }});
   const actionButton = (label, name, primary = false) => h('button', {class: ['button', primary && 'primary'],
-    dataset: {action: name}, onClick: () => actions[name]()}, label);
-  const buttons = h('div', {class: 'actions'}, status,
+    dataset: {action: name}, title: ({validate: 'Check the current draft with the host planner; no native application runs.',
+      preview: 'Create a planning checkpoint for the complete draft.', run: 'Execute the complete input in the configured application and verify outputs.',
+      save: 'Save the draft and write its input file.'})[name], onClick: () => actions[name]()}, label);
+  const liveData = h('button', {class: 'button', dataset: {action: 'live'}, hidden: true,
+    title: 'Load the selected node and everything upstream of it in the application. Unfinished downstream nodes are ignored.',
+    onClick: () => actions.inspect(true)}, 'Live data');
+  const buttons = h('div', {class: 'wb-toolbar actions', role: 'toolbar', 'aria-label': 'Adaptor actions'}, status,
     h('button', {class: 'button', dataset: {action: 'help'}, onClick: () => {
       const {value, selected, provider} = store.get();
       const pointer = selected.match(/^\/nodes\/\d+/)?.[0];
       const node = pointer ? valueAt(value, pointer) : null;
       ctx.openHelp({provider, operation: node?.filter});
-    }}, 'Help'), actionButton('Validate', 'validate'),
-    actionButton('Preview', 'preview'), actionButton('Run', 'run'), actionButton('Save', 'save', true));
+    }, title: 'Open the adaptor guide for the selected operation'}, 'Adaptor help'), actionButton('Validate', 'validate'),
+    actionButton('Preview', 'preview'), liveData, actionButton('Run', 'run'),
+    h('span', {class: 'wb-save-group'}, actionButton('Save', 'save', true),
+      h('button', {class: 'button primary', type: 'button', dataset: {action: 'save-menu'}, 'aria-label': 'More file actions',
+        'aria-haspopup': 'menu', title: 'Save as, or open another file', onClick: (event) => openMenu(event.currentTarget, [
+          {label: 'Save as…', icon: 'file', disabled: Boolean(params.operation), run: () => actions.saveAs()},
+          {label: 'Open…', icon: 'folder', run: () => ctx.bus.emit('open-file')},
+          {label: 'New adaptor instance…', icon: 'plus', run: () => ctx.bus.emit('new-instance')},
+        ])}, '▾')));
   const suggestions = h('input', {type: 'checkbox', checked: editor.getOption('suggestions'),
     onChange: (event) => editor.setOption('suggestions', event.target.checked)});
   const sourceFormat = h('select', {'aria-label': 'Source format', onChange: event => {
@@ -149,21 +208,126 @@ function createWorkbench(ctx, params, host) {
   }}, h('option', {value: 'json'}, 'JSON'), h('option', {value: 'yaml'}, 'YAML'));
   sourceFormat.hidden = Boolean(params.operation);
   const editorTools = h('div', {class: 'wb-editor-tools'}, sourceFormat,
+    h('button', {class: 'button small', dataset: {action: 'edit-settings'},
+      title: 'Reopen the settings window for the pipeline item at the cursor',
+      onClick: () => {
+        const pointer = store.get().selected.match(/^(.*\/nodes\/\d+)(?:\/|$)/)?.[1];
+        if (pointer) library.editOperation(pointer);
+        else ctx.notify.info('Select a pipeline item first', {body: 'Put the cursor inside a node, or click it in the pipeline guide, then choose Edit settings.'});
+      }}, 'Edit settings…'),
+    h('button', {class: 'button small', onClick: () => variables.pick()}, 'Value at cursor…'),
     formattingControls(editor),
-    h('button', {class: 'button small', onClick: () => actions.run(),
-      title: 'Validate and execute the current input in the configured application, then show verified outputs and available 3D geometry.'}, 'Preview with live data'),
+    h('button', {class: 'button small', onClick: () => editor.undo(), title: 'Undo draft edit (Ctrl+Z)'}, 'Undo'),
+    h('button', {class: 'button small', onClick: () => editor.redo(), title: 'Redo draft edit (Ctrl+Shift+Z)'}, 'Redo'),
     h('button', {class: 'button ghost small', onClick: () => actions.undo()}, 'Undo saved edit'),
-    h('button', {class: 'button ghost small', onClick: () => actions.redo()}, 'Redo'),
-    h('label', {class: 'wb-check'}, suggestions, 'Suggestions'), saveState, diagnosticState);
-  const element = h('div', {class: 'window-body wb-workbench'},
-    h('div', {class: 'window-header'}, icon('adaptor'), h('div', {class: 'titles'}, title, subtitle), buttons),
-    conflict,
-    h('div', {class: 'wb-layout'},
-      h('aside', {class: 'wb-left'}, comprehension.element, h('h3', {class: 'wb-section-title'}, 'Document sections'),
-        h('p', {class: 'wb-help'}, 'Document settings, scenes, components and workflow operations. Pipeline nodes are above.'),
-        outlineList, library.element, viewers.artifacts),
-      h('section', {class: 'wb-centre'}, tabs, library.bar, library.section, editorTools, panels),
-      h('aside', {class: 'wb-right'}, properties.element, viewers.references)));
+    h('button', {class: 'button ghost small', onClick: () => actions.redo()}, 'Redo saved edit'),
+    h('label', {class: 'wb-check'}, suggestions, 'Suggestions'));
+  const authoringTools = h('div', {class: 'wb-authoring-tools'}, library.bar, library.section, editorTools);
+  const preferences = readPreferences();
+  const remember = () => {
+    try {
+      localStorage.setItem(PREFERENCES, JSON.stringify(preferences));
+    } catch {
+      // Layout choices are a convenience; this window still remembers them.
+    }
+  };
+  const controlsToggle = h('button', {class: 'button small wb-controls-toggle', type: 'button', 'aria-pressed': 'true',
+    title: 'Show or hide the Add and editing controls above the input',
+    onClick: () => { preferences.controls = !preferences.controls; remember(); applyLayout(); }}, 'Controls');
+  const sidebarToggle = h('button', {class: 'button ghost small icon-only wb-sidebar-toggle', type: 'button',
+    'aria-label': 'Show or hide the sidebar', title: 'Show or hide the sidebar',
+    onClick: () => setSidebar(preferences.sidebar === 'hidden' ? preferences.shown : 'hidden')},
+  h('span', {class: 'wb-sidebar-icon', 'aria-hidden': 'true'}));
+  const sidebarModes = h('div', {class: 'wb-segmented', role: 'radiogroup', 'aria-label': 'Sidebar contents'},
+    [['guide', 'Guide', 'The pipeline, following your cursor'], ['library', 'Library', 'Document sections, templates and snippets'],
+      ['all', 'Both', 'Guide and library together']].map(([mode, label, hint]) => h('button', {type: 'button', role: 'radio',
+      dataset: {sidebar: mode}, title: hint, onClick: () => setSidebar(mode)}, label)));
+  const sections = h('div', {class: 'wb-sections'}, h('h3', {class: 'wb-section-title'}, 'Document sections'),
+    outlineList, library.element, viewers.artifacts);
+  const sidebar = h('aside', {class: 'wb-left'}, h('div', {class: 'wb-sidebar-head'}, sidebarModes,
+    h('button', {class: 'button ghost small icon-only', type: 'button', 'aria-label': 'Hide the sidebar', title: 'Hide the sidebar',
+      onClick: () => setSidebar('hidden')}, icon('close'))), comprehension.element, sections);
+  const caseData = createCaseData({onLoad: () => actions.inspect(false), onUse: useCaseName});
+  const rightModes = h('div', {class: 'wb-segmented wb-right-modes', role: 'radiogroup', 'aria-label': 'Right panel contents', hidden: true},
+    [['properties', 'Properties'], ['case', 'Case data']].map(([mode, label]) => h('button', {type: 'button', role: 'radio',
+      dataset: {right: mode}, onClick: () => { preferences.right = mode; remember(); applyLayout(); }}, label)));
+  const viewBar = h('div', {class: 'wb-view-bar'}, sidebarToggle, tabs,
+    h('div', {class: 'wb-view-state'}, saveState, diagnosticState), controlsToggle);
+  const layout = h('div', {class: 'wb-layout'}, sidebar,
+    h('section', {class: 'wb-centre'}, viewBar, authoringTools, panels),
+    h('aside', {class: 'wb-right'}, rightModes, properties.element, caseData.element, viewers.references));
+  const element = h('div', {class: 'window-body wb-workbench'}, buttons, conflict, layout);
+
+  // The toolbar is drawn in the tab row; the tabs give up exactly its width.
+  const reserveToolbar = (shown) => {
+    const main = element.closest('.main');
+    if (!main) return;
+    const inRow = shown && getComputedStyle(buttons).position === 'absolute';
+    main.style.setProperty('--window-tools-w', inRow ? `${Math.ceil(buttons.getBoundingClientRect().width)}px` : '0px');
+  };
+  const toolbarResized = () => reserveToolbar(element.closest('.window')?.hidden === false);
+  const toolbarSize = new ResizeObserver(toolbarResized);
+  toolbarSize.observe(buttons);
+  window.addEventListener('resize', toolbarResized);
+
+
+  function setSidebar(mode) {
+    preferences.sidebar = mode;
+    if (mode !== 'hidden') preferences.shown = mode;
+    remember();
+    applyLayout();
+  }
+
+  function applyLayout() {
+    const mode = preferences.sidebar;
+    sidebar.hidden = mode === 'hidden';
+    layout.classList.toggle('wb-no-sidebar', sidebar.hidden);
+    comprehension.element.hidden = mode === 'library';
+    sections.hidden = mode === 'guide';
+    sidebarToggle.setAttribute('aria-pressed', String(!sidebar.hidden));
+    [...sidebarModes.children].forEach((button) => button.setAttribute('aria-checked', String(button.dataset.sidebar === mode)));
+    const showCase = preferences.right === 'case' && !rightModes.hidden;
+    [...rightModes.children].forEach((button) => button.setAttribute('aria-checked', String((button.dataset.right === 'case') === showCase)));
+    properties.element.hidden = viewers.references.hidden = showCase;
+    caseData.element.hidden = !showCase;
+    controlsToggle.setAttribute('aria-pressed', String(preferences.controls));
+    authoringTools.hidden = store.get().tab !== 'input' || !preferences.controls;
+  }
+
+  function useCaseName(value) {
+    showTab('input');
+    const documentValue = store.get().value;
+    let pointer = editor.getCursor().pointer || '';
+    if (!Array.isArray(valueAt(documentValue, pointer))) pointer = pointer.slice(0, pointer.lastIndexOf('/'));
+    const target = valueAt(documentValue, pointer);
+    if (Array.isArray(target) && target.every((item) => typeof item !== 'object' || item?.pattern)) {
+      if (target.includes(value)) return `${JSON.stringify(value)} is already in ${pointer}.`;
+      editor.insertAtPointer(`${pointer}/-`, value);
+      changed();
+      return `Added ${JSON.stringify(value)} to ${pointer}.`;
+    }
+    const text = editor.getOption('format') === 'yaml' ? String(value) : JSON.stringify(value);
+    navigator.clipboard?.writeText(text).catch(() => {});
+    return `Copied ${text}. Put the cursor in a list of names to add it directly.`;
+  }
+
+  async function loadCaseNames() {
+    const state = store.get();
+    const operations = state.metadata.inspection?.metadataOperations;
+    if (!state.metadata.inspection?.metadata || state.inspection || params.operation) return;
+    const node = state.value?.nodes?.find((item) => typeof item?.id === 'string' && typeof item.options?.file === 'string'
+      && (!operations || operations.includes(item.filter)));
+    if (!node) return;
+    const record = state.record;
+    try {
+      const inspection = await ctx.api.post('/api/peek-input', {provider: state.provider, input: state.value, node: node.id});
+      if (!disposed && store.get().record === record && !store.get().inspection && inspection.available) {
+        store.set({inspection, dataMode: 'metadata'});
+      }
+    } catch {
+      // Names are a convenience here; Load names reports the reason on request.
+    }
+  }
 
   function renderOutline() {
     const {value, selected} = store.get();
@@ -221,14 +385,15 @@ function createWorkbench(ctx, params, host) {
     comprehension.refresh();
     editor.setDiagnostics(pointer ? [] : mapDiagnostics(record.diagnostics, value));
     conflict.hidden = true;
-    title.textContent = params.operation || record.name;
-    subtitle.textContent = `${identity(provider).name} · ${value?.version || 'JSON'}`
-      + (params.operation ? ` · in ${record.name}` : ' · all operations');
-    host.setTitle(params.operation || record.name, identity(provider).name);
+    host.setTitle(params.operation || record.name, `${identity(provider).name} · ${value?.version || 'JSON'}`
+      + (params.operation ? ` · in ${record.name}` : ' · all operations'));
     if (providerChanged || !store.get().schema || store.get().schemaVersion !== value?.version) {
       const results = await Promise.all([
         ctx.call(() => ctx.api.get('/api/studio/adaptor', {id: provider, version: value?.version}), {title: 'Could not load adaptor library'}),
-        ctx.call(() => ctx.api.get('/api/schema', {version: value?.version}), {title: 'Could not load adaptor schema'}),
+        // A nested operation uses its workflow-scoped schema: artifact and
+        // captured-input references are valid there but not in standalone input.
+        ctx.call(() => ctx.api.get('/api/schema', {version: value?.version, scope: params.operation ? 'workflow' : undefined}),
+          {title: 'Could not load adaptor schema'}),
       ]);
       if (disposed || token !== loading) {
         return;
@@ -243,6 +408,7 @@ function createWorkbench(ctx, params, host) {
     }
     renderOutline();
     renderProperties();
+    loadCaseNames();
     if (params.fill) {
       delete params.fill;
       editor.startFill();
@@ -250,11 +416,35 @@ function createWorkbench(ctx, params, host) {
   }
 
   const unsubscribeStore = store.subscribe((state) => {
-    saveState.textContent = state.busy ? 'Working…' : state.dirty ? 'Unsaved changes'
-      : `Revision ${state.record?.revision ?? '…'}`;
+    const file = state.record?.file;
+    saveState.textContent = (state.busy ? 'Working…' : state.dirty ? 'Unsaved changes'
+      : `Revision ${state.record?.revision ?? '…'}`) + (params.operation ? '' : file ? ` · ${file.split('/').at(-1)}` : ' · not saved to a file');
+    saveState.title = params.operation ? '' : file ? `Saved to ${file}` : 'Save writes this input to a file you choose.';
     const configured = ctx.store.get().server?.configured?.includes(state.provider);
     status.textContent = state.native === 'live' ? 'Live' : configured ? 'Configured' : 'Native unavailable';
     status.className = configured ? 'badge ok' : 'badge';
+    status.title = configured ? 'The native application is configured. Host editing and validation are always available.'
+      : 'The native application has no usable configured location. Open Application Setup to enable live inspection and execution.';
+    status.onclick = () => ctx.role() === 'admin' ? ctx.windows.open('setup')
+      : ctx.notify.info('Native application setup', {body: 'Select Admin in the title bar, then open Application Setup to choose the native executable. Editing, metadata preview and host validation remain available.'});
+    liveData.hidden = !state.metadata.inspection?.live;
+    liveData.textContent = state.dataMode === 'live' ? 'Refresh live data' : 'Live data';
+    const operations = state.metadata.inspection?.metadataOperations;
+    const hasCase = Boolean(state.metadata.inspection?.metadata) && !params.operation
+      && (!operations || Boolean(state.value?.nodes?.some((node) => operations.includes(node?.filter))));
+    caseData.update(state.inspection);
+    if (state.inspection !== lastInspection) {
+      lastInspection = state.inspection;
+      nameListeners.forEach((listener) => listener(lastInspection || null));
+    }
+    const names = state.inspection?.available ? (state.inspection.regions?.length || 0) + (state.inspection.cellArrays?.length || 0) : 0;
+    rightModes.lastChild.textContent = names ? `Case data (${names})` : 'Case data';
+    if (rightModes.hidden === hasCase) {
+      rightModes.hidden = !hasCase;
+      applyLayout();
+    }
+    caseData.element.querySelectorAll('button').forEach((button) => { button.disabled = state.busy || !state.record; });
+    editorTools.querySelectorAll('button').forEach(button => { button.disabled = state.busy || !state.record; });
     editor.setReadOnly(state.busy || !state.record);
     buttons.querySelectorAll('button').forEach((button) => {
       button.disabled = state.busy || !state.record;
@@ -266,6 +456,14 @@ function createWorkbench(ctx, params, host) {
     editor.setOption('indent', ' '.repeat(ctx.setting('editor.tabSize') || 2));
     suggestions.checked = editor.getOption('suggestions');
   });
+  const cursorChanged = () => {
+    if (document.activeElement !== editor.textarea) return;
+    const pointer = editor.getCursor().pointer;
+    const selected = pointer.match(/^(.*\/nodes\/\d+)(?:\/|$)/)?.[1] || pointer;
+    if (selected === store.get().selected) return;
+    store.set({selected}); renderOutline(); renderProperties();
+  };
+  document.addEventListener('selectionchange', cursorChanged);
   const unsubscribeChange = editor.onChange(changed);
   const unsubscribeSettled = editor.onSettledState((state) => {
     const describe = (item) => `${item.message} (${item.pointer || '$'} · line ${item.line || 1}, column ${item.column || 1})`;
@@ -297,15 +495,18 @@ function createWorkbench(ctx, params, host) {
       actions.save();
     }
   });
+  applyLayout();
   load();
-  return {element, editor, store,
+  return {element, editor, store, variableContext: variables.context,
     isDirty,
     onShow: () => {
+      reserveToolbar(true);
       store.set({});
       library.registerCommands(ctx.commands);
       viewers.resize();
     },
     onHide: () => {
+      reserveToolbar(false);
       library.registerCommands(null);
       reportDiagnostics(ctx, editor, {document: params.document, show: () => showTab('input')});
     },
@@ -313,9 +514,13 @@ function createWorkbench(ctx, params, host) {
       'This input has changes that have not been saved.', {confirm: 'Discard'}),
     dispose() {
       disposed = true;
+      reserveToolbar(false);
+      toolbarSize.disconnect();
+      window.removeEventListener('resize', toolbarResized);
       store.set({disposed: true});
       unsubscribeStore();
       unsubscribeChange();
+      document.removeEventListener('selectionchange', cursorChanged);
       unsubscribeSettled();
       stopValidation();
       unsubscribeSettings();
@@ -340,6 +545,7 @@ export const workbenchWindow = {
         description: 'Open an adaptor instance, or create one from an adaptor and an optional starter template.',
         providers: (provider) => !['workflow', 'workflow-design'].includes(provider),
         createLabel: 'New adaptor instance', onCreate: () => ctx.bus.emit('new-instance'), emptyIcon: 'adaptor',
+        onOpen: () => ctx.bus.emit('open-file'),
       });
       return {element: h('div', {class: 'window-body'}, chooser.element), dispose: chooser.dispose};
     }

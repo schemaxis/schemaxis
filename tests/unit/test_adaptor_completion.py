@@ -191,6 +191,71 @@ class CompletionTests(unittest.TestCase):
                     generator.build(check=True)
                 self.assertIn('Stale supplied help', str(error.exception))
 
+    def test_curated_operations_index_native_names_apart_from_prose(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('native_terms_help_generator', ROOT/'tools/generate_studio_help.py')
+        generator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(generator)
+        discovery = CapabilityCatalogue()
+        locate = discovery._declarations['exiftool']['locate']
+        self.assertIn('compareto', generator.native_terms(locate))
+        self.assertEqual(generator.native_terms(locate), sorted(set(generator.native_terms(locate))))
+        self.assertTrue(all(term == term.lower() for term in generator.native_terms(locate)))
+        index = json.loads((ROOT/'src/schemaxis/studio_ui/help/index.json').read_text())
+        entries = {e['capabilityId']: e for e in index['entries'] if e.get('capabilityId')}
+        topic = entries[operation_id('exiftool', 'locate')]
+        self.assertIn('compareto', topic['nativeTerms'])
+        self.assertNotIn('compareto', topic['search'].split())
+        curated = uncurated = 0
+        for provider, metadata in discovery._metadata.items():
+            for operation in discovery._declarations.get(provider, {}):
+                topic = entries.get(operation_id(provider, operation))
+                if topic is None or topic['operation'] is None:
+                    continue
+                if metadata.get('operations', {}).get(operation, {}).get('keywords'):
+                    curated += 1
+                    native = generator.native_terms(discovery._declarations[provider][operation])
+                    self.assertEqual(topic.get('nativeTerms', []), native, operation_id(provider, operation))
+                    # Native names are not appended to the prose; only the operation projection is.
+                    projection = set(generator.re.findall(r'[\w$:.-]+', discovery.operation_search_text(provider, operation).lower()))
+                    self.assertEqual(set(topic['search'].split()), projection, operation_id(provider, operation))
+                else:
+                    uncurated += 1
+                    self.assertNotIn('nativeTerms', topic, operation_id(provider, operation))
+        self.assertGreater(curated, 0)
+        self.assertGreater(uncurated, 0)
+
+    def test_large_json_help_remains_readable_while_prose_keeps_compressed_roundtrip(self):
+        import base64
+        import gzip
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('json_help_generator', ROOT/'tools/generate_studio_help.py')
+        generator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(generator)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'src/schemaxis/adaptors').mkdir(parents=True)
+            docs = root/'docs'
+            docs.mkdir()
+            for name in ('studio-guide', 'paraview-guide', 'dollar-reference', 'workflow-authoring', 'workflow-design', 'paraview-operation-reference'):
+                (docs/(name+'.md')).write_text('# ' + name + '\n')
+            data = json.dumps({'value': 'λ' * 60000}, ensure_ascii=False)
+            (docs/'data.json').write_text(data)
+            prose = '# Large prose\n\n' + 'Useful words. ' * 10000
+            (docs/'large.md').write_text(prose)
+            (docs/'studio-guide.md').write_text('# Studio\n\n[Data](data.json)\n[Prose](large.md)\n')
+            dest = root/'src/schemaxis/studio_ui/help'
+            dest.mkdir(parents=True)
+            with patch.object(generator, 'ROOT', root), patch.object(generator, 'DEST', dest):
+                generator.build()
+                generator.build(check=True)
+            pages = {page['source']: page for path in dest.glob('*.json')
+                     if 'source' in (page := json.loads(path.read_text()))}
+            self.assertEqual(pages['docs/data.json']['body'], data)
+            self.assertNotIn('bodyGzip', pages['docs/data.json'])
+            encoded = pages['docs/large.md']['bodyGzip']
+            self.assertEqual(gzip.decompress(base64.b64decode(encoded)).decode(), prose)
+
     def test_receipt_updates_do_not_invalidate_help_or_source_identity(self):
         import importlib.util
         from schemaxis.adaptor_delivery import source_digest

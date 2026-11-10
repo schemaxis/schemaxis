@@ -38,11 +38,11 @@ def main():
     types = {'bool': pa.bool_(), 'int32': pa.int32(), 'int64': pa.int64(), 'float64': pa.float64(),
              'utf8': pa.string(), 'timestamp_us_utc': pa.timestamp('us', 'UTC')}
     stage = sys.argv[1]
-    if stage not in ('convert', 'readback'):
+    if stage not in ('convert', 'readback', 'csvreadback'):
         raise ValueError('INVALID_ARROW_STAGE')
     config_bytes = bounded('native-config.json')
     config = json.loads(config_bytes)
-    input_name = 'source.csv' if stage == 'convert' else 'table.parquet'
+    input_name = {'convert': 'source.csv', 'readback': 'table.parquet', 'csvreadback': 'table.csv'}[stage]
     data = bounded(input_name)
     inputs = {input_name: hashlib.sha256(data).hexdigest(),
               'native-config.json': hashlib.sha256(config_bytes).hexdigest(),
@@ -65,14 +65,18 @@ def main():
                            else str(v) if c['type'] in ('int64', 'timestamp_us_utc') else v for v in values])
         return {'columns': columns, 'rows': [list(row) for row in zip(*arrays)]}
 
-    if stage == 'convert':
-        table = csv.read_csv(pa.BufferReader(data),
+    def typed_csv(buffer, columns):
+        # The declared-schema consumer: no inference, only the reserved \\N null token.
+        table = csv.read_csv(pa.BufferReader(buffer),
             read_options=csv.ReadOptions(use_threads=False),
             parse_options=csv.ParseOptions(newlines_in_values=True, ignore_empty_lines=False),
-            convert_options=csv.ConvertOptions(column_types={c['name']: types[c['type']] for c in config['columns']},
+            convert_options=csv.ConvertOptions(column_types={c['name']: types[c['type']] for c in columns},
                 null_values=['\\N'], strings_can_be_null=True, quoted_strings_can_be_null=True,
                 true_values=['true'], false_values=['false']))
-        table = table.cast(schema(config['columns']), safe=True)
+        return table.cast(schema(columns), safe=True)
+
+    if stage == 'convert':
+        table = typed_csv(data, config['columns'])
         observed = snapshot(table, config['columns'])
         for predicate in config['where']:
             column = table[predicate['column']]
@@ -103,6 +107,21 @@ def main():
             write_page_checksum=False, use_deprecated_int96_timestamps=False,
             allow_truncated_timestamps=False, store_schema=False, row_group_size=1024,
             data_page_size=65536, write_batch_size=256, use_content_defined_chunking=False)
+        if config.get('publishCSV'):
+            # Written from the same final table as the Parquet file. Arrow writes
+            # null as null_string and quotes every string; timestamps become
+            # canonical text first because the native layout uses a space.
+            published = []
+            for column in config['outputColumns']:
+                array = table[column['name']]
+                if column['type'] == 'timestamp_us_utc':
+                    array = pc.replace_substring(pc.cast(array, pa.string(), safe=True), ' ', 'T', max_replacements=1)
+                published.append(array)
+            csv.write_csv(pa.Table.from_arrays(published, names=[c['name'] for c in config['outputColumns']]), 'table.csv',
+                csv.WriteOptions(include_header=True, batch_size=1024, delimiter=',', eol='\n',
+                                 null_string='\\N', quoting_style='needed', quoting_header='none'))
+    elif stage == 'csvreadback':
+        observed = snapshot(typed_csv(data, config['outputColumns']), config['outputColumns'])
     else:
         table = pq.read_table(pa.BufferReader(data), use_threads=False)
         observed = snapshot(table, config['outputColumns'])

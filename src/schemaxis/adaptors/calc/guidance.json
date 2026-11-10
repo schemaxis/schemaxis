@@ -29,6 +29,43 @@
         "The CSV must be UTF-8, comma-delimited, at most 8 MiB, with at least two data rows and no empty, text, NaN or infinite cells.",
         "Rows must all have the same number of values as the header; there is no padding or column type guessing."
       ]
+    },
+    "fromTypedRows": {
+      "status": "reviewed",
+      "explanation": "Builds an editable LibreOffice Calc workbook from a labelled table written in this document: each column is declared as text or number, and each record mixes part or sample IDs, notes and measurements. Missing measurements are explicit nulls that become blank cells, so blank, zero and text stay distinct. It publishes analysis.xlsx, analysis.ods (reopened by a second Calc process) and a typed data.csv handoff, each checked cell by cell, with fixed numeric summaries only for the number columns. Choose it for small reproducible inventories or measurement logs; use fromRows when every cell is a number, and readTypedCSV when the table already exists as a file. Workbook numbers keep 15 significant digits, so Data cells and the Summary MIN and MAX are checked to a relative 1e-14, while SUM, AVERAGE and STDEV allow relative 2e-8 plus 1e-12 of the column's largest magnitude; counts are exact and an all-zero column accepts only zero statistics.",
+      "sources": [
+        "src/schemaxis/adaptors/calc/capabilities.json",
+        "src/schemaxis/adaptors/calc/adaptor.py:24-42",
+        "docs/calc.md#typed-labelled-tables"
+      ],
+      "pitfalls": [
+        "Every cell must match its column: a number column rejects text such as \"5\" and a text column rejects 123, so quote IDs like \"00123\".",
+        "Empty text is rejected because native reopening would turn it into a blank; use null for a missing value.",
+        "Text beginning with =, +, - or @ stays literal text; no formula is ever authored or evaluated.",
+        "Units are only part of the column name; nothing is converted, and dates, currency and time zones are not interpreted."
+      ],
+      "examples": [
+        "calc-typed-parts"
+      ]
+    },
+    "readTypedCSV": {
+      "status": "reviewed",
+      "explanation": "Builds the same editable workbook and typed data.csv handoff as fromTypedRows, but reads the records from a captured CSV file with an exact declared header, column kinds and a reserved null token. The file bytes are copied into the run, so later verification does not depend on the original. Choose it when the table already exists as a file, such as a CSV written by another tool or a typed table handed over by an earlier Calc step; the quoting and null token follow the Apache Arrow adaptor's source dialect. Its file may be an earlier workflow step's CSV file or table artifact; the bytes are validated against the declared columns first. Workbook numbers keep 15 significant digits, so Data cells and the Summary MIN and MAX are checked to a relative 1e-14, while SUM, AVERAGE and STDEV allow relative 2e-8 plus 1e-12 of the column's largest magnitude; counts are exact and an all-zero column accepts only zero statistics.",
+      "sources": [
+        "src/schemaxis/adaptors/calc/capabilities.json",
+        "src/schemaxis/adaptors/calc/adaptor.py:24-42",
+        "docs/calc.md#typed-labelled-tables",
+        "docs/calc.md#binding-a-producers-csv-file"
+      ],
+      "pitfalls": [
+        "Declare every CSV column, in file order, with the exact header text; nothing is inferred from the data.",
+        "The token (default \\N) means missing in bare or quoted cells and cannot also be present text.",
+        "Numbers must be plain ASCII decimals with no spaces, separators, currency or percent signs; the old numeric readCSV still rejects the token and blanks.",
+        "A byte-order mark, line breaks inside cells, blank lines and empty text cells are rejected with the record and column."
+      ],
+      "examples": [
+        "calc-typed-csv"
+      ]
     }
   },
   "routes": {
@@ -351,6 +388,270 @@
           "sources": [
             "docs/calc.md",
             "src/schemaxis/adaptors/calc/requirements.py:7-51"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Build the workbook from a labelled table written in this document, with a declared text or number kind for every column and explicit nulls for missing values.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/adaptor.py:24-42"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/id": {
+          "status": "reviewed",
+          "explanation": "Name this table source with an ASCII letter followed by letters, digits or underscores, at most 64 characters.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/filter": {
+          "status": "reviewed",
+          "explanation": "fromTypedRows: the labelled table is written directly in this document. Switch to readTypedCSV to load the same kind of table from a CSV file, or to fromRows when every cell is numeric.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/adaptor.py:24-42"
+          ],
+          "examples": [
+            "fromTypedRows"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options": {
+          "status": "reviewed",
+          "explanation": "The literal labelled table: columns declares each name, kind and nullability; rows holds the records in column order; nullToken is the reserved missing-value marker used in the data.csv handoff. columns and rows are required.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/adaptor.py:24-42",
+            "src/schemaxis/adaptors/calc/typed_table.py:127-161"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/columns": {
+          "status": "reviewed",
+          "explanation": "Declare 1 to 64 columns in data order. Each has a unique name, a kind of text or number, and nullable (default false). Nothing is inferred from the values, and units belong in the name, for example Mass (g).",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:49-67"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/columns/items": {
+          "status": "reviewed",
+          "explanation": "One column declaration: name, kind and optional nullable. Unknown keys such as unit or format are rejected rather than ignored.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:49-67"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/columns/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Unique label of 1 to 128 characters, without control characters or text that workbook XML cannot represent. A leading =, +, - or @ is allowed and stays literal text. It cannot equal the null token.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:49-67"
+          ],
+          "pitfalls": [
+            "Putting a unit in the name does not convert anything."
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/columns/items/properties/kind": {
+          "status": "reviewed",
+          "explanation": "text keeps exact characters and never enters arithmetic; number is a finite value within ±1e100 that receives COUNT, SUM, AVERAGE, MIN, MAX, sample STDEV and MISSING in the Summary sheet. There is no date, boolean, currency or automatic kind.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:70-100"
+          ],
+          "pitfalls": [
+            "Choose text for identifiers, even when they look numeric; integers above 2^53 are rejected as numbers."
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/columns/items/properties/nullable": {
+          "status": "reviewed",
+          "explanation": "false (the default) rejects a missing cell in this column; true allows null (or the null token in CSV), which becomes a blank workbook cell. A number column still needs at least two present values.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:103-124"
+          ],
+          "defaultMeaning": "Omitted means false: a missing value is an error."
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/nullToken": {
+          "status": "reviewed",
+          "explanation": "The reserved marker for a missing cell in the typed data.csv and in readTypedCSV input; the default is \\N, as in the Arrow adaptor. It is 1 to 16 visible characters, not a decimal number, with no comma, quote or space. Text equal to the token is rejected, so choose a token your text never uses.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:41-46"
+          ],
+          "pitfalls": [
+            "A literal \\N cannot be present text; pick another token if you need it."
+          ],
+          "defaultMeaning": "Omitted uses \\N.",
+          "examples": [
+            "\\N",
+            "NA"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/rows": {
+          "status": "reviewed",
+          "explanation": "Provide 1 to 10,000 records, each with one cell per declared column, at most 100,000 cells in total. Record order is preserved in Data and in data.csv; every record needs at least one present cell.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:127-161"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/rows/items": {
+          "status": "reviewed",
+          "explanation": "One ordered record with exactly one cell for each declared column, using null for a missing value. No padding, reordering or column conversion occurs.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:127-161"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/rows/items/items": {
+          "status": "reviewed",
+          "explanation": "One cell: a JSON string for a text column, a finite number for a number column, or null for a missing value in a nullable column. Booleans, objects, numeric strings, empty text and formulas are rejected, never converted.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:127-161"
+          ],
+          "pitfalls": [
+            "Write IDs as strings, for example \"00123\"; 123 is not accepted in a text column."
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/rows/items/items/anyOf/0": {
+          "status": "reviewed",
+          "explanation": "null: a missing value, stored as a blank cell. Allowed only in a column declared nullable.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:70-100"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/rows/items/items/anyOf/1": {
+          "status": "reviewed",
+          "explanation": "A finite number within ±1e100 for a number column. A zero is a real measurement, not a missing value.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:70-100"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/rows/items/items/anyOf/2": {
+          "status": "reviewed",
+          "explanation": "Text of 1 to 1,024 characters for a text column, exactly as written (no trimming or Unicode normalization). Control characters and empty text are rejected; =1+2 stays literal text.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:70-100"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3": {
+          "status": "reviewed",
+          "explanation": "Build the workbook from a typed CSV file: exact declared header, declared text or number columns and a reserved null token. The file bytes and SHA-256 fingerprint are captured, so a reused run is only accepted while the file is unchanged.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/adaptor.py:24-42"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/id": {
+          "status": "reviewed",
+          "explanation": "Name this table source with an ASCII letter followed by letters, digits or underscores, at most 64 characters.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/filter": {
+          "status": "reviewed",
+          "explanation": "readTypedCSV: the labelled table is read from the CSV file named in options.file. Switch to fromTypedRows to type a small table into the document.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/adaptor.py:24-42"
+          ],
+          "examples": [
+            "readTypedCSV"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options": {
+          "status": "reviewed",
+          "explanation": "The typed CSV source: file is the CSV path, columns declares each header name, kind and nullability in file order, and nullToken is the reserved missing-value marker. file and columns are required.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/adaptor.py:24-42",
+            "src/schemaxis/adaptors/calc/typed_table.py:191-240"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "Absolute path of a regular UTF-8 CSV of at most 8 MiB: no byte-order mark, comma-delimited, LF or CRLF records, cells bare or wholly double-quoted with \"\" for a quote, first record equal to the declared names. The file is copied into the run directory and never opened as a workbook; a relative path fails planning. In a workflow it can be bound to an earlier step's CSV file or table artifact, for example {\"$artifact\": \"summary\", \"index\": 2}; a file kind does not make the bytes trusted, so the declared header, kinds and null token are checked before any native work.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:164-247",
+            "docs/calc.md#binding-a-producers-csv-file"
+          ],
+          "pitfalls": [
+            "Line breaks inside cells, blank lines, trailing commas and ragged records are rejected with the record number.",
+            "A changed file, header, kind or token is a different input and cannot reuse an earlier run.",
+            "Binding a non-CSV artifact (such as a SQLite database) or one with an empty label, padded number or renamed header stops with INVALID_TABLE; declare the producer's own header names and null marker."
+          ],
+          "fileExtensions": [
+            ".csv"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/columns": {
+          "status": "reviewed",
+          "explanation": "Declare 1 to 64 columns in data order. Each has a unique name, a kind of text or number, and nullable (default false). Nothing is inferred from the values, and units belong in the name, for example Mass (g). The names must equal the CSV header exactly, in file order.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:49-67"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/columns/items": {
+          "status": "reviewed",
+          "explanation": "One column declaration: name, kind and optional nullable. Unknown keys such as unit or format are rejected rather than ignored.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:49-67"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/columns/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Unique label of 1 to 128 characters, without control characters or text that workbook XML cannot represent. A leading =, +, - or @ is allowed and stays literal text. It cannot equal the null token.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:49-67"
+          ],
+          "pitfalls": [
+            "Putting a unit in the name does not convert anything."
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/columns/items/properties/kind": {
+          "status": "reviewed",
+          "explanation": "text keeps exact characters and never enters arithmetic; number is a finite value within ±1e100 that receives COUNT, SUM, AVERAGE, MIN, MAX, sample STDEV and MISSING in the Summary sheet. There is no date, boolean, currency or automatic kind.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:70-100"
+          ],
+          "pitfalls": [
+            "Choose text for identifiers, even when they look numeric; integers above 2^53 are rejected as numbers."
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/columns/items/properties/nullable": {
+          "status": "reviewed",
+          "explanation": "false (the default) rejects a missing cell in this column; true allows null (or the null token in CSV), which becomes a blank workbook cell. A number column still needs at least two present values.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:103-124"
+          ],
+          "defaultMeaning": "Omitted means false: a missing value is an error."
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/nullToken": {
+          "status": "reviewed",
+          "explanation": "The reserved marker for a missing cell in the typed data.csv and in readTypedCSV input; the default is \\N, as in the Arrow adaptor. It is 1 to 16 visible characters, not a decimal number, with no comma, quote or space. Text equal to the token is rejected, so choose a token your text never uses.",
+          "sources": [
+            "docs/calc.md#typed-labelled-tables",
+            "src/schemaxis/adaptors/calc/typed_table.py:41-46"
+          ],
+          "pitfalls": [
+            "A literal \\N cannot be present text; pick another token if you need it."
+          ],
+          "defaultMeaning": "Omitted uses \\N.",
+          "examples": [
+            "\\N",
+            "NA"
           ]
         }
       }

@@ -8,7 +8,7 @@
         "assumptions": "Godot 4.x; metres, explicit transforms and intrinsic YXZ Euler rotation semantics. Resources must remain with the project. Preview rendering needs an available graphics environment.",
         "constraints": "No arbitrary GDScript; only trusted generated project/orbit scripts. Bounded self-contained glTF subset. No live reverse synchronisation or universal material preservation.",
         "inspection": "Inspect fresh-process scene node membership, transforms, bounds, material/light settings and optional decoded PNG preview. Headless case acceptance does not qualify graphical rendering.",
-        "recovery": "UNSUPPORTED_UNITS requires metres. Correct missing materials/resources and unsupported glTF features; preserve build/reopen logs. Use headless acceptance when preview graphics are unavailable."
+        "recovery": "UNSUPPORTED_UNITS requires metres. Correct missing materials/resources and unsupported glTF features; preserve build/reopen logs. Use headless acceptance when preview graphics are unavailable. SCENE_MALFORMED means the retained scene text is outside the canonical single-line property syntax; preserve it and rerun in a fresh directory. The saved scene hierarchy and placement are checked against the authored plan even when hash manifests agree."
       },
       "examples": [
         {
@@ -172,17 +172,47 @@
           "expect": "invalid",
           "fault": "DEPENDENCY_CYCLE",
           "schemaValid": true
+        },
+        {
+          "id": "animated-sprite",
+          "reference": "examples/schemaxis/godot-animated-sprite.json"
+        },
+        {
+          "id": "animated-sprite-relative-metadata",
+          "document": {
+            "version": "schemaxis.godot/1",
+            "nodes": [
+              {
+                "id": "hero",
+                "filter": "animatedSprite3D",
+                "options": {
+                  "file": "/library-fixtures/animated-sheet.png",
+                  "metadata": "sheet.json",
+                  "animation": "pulse"
+                }
+              },
+              {
+                "id": "view",
+                "filter": "camera"
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "UNSUPPORTED_RESOURCE",
+          "schemaValid": true
         }
       ],
       "conformance": [
         "tests/unit/test_schemaxis_godot.py",
         "tests/unit/test_adaptor_migration.py",
-        "tests/unit/test_godot_hierarchy.py"
+        "tests/unit/test_godot_hierarchy.py",
+        "tests/unit/test_godot_animated_sprite.py"
       ],
       "acceptance": [
         "tools/qualify_adaptor_migration.py",
         "tools/qualify_godot.py",
-        "tools/qualify_godot_hierarchy.py"
+        "tools/qualify_godot_hierarchy.py",
+        "tools/qualify_godot_animation.py"
       ],
       "profiles": {
         "workflow": {
@@ -204,7 +234,9 @@
         "api": [
           "https://docs.godotengine.org/en/stable/classes/class_node3d.html",
           "https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner",
-          "https://docs.godotengine.org/en/stable/classes/class_packedscene.html"
+          "https://docs.godotengine.org/en/stable/classes/class_packedscene.html",
+          "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+          "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
         ],
         "lifecycle": {
           "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
@@ -265,6 +297,22 @@
               "Only the documented glTF/material subset is imported; sprite timing metadata is not inferred from a PNG."
             ],
             "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "input-3",
+            "direction": "input",
+            "kind": "spriteMetadata",
+            "format": "schemaxis.aseprite.sheet/1 JSON",
+            "traits": {
+              "time": "durationMS whole milliseconds, 1-5000",
+              "rectangles": "explicit pixel rectangles, non-overlapping, uniform size",
+              "tags": "one forward tag selected by name"
+            },
+            "losses": [
+              "Only the named forward tag is imported; other tags, reverse and ping-pong directions, trimming, offsets, layers and user data are refused or ignored, never reinterpreted.",
+              "Godot stores relative durations; Schemaxis fixes 1 frame per second so each stays authored milliseconds."
+            ],
+            "scope": "At most 32 frames of at most 256x256 inside a 4096x256 sheet; verified by independent crop, saved-scene reading and fixed-tick headless playback sampling."
           }
         ],
         "inspection": [
@@ -471,17 +519,340 @@
                 "expected": "."
               }
             ]
+          },
+          {
+            "id": "animated-sprite",
+            "example": "animated-sprite",
+            "edits": [],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/sprite-animation-fixture.png",
+              "/nodes/0/options/metadata": "examples/schemaxis/sprite-animation-fixture.json"
+            },
+            "scope": "Committed 24x8 original sheet and sheet.json (100/250/400 ms, forward pulse tag, looping): literal durations, rectangles, loop mode and per-frame pixel hashes from the fresh reopen, plus decisive headless playback frames 12 ms either side of the 0.1 s and 0.75 s boundaries and in the second lap. Expectations are fixture literals, not read from the producer.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/0/duration",
+                "expected": 0.1,
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/1/duration",
+                "expected": 0.25,
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/2/duration",
+                "expected": 0.4,
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/0/rect",
+                "expected": [
+                  0,
+                  0,
+                  8,
+                  8
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/1/rect",
+                "expected": [
+                  8,
+                  0,
+                  8,
+                  8
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/2/rect",
+                "expected": [
+                  16,
+                  0,
+                  8,
+                  8
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/0/rgbaSHA256",
+                "expected": "d4fe7662085c6070841291c0ea2585cfb1f1357b15c62562d0a797a7176b2884"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/1/rgbaSHA256",
+                "expected": "39510b8ab0e91c45bac6330d040212e4c3b66747402242991ebc6c1cb1b8aed0"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/2/rgbaSHA256",
+                "expected": "168a56bb0e406f0a1eb75a4b32d09af592b641defe84722b3759c6bc87ca59ee"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/loopMode",
+                "expected": 1
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/1/target",
+                "expected": 0.088,
+                "absolute": 1e-09
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/1/frame",
+                "expected": 0
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/2/target",
+                "expected": 0.112,
+                "absolute": 1e-09
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/2/frame",
+                "expected": 1
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/5/target",
+                "expected": 0.362,
+                "absolute": 1e-09
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/5/frame",
+                "expected": 2
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/8/target",
+                "expected": 0.762,
+                "absolute": 1e-09
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/8/frame",
+                "expected": 0
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/12/target",
+                "expected": 1.512,
+                "absolute": 1e-09
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/12/frame",
+                "expected": 0
+              }
+            ]
+          },
+          {
+            "id": "animated-sprite-variant",
+            "example": "animated-sprite",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/loop",
+                "value": false
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/sprite-animation-fixture.png",
+              "/nodes/0/options/metadata": "examples/schemaxis/sprite-animation-fixture-variant.json"
+            },
+            "scope": "Changed timing (250/100/400 ms) and loop off for the same sheet: literal durations, rectangles, loop mode, pixel hashes and decisive playback frames, with the last frame held and playing false after 0.75 s. Does not claim shared timeout or cancellation of the sampling loop; those are proved by the dedicated qualifier.",
+            "checks": [
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/0/duration",
+                "expected": 0.25,
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/1/duration",
+                "expected": 0.1,
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/2/duration",
+                "expected": 0.4,
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/0/rect",
+                "expected": [
+                  0,
+                  0,
+                  8,
+                  8
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/1/rect",
+                "expected": [
+                  8,
+                  0,
+                  8,
+                  8
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/2/rect",
+                "expected": [
+                  16,
+                  0,
+                  8,
+                  8
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/0/rgbaSHA256",
+                "expected": "d4fe7662085c6070841291c0ea2585cfb1f1357b15c62562d0a797a7176b2884"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/1/rgbaSHA256",
+                "expected": "39510b8ab0e91c45bac6330d040212e4c3b66747402242991ebc6c1cb1b8aed0"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/frames/2/rgbaSHA256",
+                "expected": "168a56bb0e406f0a1eb75a4b32d09af592b641defe84722b3759c6bc87ca59ee"
+              },
+              {
+                "file": "reopened.json",
+                "format": "json",
+                "pointer": "/scene/nodes/hero/animation/loopMode",
+                "expected": 0
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/1/target",
+                "expected": 0.238,
+                "absolute": 1e-09
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/1/frame",
+                "expected": 0
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/2/target",
+                "expected": 0.262,
+                "absolute": 1e-09
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/2/frame",
+                "expected": 1
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/5/target",
+                "expected": 0.362,
+                "absolute": 1e-09
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/5/frame",
+                "expected": 2
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/8/target",
+                "expected": 0.762,
+                "absolute": 1e-09
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/8/frame",
+                "expected": 2
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/8/playing",
+                "expected": false
+              },
+              {
+                "file": "playback.json",
+                "format": "json",
+                "pointer": "/sprites/hero/samples/9/playing",
+                "expected": false
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Named transformGroup static assemblies, optional geometry/group parents, local transform composition, ownership and world bounds; legacy root nodes retained.",
+        "scope": "Named transformGroup static assemblies, optional geometry/group parents, local transform composition, ownership and world bounds; legacy root nodes retained. Offline verification also checks the retained scene.tscn hierarchy and local transforms against the plan. Adds animatedSprite3D: timed AnimatedSprite3D/SpriteFrames from schemaxis.aseprite.sheet/1 sheet and metadata artifacts (forward tag slice, loop or hold), with fresh-process readback and fixed-tick headless playback sampling. Static sprites, geometry, hierarchy and preview are retained.",
         "review": [
-          "verification/2026-10-17-godot-completion.md"
+          "verification/2026-10-17-godot-completion.md",
+          "verification/2026-10-24-godot-allocation.md",
+          "verification/2026-10-26-godot-animated-sprite.md"
         ],
         "notApplicable": {
           "mpi": "Static Godot scenes run serially; no distributed execution.",
-          "time-batches": "No simulation time or animation in this bounded static assembly slice.",
+          "time-batches": "No simulation time series; animation is one authored sprite slice sampled at fixed process ticks, not a time-batch contract.",
           "live-editing": "Saved project edits invalidate verification; no live reverse synchronisation."
         }
       }

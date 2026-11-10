@@ -9,12 +9,41 @@
       ],
       "pitfalls": [
         "Nearest downsampling loses unsampled pixels and is not an average.",
-        "CRS assertion never reprojects coordinates; EPSG:4326 raster axes are longitude then latitude."
+        "CRS assertion never reprojects coordinates; EPSG:4326 raster axes are longitude then latitude.",
+        "EPSG:4326 latitude outside -90..90 is refused with RASTER_EXTENT_INVALID; this may indicate mislabelled metre-scale northings. Longitude conventions and projected coordinates are preserved."
       ],
       "examples": [
         {
           "reference": "examples/schemaxis/gdal-window.json",
           "purpose": "Extract a nodata-aware elevation window with independently checked pixels."
+        }
+      ]
+    },
+    "zonalSummary": {
+      "status": "reviewed",
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
+      "explanation": "Measure named pixel-aligned rectangles of the captured raster grid. For each zone you declare, you get eight columns tied to your zone ID: valid and missing (how many pixels held a real value and how many equalled nodata), coverage (valid as a fraction of the rectangle, so you can judge how much was measured), minimum and maximum (the exact spread of values), sum (the total, meaningful for additive quantities) and mean (the unweighted typical value). It is published as a typed CSV, with a JSON summary that keeps units, CRS and rectangle corners. Use it for bounded elevation, temperature or categorical-index grids when you already know the rectangles in pixel indices. It does not classify land, weight by ground area, reproject, read polygons or infer meaning beyond the band values.",
+      "sources": [
+        "docs/gdal.md#zonal-summaries"
+      ],
+      "pitfalls": [
+        "Zones are rectangles in this raster's own pixel grid, counted from the top-left. After a window or resize, re-author the zones for the new grid.",
+        "Overlapping zones are summarised independently; their pixel visits are not unique pixels and totals must not be added.",
+        "sum is the total of band values, not an area integral. It is only meaningful for additive quantities; for elevation or temperature read the mean, minimum and maximum instead.",
+        "mean is unweighted: every valid pixel counts equally. EPSG:4326 pixels are angular, so ground area varies with latitude and no area-weighted quantity is implied.",
+        "coverage says how much of the rectangle held real values, not how accurate they are. Check it, with valid, before trusting a mean.",
+        "A zone with no valid pixel reports valid 0, coverage 0 and null statistics, not zero.",
+        "A zone whose positive and negative values nearly cancel (for example +1 and -1) is refused with ZONE_SUM_UNRESOLVABLE before any native work: its derived roundoff allowance exceeds 2**-26 of the sum, so a native sum could no longer be told from a wrong one. Choose a zone that does not cancel; the threshold checks that two computations agree, not how accurate the measurement is.",
+        "The CSV carries no units; minimum, maximum, sum and mean take the asserted band units, recorded in zones-summary.json and the publication metadata."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/gdal-zonal.json",
+          "purpose": "Four overlapping and all-missing zones on the elevation fixture with literal expected statistics."
+        },
+        {
+          "reference": "examples/schemaxis/gdal-zonal-temperature.json",
+          "purpose": "Float32 Kelvin zones on an EPSG:4326 grid with the refuse missing policy."
         }
       ]
     }
@@ -129,6 +158,279 @@
           "explanation": "Choose strict to refuse unsupported bands, masks, overviews, compression or metadata. Only TIFF strip layout, byte order and descriptive CRS citations may change; no silent semantic metadata loss.",
           "sources": [
             "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/properties/zones": {
+          "status": "reviewed",
+          "explanation": "One to 16 named rectangles in the captured raster's pixel grid, summarised in the order you author them. Each is an independent measurement region; overlap is allowed and nothing is merged, so pixels inside two zones are counted in both.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/properties/zones/items": {
+          "status": "reviewed",
+          "explanation": "One zone: an ID plus a column/row rectangle. All five members are required; no polygons, world coordinates or reprojection.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/properties/zones/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Your name for the zone, 1 to 32 printable ASCII characters, unique, with no leading or trailing space and not the CSV null token \\N. It is plain text everywhere: 007 keeps its leading zeros and =1+2 is never a formula. It is the identity that links the CSV row, JSON entry and native result.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/properties/zones/items/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based column of the rectangle's left edge, counted in pixels from the left of the captured raster. The whole rectangle must lie inside the grid.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/properties/zones/items/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based row of the rectangle's top edge, counted in pixels downward from the top of the captured raster (north-up). The whole rectangle must lie inside the grid.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/properties/zones/items/properties/width": {
+          "status": "reviewed",
+          "explanation": "Number of pixel columns in the rectangle (at least 1). x plus width must not exceed the raster width.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/properties/zones/items/properties/height": {
+          "status": "reviewed",
+          "explanation": "Number of pixel rows in the rectangle (at least 1). y plus height must not exceed the raster height.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/properties/missing": {
+          "status": "reviewed",
+          "explanation": "What to do with nodata pixels inside a zone. exclude leaves them out and reports the missing count and coverage; refuse fails the run if any zone contains one. Nodata is the exact sentinel you assert and the raster declares; nothing is imputed, and a zone with no valid pixel gets null statistics.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "The window branch: crop a pixel window and optionally resize its grid with nearest-neighbour sampling.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.gdal/1; it covers both the window and zonalSummary operations. The version identifies the document schema, not the GDAL release.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select window to crop and optionally resize a raster grid. The zonalSummary operation uses a different closed set of fields.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/source": {
+          "status": "reviewed",
+          "explanation": "Absolute local .tif/.tiff regular file, at most 8 MiB and 262144 pixels. Single-band north-up uncompressed strips only, no symlink/device/remote input. Source bytes are captured; changes invalidate reuse.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based leftmost source column, in pixels, from the upper-left corner. The window must remain fully inside the source; no padded pixels.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based topmost source row, in pixels, increasing downward. It is not a northing; north-up grids have negative geotransform y spacing.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/width": {
+          "status": "reviewed",
+          "explanation": "Number of source columns to retain,1\u20134096 pixels. Together with height at most 262144; x+width must fit the source.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/height": {
+          "status": "reviewed",
+          "explanation": "Number of source rows to retain,1\u20134096 pixels. Together with width at most 262144; y+height must fit the source.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/outputWidth": {
+          "status": "reviewed",
+          "explanation": "Number of columns on the output grid,1\u20134096, at most 262144 output pixels. Equal to width retains horizontal spacing; a changed count preserves extent and changes pixel width.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/outputHeight": {
+          "status": "reviewed",
+          "explanation": "Number of rows on the output grid,1\u20134096, at most 262144 output pixels. Equal to height retains vertical spacing; a changed count preserves extent and negative y spacing.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/epsg": {
+          "status": "reviewed",
+          "explanation": "Required assertion of source CRS, 4326 or 3857. 4326 raster coordinates are x longitude and y latitude in degrees; 3857 uses easting/northing metres. A mismatch is refused; this field does not reproject.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/units": {
+          "status": "reviewed",
+          "explanation": "Required assertion of band value units: m for metres, K for kelvin, 1 for dimensionless. Distinct from horizontal CRS units. Source units must match and output units are preserved, without vertical-datum inference.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/nodata": {
+          "status": "reviewed",
+          "explanation": "Required finite source nodata sentinel. Must match the tag and fit the source dtype exactly. Nearest sampling copies a nodata pixel unchanged; statistics exclude it and use null extrema/mean when every pixel is nodata.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/resampling": {
+          "status": "reviewed",
+          "explanation": "Only nearest is supported. Output centres select source indices floor((2*i+1)*sourceSize/(2*outputSize)); ties select the higher index. No averaging or conservation; bilinear is deliberately refused.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/0/properties/lossPolicy": {
+          "status": "reviewed",
+          "explanation": "Choose strict to refuse unsupported bands, masks, overviews, compression or metadata. Only TIFF strip layout, byte order and descriptive CRS citations may change; no silent semantic metadata loss.",
+          "sources": [
+            "docs/gdal.md#contract-and-units"
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "The zonalSummary branch: summarise declared pixel-aligned rectangles of the captured raster into a typed CSV and JSON summary.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.gdal/1; it covers both the window and zonalSummary operations. The version identifies the document schema, not the GDAL release.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select zonalSummary to summarise named pixel rectangles of the captured raster. The window operation uses a different closed set of fields.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/source": {
+          "status": "reviewed",
+          "explanation": "Absolute local single-band uncompressed GeoTIFF (UInt16, Int16 or finite Float32) whose pixel grid the zones are counted in. The bytes are captured; a workflow may supply a verified GeoTIFF artifact, whose own grid then defines the zone indices.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/epsg": {
+          "status": "reviewed",
+          "explanation": "Asserted CRS of the captured raster: 4326 (angular longitude/latitude degrees) or 3857 (metres). It is checked against the source and never reprojects; EPSG:4326 pixels support unweighted averages but no ground-area claim.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/units": {
+          "status": "reviewed",
+          "explanation": "Asserted units of the band values (m, K or dimensionless 1), checked against the source and never converted. The CSV has no unit column; units are recorded in zones-summary.json and publication metadata.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/nodata": {
+          "status": "reviewed",
+          "explanation": "Asserted nodata sentinel; it must equal the raster's declared finite nodata. Only exact matches are treated as missing, and nothing is imputed.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/zones": {
+          "status": "reviewed",
+          "explanation": "One to 16 named rectangles in the captured raster's pixel grid, summarised in the order you author them. Each is an independent measurement region; overlap is allowed and nothing is merged, so pixels inside two zones are counted in both.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/zones/items": {
+          "status": "reviewed",
+          "explanation": "One zone: an ID plus a column/row rectangle. All five members are required; no polygons, world coordinates or reprojection.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/zones/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Your name for the zone, 1 to 32 printable ASCII characters, unique, with no leading or trailing space and not the CSV null token \\N. It is plain text everywhere: 007 keeps its leading zeros and =1+2 is never a formula. It is the identity that links the CSV row, JSON entry and native result.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/zones/items/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based column of the rectangle's left edge, counted in pixels from the left of the captured raster. The whole rectangle must lie inside the grid.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/zones/items/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based row of the rectangle's top edge, counted in pixels downward from the top of the captured raster (north-up). The whole rectangle must lie inside the grid.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/zones/items/properties/width": {
+          "status": "reviewed",
+          "explanation": "Number of pixel columns in the rectangle (at least 1). x plus width must not exceed the raster width.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/zones/items/properties/height": {
+          "status": "reviewed",
+          "explanation": "Number of pixel rows in the rectangle (at least 1). y plus height must not exceed the raster height.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/missing": {
+          "status": "reviewed",
+          "explanation": "What to do with nodata pixels inside a zone. exclude leaves them out and reports the missing count and coverage; refuse fails the run if any zone contains one. Nodata is the exact sentinel you assert and the raster declares; nothing is imputed, and a zone with no valid pixel gets null statistics.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
+          ]
+        },
+        "/oneOf/1/properties/lossPolicy": {
+          "status": "reviewed",
+          "explanation": "Only strict is supported: unsupported TIFF content, metadata or zone requests are refused rather than approximated.",
+          "sources": [
+            "docs/gdal.md#zonal-summaries"
           ]
         }
       }

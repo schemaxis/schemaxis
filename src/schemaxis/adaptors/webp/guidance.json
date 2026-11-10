@@ -1,0 +1,304 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "encodeLossless": {
+      "status": "reviewed",
+      "explanation": "Publish one captured PNG as a lossless WebP for web pages. The adaptor decodes the PNG, encodes it with libwebp (cwebp -lossless -exact), then decodes the published bytes again with a separate dwebp process and proves that every red, green, blue and alpha sample matches the source, including colour hidden under fully transparent pixels. Choose it to reuse illustrations or transparent assets on the web without any pixel change. File size savings depend on content; no detail is discarded.",
+      "pitfalls": [
+        "Lossless WebP is not guaranteed to be smaller than the PNG; check the byte counts in webp-summary.json.",
+        "Only static non-interlaced 8-bit RGB/RGBA sRGB PNGs within 2048 pixels per side and 1,048,576 pixels are accepted; others are refused, not converted.",
+        "A run needs both cwebp and dwebp; verification needs only dwebp because no host WebP decoder exists. The --dwebp flag applies to run; schemaxis verify takes SCHEMAXIS_DWEBP or a stored dwebp location."
+      ],
+      "sources": [
+        "docs/webp.md"
+      ]
+    },
+    "encodeLossy": {
+      "status": "reviewed",
+      "explanation": "Publish one opaque captured PNG as a lossy WebP (VP8) for web pages where a photograph-like image may trade a bounded amount of accuracy for size. You choose cwebp quality (0-100, a lossy setting: 100 is not lossless), a mean-absolute-RGB-error budget and optionally a byte budget. The adaptor encodes with libwebp, decodes the published bytes again with a separate dwebp process, compares every red, green and blue sample with the source and publishes only if the measured mean error and the file size are inside your budgets. Otherwise the run fails with DELIVERABLE_NOT_MET and says what was measured. There is no automatic quality search.",
+      "pitfalls": [
+        "Every pixel must be opaque (alpha 255). Any alpha value below 255 is refused with WEBP_ALPHA_UNSUPPORTED: use encodeLossless to preserve alpha, or flatten onto a background first.",
+        "The error is the mean absolute difference over all width*height*3 RGB samples against the trusted dwebp default decode. It is not a perceptual score and does not describe other decoders or viewers; a small mean can hide a few badly damaged edges.",
+        "A lossy WebP is not guaranteed smaller than the PNG. Flat charts, line art and screenshots often come out larger and less accurate than lossless; check the byte counts and error in webp-summary.json.",
+        "A budget of 0 can only be met by a bit-identical decode, which lossy coding practically never gives; it is accepted as a legitimate way to refuse."
+      ],
+      "sources": [
+        "docs/webp.md"
+      ]
+    },
+    "decodeToPng": {
+      "status": "reviewed",
+      "explanation": "Decode one captured static WebP back to a PNG that reports, documents and other tools can use. The adaptor captures the WebP once, reads its RIFF framing (exactly one VP8L chunk, or one opaque VP8 chunk), decodes it with the trusted libwebp dwebp (-nodither -pam), writes the samples as a canonical 8-bit RGB or RGBA PNG (only IHDR, IDAT and IEND), and decodes the captured bytes again to prove that every red, green, blue and alpha sample of the PNG equals the decoder output, including colour hidden under fully transparent pixels. Only dwebp is needed, not cwebp. Choose it to turn an existing web asset into a report-compatible PNG.",
+      "pitfalls": [
+        "Only static simple-format files are accepted: animated, extended (VP8X with ALPH alpha, ICC, EXIF or XMP), multi-chunk and trailing-byte files are refused before any decoder runs.",
+        "A lossy WebP decodes to what libwebp produces, not to the original picture; another decoder or viewer may differ slightly. Lossless input decodes exactly.",
+        "The PNG is untagged (read it as sRGB, the web convention) and carries no text, EXIF or profile chunk. Its file digest depends on the host zlib; its samples do not.",
+        "Verification re-decodes the captured WebP with dwebp and so needs that trusted decoder (SCHEMAXIS_DWEBP or a stored location); it does not authenticate where the WebP came from or re-read the original path."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/webp-decode-lossless.json",
+          "purpose": "Decode a 4x3 lossless WebP with transparency and hidden colour to an RGBA PNG."
+        },
+        {
+          "reference": "examples/schemaxis/webp-decode-lossy.json",
+          "purpose": "Decode a lossy opaque WebP gradient to an RGB PNG."
+        }
+      ],
+      "sources": [
+        "docs/webp.md"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.webp/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Describe one WebP operation: publish a PNG as a lossless (encodeLossless) or budgeted lossy (encodeLossy) WebP, or decode a static WebP back to a PNG (decodeToPng). The file named here is captured as immutable evidence before the native tool runs; output is image.webp or image.png plus a JSON summary of dimensions, hashes and, where relevant, the measured error.",
+          "pitfalls": [
+            "Do not author encoder flags, resize, metadata or animation: this contract has none. quality, maxMeanRGBError and maxBytes belong to encodeLossy only."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the WebP publication document contract shared by the lossless (encodeLossless, VP8L) and lossy (encodeLossy, opaque VP8) operations. This identifies the authored structure, not the installed libwebp release (1.6 is observed and checked at run time).",
+          "pitfalls": [
+            "Use schemaxis.webp/1."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select encodeLossless (every RGBA sample proven identical), encodeLossy (opaque sources only; measured error and size must stay inside the authored budgets) or decodeToPng (a static WebP decoded to a canonical PNG whose every sample equals a fresh dwebp decode).",
+          "pitfalls": [
+            "Near-lossless, animated and metadata-retaining WebP are outside this contract. Lossy output is chosen explicitly and is never a fallback for lossless."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute local .png file: a non-interlaced 8-bit RGB or RGBA image, untagged or tagged sRGB, at most 2048 pixels per side, 1,048,576 pixels and 8 MiB. A verified image artifact from another step can be bound here. Its bytes are captured before encoding and decide scheduler reuse. For decodeToPng the source is instead an absolute local .webp file of at most 16 MiB, one simple-format VP8L or opaque VP8 chunk, within the same pixel limits.",
+          "pitfalls": [
+            "No URLs, relative paths, symlinks or non-PNG files; palette, greyscale, 16-bit, interlaced, tRNS, animated and ICC-profile PNGs are refused.",
+            "Embedded text, EXIF and physical-size chunks are dropped and listed in the summary.",
+            "encodeLossy additionally refuses any pixel that is not fully opaque (alpha 255); encodeLossless accepts transparency.",
+            "decodeToPng refuses animated, extended (VP8X) and multi-chunk WebP files and any WebP whose alpha hint disagrees with its decoded pixels."
+          ],
+          "fileExtensions": [
+            ".png",
+            ".webp"
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/properties/quality": {
+          "status": "reviewed",
+          "explanation": "The cwebp -q setting for encodeLossy: an integer from 0 (smallest, roughest) to 100 (largest, closest). Required. It is a lossy quality, not a percentage of preserved detail; 100 is still lossy.",
+          "pitfalls": [
+            "Booleans, decimals and strings are refused. There is no automatic search: if the result misses a budget, choose another value and run again.",
+            "Quality has no portable relation to the error or size of a particular image; the measured values in the summary decide."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/properties/maxMeanRGBError": {
+          "status": "reviewed",
+          "explanation": "Largest accepted mean absolute RGB error, in 8-bit levels (0 to 255), averaged over every red, green and blue sample of the image after a fresh dwebp decode. Required for encodeLossy. Typical smooth photographs at moderate quality land in the low single digits; saturated charts and line art are often much higher.",
+          "pitfalls": [
+            "Zero is allowed and almost always refuses the run. NaN, infinity, booleans and values above 255 are refused.",
+            "The comparison is exact: the measured error (an integer sum over the sample count) is compared with the decimal as you write it, so an error of exactly 18/60 meets a budget of 0.3 and 19/60 does not.",
+            "A mean hides local damage; it is a bounded accuracy check, not a perceptual quality certificate."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/properties/maxBytes": {
+          "status": "reviewed",
+          "explanation": "Optional largest accepted size of image.webp in bytes (1 to 16,777,216). When omitted, the global 16 MiB WebP cap applies and the plan records that default. A larger file fails with DELIVERABLE_NOT_MET and is not published.",
+          "pitfalls": [
+            "The cap cannot exceed 16 MiB. Setting it below the PNG size does not make a smaller file possible; lossy WebP can be larger than the PNG."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "The lossless branch: encodeLossless takes only a source PNG and proves every decoded RGBA sample identical, including colour under transparent pixels.",
+          "pitfalls": [
+            "quality, maxMeanRGBError and maxBytes are not accepted here; select encodeLossy to use them."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select encodeLossless: every decoded RGBA sample is proven identical.",
+          "pitfalls": [
+            "Near-lossless, animated and metadata-retaining WebP are outside this contract."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/0/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute local .png file: a non-interlaced 8-bit RGB or RGBA image, untagged or tagged sRGB, at most 2048 pixels per side, 1,048,576 pixels and 8 MiB. A verified image artifact from another step can be bound here. Its bytes are captured before encoding and decide scheduler reuse.",
+          "pitfalls": [
+            "No URLs, relative paths, symlinks or non-PNG files; palette, greyscale, 16-bit, interlaced, tRNS, animated and ICC-profile PNGs are refused.",
+            "Embedded text, EXIF and physical-size chunks are dropped and listed in the summary."
+          ],
+          "fileExtensions": [
+            ".png"
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/0/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the lossless WebP publication document contract. This identifies the authored structure, not the installed libwebp release (1.6 is observed and checked at run time).",
+          "pitfalls": [
+            "Use schemaxis.webp/1."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "The lossy branch: encodeLossy takes a source PNG whose pixels are all opaque, an integer quality and a mean-RGB-error budget, and optionally a byte budget. It publishes only a file whose fresh dwebp decode is within both budgets.",
+          "pitfalls": [
+            "quality and maxMeanRGBError are required; there is no default and no automatic quality search."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/1/properties/maxBytes": {
+          "status": "reviewed",
+          "explanation": "Optional largest accepted size of image.webp in bytes (1 to 16,777,216). When omitted, the global 16 MiB WebP cap applies and the plan records that default. A larger file fails with DELIVERABLE_NOT_MET and is not published.",
+          "pitfalls": [
+            "The cap cannot exceed 16 MiB. Setting it below the PNG size does not make a smaller file possible; lossy WebP can be larger than the PNG."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/1/properties/maxMeanRGBError": {
+          "status": "reviewed",
+          "explanation": "Largest accepted mean absolute RGB error, in 8-bit levels (0 to 255), averaged over every red, green and blue sample of the image after a fresh dwebp decode. Required for encodeLossy. Typical smooth photographs at moderate quality land in the low single digits; saturated charts and line art are often much higher.",
+          "pitfalls": [
+            "Zero is allowed and almost always refuses the run. NaN, infinity, booleans and values above 255 are refused.",
+            "The comparison is exact: the measured error (an integer sum over the sample count) is compared with the decimal as you write it, so an error of exactly 18/60 meets a budget of 0.3 and 19/60 does not.",
+            "A mean hides local damage; it is a bounded accuracy check, not a perceptual quality certificate."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select encodeLossy: opaque sources only; the measured mean RGB error and file size must stay inside the authored budgets.",
+          "pitfalls": [
+            "Near-lossless, animated and metadata-retaining WebP are outside this contract."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/1/properties/quality": {
+          "status": "reviewed",
+          "explanation": "The cwebp -q setting for encodeLossy: an integer from 0 (smallest, roughest) to 100 (largest, closest). Required. It is a lossy quality, not a percentage of preserved detail; 100 is still lossy.",
+          "pitfalls": [
+            "Booleans, decimals and strings are refused. There is no automatic search: if the result misses a budget, choose another value and run again.",
+            "Quality has no portable relation to the error or size of a particular image; the measured values in the summary decide."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/1/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute local .png file: a non-interlaced 8-bit RGB or RGBA image, untagged or tagged sRGB, at most 2048 pixels per side, 1,048,576 pixels and 8 MiB. A verified image artifact from another step can be bound here. Its bytes are captured before encoding and decide scheduler reuse.",
+          "pitfalls": [
+            "No URLs, relative paths, symlinks or non-PNG files; palette, greyscale, 16-bit, interlaced, tRNS, animated and ICC-profile PNGs are refused.",
+            "Embedded text, EXIF and physical-size chunks are dropped and listed in the summary.",
+            "encodeLossy additionally refuses any pixel that is not fully opaque (alpha 255); encodeLossless accepts transparency."
+          ],
+          "fileExtensions": [
+            ".png"
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/1/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the WebP publication document contract for the lossy branch (encodeLossy, opaque VP8). This identifies the authored structure, not the installed libwebp release (1.6 is observed and checked at run time).",
+          "pitfalls": [
+            "Use schemaxis.webp/1."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "The decode branch: decodeToPng takes only a source .webp and publishes image.png (8-bit RGB, or RGBA when the WebP carries the alpha hint) plus webp-summary.json.",
+          "pitfalls": [
+            "No quality, error or byte budget applies; the decode is exact against dwebp."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/2/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select decodeToPng: a static simple-format WebP becomes a canonical PNG whose every sample equals a fresh trusted dwebp decode.",
+          "pitfalls": [
+            "Encoding options of the other operations do not apply; animation and metadata are not carried."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/2/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute local .webp file: exactly one VP8L chunk (lossless) or one opaque VP8 chunk (lossy), at most 16 MiB, 2048 pixels per side and 1,048,576 pixels. Its bytes are captured before decoding and decide scheduler reuse; the original path is not read again.",
+          "pitfalls": [
+            "No URLs, relative paths, symlinks or non-WebP files; animated and VP8X files are refused."
+          ],
+          "fileExtensions": [
+            ".webp"
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        },
+        "/oneOf/2/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the WebP document contract for the decode branch (decodeToPng). This identifies the authored structure, not the libwebp release (1.6 is observed and checked at run time).",
+          "pitfalls": [
+            "Use schemaxis.webp/1."
+          ],
+          "sources": [
+            "docs/webp.md"
+          ]
+        }
+      }
+    }
+  }
+}

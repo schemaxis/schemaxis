@@ -1,0 +1,171 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "scheduleWalls": {
+      "status": "reviewed",
+      "explanation": "Build a schedule of the plain IfcWall occurrences in one small ASCII IFC4 file: one row per wall, linked by GlobalId, with the property-set values and quantities you name. Each cell records whether it came from the occurrence, the wall type or nowhere, and quantities are converted from the project SI unit to metres, square metres or cubic metres. IfcOpenShell reads the file in its own process twice, and an independent standard-library STEP reader decides every GUID, origin and value; the published typed CSV and JSON schedule are rebuilt from that checked result, so a Calc workbook can be made from the CSV. Use it to reconcile what a model says about walls; it does not compute geometry, certify the model or validate the whole IFC file, and the schedule is a draft for BIM coordination review. IFC2X3, IFC4X3, Unicode escapes, subtype walls, lists and enumerations are refused rather than guessed.",
+      "pitfalls": [
+        "Rows are plain IfcWall occurrences sorted by GlobalId; the Name is nullable literal text and never an identity.",
+        "occurrence-only never reads the wall type; occurrence-overrides-type reads the type property set only where the occurrence has no such property, and each cell records occurrence, type or missing.",
+        "Quantities come from the occurrence IfcElementQuantity only and are converted exactly from the project SI unit to m, m2 or m3; no geometry is calculated and nothing certifies the stored quantity.",
+        "The typed CSV uses the null token \\N and can be read by Calc readTypedCSV; each numeric column needs at least two present values there."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/ifcopenshell-baseline.json",
+          "purpose": "Schedule three synthetic walls with a type default, an occurrence override, a missing height and mm quantities."
+        },
+        {
+          "reference": "examples/schemaxis/ifcopenshell-variant.json",
+          "purpose": "Schedule the same walls after one length changed."
+        },
+        {
+          "reference": "examples/schemaxis/ifcopenshell-areas.json",
+          "purpose": "Convert prefixed project area and volume units to m2 and m3."
+        }
+      ],
+      "sources": [
+        "docs/ifcopenshell.md"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.ifcopenshell/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A request to schedule the walls of one IFC4 file: choose the file, the property-set and quantity columns you want, how missing values and type inheritance are treated. The result is a typed table keyed by GlobalId for coordination review; it is not geometry, certification or whole-model validation.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "The document version, always schemaxis.ifcopenshell/1. It names this input contract, not the IfcOpenShell release.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The operation to run. scheduleWalls is the only one: it schedules IfcWall occurrences.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "The IFC file as an object: an absolute local .ifc path and an optional SHA-256 pin. The file is copied into the run and all later checks use the copy, so the schedule stays checkable after the original is gone.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/source/properties/path": {
+          "status": "reviewed",
+          "explanation": "Absolute local path to one ASCII IFC4 STEP file, at most 2MiB, 4096 entities and 64 plain walls (at least 2). The header must say IFC4 exactly. Numbers and #ids anywhere in the file are bounded (at most 40 mantissa digits, exponent magnitude 400, 10 id digits) and must be valid STEP integers or reals (2500. not 2500). Paths with parent references are refused.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/source/properties/sha256": {
+          "status": "reviewed",
+          "explanation": "Optional lowercase SHA-256 of the file bytes. If given, a different file is refused before any native work. Omit it to schedule whatever the file contains and record its hash.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/class": {
+          "status": "reviewed",
+          "explanation": "The selected entity class. Only IfcWall is supported: subtype entities such as IfcWallStandardCase are refused instead of silently included, because a native subtype-aware lookup would otherwise change the row set.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/columns": {
+          "status": "reviewed",
+          "explanation": "Two to six explicit columns. Each names one property from a property set or one quantity from a quantity set; there are no selectors, expressions or geometry options. GUID and Name columns are always added first. For a Calc handoff every numeric column needs at least two present values.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/columns/items": {
+          "status": "reviewed",
+          "explanation": "One schedule column: where its value comes from (a property or a quantity), the exact set and member names, and the name of the published column.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/columns/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "The published column header. It must be distinct, printable ASCII, and different from GUID, Name and the null token. A header that looks like a formula stays literal text.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/columns/items/properties/source": {
+          "status": "reviewed",
+          "explanation": "property reads an IfcPropertySingleValue from an IfcPropertySet; quantity reads an IfcQuantityLength, Area or Volume from an occurrence IfcElementQuantity.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/columns/items/properties/set": {
+          "status": "reviewed",
+          "explanation": "The exact name of the property set or quantity set, for example Pset_WallCommon or Qto_WallBaseQuantities. Names are compared exactly; a wall with two sets of the same name is refused as ambiguous.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/columns/items/properties/property": {
+          "status": "reviewed",
+          "explanation": "The exact property name inside the set (property columns only). Lists, enumerated, bounded and complex properties and properties with their own unit are refused when selected.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/columns/items/properties/valueType": {
+          "status": "reviewed",
+          "explanation": "The type you expect (property columns only): text for IfcLabel, IfcText or IfcIdentifier, number for unitless IfcReal or IfcInteger, boolean for IfcBoolean (published as the text true or false). A different stored type is refused, never converted. Empty text is refused.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/columns/items/properties/quantityName": {
+          "status": "reviewed",
+          "explanation": "The exact quantity name inside the quantity set (quantity columns only), for example Length, NetSideArea or NetVolume.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/columns/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "The quantity kind (quantity columns only): length (m), area (m2) or volume (m3). The project must declare the matching plain SI unit, with no prefix or MILLI, CENTI, DECI or KILO; conversion-based, derived or ambiguous units are refused. No geometry is calculated.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/missing": {
+          "status": "reviewed",
+          "explanation": "What to do when a wall has no value for a column. refuse stops with the wall GlobalId and column named; null publishes an empty typed cell with origin missing. A missing value is never zero.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/inheritance": {
+          "status": "reviewed",
+          "explanation": "occurrence-only reads only the wall itself. occurrence-overrides-type reads the wall type property set when the occurrence has no such property. Each cell records occurrence, type or missing. Quantities are never inherited from the type.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        },
+        "/properties/zeroQuantity": {
+          "status": "reviewed",
+          "explanation": "accept keeps a stored zero quantity as zero; refuse stops on it. Negative quantities and empty text are always refused. A missing quantity is null, not zero.",
+          "sources": [
+            "docs/ifcopenshell.md"
+          ]
+        }
+      }
+    }
+  }
+}

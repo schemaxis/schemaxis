@@ -1,0 +1,46 @@
+{
+  "version": "schemaxis.adaptor-assessment/1",
+  "rubric": "schemaxis.strength-rubric/1",
+  "assessmentVersion": "2026-10-25.1",
+  "assessedOn": "2026-10-25",
+  "assessor": "Schemaxis editorial assessment",
+  "provider": "tesseract",
+  "providerVersion": "schemaxis.tesseract/1",
+  "routes": [
+    "schemaxis.tesseract/1"
+  ],
+  "sourceFingerprint": "sha256:5ed5cb264323cd9ed467c76baa6061124e6a5a08f877dd0030b396580553acbf",
+  "coverage": {
+    "percent": 10,
+    "status": "subjective",
+    "scope": {
+      "kind": "whole-application",
+      "description": "Whole Tesseract engine and tooling breadth across useful recognition and maintenance families.",
+      "denominator": "Image and page recognition, layout and segmentation choices, languages and models, structured document outputs, configuration and vocabulary, orientation and script detection, and model training and evaluation."
+    },
+    "rationale": "A single English-model page recognition path provides useful text and word boxes, but most language, layout, output-format, configuration and training capabilities remain outside the integration. The estimate concerns the whole application rather than recognition accuracy on its small qualification corpus.",
+    "confidence": "low"
+  },
+  "abstraction": {
+    "percent": 60,
+    "status": "subjective",
+    "scope": {
+      "kind": "declared-workflows",
+      "description": "Bounded one-page OCR into explicitly unreviewed text, word boxes and native confidence, with captured image/model inputs and optional declared origin bound to pixels.",
+      "denominator": "User intent and domain decisions within this one-page machine-draft workflow; excluded languages, layouts, outputs and training are outside this denominator."
+    },
+    "rationale": "A recognition operation produces an inspectable review trail and hides subprocess configuration and TSV parsing. Authors still supply a pinned model file, choose a native-derived segmentation mode and compose document rendering or later correction themselves; the interface does not decide whether recognised words are correct.",
+    "confidence": "medium"
+  },
+  "evidence": [
+    "src/schemaxis/adaptors/tesseract/adaptor.json",
+    "src/schemaxis/adaptors/tesseract/readiness.json",
+    "docs/tesseract.md",
+    "verification/2026-10-25-tesseract-63.md"
+  ],
+  "limitations": [
+    "One opaque RGB8 non-interlaced PNG and one explicitly pinned LSTM model, exposed as English; the model's language content is not established by its filename or hash. The interface has two segmentation modes and bounded image/model sizes; no general PDF, multipage, layout, handwriting, correction or training workflow.",
+    "Native confidence is uncalibrated, output is a machine draft, and pixel consistency does not certify text truth or human review. Native availability and source-bound qualification remain separate readiness facts.",
+    "Subjective source-contract assessment rounded to five points; no exhaustive API denominator or recognition-accuracy measurement supports these percentages."
+  ]
+}

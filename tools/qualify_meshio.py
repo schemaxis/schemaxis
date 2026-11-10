@@ -86,7 +86,7 @@ def input_probes(directory, document, executable):
     replacements={
         'inverted-tetra': (b'0 1 2 0 1 2 3 1 4 2',b'0 1 2 1 0 2 3 1 4 2'),
         'compressed-payload': (b'format="ascii"',b'format="binary"'),
-        'unsupported-topology': (b'5 10 5',b'5 12 5'),
+        'unsupported-topology': (b'5 10 5',b'5 13 5'),
         'extra-metadata': (b'</Piece>',b'<FieldData/></Piece>'),
         'entity-declaration': (b'<VTKFile',b'<!DOCTYPE VTKFile [<!ENTITY x "boom">]><VTKFile'),
         'integer-storage-overflow': (b'Name="types" format="ascii">5',b'Name="types" format="ascii">261'),

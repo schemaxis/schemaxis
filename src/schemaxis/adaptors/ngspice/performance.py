@@ -8,12 +8,14 @@ from schemaxis.errors import fail
 from . import circuit
 
 AXES={'dcSweep':'sourceVoltage_V','acSweep':'frequency_Hz','rcStep':'time_s'}
-QUANTITIES={'dcSweep':['voltage_V'],'acSweep':['magnitude_V','gainMagnitude'],'rcStep':['voltage_V']}
+QUANTITIES={'dcSweep':['voltage_V'],'acSweep':['magnitude_V','gainMagnitude','gain_dB','phase_deg','currentMagnitude_A','activePower_W','reactivePower_var','impedanceMagnitude_Ohm'],'rcStep':['voltage_V']}
+NONNEGATIVE={'magnitude_V','gainMagnitude','currentMagnitude_A','impedanceMagnitude_Ohm'}
+UNITS={'voltage_V':'V','magnitude_V':'V','gainMagnitude':'V/V','gain_dB':'dB','phase_deg':'deg','currentMagnitude_A':'A','activePower_W':'W','reactivePower_var':'var','impedanceMagnitude_Ohm':'ohm'}
 NUMBER={'type':'number','minimum':-1e12,'maximum':1e12}
 SPECIFICATION={'type':'array','minItems':1,'maxItems':32,'items':{'type':'object','properties':{
     'name':{'type':'string','minLength':1,'maxLength':64,'required':True},
     'probe':{'type':'string','minLength':1,'maxLength':32,'required':True},
-    'quantity':{'type':'enum','values':['voltage_V','magnitude_V','gainMagnitude'],'required':True},
+    'quantity':{'type':'enum','values':sorted(set(sum(QUANTITIES.values(),[]))),'required':True},
     'axis':{'type':'enum','values':list(AXES.values()),'required':True},
     'window':{'type':'array','items':NUMBER,'minItems':2,'maxItems':2,'required':True},
     'minimum':NUMBER,'maximum':NUMBER}}}
@@ -37,8 +39,11 @@ def validate(prepared,value):
         if not re.fullmatch(r'[a-z][a-z0-9_]{0,63}',entry['name']) or entry['name'] in names:
             fail('INVALID_REQUIREMENT','requirement names must be unique lowercase identifiers',location+'.name')
         names.add(entry['name'])
-        if entry['probe'] not in prepared['circuit']['probes']:
-            fail('INVALID_REQUIREMENT','select a published circuit probe',location+'.probe')
+        voltage_quantities={'voltage_V','magnitude_V','gainMagnitude','gain_dB','phase_deg'}
+        available=(prepared['circuit']['probes'] if entry['quantity'] in voltage_quantities else
+                   (['$input'] if entry['quantity']=='impedanceMagnitude_Ohm' else prepared['circuit'].get('branchProbes',[])+['$input']))
+        if entry['probe'] not in available or entry['probe']=='$input' and not prepared.get('portMetrics'):
+            fail('INVALID_REQUIREMENT','select a published voltage or branch probe, or enable portMetrics for $input',location+'.probe')
         if entry['quantity'] not in QUANTITIES[prepared['operation']]:
             fail('INVALID_REQUIREMENT','quantity is not supported by this analysis',location+'.quantity')
         if entry['axis']!=AXES[prepared['operation']]:
@@ -50,8 +55,15 @@ def validate(prepared,value):
             fail('INVALID_REQUIREMENT','declare a lower or upper performance bound',location)
         if entry.get('minimum',-math.inf)>entry.get('maximum',math.inf):
             fail('INVALID_REQUIREMENT','minimum must not exceed maximum',location)
-        if entry['quantity']!='voltage_V' and any(entry.get(key,0)<0 for key in ('minimum','maximum')):
-            fail('INVALID_REQUIREMENT','magnitude and gain bounds must be nonnegative',location)
+        if entry['quantity'] in NONNEGATIVE and any(entry.get(key,0)<0 for key in ('minimum','maximum')):
+            fail('INVALID_REQUIREMENT','magnitude bounds must be nonnegative',location)
+        if entry['quantity']=='phase_deg' and any(not -180<=entry[key]<=180 for key in ('minimum','maximum') if key in entry):
+            fail('INVALID_REQUIREMENT','phase bounds use the principal interval [-180,180] degrees; split a wrapping interval into separate windows',location)
+        if entry['quantity'] in ('phase_deg','gain_dB'):
+            for index in selected:
+                axis_value=axis[index];v=circuit.expected(prepared,axis_value)[entry['probe']]
+                if abs(v/prepared['amplitude'])<=1e-30:
+                    fail('UNDEFINED_OBSERVABLE','phase/gain dB is undefined at zero response; choose a nonzero probe or magnitude bound',location+'.quantity')
     return requirements
 
 
@@ -63,7 +75,12 @@ def requirement_schema(operation):
     fields['quantity']={'enum':QUANTITIES[operation]}
     fields['axis']={'const':AXES[operation]}
     if operation=='acSweep':
-        for field in ('minimum','maximum'):fields[field]['minimum']=0
+        result['items']['allOf']=[
+            {'if':{'properties':{'quantity':{'enum':sorted(NONNEGATIVE)}}},
+             'then':{'properties':{key:{'minimum':0} for key in ('minimum','maximum')}}},
+            {'if':{'properties':{'quantity':{'const':'phase_deg'}}},
+             'then':{'properties':{key:{'minimum':-180,'maximum':180} for key in ('minimum','maximum')}}}]
+
     result['items']['anyOf']=[{'required':['minimum']},{'required':['maximum']}]
     return result
 
@@ -73,13 +90,15 @@ def assess(prepared,rows):
     requirements=[]
     for entry in prepared['requirements']:
         axis,selected,epsilon=window_samples(prepared,entry['window'])
-        column=prepared['nodes'].index(entry['probe'])
+        column=prepared['nodes'].index(entry['probe']) if prepared['operation']!='acSweep' else None
         values=[]
         for index in selected:
             row=rows[index]
             if prepared['operation']=='acSweep':
-                value=abs(complex(row[1+2*column],row[2+2*column]))
-                if entry['quantity']=='gainMagnitude':value/=abs(prepared['amplitude'])
+                measured=circuit.observables(prepared,row)
+                if entry['quantity'] not in measured.get(entry['probe'],{}):
+                    fail('VERIFICATION_FAILED','required phase/gain is undefined in native observations')
+                value=measured[entry['probe']][entry['quantity']]
             else:value=row[1+column]
             values.append({'value':value,'sampleIndex':index,'coordinate':axis[index],'nativeCoordinate':row[0]})
         minimum=min(values,key=lambda value:value['value']);maximum=max(values,key=lambda value:value['value'])
@@ -90,7 +109,7 @@ def assess(prepared,rows):
             checks.append({'bound':bound,'expected':entry[bound],'observed':worst['value'],
                 'margin':margin,'passed':margin>=0,'worstCondition':worst})
         accepted=all(check['passed'] for check in checks)
-        requirements.append({**entry,'units':'V/V' if entry['quantity']=='gainMagnitude' else 'V',
+        requirements.append({**entry,'units':UNITS[entry['quantity']],
             'samplesChecked':len(selected),'endpointTolerance':epsilon,
             'minimumObserved':minimum,'maximumObserved':maximum,'checks':checks,'accepted':accepted,
             'nextAction':'Accept the requirement at the declared samples.' if accepted else

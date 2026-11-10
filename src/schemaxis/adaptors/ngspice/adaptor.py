@@ -10,7 +10,7 @@ import time
 
 from schemaxis.artifacts import atomic_json, file_digest
 from schemaxis.core.declarations import validate_arguments
-from schemaxis.core.faults import SchemaxisError
+from schemaxis.core.faults import Fault, SchemaxisError
 from schemaxis.dispatch import cancellation_requested
 from schemaxis.errors import fail, keys
 from schemaxis.native_command import execute
@@ -30,31 +30,61 @@ CIRCUIT={'type':'object','required':True,'properties':{
 AC_CIRCUIT={**CIRCUIT,'properties':{**CIRCUIT['properties'],
     'inductors':{'type':'array','maxItems':64,'default':[],'items':{'type':'object','properties':{
         **COMPONENT,'inductance':{'type':'number','minimum':1e-9,'maximum':1e3,'required':True}}}},
-    'probes':{**CIRCUIT['properties']['probes'],'maxItems':15}}}
+    'probes':{**CIRCUIT['properties']['probes'],'maxItems':15},
+    'branchProbes':{'type':'array','maxItems':8,'uniqueItems':True,'default':[],'items':NODE}}}
 POINTS={'type':'integer','minimum':2,'maximum':512,'default':101}
 AMPLITUDE={'type':'number','minimum':-1000,'maximum':1000,'default':1}
 OPTIONS={
     'dcSweep':{'circuit':CIRCUIT,'start':{**AMPLITUDE,'default':0},'stop':{**AMPLITUDE,'default':5},'points':POINTS},
     'acSweep':{'circuit':AC_CIRCUIT,'start':{'type':'number','minimum':0.001,'maximum':1e9,'default':1},
-               'stop':{'type':'number','minimum':0.001,'maximum':1e9,'default':10000},'points':{**POINTS,'minimum':3},'amplitude':AMPLITUDE},
+               'stop':{'type':'number','minimum':0.001,'maximum':1e9,'default':10000},'points':{**POINTS,'minimum':3},'amplitude':AMPLITUDE,
+               'spacing':{'type':'enum','values':['linear','decade','octave'],'default':'linear'},
+               'portMetrics':{'type':'boolean','default':False},
+               'amplitudeConvention':{'type':'enum','values':['peak','rms'],'default':'peak'}},
     'rcStep':{'circuit':CIRCUIT,'stop':{'type':'number','minimum':1e-9,'maximum':1e6,'default':0.005},'points':POINTS,'amplitude':AMPLITUDE}}
-DECLARATIONS={op:{'native':{'dcSweep':'ngspice dc','acSweep':'ngspice ac lin','rcStep':'ngspice tran/linearize'}[op],
+DECLARATIONS={op:{'native':{'dcSweep':'ngspice dc','acSweep':'ngspice ac lin/dec/oct','rcStep':'ngspice tran/linearize'}[op],
     'kinds':['table'],'inputs':{},'options':{k:{'value':v} for k,v in opts.items()}} for op,opts in OPTIONS.items()}
 FILES=[('results.csv','table'),('circuit-summary.json','text'),('circuit.cir','text')]
 EVIDENCE=['native.dat','reopened.dat','result.raw','reopen.cir','runtime.json','version.stdout','version.stderr']
 LOSSES=['Only ideal resistors, capacitors, AC-only uncoupled inductors and one grounded ideal voltage source; no semiconductors, models, subcircuits or imported scripts',
         'DC treats capacitors as open circuits; AC is a linear phasor response with exp(+j*omega*t) convention',
         'Transient support is one initially uncharged series-R/shunt-C step response; no general transient circuit claim',
-        'CSV contains selected voltages; retain summary and generated netlist for topology, SI units and assumptions']
+        'AC branch currents and powers derive from verified terminal voltages and ideal constitutive laws; portMetrics also checks native source current and publishes input impedance/power',
+        'Finite frequency/time samples do not prove continuous extrema or all component tolerances; retain topology and assumptions with CSV']
+
+
+RESERVED_GROUND_ALIAS='gnd'
+
+
+def refuse_ground_alias(network):
+    """Refuse every authored node token that ngspice would silently rewrite to ground.
+
+    ngspice lowercases the deck, then replaces a whole delimited ``gnd`` token on
+    each card after the first token with node 0 (inpcom.c inp_fix_gnd_name, unless
+    no_auto_gnd is set). The generated netlist would then describe a different
+    circuit from the planned one, so the alias is refused rather than normalised.
+    """
+    positions=[('$.circuit.source',network['source'])]
+    for kind in ('resistors','capacitors','inductors'):
+        for index,component in enumerate(network.get(kind,[])):
+            positions.extend((f'$.circuit.{kind}[{index}].{terminal}',component[terminal]) for terminal in ('a','b'))
+    positions.extend((f'$.circuit.probes[{index}]',probe) for index,probe in enumerate(network['probes']))
+    for location,value in positions:
+        if isinstance(value,str) and value.lower()==RESERVED_GROUND_ALIAS:
+            raise SchemaxisError(Fault('INVALID_CIRCUIT',
+                "node name 'gnd' is reserved: ngspice rewrites it to ground node 0, which would change the simulated circuit",
+                location,'pipeline',observed={'node':value,'reservedAlias':RESERVED_GROUND_ALIAS,'ngspiceNode':'0'},
+                recovery="Use 0 for ground, or choose another node name such as gnd1 or ground; names are matched case-insensitively."))
 
 
 def plan(document):
-    keys(document,('version','operation','circuit','start','stop','points','amplitude','requirements'),'$')
+    keys(document,('version','operation','circuit','start','stop','points','amplitude','spacing','portMetrics','amplitudeConvention','requirements'),'$')
     if document.get('version')!=VERSION:fail('UNSUPPORTED_VERSION','expected '+VERSION)
     operation=document.get('operation')
     if not isinstance(operation,str) or operation not in OPTIONS:fail('UNKNOWN_FILTER','select dcSweep, acSweep or rcStep')
     options=validate_arguments(OPTIONS[operation],{k:v for k,v in document.items() if k not in ('version','operation','requirements')})
     network=options['circuit'];drive=network['source']
+    refuse_ground_alias(network)
     def node(value):
         return isinstance(value,str) and (value=='0' or re.fullmatch(r'[a-z][a-z0-9_]{0,31}',value) is not None)
     if not node(drive) or drive=='0':fail('INVALID_CIRCUIT','source must name a lowercase non-ground node')
@@ -89,6 +119,13 @@ def plan(document):
     if operation=='acSweep' and options['amplitude']==0:fail('INVALID_ARGUMENT','AC amplitude must be nonzero')
     result={'version':'schemaxis.ngspice.plan/1','operation':operation,**options,'nodes':sorted(nodes),'losses':LOSSES}
     axis=circuit.samples(result)
+    if not 3<=len(axis)<=512 and operation=='acSweep':
+        fail('RESOURCE_LIMIT','AC needs 3–512 actual frequency samples; adjust range or points density','$.points')
+    if operation=='acSweep':
+        if any(name not in names for name in network['branchProbes']):
+            fail('INVALID_SELECTION','branchProbes must name declared components','$.circuit.branchProbes')
+        columns=1+4*len(network['probes'])+6*len(network['branchProbes'])+10*options['portMetrics']
+        if columns>64:fail('RESOURCE_LIMIT','selected voltage, branch and port metrics exceed 64 output columns; select fewer probes','$.circuit')
     if any(b<=a for a,b in zip(axis,axis[1:])):
         fail('INVALID_SWEEP','sample spacing must be representable; widen the interval or reduce points')
     if operation=='rcStep':
@@ -103,7 +140,9 @@ def plan(document):
         result.update(responseNode=response,timeConstant=tau)
     else:
         # Reject singular/ill-conditioned systems before native assignment.
-        for value in axis:circuit.voltages(result,value)
+        for value in axis:
+            values=circuit.voltages(result,value)
+            if result.get('portMetrics'):circuit.port_impedance(result,value,values)
     if 'requirements' in document:result['requirements']=performance.validate(result,document['requirements'])
     return result
 
@@ -142,7 +181,7 @@ def resources(document,spec,identity):
 
 def expressions(prepared):
     if prepared['operation']=='acSweep':
-        return ' '.join(f'real(v({n})) imag(v({n}))' for n in prepared['nodes'])
+        return ' '.join(f'real(v({n})) imag(v({n}))' for n in prepared['nodes'])+(' real(i(vdrive)) imag(i(vdrive))' if prepared.get('portMetrics') else '')
     return ' '.join(f'v({n})' for n in prepared['nodes'])
 
 
@@ -163,12 +202,13 @@ def netlists(prepared):
         step=(prepared['stop']-prepared['start'])/(prepared['points']-1)
         commands=[f"dc Vdrive {prepared['start']:.17g} {prepared['stop']:.17g} {step:.17g}"]
     elif operation=='acSweep':
-        commands=[f"ac lin {prepared['points']} {prepared['start']:.17g} {prepared['stop']:.17g}"]
+        kind={'linear':'lin','decade':'dec','octave':'oct'}[prepared['spacing']]
+        commands=[f"ac {kind} {prepared['points']} {prepared['start']:.17g} {prepared['stop']:.17g}"]
     else:
         step=prepared['stop']/(prepared['points']-1);maximum=min(step,prepared['timeConstant']/1000)
         commands=[f"tran {step:.17g} {prepared['stop']:.17g} 0 {maximum:.17g}",
                   'linearize '+' '.join(f'v({n})' for n in prepared['nodes'])]
-    saved=' '.join(f'v({n})' for n in prepared['nodes'])
+    saved=' '.join(f'v({n})' for n in prepared['nodes'])+(' i(vdrive)' if prepared.get('portMetrics') else '')
     build='\n'.join(lines+control+commands+['write result.raw '+saved,'wrdata native.dat '+expressions(prepared),'quit','.endc','.end'])+'\n'
     reopen='\n'.join(['Schemaxis raw-data readback']+control+['load result.raw','wrdata reopened.dat '+expressions(prepared),'quit','.endc','.end'])+'\n'
     return build,reopen
@@ -184,7 +224,12 @@ def summary(prepared,rows):
             'samples':len(rows),'firstRow':circuit.publication(prepared,rows)['rows'][0],
             'lastRow':circuit.publication(prepared,rows)['rows'][-1],'columns':circuit.publication(prepared,rows)['columns'],
             'maximumVoltageError_V':error,'timeConstant_s':prepared.get('timeConstant'),
-            'convention':'exp(+j*omega*t); RC capacitor voltage starts at zero','losses':LOSSES}
+            'convention':'exp(+j*omega*t); branch current a to b; input current enters network; capacitor voltage starts at zero in rcStep',
+            'amplitudeConvention':prepared.get('amplitudeConvention'),
+            'complexPowerFactor':(.5 if prepared.get('amplitudeConvention')=='peak' else 1) if prepared['operation']=='acSweep' else None,'losses':LOSSES}
+    if prepared.get('portMetrics'):
+        details['maximumSourceCurrentError_A']=circuit.current_error(prepared,rows)
+    if prepared['operation']=='acSweep':details['frequencyGrid']={'spacing':prepared['spacing'],'pointsMeaning':'total samples' if prepared['spacing']=='linear' else 'nominal samples per '+prepared['spacing'],'actualSamples':len(rows),'lastFrequency_Hz':rows[-1][0]}
     if 'requirements' in prepared:details['performance']=performance.assess(prepared,rows)
     return details
 
@@ -214,8 +259,8 @@ def run(document,directory,*,executable=None,timeout=300):
         atomic_json(directory/'runtime.json',observed)
         for stage,name in [('build','circuit.cir'),('reopen','reopen.cir')]:
             execute([executable,'-n','-b',name],directory,stage,deadline-time.monotonic(),environment)
-        width=1+len(prepared['nodes'])*(2 if prepared['operation']=='acSweep' else 1)
-        rows=circuit.read_table(directory/'native.dat',width,prepared['points'])
+        width=circuit.row_width(prepared)
+        rows=circuit.read_table(directory/'native.dat',width,len(circuit.samples(prepared)))
         details=summary(prepared,rows);write_csv(directory/'results.csv',circuit.publication(prepared,rows));atomic_json(directory/'circuit-summary.json',details)
         atomic_json(directory/'verification.json',{'artifacts':manifest(directory),'evidence':{n:file_digest(directory/n) for n in EVIDENCE}})
         result=verify(directory,require_result=False)
@@ -242,9 +287,10 @@ def verify(directory,require_result=True):
         circuit.check((directory/'circuit.cir').read_text()==build and (directory/'reopen.cir').read_text()==reopen,'generated netlist differs')
         observed=read('runtime.json');identity=runtime((directory/'version.stdout').read_text())
         circuit.check(observed['name']==identity['name'] and observed['version']==identity['version'] and Path(observed['executable']).is_absolute(),'native runtime identity differs')
-        width=1+len(prepared['nodes'])*(2 if prepared['operation']=='acSweep' else 1)
-        rows=circuit.read_table(directory/'native.dat',width,prepared['points'])
-        reread=circuit.read_table(directory/'reopened.dat',width,prepared['points'])
+        width=circuit.row_width(prepared)
+        rows=circuit.read_table(directory/'native.dat',width,len(circuit.samples(prepared)))
+        circuit.inspect(prepared,rows)
+        reread=circuit.read_table(directory/'reopened.dat',width,len(circuit.samples(prepared)))
         circuit.inspect(prepared,reread);circuit.check(close(rows,reread,rel=1e-12,absolute=1e-12),'fresh native raw-data readback differs')
         raw=circuit.read_raw(directory/'result.raw',prepared)
         circuit.inspect(prepared,raw);circuit.check(close(rows,raw,rel=1e-12,absolute=1e-12),'independent raw parser differs')

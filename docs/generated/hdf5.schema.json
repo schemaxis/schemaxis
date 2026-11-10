@@ -1,0 +1,2509 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.hdf5/1"
+    },
+    "operation": {
+      "enum": [
+        "createFile",
+        "editFile",
+        "inspectFile",
+        "extractData",
+        "writeMeshFields",
+        "appendSeries",
+        "compareFiles",
+        "parallelWrite"
+      ]
+    },
+    "file": {
+      "$ref": "#/$defs/file"
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/input"
+      },
+      "maxItems": 32,
+      "default": []
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dependency"
+      },
+      "maxItems": 64,
+      "default": []
+    },
+    "objects": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/object"
+          },
+          "minItems": 1,
+          "maxItems": 256
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/object"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      ]
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/link"
+      },
+      "maxItems": 256,
+      "default": []
+    },
+    "extracts": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/extract"
+          },
+          "maxItems": 32,
+          "default": []
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/extract"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      ]
+    },
+    "access": {
+      "$ref": "#/$defs/access"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "edits": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edit"
+      },
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "repack": {
+      "type": "boolean",
+      "default": false
+    },
+    "expectations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/expectation"
+      },
+      "maxItems": 256,
+      "default": []
+    },
+    "preview": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 256,
+      "default": 8
+    },
+    "parallel": {
+      "$ref": "#/$defs/parallelRead"
+    },
+    "mesh": {
+      "$ref": "#/$defs/mesh"
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/meshField"
+      },
+      "maxItems": 32,
+      "default": []
+    },
+    "times": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "timeUnits": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "default": "s"
+    },
+    "storage": {
+      "$ref": "#/$defs/storage"
+    },
+    "series": {
+      "$ref": "#/$defs/series"
+    },
+    "batches": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/data"
+      },
+      "minItems": 1,
+      "maxItems": 64
+    },
+    "swmr": {
+      "type": "boolean",
+      "default": true
+    },
+    "readers": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2,
+      "default": 1
+    },
+    "reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "referenceSha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "tolerance": {
+      "$ref": "#/$defs/tolerance"
+    },
+    "ranks": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 4,
+      "default": 2
+    },
+    "io": {
+      "enum": [
+        "collective",
+        "independent"
+      ],
+      "default": "collective"
+    },
+    "reduce": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation"
+  ],
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.hdf5/1"
+        },
+        "operation": {
+          "const": "createFile"
+        },
+        "file": {
+          "$ref": "#/$defs/file"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/input"
+          },
+          "maxItems": 32,
+          "default": []
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency"
+          },
+          "maxItems": 64,
+          "default": []
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/object"
+          },
+          "minItems": 1,
+          "maxItems": 256
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          },
+          "maxItems": 256,
+          "default": []
+        },
+        "extracts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/extract"
+          },
+          "maxItems": 32,
+          "default": []
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "objects"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.hdf5/1"
+        },
+        "operation": {
+          "const": "editFile"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "file": {
+          "$ref": "#/$defs/file"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/input"
+          },
+          "maxItems": 32,
+          "default": []
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency"
+          },
+          "maxItems": 64,
+          "default": []
+        },
+        "edits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edit"
+          },
+          "minItems": 1,
+          "maxItems": 128
+        },
+        "repack": {
+          "type": "boolean",
+          "default": false
+        },
+        "extracts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/extract"
+          },
+          "maxItems": 32,
+          "default": []
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "edits"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.hdf5/1"
+        },
+        "operation": {
+          "const": "inspectFile"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency"
+          },
+          "maxItems": 64,
+          "default": []
+        },
+        "expectations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/expectation"
+          },
+          "maxItems": 256,
+          "default": []
+        },
+        "preview": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256,
+          "default": 8
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.hdf5/1"
+        },
+        "operation": {
+          "const": "extractData"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency"
+          },
+          "maxItems": 64,
+          "default": []
+        },
+        "extracts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/extract"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        },
+        "parallel": {
+          "$ref": "#/$defs/parallelRead"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "extracts"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.hdf5/1"
+        },
+        "operation": {
+          "const": "writeMeshFields"
+        },
+        "file": {
+          "$ref": "#/$defs/file"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/input"
+          },
+          "maxItems": 32,
+          "default": []
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency"
+          },
+          "maxItems": 64,
+          "default": []
+        },
+        "mesh": {
+          "$ref": "#/$defs/mesh"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/meshField"
+          },
+          "maxItems": 32,
+          "default": []
+        },
+        "times": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1,
+          "maxItems": 256
+        },
+        "timeUnits": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "default": "s"
+        },
+        "storage": {
+          "$ref": "#/$defs/storage"
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "mesh",
+        "times"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.hdf5/1"
+        },
+        "operation": {
+          "const": "appendSeries"
+        },
+        "file": {
+          "$ref": "#/$defs/file"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/input"
+          },
+          "maxItems": 32,
+          "default": []
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency"
+          },
+          "maxItems": 64,
+          "default": []
+        },
+        "series": {
+          "$ref": "#/$defs/series"
+        },
+        "batches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/data"
+          },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "swmr": {
+          "type": "boolean",
+          "default": true
+        },
+        "readers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 1
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "series",
+        "batches"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.hdf5/1"
+        },
+        "operation": {
+          "const": "compareFiles"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "referenceSha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency"
+          },
+          "maxItems": 64,
+          "default": []
+        },
+        "tolerance": {
+          "$ref": "#/$defs/tolerance"
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "reference"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.hdf5/1"
+        },
+        "operation": {
+          "const": "parallelWrite"
+        },
+        "file": {
+          "$ref": "#/$defs/file"
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/object"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        "ranks": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4,
+          "default": 2
+        },
+        "io": {
+          "enum": [
+            "collective",
+            "independent"
+          ],
+          "default": "collective"
+        },
+        "reduce": {
+          "type": "boolean",
+          "default": true
+        },
+        "access": {
+          "$ref": "#/$defs/access"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "objects"
+      ]
+    }
+  ],
+  "$defs": {
+    "scalarType": {
+      "type": "object",
+      "properties": {
+        "class": {
+          "enum": [
+            "float",
+            "int",
+            "uint",
+            "complex",
+            "bool",
+            "string",
+            "enum"
+          ]
+        },
+        "bits": {
+          "enum": [
+            8,
+            16,
+            32,
+            64,
+            128
+          ]
+        },
+        "order": {
+          "enum": [
+            "little",
+            "big"
+          ],
+          "default": "little"
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "encoding": {
+          "enum": [
+            "utf-8",
+            "ascii"
+          ],
+          "default": "utf-8"
+        },
+        "signed": {
+          "type": "boolean",
+          "default": false
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/member"
+          },
+          "minItems": 1,
+          "maxItems": 256
+        },
+        "dims": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "minItems": 1,
+          "maxItems": 4
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "class"
+      ]
+    },
+    "member": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "value": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 18446744073709551615
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value"
+      ]
+    },
+    "field": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "type": {
+          "$ref": "#/$defs/scalarType"
+        },
+        "units": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+    "type": {
+      "type": "object",
+      "properties": {
+        "bits": {
+          "enum": [
+            8,
+            16,
+            32,
+            64,
+            128
+          ]
+        },
+        "order": {
+          "enum": [
+            "little",
+            "big"
+          ],
+          "default": "little"
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "encoding": {
+          "enum": [
+            "utf-8",
+            "ascii"
+          ],
+          "default": "utf-8"
+        },
+        "signed": {
+          "type": "boolean",
+          "default": false
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/member"
+          },
+          "minItems": 1,
+          "maxItems": 256
+        },
+        "dims": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "minItems": 1,
+          "maxItems": 4
+        },
+        "class": {
+          "enum": [
+            "float",
+            "int",
+            "uint",
+            "complex",
+            "bool",
+            "string",
+            "enum",
+            "compound",
+            "vlen",
+            "reference",
+            "opaque",
+            "named"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "base": {
+          "$ref": "#/$defs/scalarType"
+        },
+        "reference": {
+          "enum": [
+            "object",
+            "region"
+          ],
+          "default": "object"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "class"
+      ]
+    },
+    "selectionSlice": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483648
+        },
+        "stop": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483648
+        },
+        "step": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483648
+        }
+      },
+      "additionalProperties": false
+    },
+    "selection": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "all",
+            "slices",
+            "hyperslab",
+            "points"
+          ]
+        },
+        "slices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/selectionSlice"
+          },
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "start": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483648
+          },
+          "maxItems": 8
+        },
+        "count": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483648
+          },
+          "maxItems": 8
+        },
+        "stride": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483648
+          },
+          "maxItems": 8
+        },
+        "block": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483648
+          },
+          "maxItems": 8
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483648
+            },
+            "maxItems": 8
+          },
+          "minItems": 1,
+          "maxItems": 65536
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ]
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "enum": [
+            "values",
+            "fill",
+            "range",
+            "linspace",
+            "input",
+            "references",
+            "copy"
+          ]
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "maxLength": 65535
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "maxLength": 65535
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "maxLength": 65535
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      },
+                      "maxItems": 65536
+                    }
+                  ]
+                },
+                "maxItems": 65536
+              }
+            ]
+          },
+          "maxItems": 65536
+        },
+        "start": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number"
+        },
+        "stop": {
+          "type": "number"
+        },
+        "input": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "column": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/target"
+          },
+          "minItems": 1,
+          "maxItems": 4096
+        },
+        "dataset": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source"
+      ]
+    },
+    "externalSegment": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1099511627776,
+          "default": 0
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1099511627776
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "size"
+      ]
+    },
+    "storage": {
+      "type": "object",
+      "properties": {
+        "layout": {
+          "enum": [
+            "contiguous",
+            "chunked",
+            "compact",
+            "external",
+            "virtual"
+          ]
+        },
+        "chunks": {
+          "anyOf": [
+            {
+              "enum": [
+                "auto"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483648
+              },
+              "minItems": 1,
+              "maxItems": 8
+            }
+          ]
+        },
+        "compression": {
+          "enum": [
+            "none",
+            "gzip",
+            "lzf",
+            "szip"
+          ],
+          "default": "none"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "szipMethod": {
+          "enum": [
+            "nn",
+            "ec"
+          ]
+        },
+        "szipPixels": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 32
+        },
+        "shuffle": {
+          "type": "boolean",
+          "default": false
+        },
+        "fletcher32": {
+          "type": "boolean",
+          "default": false
+        },
+        "scaleOffset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "nbit": {
+          "type": "boolean",
+          "default": false
+        },
+        "fillValue": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 65535
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "fillTime": {
+          "enum": [
+            "ifSet",
+            "alloc",
+            "never"
+          ]
+        },
+        "allocTime": {
+          "enum": [
+            "early",
+            "incremental",
+            "late"
+          ]
+        },
+        "external": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/externalSegment"
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "trackTimes": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "virtualSource": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "default": "."
+        },
+        "dataset": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "select": {
+          "$ref": "#/$defs/selection"
+        },
+        "at": {
+          "$ref": "#/$defs/selection"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "dataset"
+      ]
+    },
+    "virtual": {
+      "type": "object",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/virtualSource"
+          },
+          "minItems": 1,
+          "maxItems": 256
+        },
+        "fill": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 65535
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "sources"
+      ]
+    },
+    "generated": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "enum": [
+            "range",
+            "linspace"
+          ]
+        },
+        "start": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number"
+        },
+        "stop": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source"
+      ]
+    },
+    "attribute": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "type": {
+          "$ref": "#/$defs/type"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 65535
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 65535
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "maxLength": 65535
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string",
+                                "maxLength": 65535
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ]
+                          },
+                          "maxItems": 65536
+                        }
+                      ]
+                    },
+                    "maxItems": 65536
+                  }
+                ]
+              },
+              "maxItems": 65536
+            }
+          ]
+        },
+        "data": {
+          "$ref": "#/$defs/generated"
+        },
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483648
+          },
+          "maxItems": 8
+        },
+        "empty": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "dimension": {
+      "type": "object",
+      "properties": {
+        "axis": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "label": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 255
+        },
+        "scales": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "maxItems": 8,
+          "default": []
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "axis"
+      ]
+    },
+    "object": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "kind": {
+          "enum": [
+            "dataset",
+            "group",
+            "datatype"
+          ],
+          "default": "dataset"
+        },
+        "type": {
+          "$ref": "#/$defs/type"
+        },
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483648
+          },
+          "maxItems": 8
+        },
+        "maxshape": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483648
+              },
+              {
+                "enum": [
+                  "unlimited"
+                ]
+              }
+            ]
+          },
+          "maxItems": 8
+        },
+        "data": {
+          "$ref": "#/$defs/data"
+        },
+        "storage": {
+          "$ref": "#/$defs/storage"
+        },
+        "virtual": {
+          "$ref": "#/$defs/virtual"
+        },
+        "attributes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attribute"
+          },
+          "maxItems": 64,
+          "default": []
+        },
+        "units": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "scale": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 255
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dimension"
+          },
+          "maxItems": 8,
+          "default": []
+        },
+        "trackOrder": {
+          "type": "boolean"
+        },
+        "empty": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ]
+    },
+    "link": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "kind": {
+          "enum": [
+            "soft",
+            "hard",
+            "external"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "kind",
+        "target"
+      ]
+    },
+    "input": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "format": {
+          "enum": [
+            "csv",
+            "npy",
+            "raw"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "type": {
+          "$ref": "#/$defs/scalarType"
+        },
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483648
+          },
+          "maxItems": 8
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 0
+        },
+        "delimiter": {
+          "enum": [
+            ",",
+            ";",
+            "tab"
+          ],
+          "default": ","
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "path",
+        "format"
+      ]
+    },
+    "dependency": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "role": {
+          "enum": [
+            "virtualSource",
+            "externalLink",
+            "rawStorage",
+            "copySource",
+            "reference"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "path",
+        "role"
+      ]
+    },
+    "file": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "default": "data.h5"
+        },
+        "libver": {
+          "enum": [
+            "earliest",
+            "v108",
+            "v110",
+            "v112",
+            "v114",
+            "v200",
+            "latest"
+          ],
+          "default": "earliest"
+        },
+        "libverHigh": {
+          "enum": [
+            "earliest",
+            "v108",
+            "v110",
+            "v112",
+            "v114",
+            "v200",
+            "latest"
+          ],
+          "default": "latest"
+        },
+        "userblock": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576,
+          "default": 0
+        },
+        "trackOrder": {
+          "type": "boolean",
+          "default": false
+        },
+        "driver": {
+          "enum": [
+            "sec2",
+            "stdio",
+            "core",
+            "family",
+            "split"
+          ],
+          "default": "sec2"
+        },
+        "memberBytes": {
+          "type": "integer",
+          "minimum": 4096,
+          "maximum": 2147483648
+        },
+        "spaceStrategy": {
+          "enum": [
+            "default",
+            "fsm",
+            "page",
+            "aggregate",
+            "none"
+          ],
+          "default": "default"
+        },
+        "pageBytes": {
+          "type": "integer",
+          "minimum": 512,
+          "maximum": 16777216
+        },
+        "attributes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attribute"
+          },
+          "maxItems": 64,
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    },
+    "extract": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "dataset": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "format": {
+          "enum": [
+            "csv",
+            "npy",
+            "json",
+            "chunks"
+          ],
+          "default": "csv"
+        },
+        "coordinates": {
+          "type": "boolean",
+          "default": true
+        },
+        "header": {
+          "enum": [
+            "units",
+            "names"
+          ],
+          "default": "units"
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "minItems": 1,
+          "maxItems": 4096
+        },
+        "where": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "minItems": 1,
+          "maxItems": 8
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "dataset"
+      ]
+    },
+    "expectation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "present": {
+          "type": "boolean",
+          "default": true
+        },
+        "kind": {
+          "enum": [
+            "group",
+            "dataset",
+            "datatype",
+            "softLink",
+            "externalLink"
+          ]
+        },
+        "class": {
+          "enum": [
+            "float",
+            "int",
+            "uint",
+            "complex",
+            "bool",
+            "string",
+            "enum",
+            "compound",
+            "vlen",
+            "reference",
+            "opaque"
+          ]
+        },
+        "bits": {
+          "enum": [
+            8,
+            16,
+            32,
+            64,
+            128
+          ]
+        },
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483648
+          },
+          "maxItems": 8
+        },
+        "units": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "attribute": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 65535
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 65535
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "maxLength": 65535
+                        },
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string",
+                                "maxLength": 65535
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ]
+                          },
+                          "maxItems": 65536
+                        }
+                      ]
+                    },
+                    "maxItems": 65536
+                  }
+                ]
+              },
+              "maxItems": 65536
+            }
+          ]
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "finite": {
+          "type": "boolean"
+        },
+        "compression": {
+          "enum": [
+            "none",
+            "gzip",
+            "lzf",
+            "szip"
+          ]
+        },
+        "minCompressionRatio": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000000
+        },
+        "maxAllocatedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1125899906842624
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "path"
+      ]
+    },
+    "edit": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "create",
+            "delete",
+            "move",
+            "copy",
+            "link",
+            "setAttribute",
+            "deleteAttribute",
+            "renameAttribute",
+            "write",
+            "resize",
+            "append",
+            "makeScale",
+            "attachScale",
+            "detachScale",
+            "relayout",
+            "copyChunks"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "object": {
+          "$ref": "#/$defs/object"
+        },
+        "link": {
+          "$ref": "#/$defs/link"
+        },
+        "attribute": {
+          "$ref": "#/$defs/attribute"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "newName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        },
+        "data": {
+          "$ref": "#/$defs/data"
+        },
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483648
+          },
+          "maxItems": 8
+        },
+        "axis": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "scale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "storage": {
+          "$ref": "#/$defs/storage"
+        },
+        "from": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "shallow": {
+          "type": "boolean",
+          "default": false
+        },
+        "withoutAttributes": {
+          "type": "boolean",
+          "default": false
+        },
+        "expandSoft": {
+          "type": "boolean",
+          "default": false
+        },
+        "expandExternal": {
+          "type": "boolean",
+          "default": false
+        },
+        "expandReferences": {
+          "type": "boolean",
+          "default": false
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "minItems": 1,
+          "maxItems": 64
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "action"
+      ]
+    },
+    "cells": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "vertex",
+            "line",
+            "triangle",
+            "quadrilateral",
+            "tetrahedron",
+            "pyramid",
+            "wedge",
+            "hexahedron"
+          ]
+        },
+        "connectivity": {
+          "$ref": "#/$defs/data"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4194304
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "connectivity"
+      ]
+    },
+    "mesh": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "$ref": "#/$defs/data"
+        },
+        "dimension": {
+          "enum": [
+            2,
+            3
+          ],
+          "default": 3
+        },
+        "pointCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4194304
+        },
+        "cells": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cells"
+          },
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "units": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "default": "m"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "points",
+        "cells"
+      ]
+    },
+    "meshField": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "association": {
+          "enum": [
+            "point",
+            "cell"
+          ]
+        },
+        "components": {
+          "enum": [
+            1,
+            3,
+            6,
+            9
+          ],
+          "default": 1
+        },
+        "units": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "type": {
+          "$ref": "#/$defs/scalarType"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/data"
+          },
+          "minItems": 1,
+          "maxItems": 256
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "association",
+        "units",
+        "steps"
+      ]
+    },
+    "series": {
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "type": {
+          "$ref": "#/$defs/scalarType"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "default": 1
+        },
+        "units": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "chunkRows": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576,
+          "default": 64
+        },
+        "compression": {
+          "enum": [
+            "none",
+            "gzip",
+            "lzf"
+          ],
+          "default": "none"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "dataset"
+      ]
+    },
+    "tolerance": {
+      "type": "object",
+      "properties": {
+        "absolute": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "relative": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "maxItems": 256
+        },
+        "attributes": {
+          "type": "boolean",
+          "default": true
+        },
+        "storage": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "access": {
+      "type": "object",
+      "properties": {
+        "chunkCache": {
+          "type": "object",
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1073741824
+            },
+            "slots": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777213,
+              "default": 12421
+            },
+            "preemption": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.75
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "bytes"
+          ]
+        },
+        "pageBufferBytes": {
+          "type": "integer",
+          "minimum": 512,
+          "maximum": 1073741824
+        },
+        "metaBlockBytes": {
+          "type": "integer",
+          "minimum": 512,
+          "maximum": 16777216
+        },
+        "alignment": {
+          "type": "object",
+          "properties": {
+            "threshold": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483648,
+              "default": 1
+            },
+            "interval": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "interval"
+          ]
+        },
+        "memoryBytes": {
+          "type": "integer",
+          "minimum": 4096,
+          "maximum": 1073741824
+        },
+        "sieveBufferBytes": {
+          "type": "integer",
+          "minimum": 512,
+          "maximum": 268435456
+        }
+      },
+      "additionalProperties": false
+    },
+    "parallelRead": {
+      "type": "object",
+      "properties": {
+        "ranks": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4,
+          "default": 2
+        },
+        "io": {
+          "enum": [
+            "collective",
+            "independent"
+          ],
+          "default": "collective"
+        }
+      },
+      "additionalProperties": false
+    },
+    "condition": {
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "ne",
+            "lt",
+            "le",
+            "gt",
+            "ge",
+            "between",
+            "in",
+            "finite",
+            "nan"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "maxLength": 65535
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "upper": {
+          "type": "number"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "maxLength": 65535
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 256
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "op"
+      ]
+    }
+  }
+}

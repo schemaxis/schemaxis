@@ -97,11 +97,13 @@ class Line(NativeFilter):
     declaration = LINE
 
 
+from .reader_choices import selection as reader_selection
+
 FOAM = {'id': 'foam', 'native': 'OpenFOAMReader', 'inputs': {}, 'options': {
     'file': {**option('string', 'FileName', required=True, minLength=1), 'constructor': True},
     'caseType': {**choice('CaseType', ['Decomposed Case', 'Reconstructed Case'], 'Decomposed Case'), 'constructor': True},
-    'regions': strings('MeshRegions', ['internalMesh']),
-    'cellArrays': strings('CellArrays'),
+    'regions': reader_selection('MeshRegions', ['internalMesh']),
+    'cellArrays': reader_selection('CellArrays'),
     'skipZero': option('boolean', 'SkipZeroTime', False),
 }}
 class Foam(NativeFilter):
@@ -128,7 +130,10 @@ class Calculator(NativeFilter):
 SLICE_INPUT = {'input': {**ONE['input'], 'contract': {
     'nativeTypes': ['vtkDataSet'], 'requirements': {'topology': ['structured', 'unstructured']},
     'recovery': 'use pvSlice, which exposes the native hyper-tree-grid cut function'}}}
-SLICE = {'id': 'slice', 'native': 'Slice', 'inputs': SLICE_INPUT, 'fixed': {'SliceType': 'Plane'}, 'options': {
+# Pin the curated single-plane contract: a fresh ParaView session can otherwise
+# expose empty offsets for its first Slice and [0] for later Slice instances.
+SLICE = {'id': 'slice', 'native': 'Slice', 'inputs': SLICE_INPUT,
+         'fixed': {'SliceType': 'Plane', 'SliceOffsetValues': [0]}, 'options': {
     'origin': vector('SliceType.Origin', [0, 0, 0]),
     'normal': direction('SliceType.Normal', [1, 0, 0]),
     'crinkle': option('boolean', 'Crinkleslice', False),
@@ -166,8 +171,10 @@ class PointToCell(NativeFilter):
     declaration = POINT_TO_CELL
 
 
+from .block_choices import selection as block_selection
+
 EXTRACT = {'id': 'extractBlock', 'native': 'ExtractBlock', 'inputs': ONE, 'options': {
-    'selectors': strings('Selectors', required=True),
+    'selectors': block_selection('Selectors'),
 }}
 class ExtractBlock(NativeFilter):
     declaration = EXTRACT

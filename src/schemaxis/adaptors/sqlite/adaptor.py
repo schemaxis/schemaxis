@@ -1,6 +1,7 @@
 # Copyright (C) 2026 David L F Gaden
 """Typed captured tables and closed relational intentions, never authored SQL."""
 import csv
+import errno
 import hashlib
 import io
 import json
@@ -104,16 +105,30 @@ def resources(document,execution,identity):
     return {'threads':1}
 
 
-def bounded(path,code='VERIFICATION_FAILED',limit=LIMIT):
+SOURCE_REASONS = {'missing':'the file does not exist','symlink':'file symlinks are not accepted','not-regular':'a regular file is required',
+    'too-large':'the file exceeds its byte budget','unreadable':'the file could not be read'}
+
+
+def bounded(path,code='VERIFICATION_FAILED',limit=LIMIT,at=None,**context):
+    """Read a bounded regular file; ``at`` replaces the path in the fault location and keeps it out of public text."""
+    reason='unreadable'
     try:
-        fd=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0))
-        with os.fdopen(fd,'rb') as f:
-            info=os.fstat(f.fileno())
-            if not stat.S_ISREG(info.st_mode) or info.st_size>limit:raise ValueError('not a bounded regular file')
-            data=f.read(limit+1)
-        if len(data)>limit:raise ValueError('byte budget exceeded')
+        try:fd=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0))
+        except FileNotFoundError:reason='missing';raise
+        except OSError as e:
+            if e.errno==errno.ELOOP:reason='symlink'
+            raise
+        try:
+            info=os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode):reason='not-regular';raise ValueError('not a regular file')
+            if info.st_size>limit:reason='too-large';raise ValueError('byte budget exceeded')
+        except BaseException:os.close(fd);raise
+        with os.fdopen(fd,'rb') as f:data=f.read(limit+1)
+        if len(data)>limit:reason='too-large';raise ValueError('byte budget exceeded')
         return data
-    except (ValueError,OSError) as e:fail(code,'select an intact bounded regular file: '+str(e),str(path))
+    except (ValueError,OSError) as e:
+        if at is None:fail(code,'select an intact bounded regular file: '+str(e),str(path),reason=reason,**context)
+        fail(code,'select an intact bounded regular file: '+SOURCE_REASONS[reason],at,reason=reason,limit=limit,**context)
 
 
 def unique_object(pairs):
@@ -130,26 +145,31 @@ def read(directory,name):return decode(bounded(directory/name))
 def digest(directory,name):return hashlib.sha256(bounded(directory/name)).hexdigest()
 
 
+class RowFault(ValueError):
+    def __init__(self,reason,message,**where):super().__init__(message);self.reason=reason;self.where=where
+
+
 def rows(data,t,at):
     try:
-        values=decode(data)
-        if not isinstance(values,list) or len(values)>2048:raise ValueError('require at most 2048 JSON row objects')
+        try:values=decode(data)
+        except (ValueError,UnicodeError) as e:raise RowFault('malformed-json','not valid unique-key JSON: '+str(e))
+        if not isinstance(values,list) or len(values)>2048:raise RowFault('invalid-shape','require at most 2048 JSON row objects')
         names={c['name'] for c in t['columns']};seen=set()
         for i,row in enumerate(values):
-            if not isinstance(row,dict) or set(row)!=names:raise ValueError(f'row {i}: exact declared columns required')
+            if not isinstance(row,dict) or set(row)!=names:raise RowFault('invalid-shape',f'row {i}: exact declared columns required',row=i)
             for c in t['columns']:
-                v=row[c['name']]
+                v=row[c['name']];where={'row':i,'column':c['name']}
                 if v is None:
-                    if not c['nullable']:raise ValueError(f'row {i} {c["name"]}: null forbidden')
+                    if not c['nullable']:raise RowFault('invalid-cell',f'row {i} {c["name"]}: null forbidden',**where)
                 elif c['type']=='INTEGER':
-                    if type(v) is not int or abs(v)>10**9:raise ValueError(f'row {i} {c["name"]}: exact bounded integer required; booleans are not integers')
+                    if type(v) is not int or abs(v)>10**9:raise RowFault('invalid-cell',f'row {i} {c["name"]}: exact bounded integer required; booleans are not integers',**where)
                 elif not isinstance(v,str) or len(v)>256 or v=='\\N' or any(ord(x)<32 or ord(x)>126 for x in v):
-                    raise ValueError(f'row {i} {c["name"]}: printable ASCII text excluding \\N required')
+                    raise RowFault('invalid-cell',f'row {i} {c["name"]}: printable ASCII text excluding \\N required',**where)
             key=row[t['primaryKey']]
-            if key in seen:raise ValueError(f'row {i}: duplicate primary key')
+            if key in seen:raise RowFault('duplicate-key',f'row {i}: duplicate primary key',row=i,column=t['primaryKey'])
             seen.add(key)
         return values
-    except (ValueError,UnicodeError,TypeError) as e:fail('INVALID_TABLE_DATA','correct typed JSON rows: '+str(e),at)
+    except RowFault as e:fail('INVALID_TABLE_DATA','correct typed JSON rows: '+str(e),at,table=t['name'],reason=e.reason,**e.where)
 
 
 def captured(directory,p):
@@ -157,8 +177,10 @@ def captured(directory,p):
     for i,t in enumerate(p['tables']):
         for j,f in enumerate(t['foreignKeys']):
             allowed={r[f['target']] for r in result[f['table']]}
-            if any(r[f['column']] is not None and r[f['column']] not in allowed for r in result[t['name']]):
-                fail('INVALID_TABLE_DATA','non-null foreign key has no matching parent primary key',f'$.tables[{i}].foreignKeys[{j}]')
+            for n,r in enumerate(result[t['name']]):
+                if r[f['column']] is not None and r[f['column']] not in allowed:
+                    fail('INVALID_TABLE_DATA',f'row {n}: non-null foreign key has no matching parent primary key; add the parent row or correct the value',f'$.tables[{i}].foreignKeys[{j}]',
+                        table=t['name'],column=f['column'],row=n,value=r[f['column']],parent=f['table'],reason='orphan-foreign-key')
     return result
 
 
@@ -281,9 +303,12 @@ def evidence_names(p):
     return {'authored.json','plan.json','captures.json','import.sql','query.sql',*['table-'+t['name']+'.json' for t in p['tables']],*[s+x for s in ('version','import','query') for x in ('-launcher.py','-inputs.json','-submission.json','.stdout','.stderr')]}
 
 
+def source_bytes(t,i):return bounded(t['source'],'INVALID_TABLE_SOURCE',1024*1024,at=f'$.tables[{i}].source',table=t['name'])
+
+
 def reusableInputs(document):
     p=plan(document)
-    return {t['name']:hashlib.sha256(bounded(t['source'],'INVALID_TABLE_SOURCE',1024*1024)).hexdigest() for t in p['tables']}
+    return {t['name']:hashlib.sha256(source_bytes(t,i)).hexdigest() for i,t in enumerate(p['tables'])}
 
 
 def run(document,directory,*,executable=None,timeout=300):
@@ -295,8 +320,8 @@ def run(document,directory,*,executable=None,timeout=300):
     directory.mkdir(parents=True);atomic_json(directory/'authored.json',document);atomic_json(directory/'plan.json',p);atomic_json(directory/'result.json',{'status':'incomplete','verified':False});deadline=time.monotonic()+timeout
     try:
         captures={}
-        for t in p['tables']:
-            data=bounded(t['source'],'INVALID_TABLE_SOURCE',1024*1024);rows(data,t,'$.tables');name='table-'+t['name']+'.json';(directory/name).write_bytes(data)
+        for i,t in enumerate(p['tables']):
+            data=source_bytes(t,i);rows(data,t,f'$.tables[{i}].source');name='table-'+t['name']+'.json';(directory/name).write_bytes(data)
             captures[t['name']]={'source':t['source'],'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)}
         atomic_json(directory/'captures.json',captures);data=captured(directory,p);expected=oracle(p,data)
         (directory/'schema.sql').write_text(ddl(p));(directory/'import.sql').write_text(import_sql(p,data));(directory/'query.sql').write_text('PRAGMA trusted_schema=OFF;\n'+select(p))
@@ -326,9 +351,15 @@ def run(document,directory,*,executable=None,timeout=300):
 def verify(directory,require_result=True):
     directory=Path(directory).absolute()
     try:
-        p=plan(read(directory,'authored.json'));receipt=read(directory,'verification.json')
+        p=plan(read(directory,'authored.json'))
+        if require_result:
+            status=read(directory,'result.json')
+            if status.get('status')!='succeeded':
+                # A recorded failed or interrupted run is honest evidence of incompleteness, not tampering.
+                recorded=status.get('fault');recorded=recorded.get('code') if isinstance(recorded,dict) else None
+                fail('INCOMPLETE_EXECUTION','SQLite did not complete; correct the cause, then run again in a fresh output directory',str(directory/'result.json'),status=status.get('status'),faultCode=recorded)
+        receipt=read(directory,'verification.json')
         if read(directory,'plan.json')!=p:fail('VERIFICATION_FAILED','effective relational plan differs')
-        if require_result and read(directory,'result.json').get('status')!='succeeded':fail('INCOMPLETE_EXECUTION','SQLite did not complete')
         captures={t['name']:{'source':t['source'],'sha256':digest(directory,'table-'+t['name']+'.json'),'bytes':len(bounded(directory/('table-'+t['name']+'.json')))} for t in p['tables']}
         if read(directory,'captures.json')!=captures:fail('VERIFICATION_FAILED','source capture bindings differ')
         data=captured(directory,p)

@@ -1,0 +1,2638 @@
+{
+ "version": "schemaxis.studio-adaptor/2",
+ "baseDocument": {
+  "version": "schemaxis.hdf5/1",
+  "operation": "createFile",
+  "file": {
+   "name": "measurements.h5"
+  },
+  "objects": [
+   {
+    "path": "/run/time",
+    "type": {
+     "class": "float",
+     "bits": 64
+    },
+    "shape": [
+     5
+    ],
+    "data": {
+     "source": "linspace",
+     "start": 0,
+     "stop": 2
+    },
+    "units": "s",
+    "scale": "time"
+   },
+   {
+    "path": "/run/pressure",
+    "type": {
+     "class": "float",
+     "bits": 32
+    },
+    "shape": [
+     5
+    ],
+    "data": {
+     "source": "values",
+     "values": [
+      101.3,
+      101.1,
+      100.8,
+      100.9,
+      101.2
+     ]
+    },
+    "units": "kPa",
+    "dimensions": [
+     {
+      "axis": 0,
+      "label": "time",
+      "scales": [
+       "/run/time"
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "categories": [
+  {
+   "id": "files",
+   "title": "Write HDF5 files",
+   "icon": "layers"
+  },
+  {
+   "id": "adoption",
+   "title": "Use existing HDF5 files",
+   "icon": "layers"
+  }
+ ],
+ "snippets": [],
+ "templates": [
+  {
+   "id": "sensor-run",
+   "title": "Typed sensor run file",
+   "description": "A new HDF5 file with groups, units, a time dimension scale, compressed resizable counts, records, enum states, notes, references and CSV/NPY extracts. Edit the objects to match your measurements.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "sensor-run.h5",
+     "libver": "v110",
+     "userblock": 512,
+     "attributes": [
+      {
+       "name": "title",
+       "value": "Calibrated pressure-rig run 17"
+      },
+      {
+       "name": "run_number",
+       "type": {
+        "class": "int",
+        "bits": 32
+       },
+       "value": 17
+      }
+     ]
+    },
+    "objects": [
+     {
+      "path": "/run/raw",
+      "kind": "group",
+      "attributes": [
+       {
+        "name": "instrument",
+        "value": "PX-4 transducer array"
+       }
+      ]
+     },
+     {
+      "path": "/run/raw/time",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       6
+      ],
+      "data": {
+       "source": "linspace",
+       "start": 0,
+       "stop": 2.5
+      },
+      "units": "s",
+      "scale": "time"
+     },
+     {
+      "path": "/run/raw/channel",
+      "type": {
+       "class": "int",
+       "bits": 8
+      },
+      "shape": [
+       2
+      ],
+      "data": {
+       "source": "range",
+       "start": 1,
+       "step": 1
+      },
+      "scale": "channel"
+     },
+     {
+      "path": "/run/raw/counts",
+      "type": {
+       "class": "int",
+       "bits": 16,
+       "order": "big"
+      },
+      "shape": [
+       6,
+       2
+      ],
+      "maxshape": [
+       "unlimited",
+       2
+      ],
+      "data": {
+       "source": "range",
+       "start": -5,
+       "step": 3
+      },
+      "storage": {
+       "chunks": [
+        3,
+        2
+       ],
+       "compression": "gzip",
+       "level": 6,
+       "shuffle": true,
+       "fletcher32": true,
+       "fillValue": -1
+      },
+      "units": "count",
+      "dimensions": [
+       {
+        "axis": 0,
+        "label": "time",
+        "scales": [
+         "/run/raw/time"
+        ]
+       },
+       {
+        "axis": 1,
+        "label": "channel",
+        "scales": [
+         "/run/raw/channel"
+        ]
+       }
+      ],
+      "attributes": [
+       {
+        "name": "gain",
+        "type": {
+         "class": "float",
+         "bits": 32
+        },
+        "value": [
+         0.125,
+         0.25
+        ]
+       }
+      ]
+     },
+     {
+      "path": "/run/calibrated/pressure",
+      "type": {
+       "class": "float",
+       "bits": 32
+      },
+      "shape": [
+       6
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        101.325,
+        101.3,
+        101.27,
+        101.31,
+        "nan",
+        101.4
+       ]
+      },
+      "storage": {
+       "layout": "chunked",
+       "chunks": [
+        3
+       ],
+       "compression": "lzf"
+      },
+      "units": "kPa",
+      "dimensions": [
+       {
+        "axis": 0,
+        "label": "time",
+        "scales": [
+         "/run/raw/time"
+        ]
+       }
+      ]
+     },
+     {
+      "path": "/run/events",
+      "type": {
+       "class": "compound",
+       "fields": [
+        {
+         "name": "sample",
+         "type": {
+          "class": "uint",
+          "bits": 32
+         }
+        },
+        {
+         "name": "level",
+         "type": {
+          "class": "float",
+          "bits": 64
+         },
+         "units": "kPa"
+        },
+        {
+         "name": "code",
+         "type": {
+          "class": "string",
+          "length": 4,
+          "encoding": "ascii"
+         }
+        },
+        {
+         "name": "position",
+         "type": {
+          "class": "float",
+          "bits": 32,
+          "dims": [
+           3
+          ]
+         }
+        }
+       ]
+      },
+      "shape": [
+       2
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        [
+         1,
+         101.3,
+         "OVR",
+         [
+          0,
+          0.5,
+          1
+         ]
+        ],
+        [
+         4,
+         99.5,
+         "LOW",
+         [
+          1,
+          1,
+          1
+         ]
+        ]
+       ]
+      }
+     },
+     {
+      "path": "/run/state",
+      "type": {
+       "class": "enum",
+       "bits": 8,
+       "members": [
+        {
+         "name": "IDLE",
+         "value": 0
+        },
+        {
+         "name": "ACQUIRE",
+         "value": 1
+        },
+        {
+         "name": "FAULT",
+         "value": 7
+        }
+       ]
+      },
+      "shape": [
+       6
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        "IDLE",
+        "ACQUIRE",
+        "ACQUIRE",
+        "ACQUIRE",
+        "FAULT",
+        "IDLE"
+       ]
+      }
+     },
+     {
+      "path": "/run/notes",
+      "type": {
+       "class": "string"
+      },
+      "shape": [
+       2
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        "Druckprüfung gestartet",
+        "valve 3 \"sticky\""
+       ]
+      }
+     },
+     {
+      "path": "/run/ragged",
+      "type": {
+       "class": "vlen",
+       "base": {
+        "class": "int",
+        "bits": 32
+       }
+      },
+      "shape": [
+       3
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        [
+         1,
+         2,
+         3
+        ],
+        [],
+        [
+         42
+        ]
+       ]
+      }
+     },
+     {
+      "path": "/run/flags",
+      "type": {
+       "class": "bool"
+      },
+      "shape": [
+       3
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        true,
+        false,
+        true
+       ]
+      }
+     },
+     {
+      "path": "/run/impedance",
+      "type": {
+       "class": "complex",
+       "bits": 128
+      },
+      "shape": [
+       2
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        [
+         50,
+         -2.5
+        ],
+        [
+         49.5,
+         0.125
+        ]
+       ]
+      },
+      "units": "ohm"
+     },
+     {
+      "path": "/run/index",
+      "type": {
+       "class": "reference"
+      },
+      "shape": [
+       2
+      ],
+      "data": {
+       "source": "references",
+       "targets": [
+        {
+         "path": "/run/raw/counts"
+        },
+        {
+         "path": "/run/calibrated/pressure"
+        }
+       ]
+      }
+     },
+     {
+      "path": "/run/peak",
+      "type": {
+       "class": "reference",
+       "reference": "region"
+      },
+      "shape": [
+       1
+      ],
+      "data": {
+       "source": "references",
+       "targets": [
+        {
+         "path": "/run/raw/counts",
+         "selection": {
+          "kind": "hyperslab",
+          "start": [
+           2,
+           0
+          ],
+          "count": [
+           2,
+           2
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "path": "/run/blob",
+      "type": {
+       "class": "opaque",
+       "size": 4
+      },
+      "shape": [],
+      "data": {
+       "source": "values",
+       "values": [
+        "deadbeef"
+       ]
+      }
+     },
+     {
+      "path": "/types/reading",
+      "kind": "datatype",
+      "type": {
+       "class": "compound",
+       "fields": [
+        {
+         "name": "t",
+         "type": {
+          "class": "float",
+          "bits": 64
+         }
+        },
+        {
+         "name": "p",
+         "type": {
+          "class": "float",
+          "bits": 32
+         }
+        }
+       ]
+      }
+     },
+     {
+      "path": "/run/readings",
+      "type": {
+       "class": "named",
+       "path": "/types/reading"
+      },
+      "shape": [
+       2
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        [
+         0,
+         1.5
+        ],
+        [
+         0.5,
+         1.75
+        ]
+       ]
+      }
+     },
+     {
+      "path": "/run/compact",
+      "type": {
+       "class": "uint",
+       "bits": 16
+      },
+      "shape": [
+       4
+      ],
+      "storage": {
+       "layout": "compact"
+      },
+      "data": {
+       "source": "values",
+       "values": [
+        1,
+        2,
+        3,
+        65535
+       ]
+      }
+     },
+     {
+      "path": "/run/flag",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [],
+      "data": {
+       "source": "values",
+       "values": [
+        1.5
+       ]
+      },
+      "attributes": [
+       {
+        "name": "pending",
+        "empty": true,
+        "type": {
+         "class": "float",
+         "bits": 64
+        }
+       }
+      ]
+     }
+    ],
+    "links": [
+     {
+      "path": "/latest",
+      "kind": "soft",
+      "target": "/run/raw/counts"
+     },
+     {
+      "path": "/run/time_alias",
+      "kind": "hard",
+      "target": "/run/raw/time"
+     },
+     {
+      "path": "/catalogue",
+      "kind": "external",
+      "file": "catalogue.h5",
+      "target": "/index"
+     }
+    ],
+    "extracts": [
+     {
+      "id": "counts_window",
+      "dataset": "/run/raw/counts",
+      "selection": {
+       "kind": "hyperslab",
+       "start": [
+        1,
+        0
+       ],
+       "count": [
+        3,
+        2
+       ]
+      },
+      "columns": [
+       "ch1",
+       "ch2"
+      ]
+     },
+     {
+      "id": "pressure",
+      "dataset": "/run/calibrated/pressure"
+     },
+     {
+      "id": "event_levels",
+      "dataset": "/run/events",
+      "fields": [
+       "sample",
+       "level"
+      ],
+      "format": "csv"
+     },
+     {
+      "id": "counts_points",
+      "dataset": "/run/raw/counts",
+      "selection": {
+       "kind": "points",
+       "points": [
+        [
+         5,
+         1
+        ],
+        [
+         0,
+         0
+        ],
+        [
+         3,
+         1
+        ]
+       ]
+      },
+      "format": "npy"
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "campaign",
+   "title": "Multi-run campaign with a virtual dataset",
+   "description": "Stitch per-run files into one virtual signal, reference raw instrument bytes as external storage and import CSV/NPY measurements.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "campaign.h5",
+     "libver": "v110",
+     "trackOrder": true,
+     "attributes": [
+      {
+       "name": "campaign",
+       "value": "Thermal soak 2026-11"
+      }
+     ]
+    },
+    "inputs": [
+     {
+      "id": "temps",
+      "path": {
+       "$fill": "input-temps"
+      },
+      "format": "csv"
+     },
+     {
+      "id": "matrix",
+      "path": {
+       "$fill": "input-matrix"
+      },
+      "format": "npy"
+     }
+    ],
+    "dependencies": [
+     {
+      "id": "runA",
+      "path": {
+       "$fill": "dependency-runA"
+      },
+      "role": "virtualSource"
+     },
+     {
+      "id": "runB",
+      "path": {
+       "$fill": "dependency-runB"
+      },
+      "role": "virtualSource"
+     },
+     {
+      "id": "probe",
+      "path": {
+       "$fill": "dependency-probe"
+      },
+      "role": "rawStorage"
+     }
+    ],
+    "objects": [
+     {
+      "path": "/campaign/signal",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       10
+      ],
+      "units": "V",
+      "virtual": {
+       "fill": -999.0,
+       "sources": [
+        {
+         "file": "runA",
+         "dataset": "/signal",
+         "at": {
+          "kind": "slices",
+          "slices": [
+           {
+            "start": 0,
+            "stop": 4
+           }
+          ]
+         }
+        },
+        {
+         "file": "runB",
+         "dataset": "/signal",
+         "select": {
+          "kind": "slices",
+          "slices": [
+           {
+            "start": 1,
+            "stop": 4
+           }
+          ]
+         },
+         "at": {
+          "kind": "slices",
+          "slices": [
+           {
+            "start": 5,
+            "stop": 8
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "path": "/campaign/probe_counts",
+      "type": {
+       "class": "int",
+       "bits": 16,
+       "order": "big"
+      },
+      "shape": [
+       8
+      ],
+      "units": "count",
+      "storage": {
+       "external": [
+        {
+         "file": "probe",
+         "offset": 4,
+         "size": 16
+        }
+       ]
+      }
+     },
+     {
+      "path": "/campaign/time",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       4
+      ],
+      "data": {
+       "source": "input",
+       "input": "temps",
+       "column": "time"
+      },
+      "units": "s",
+      "scale": "time"
+     },
+     {
+      "path": "/campaign/temperature",
+      "type": {
+       "class": "float",
+       "bits": 32
+      },
+      "shape": [
+       4
+      ],
+      "data": {
+       "source": "input",
+       "input": "temps",
+       "column": "temperature"
+      },
+      "units": "K",
+      "dimensions": [
+       {
+        "axis": 0,
+        "label": "time",
+        "scales": [
+         "/campaign/time"
+        ]
+       }
+      ],
+      "storage": {
+       "chunks": [
+        2
+       ],
+       "compression": "szip",
+       "szipMethod": "nn",
+       "szipPixels": 2
+      }
+     },
+     {
+      "path": "/campaign/samples",
+      "type": {
+       "class": "compound",
+       "fields": [
+        {
+         "name": "time",
+         "type": {
+          "class": "float",
+          "bits": 64
+         }
+        },
+        {
+         "name": "temperature",
+         "type": {
+          "class": "float",
+          "bits": 64
+         }
+        },
+        {
+         "name": "valid",
+         "type": {
+          "class": "bool"
+         }
+        }
+       ]
+      },
+      "shape": [
+       4
+      ],
+      "data": {
+       "source": "input",
+       "input": "temps",
+       "columns": [
+        "time",
+        "temperature",
+        "valid"
+       ]
+      }
+     },
+     {
+      "path": "/campaign/gain_matrix",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       2,
+       3
+      ],
+      "data": {
+       "source": "input",
+       "input": "matrix"
+      },
+      "storage": {
+       "chunks": [
+        1,
+        3
+       ],
+       "scaleOffset": 2,
+       "fillValue": 0
+      }
+     },
+     {
+      "path": "/campaign/counter",
+      "type": {
+       "class": "uint",
+       "bits": 32
+      },
+      "shape": [
+       6
+      ],
+      "maxshape": [
+       12
+      ],
+      "data": {
+       "source": "range",
+       "start": 100,
+       "step": 25
+      },
+      "storage": {
+       "chunks": [
+        3
+       ],
+       "scaleOffset": 0,
+       "fletcher32": true,
+       "allocTime": "early",
+       "fillTime": "alloc",
+       "fillValue": 7
+      }
+     }
+    ],
+    "links": [
+     {
+      "path": "/runs/a_signal",
+      "kind": "external",
+      "file": "run-a.h5",
+      "target": "/signal"
+     }
+    ],
+    "extracts": [
+     {
+      "id": "stitched",
+      "dataset": "/campaign/signal",
+      "format": "json"
+     },
+     {
+      "id": "temperature",
+      "dataset": "/campaign/temperature"
+     }
+    ]
+   },
+   "testValues": {
+    "input-temps": "/replace/with/temperatures.csv",
+    "input-matrix": "/replace/with/matrix.npy",
+    "dependency-runA": "/replace/with/run-a.h5",
+    "dependency-runB": "/replace/with/run-b.h5",
+    "dependency-probe": "/replace/with/probe-counts.bin"
+   },
+   "fields": {
+    "input-temps": {
+     "label": "Temperature CSV",
+     "type": "path",
+     "required": true,
+     "description": "UTF-8 CSV with time, temperature and valid columns.",
+     "extensions": [
+      "csv"
+     ],
+     "acceptsKinds": [
+      "file",
+      "table"
+     ]
+    },
+    "input-matrix": {
+     "label": "Gain matrix NPY",
+     "type": "path",
+     "required": true,
+     "description": "C-ordered 2x3 float .npy array.",
+     "extensions": [
+      "npy"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    },
+    "dependency-runA": {
+     "label": "Run A file",
+     "type": "path",
+     "required": true,
+     "description": "HDF5 file holding /signal (4 float64 values) for the first half of the stitched view.",
+     "extensions": [
+      "h5",
+      "hdf5",
+      "he5"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    },
+    "dependency-runB": {
+     "label": "Run B file",
+     "type": "path",
+     "required": true,
+     "description": "HDF5 file holding /signal (4 float64 values) for the second half.",
+     "extensions": [
+      "h5",
+      "hdf5",
+      "he5"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    },
+    "dependency-probe": {
+     "label": "Raw probe counts",
+     "type": "path",
+     "required": true,
+     "description": "Raw binary instrument file: 4-byte header then 8 big-endian int16 counts.",
+     "extensions": [
+      "bin",
+      "raw",
+      "dat"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    }
+   },
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump). Select the CSV, NPY, run files and raw probe file."
+  },
+  {
+   "id": "inspect",
+   "title": "Audit a received HDF5 file",
+   "description": "Inventory every object and decide unit, shape, range, compression and link expectations.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "inspectFile",
+    "source": {
+     "$fill": "source"
+    },
+    "preview": 6,
+    "expectations": [
+     {
+      "id": "frames_shape",
+      "path": "/acquisition/frames",
+      "kind": "dataset",
+      "class": "uint",
+      "bits": 16,
+      "shape": [
+       4,
+       2,
+       3
+      ],
+      "units": "counts",
+      "compression": "gzip"
+     },
+     {
+      "id": "frames_range",
+      "path": "/acquisition/frames",
+      "minimum": 0,
+      "maximum": 230,
+      "finite": true
+     },
+     {
+      "id": "time_units",
+      "path": "/acquisition/time",
+      "units": "ms"
+     },
+     {
+      "id": "vendor",
+      "path": "/",
+      "attribute": "format_version",
+      "value": 3
+     },
+     {
+      "id": "latest_link",
+      "path": "/latest_frames",
+      "kind": "softLink"
+     },
+     {
+      "id": "no_calibration",
+      "path": "/calibration",
+      "present": false
+     },
+     {
+      "id": "frames_kelvin",
+      "path": "/acquisition/frames",
+      "units": "K"
+     },
+     {
+      "id": "frames_compressed",
+      "path": "/acquisition/frames",
+      "minCompressionRatio": 1.0,
+      "maxAllocatedBytes": 4096
+     }
+    ]
+   },
+   "testValues": {
+    "source": "/replace/with/vendor-export.h5"
+   },
+   "fields": {
+    "source": {
+     "label": "HDF5 source",
+     "type": "path",
+     "required": true,
+     "description": "Existing HDF5 file to read; it is captured and never modified.",
+     "extensions": [
+      "h5",
+      "hdf5",
+      "he5"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    }
+   },
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "extract",
+   "title": "Extract datasets to CSV, NPY or JSON",
+   "description": "Read hyperslabs, slices, compound fields and axes for downstream tables and arrays.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "extractData",
+    "source": {
+     "$fill": "source"
+    },
+    "extracts": [
+     {
+      "id": "frame_pixels",
+      "dataset": "/acquisition/frames",
+      "selection": {
+       "kind": "hyperslab",
+       "start": [
+        1,
+        0,
+        1
+       ],
+       "count": [
+        2,
+        2,
+        2
+       ],
+       "stride": [
+        2,
+        1,
+        1
+       ],
+       "block": [
+        1,
+        1,
+        1
+       ]
+      },
+      "format": "json"
+     },
+     {
+      "id": "first_column",
+      "dataset": "/acquisition/frames",
+      "selection": {
+       "kind": "slices",
+       "slices": [
+        {
+         "start": 0,
+         "stop": 4
+        },
+        {
+         "start": 0,
+         "stop": 1
+        },
+        {
+         "start": 0,
+         "stop": 1
+        }
+       ]
+      }
+     },
+     {
+      "id": "log_events",
+      "dataset": "/acquisition/log",
+      "fields": [
+       "frame",
+       "event"
+      ]
+     },
+     {
+      "id": "time",
+      "dataset": "/acquisition/time",
+      "format": "npy"
+     }
+    ]
+   },
+   "testValues": {
+    "source": "/replace/with/vendor-export.h5"
+   },
+   "fields": {
+    "source": {
+     "label": "HDF5 source",
+     "type": "path",
+     "required": true,
+     "description": "Existing HDF5 file to read; it is captured and never modified.",
+     "extensions": [
+      "h5",
+      "hdf5",
+      "he5"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    }
+   },
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "edit",
+   "title": "Edit a copy of an HDF5 file",
+   "description": "Add calibration attributes, correct pixels, add a derived series with a scale, copy, move and relayout objects; the original is never modified.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "editFile",
+    "source": {
+     "$fill": "source"
+    },
+    "file": {
+     "name": "vendor-export-annotated.h5"
+    },
+    "edits": [
+     {
+      "action": "setAttribute",
+      "path": "/acquisition/frames",
+      "attribute": {
+       "name": "calibration",
+       "type": {
+        "class": "float",
+        "bits": 64
+       },
+       "value": [
+        0.5,
+        1.0
+       ]
+      }
+     },
+     {
+      "action": "write",
+      "path": "/acquisition/frames",
+      "selection": {
+       "kind": "hyperslab",
+       "start": [
+        2,
+        1,
+        0
+       ],
+       "count": [
+        1,
+        1,
+        3
+       ]
+      },
+      "data": {
+       "source": "values",
+       "values": [
+        1,
+        2,
+        3
+       ]
+      }
+     },
+     {
+      "action": "create",
+      "object": {
+       "path": "/analysis/mean_counts",
+       "type": {
+        "class": "float",
+        "bits": 64
+       },
+       "shape": [
+        4
+       ],
+       "data": {
+        "source": "values",
+        "values": [
+         25,
+         85,
+         145,
+         205
+        ]
+       },
+       "units": "counts"
+      }
+     },
+     {
+      "action": "attachScale",
+      "path": "/analysis/mean_counts",
+      "axis": 0,
+      "scale": "/acquisition/time"
+     },
+     {
+      "action": "copy",
+      "path": "/acquisition/log",
+      "to": "/analysis/log_copy"
+     },
+     {
+      "action": "move",
+      "path": "/latest_frames",
+      "to": "/links/latest_frames"
+     },
+     {
+      "action": "relayout",
+      "path": "/acquisition/log",
+      "storage": {
+       "layout": "compact"
+      }
+     },
+     {
+      "action": "renameAttribute",
+      "path": "/",
+      "name": "vendor",
+      "newName": "manufacturer"
+     }
+    ],
+    "extracts": [
+     {
+      "id": "mean_counts",
+      "dataset": "/analysis/mean_counts"
+     }
+    ]
+   },
+   "testValues": {
+    "source": "/replace/with/vendor-export.h5"
+   },
+   "fields": {
+    "source": {
+     "label": "HDF5 source",
+     "type": "path",
+     "required": true,
+     "description": "Existing HDF5 file to read; it is captured and never modified.",
+     "extensions": [
+      "h5",
+      "hdf5",
+      "he5"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    }
+   },
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "compare",
+   "title": "Compare two HDF5 files",
+   "description": "Regression-check presence, types, shapes, attributes and values within tolerances.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "compareFiles",
+    "source": {
+     "$fill": "source"
+    },
+    "reference": {
+     "$fill": "reference"
+    },
+    "tolerance": {
+     "absolute": 0.5,
+     "relative": 0
+    }
+   },
+   "testValues": {
+    "source": "/replace/with/run-a.h5",
+    "reference": "/replace/with/run-b.h5"
+   },
+   "fields": {
+    "source": {
+     "label": "HDF5 source",
+     "type": "path",
+     "required": true,
+     "description": "Existing HDF5 file to read; it is captured and never modified.",
+     "extensions": [
+      "h5",
+      "hdf5",
+      "he5"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    },
+    "reference": {
+     "label": "Reference HDF5 file",
+     "type": "path",
+     "required": true,
+     "description": "File the source is compared against.",
+     "extensions": [
+      "h5",
+      "hdf5",
+      "he5"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    }
+   },
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "mesh-fields",
+   "title": "Mesh and field time series (XDMF)",
+   "description": "Tetrahedral mesh with point temperature and cell heat flux over three times, readable as XDMF.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "writeMeshFields",
+    "file": {
+     "name": "cooling-block.h5",
+     "libver": "v110"
+    },
+    "mesh": {
+     "dimension": 3,
+     "units": "m",
+     "points": {
+      "source": "values",
+      "values": [
+       0,
+       0,
+       0,
+       0.1,
+       0,
+       0,
+       0,
+       0.1,
+       0,
+       0,
+       0,
+       0.1,
+       0.1,
+       0.1,
+       0.1
+      ]
+     },
+     "cells": [
+      {
+       "type": "tetrahedron",
+       "name": "solid",
+       "connectivity": {
+        "source": "values",
+        "values": [
+         0,
+         1,
+         2,
+         3,
+         1,
+         2,
+         3,
+         4
+        ]
+       }
+      }
+     ]
+    },
+    "times": [
+     0,
+     30,
+     60
+    ],
+    "timeUnits": "s",
+    "fields": [
+     {
+      "name": "temperature",
+      "association": "point",
+      "units": "K",
+      "steps": [
+       {
+        "source": "values",
+        "values": [
+         350,
+         350,
+         350,
+         350,
+         350
+        ]
+       },
+       {
+        "source": "values",
+        "values": [
+         340,
+         345,
+         345,
+         345,
+         348
+        ]
+       },
+       {
+        "source": "values",
+        "values": [
+         330.5,
+         339,
+         339,
+         339,
+         346
+        ]
+       }
+      ]
+     },
+     {
+      "name": "heat_flux",
+      "association": "cell",
+      "components": 3,
+      "units": "W/m^2",
+      "steps": [
+       {
+        "source": "fill"
+       },
+       {
+        "source": "values",
+        "values": [
+         -120,
+         0,
+         15,
+         -80,
+         5,
+         10
+        ]
+       },
+       {
+        "source": "values",
+        "values": [
+         -95,
+         0,
+         12,
+         -61,
+         4,
+         8
+        ]
+       }
+      ]
+     }
+    ],
+    "storage": {
+     "layout": "chunked",
+     "chunks": "auto",
+     "compression": "gzip",
+     "level": 4,
+     "shuffle": true
+    }
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "swmr-monitor",
+   "title": "Live SWMR monitor series",
+   "description": "Append three batches of a three-channel probe while two concurrent readers observe every flushed batch.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "appendSeries",
+    "file": {
+     "name": "monitor.h5"
+    },
+    "series": {
+     "dataset": "/monitor/probe",
+     "type": {
+      "class": "float",
+      "bits": 32
+     },
+     "width": 3,
+     "units": "K",
+     "chunkRows": 4,
+     "compression": "gzip"
+    },
+    "batches": [
+     {
+      "source": "values",
+      "values": [
+       300.0,
+       301.5,
+       299.75,
+       300.25,
+       301.0,
+       299.5
+      ]
+     },
+     {
+      "source": "values",
+      "values": [
+       300.5,
+       302.0,
+       300.0
+      ]
+     },
+     {
+      "source": "values",
+      "values": [
+       301.0,
+       302.25,
+       300.5,
+       301.5,
+       302.5,
+       300.75,
+       302.0,
+       303.0,
+       301.0
+      ]
+     }
+    ],
+    "swmr": true,
+    "readers": 2
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "parallel-write",
+   "title": "Parallel MPI-IO write",
+   "description": "Two MPI ranks write row blocks of a compressed field and an id array collectively, then reduce it in parallel.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "parallelWrite",
+    "file": {
+     "name": "parallel-field.h5",
+     "libver": "v110",
+     "attributes": [
+      {
+       "name": "decomposition",
+       "value": "axis-0 row blocks"
+      }
+     ]
+    },
+    "ranks": 2,
+    "io": "collective",
+    "objects": [
+     {
+      "path": "/field",
+      "kind": "group",
+      "attributes": [
+       {
+        "name": "solver",
+        "value": "synthetic ramp"
+       }
+      ]
+     },
+     {
+      "path": "/field/temperature",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       6,
+       3
+      ],
+      "units": "K",
+      "data": {
+       "source": "linspace",
+       "start": 300,
+       "stop": 317
+      },
+      "storage": {
+       "chunks": [
+        2,
+        3
+       ],
+       "compression": "gzip",
+       "level": 4,
+       "shuffle": true
+      }
+     },
+     {
+      "path": "/field/cell_id",
+      "type": {
+       "class": "int",
+       "bits": 32
+      },
+      "shape": [
+       7
+      ],
+      "data": {
+       "source": "range",
+       "start": 100,
+       "step": 7
+      }
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the parallel h5py Python (--hdf5-mpi) and Open MPI mpiexec (--hdf5-mpiexec) as well as the serial runtime and h5dump."
+  },
+  {
+   "id": "streamed-grid",
+   "title": "Memory-bounded export with access tuning",
+   "description": "Write an aligned, chunk-cached grid and export it in 64 KiB blocks, plus a small corner selection.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "grid.h5",
+     "libver": "v110"
+    },
+    "access": {
+     "chunkCache": {
+      "bytes": 4194304,
+      "slots": 1009,
+      "preemption": 0.25
+     },
+     "alignment": {
+      "threshold": 4096,
+      "interval": 4096
+     },
+     "metaBlockBytes": 8192,
+     "memoryBytes": 65536
+    },
+    "objects": [
+     {
+      "path": "/row",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       3000
+      ],
+      "data": {
+       "source": "range",
+       "start": 0,
+       "step": 1
+      },
+      "units": "m",
+      "scale": "row"
+     },
+     {
+      "path": "/grid",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       3000,
+       200
+      ],
+      "data": {
+       "source": "range",
+       "start": 0,
+       "step": 0.5
+      },
+      "units": "K",
+      "storage": {
+       "chunks": [
+        100,
+        200
+       ],
+       "compression": "gzip",
+       "level": 1,
+       "shuffle": true
+      },
+      "dimensions": [
+       {
+        "axis": 0,
+        "label": "row",
+        "scales": [
+         "/row"
+        ]
+       }
+      ]
+     }
+    ],
+    "extracts": [
+     {
+      "id": "grid",
+      "dataset": "/grid",
+      "format": "npy"
+     },
+     {
+      "id": "corner",
+      "dataset": "/grid",
+      "selection": {
+       "kind": "hyperslab",
+       "start": [
+        2990,
+        198
+       ],
+       "count": [
+        2,
+        2
+       ],
+       "stride": [
+        9,
+        1
+       ]
+      },
+      "format": "json"
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "parallel-extract",
+   "title": "Parallel MPI extraction",
+   "description": "Read selections on two MPI ranks and gather them into CSV and JSON extracts.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "extractData",
+    "source": {
+     "$fill": "source"
+    },
+    "parallel": {
+     "ranks": 2,
+     "io": "collective"
+    },
+    "access": {
+     "chunkCache": {
+      "bytes": 1048576
+     }
+    },
+    "extracts": [
+     {
+      "id": "frames",
+      "dataset": "/acquisition/frames",
+      "format": "json"
+     },
+     {
+      "id": "first_column",
+      "dataset": "/acquisition/frames",
+      "selection": {
+       "kind": "slices",
+       "slices": [
+        {
+         "start": 0,
+         "stop": 4
+        },
+        {
+         "start": 0,
+         "stop": 1
+        },
+        {
+         "start": 0,
+         "stop": 1
+        }
+       ]
+      }
+     }
+    ]
+   },
+   "testValues": {
+    "source": "/replace/with/vendor-export.h5"
+   },
+   "fields": {
+    "source": {
+     "label": "HDF5 source",
+     "type": "path",
+     "required": true,
+     "description": "Existing HDF5 file to read; it is captured and never modified.",
+     "extensions": [
+      "h5",
+      "hdf5",
+      "he5"
+     ],
+     "acceptsKinds": [
+      "file"
+     ]
+    }
+   },
+   "requires": "Configure the serial runtime and h5dump plus the parallel h5py Python (--hdf5-mpi) and Open MPI mpiexec (--hdf5-mpiexec)."
+  },
+  {
+   "id": "human-names",
+   "title": "Human-readable object names",
+   "description": "Groups and datasets named with spaces, units, Greek letters, punctuation and a leading dot, with references, links and a quoted CSV header.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "lab-notebook.h5"
+    },
+    "objects": [
+     {
+      "path": "/Experiment 1",
+      "kind": "group",
+      "attributes": [
+       {
+        "name": "Operator (initials)",
+        "value": "D. G."
+       }
+      ]
+     },
+     {
+      "path": "/Experiment 1/Zeit (s)",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       4
+      ],
+      "data": {
+       "source": "linspace",
+       "start": 0,
+       "stop": 1.5
+      },
+      "units": "s",
+      "scale": "Zeit"
+     },
+     {
+      "path": "/Experiment 1/Temperature (°C)",
+      "type": {
+       "class": "float",
+       "bits": 32
+      },
+      "shape": [
+       4,
+       2
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        20.5,
+        21,
+        22.25,
+        23,
+        24.5,
+        25,
+        26.75,
+        27
+       ]
+      },
+      "units": "°C",
+      "dimensions": [
+       {
+        "axis": 0,
+        "label": "time",
+        "scales": [
+         "/Experiment 1/Zeit (s)"
+        ]
+       }
+      ],
+      "storage": {
+       "chunks": [
+        2,
+        2
+       ],
+       "compression": "gzip",
+       "level": 4,
+       "shuffle": true
+      }
+     },
+     {
+      "path": "/Kanal[2] = Druck",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       3
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        1.5,
+        2.5,
+        3.5
+       ]
+      },
+      "units": "kPa"
+     },
+     {
+      "path": "/μm",
+      "type": {
+       "class": "int",
+       "bits": 32
+      },
+      "shape": [
+       3
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        1,
+        2,
+        3
+       ]
+      },
+      "units": "μm"
+     },
+     {
+      "path": "/.calibration",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       2
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        0.5,
+        -1.25
+       ]
+      }
+     },
+     {
+      "path": "/Run #2, \"warm\" & <dry>",
+      "kind": "group"
+     },
+     {
+      "path": "/Run #2, \"warm\" & <dry>/Messwerte",
+      "type": {
+       "class": "compound",
+       "fields": [
+        {
+         "name": "Zeit (s)",
+         "type": {
+          "class": "float",
+          "bits": 64
+         }
+        },
+        {
+         "name": "Druck, kPa",
+         "type": {
+          "class": "float",
+          "bits": 32
+         }
+        }
+       ]
+      },
+      "shape": [
+       2
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        [
+         0,
+         101.25
+        ],
+        [
+         0.5,
+         101.5
+        ]
+       ]
+      }
+     },
+     {
+      "path": "/Run #2, \"warm\" & <dry>/peak ratio",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [],
+      "data": {
+       "source": "values",
+       "values": [
+        0.875
+       ]
+      }
+     },
+     {
+      "path": "/Index",
+      "type": {
+       "class": "reference"
+      },
+      "shape": [
+       2
+      ],
+      "data": {
+       "source": "references",
+       "targets": [
+        {
+         "path": "/Experiment 1/Temperature (°C)"
+        },
+        {
+         "path": "/μm"
+        }
+       ]
+      }
+     },
+     {
+      "path": "/Hot spot",
+      "type": {
+       "class": "reference",
+       "reference": "region"
+      },
+      "shape": [
+       1
+      ],
+      "data": {
+       "source": "references",
+       "targets": [
+        {
+         "path": "/Experiment 1/Temperature (°C)",
+         "selection": {
+          "kind": "hyperslab",
+          "start": [
+           2,
+           0
+          ],
+          "count": [
+           2,
+           2
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ],
+    "links": [
+     {
+      "path": "/Latest temperature",
+      "kind": "soft",
+      "target": "/Experiment 1/Temperature (°C)"
+     },
+     {
+      "path": "/Run #2, \"warm\" & <dry>/μm alias",
+      "kind": "hard",
+      "target": "/μm"
+     }
+    ],
+    "extracts": [
+     {
+      "id": "temperature",
+      "dataset": "/Experiment 1/Temperature (°C)",
+      "columns": [
+       "left, °C",
+       "right \"°C\""
+      ]
+     },
+     {
+      "id": "channel",
+      "dataset": "/Kanal[2] = Druck",
+      "selection": {
+       "kind": "slices",
+       "slices": [
+        {
+         "start": 1
+        }
+       ]
+      },
+      "format": "json"
+     },
+     {
+      "id": "readings",
+      "dataset": "/Run #2, \"warm\" & <dry>/Messwerte",
+      "fields": [
+       "Druck, kPa",
+       "Zeit (s)"
+      ]
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "filter-rows",
+   "title": "Filter rows by condition",
+   "description": "Keep the rows recorded while acquiring with a valid pressure, pressures above a threshold, and overload events of a compound log.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "extractData",
+    "source": "/replace/with/hdf5-fixtures/sensor-run.h5",
+    "extracts": [
+     {
+      "id": "acquiring",
+      "dataset": "/run/raw/counts",
+      "where": [
+       {
+        "dataset": "/run/state",
+        "op": "in",
+        "values": [
+         "ACQUIRE",
+         "FAULT"
+        ]
+       },
+       {
+        "dataset": "/run/calibrated/pressure",
+        "op": "finite"
+       }
+      ]
+     },
+     {
+      "id": "high_pressure",
+      "dataset": "/run/calibrated/pressure",
+      "format": "json",
+      "where": [
+       {
+        "op": "gt",
+        "value": 101.305
+       }
+      ]
+     },
+     {
+      "id": "overloads",
+      "dataset": "/run/events",
+      "fields": [
+       "sample",
+       "code"
+      ],
+      "format": "json",
+      "where": [
+       {
+        "field": "level",
+        "op": "ge",
+        "value": 100
+       }
+      ]
+     },
+     {
+      "id": "faults_with_pressure",
+      "dataset": "/run/raw/counts",
+      "format": "json",
+      "where": [
+       {
+        "dataset": "/run/state",
+        "op": "eq",
+        "value": "FAULT"
+       },
+       {
+        "dataset": "/run/calibrated/pressure",
+        "op": "finite"
+       }
+      ]
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "chunk-index",
+   "title": "Index compressed chunks",
+   "description": "List every stored chunk of a compressed dataset with its file offset, size and digest for in-place references, checked by decoding the bytes.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "extractData",
+    "source": "/replace/with/hdf5-fixtures/sensor-run.h5",
+    "extracts": [
+     {
+      "id": "counts",
+      "dataset": "/run/raw/counts",
+      "format": "chunks"
+     },
+     {
+      "id": "counts_values",
+      "dataset": "/run/raw/counts",
+      "format": "json"
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "copy-chunks",
+   "title": "Copy compressed chunks unchanged",
+   "description": "Mirror a compressed dataset into a new archive dataset by copying its stored chunks without recompression.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "editFile",
+    "source": "/replace/with/hdf5-fixtures/sensor-run.h5",
+    "file": {
+     "name": "sensor-mirrored.h5"
+    },
+    "edits": [
+     {
+      "action": "create",
+      "object": {
+       "path": "/archive/counts",
+       "type": {
+        "class": "int",
+        "bits": 16,
+        "order": "big"
+       },
+       "shape": [
+        6,
+        2
+       ],
+       "maxshape": [
+        "unlimited",
+        2
+       ],
+       "storage": {
+        "chunks": [
+         3,
+         2
+        ],
+        "compression": "gzip",
+        "level": 6,
+        "shuffle": true,
+        "fletcher32": true,
+        "fillValue": -1
+       }
+      }
+     },
+     {
+      "action": "copyChunks",
+      "path": "/run/raw/counts",
+      "to": "/archive/counts"
+     }
+    ],
+    "extracts": [
+     {
+      "id": "archived",
+      "dataset": "/archive/counts",
+      "format": "json"
+     },
+     {
+      "id": "archived_chunks",
+      "dataset": "/archive/counts",
+      "format": "chunks"
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "sieve-columns",
+   "title": "Partial reads of a contiguous array",
+   "description": "Read a strided column and a band of an uncompressed contiguous grid with a 1 MiB data sieve buffer.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "profiles.h5"
+    },
+    "access": {
+     "sieveBufferBytes": 1048576
+    },
+    "objects": [
+     {
+      "path": "/grid",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       2000,
+       64
+      ],
+      "data": {
+       "source": "range",
+       "start": 0,
+       "step": 1
+      },
+      "storage": {
+       "layout": "contiguous"
+      },
+      "units": "K"
+     }
+    ],
+    "extracts": [
+     {
+      "id": "column",
+      "dataset": "/grid",
+      "format": "json",
+      "selection": {
+       "kind": "hyperslab",
+       "start": [
+        0,
+        5
+       ],
+       "count": [
+        4,
+        1
+       ],
+       "stride": [
+        500,
+        1
+       ]
+      }
+     },
+     {
+      "id": "band",
+      "dataset": "/grid",
+      "format": "npy",
+      "selection": {
+       "kind": "slices",
+       "slices": [
+        {
+         "start": 1000,
+         "stop": 1500
+        },
+        {
+         "start": 8,
+         "stop": 12
+        }
+       ]
+      }
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "large-attributes",
+   "title": "Large attributes in creation order",
+   "description": "Store calibration tables larger than 64 KiB as attributes on the root, a group and a dataset that keep attribute creation order.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "calibrated.h5",
+     "trackOrder": true,
+     "attributes": [
+      {
+       "name": "title",
+       "value": "Detector calibration"
+      },
+      {
+       "name": "pixel gains",
+       "type": {
+        "class": "float",
+        "bits": 32
+       },
+       "shape": [
+        128,
+        160
+       ],
+       "data": {
+        "source": "linspace",
+        "start": 0.5,
+        "stop": 1.5
+       }
+      }
+     ]
+    },
+    "objects": [
+     {
+      "path": "/detector",
+      "kind": "group",
+      "trackOrder": true,
+      "attributes": [
+       {
+        "name": "serial",
+        "value": "DX-1042"
+       },
+       {
+        "name": "dark frame",
+        "type": {
+         "class": "uint",
+         "bits": 16
+        },
+        "shape": [
+         256,
+         160
+        ],
+        "data": {
+         "source": "range",
+         "start": 100,
+         "step": 1
+        }
+       },
+       {
+        "name": "model",
+        "value": "Mk II"
+       }
+      ]
+     },
+     {
+      "path": "/detector/counts",
+      "type": {
+       "class": "uint",
+       "bits": 16
+      },
+      "shape": [
+       4,
+       8
+      ],
+      "data": {
+       "source": "range",
+       "start": 0,
+       "step": 3
+      },
+      "trackOrder": true,
+      "attributes": [
+       {
+        "name": "zeta",
+        "value": 1
+       },
+       {
+        "name": "lookup table",
+        "type": {
+         "class": "float",
+         "bits": 64
+        },
+        "shape": [
+         9000
+        ],
+        "data": {
+         "source": "linspace",
+         "start": 0,
+         "stop": 8999
+        }
+       },
+       {
+        "name": "alpha",
+        "value": 2
+       }
+      ],
+      "units": "counts"
+     }
+    ],
+    "extracts": [
+     {
+      "id": "counts",
+      "dataset": "/detector/counts",
+      "format": "json"
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  },
+  {
+   "id": "edit-fields",
+   "title": "Correct compound fields",
+   "description": "Correct individual members of compound records (a level, codes and sample numbers, a position vector) without rewriting whole records, and add a typed null placeholder dataset.",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "editFile",
+    "source": "/replace/with/hdf5-fixtures/sensor-run.h5",
+    "file": {
+     "name": "events-corrected.h5"
+    },
+    "edits": [
+     {
+      "action": "write",
+      "path": "/run/events",
+      "fields": [
+       "level"
+      ],
+      "selection": {
+       "kind": "points",
+       "points": [
+        [
+         1
+        ]
+       ]
+      },
+      "data": {
+       "source": "values",
+       "values": [
+        98.25
+       ]
+      }
+     },
+     {
+      "action": "write",
+      "path": "/run/events",
+      "fields": [
+       "code",
+       "sample"
+      ],
+      "data": {
+       "source": "values",
+       "values": [
+        [
+         "FIX",
+         10
+        ],
+        [
+         "FIX",
+         40
+        ]
+       ]
+      }
+     },
+     {
+      "action": "write",
+      "path": "/run/events",
+      "fields": [
+       "position"
+      ],
+      "selection": {
+       "kind": "slices",
+       "slices": [
+        {
+         "start": 0,
+         "stop": 1
+        }
+       ]
+      },
+      "data": {
+       "source": "values",
+       "values": [
+        [
+         0.25,
+         0.5,
+         0.75
+        ]
+       ]
+      }
+     },
+     {
+      "action": "create",
+      "object": {
+       "path": "/run/pending",
+       "type": {
+        "class": "float",
+        "bits": 64
+       },
+       "empty": true,
+       "units": "kPa"
+      }
+     }
+    ],
+    "extracts": [
+     {
+      "id": "events",
+      "dataset": "/run/events",
+      "format": "json"
+     }
+    ]
+   },
+   "testValues": {},
+   "fields": {},
+   "requires": "Configure the isolated h5py 3.16.0 Python (--hdf5) and HDF Group h5dump 2.2.0 (--hdf5-h5dump)."
+  }
+ ],
+ "viewers": [
+  "text"
+ ]
+}

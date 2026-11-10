@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[fromRows](#fromrows), [readCSV](#readcsv)
+[fromRows](#fromrows), [fromTypedRows](#fromtypedrows), [readCSV](#readcsv), [readTypedCSV](#readtypedcsv)
 
 ## fromRows
 
@@ -30,6 +30,28 @@ Inputs: none.
 | `rows` | Provide 2 to 10,000 numeric records, each matching the column count. Row order is preserved in Data and the CSV round trip. | `{"type":"array","items":{"type":"array","items":{"type":"number","minimum":-1e+100,"maximum":1e+100},"minItems":1,"maxItems":64},"minItems":2,"maxItems":10000}` | **required** |
 
 
+## fromTypedRows
+
+Builds an editable LibreOffice Calc workbook from a labelled table written in this document: each column is declared as text or number, and each record mixes part or sample IDs, notes and measurements. Missing measurements are explicit nulls that become blank cells, so blank, zero and text stay distinct. It publishes analysis.xlsx, analysis.ods (reopened by a second Calc process) and a typed data.csv handoff, each checked cell by cell, with fixed numeric summaries only for the number columns. Choose it for small reproducible inventories or measurement logs; use fromRows when every cell is a number, and readTypedCSV when the table already exists as a file. Workbook numbers keep 15 significant digits, so Data cells and the Summary MIN and MAX are checked to a relative 1e-14, while SUM, AVERAGE and STDEV allow relative 2e-8 plus 1e-12 of the column's largest magnitude; counts are exact and an all-zero column accepts only zero statistics.
+
+Common mistakes and assumptions:
+
+- Every cell must match its column: a number column rejects text such as "5" and a text column rejects 123, so quote IDs like "00123".
+- Empty text is rejected because native reopening would turn it into a blank; use null for a missing value.
+- Text beginning with =, +, - or @ stays literal text; no formula is ever authored or evaluated.
+- Units are only part of the column name; nothing is converted, and dates, currency and time zones are not interpreted.
+
+Native binding: `LibreOffice Calc`. Output kind: `["spreadsheet"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `columns` | Declare 1 to 64 columns in data order. Each has a unique name, a kind of text or number, and nullable (default false). Nothing is inferred from the values, and units belong in the name, for example Mass (g). | `{"type":"array","minItems":1,"maxItems":64,"items":{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":128,"required":true},"kind":{"type":"enum","values":["text","number"],"required":true},"nullable":{"type":"boolean","default":false}}}}` | **required** |
+| `nullToken` | The reserved marker for a missing cell in the typed data.csv and in readTypedCSV input; the default is \N, as in the Arrow adaptor. It is 1 to 16 visible characters, not a decimal number, with no comma, quote or space. Text equal to the token is rejected, so choose a token your text never uses. | `{"type":"string","minLength":1,"maxLength":16}` | `"\\N"` |
+| `rows` | Provide 1 to 10,000 records, each with one cell per declared column, at most 100,000 cells in total. Record order is preserved in Data and in data.csv; every record needs at least one present cell. | `{"type":"array","items":{"type":"array","items":{"type":"union","options":[{"type":"enum","values":[null]},{"type":"number","minimum":-1e+100,"maximum":1e+100},{"type":"string","maxLength":1024}]},"minItems":1,"maxItems":64},"minItems":1,"maxItems":10000}` | **required** |
+
+
 ## readCSV
 
 Builds the same Data/Summary workbook as fromRows, but reads the table from an existing comma-separated file: the first line holds column labels and every later line holds numbers. The file bytes are copied into the run so later verification does not depend on the original file. Choose it for measured data already on disk or for a numeric table produced by another workflow step (for example an R or ngspice results table).
@@ -47,3 +69,25 @@ Inputs: none.
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
 | `file` | Absolute path of a UTF-8, comma-separated file whose first line holds 1 to 64 distinct column labels and whose remaining 2 to 10,000 lines hold one finite number per column. The file must be a regular file of at most 8 MiB; it is copied into the run directory and read as plain text, never opened as a workbook. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+
+
+## readTypedCSV
+
+Builds the same editable workbook and typed data.csv handoff as fromTypedRows, but reads the records from a captured CSV file with an exact declared header, column kinds and a reserved null token. The file bytes are copied into the run, so later verification does not depend on the original. Choose it when the table already exists as a file, such as a CSV written by another tool or a typed table handed over by an earlier Calc step; the quoting and null token follow the Apache Arrow adaptor's source dialect. Its file may be an earlier workflow step's CSV file or table artifact; the bytes are validated against the declared columns first. Workbook numbers keep 15 significant digits, so Data cells and the Summary MIN and MAX are checked to a relative 1e-14, while SUM, AVERAGE and STDEV allow relative 2e-8 plus 1e-12 of the column's largest magnitude; counts are exact and an all-zero column accepts only zero statistics.
+
+Common mistakes and assumptions:
+
+- Declare every CSV column, in file order, with the exact header text; nothing is inferred from the data.
+- The token (default \N) means missing in bare or quoted cells and cannot also be present text.
+- Numbers must be plain ASCII decimals with no spaces, separators, currency or percent signs; the old numeric readCSV still rejects the token and blanks.
+- A byte-order mark, line breaks inside cells, blank lines and empty text cells are rejected with the record and column.
+
+Native binding: `LibreOffice Calc`. Output kind: `["spreadsheet"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `file` | Absolute path of a regular UTF-8 CSV of at most 8 MiB: no byte-order mark, comma-delimited, LF or CRLF records, cells bare or wholly double-quoted with "" for a quote, first record equal to the declared names. The file is copied into the run directory and never opened as a workbook; a relative path fails planning. In a workflow it can be bound to an earlier step's CSV file or table artifact, for example {"$artifact": "summary", "index": 2}; a file kind does not make the bytes trusted, so the declared header, kinds and null token are checked before any native work. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `columns` | Declare 1 to 64 columns in data order. Each has a unique name, a kind of text or number, and nullable (default false). Nothing is inferred from the values, and units belong in the name, for example Mass (g). The names must equal the CSV header exactly, in file order. | `{"type":"array","minItems":1,"maxItems":64,"items":{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":128,"required":true},"kind":{"type":"enum","values":["text","number"],"required":true},"nullable":{"type":"boolean","default":false}}}}` | **required** |
+| `nullToken` | The reserved marker for a missing cell in the typed data.csv and in readTypedCSV input; the default is \N, as in the Arrow adaptor. It is 1 to 16 visible characters, not a decimal number, with no comma, quote or space. Text equal to the token is rejected, so choose a token your text never uses. | `{"type":"string","minLength":1,"maxLength":16}` | `"\\N"` |

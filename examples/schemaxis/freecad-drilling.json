@@ -1,0 +1,101 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "body",
+      "filter": "body"
+    },
+    {
+      "id": "outline",
+      "filter": "rectangle",
+      "options": {
+        "width": 30,
+        "height": 30
+      },
+      "inputs": {
+        "body": "body"
+      }
+    },
+    {
+      "id": "stock",
+      "filter": "pad",
+      "options": {
+        "length": 10
+      },
+      "inputs": {
+        "body": "body",
+        "profile": "outline"
+      }
+    },
+    {
+      "id": "locations",
+      "filter": "boltGrid",
+      "options": {
+        "onFace": {
+          "face": "top"
+        },
+        "columns": 2,
+        "rows": 2,
+        "yPitch": 14
+      },
+      "inputs": {
+        "body": "body",
+        "support": "stock"
+      },
+      "drive": {
+        "xPitch": {
+          "terms": {
+            "pitch": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "holes",
+      "filter": "hole",
+      "options": {
+        "recess": "counterbore",
+        "recessDiameter": 6
+      },
+      "inputs": {
+        "body": "body",
+        "base": "stock",
+        "profile": "locations"
+      },
+      "drive": {
+        "diameter": {
+          "terms": {
+            "drill": 1
+          }
+        },
+        "recessDepth": {
+          "terms": {
+            "headDepth": 1
+          }
+        }
+      }
+    }
+  ],
+  "output": "holes",
+  "parameters": {
+    "pitch": {
+      "kind": "length",
+      "value": 16,
+      "minimum": 12,
+      "maximum": 20
+    },
+    "drill": {
+      "kind": "length",
+      "value": 3,
+      "minimum": 2,
+      "maximum": 4
+    },
+    "headDepth": {
+      "kind": "length",
+      "value": 2,
+      "minimum": 1,
+      "maximum": 3.5
+    }
+  }
+}

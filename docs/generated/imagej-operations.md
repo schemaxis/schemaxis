@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[analyzeParticles](#analyzeparticles)
+[analyzeParticles](#analyzeparticles), [measureRegions](#measureregions)
 
 ## analyzeParticles
 
@@ -35,3 +35,25 @@ Inputs: none.
 | `excludeEdges` | When true, particles whose bounding box touches any image border are dropped, because they may be cut off. They are counted in the summary under rejected.edge. | `{"type":"boolean"}` | `false` |
 | `minimumArea` | Smallest particle area kept, in unit squared (inclusive). It is converted to a whole pixel count before ImageJ runs; use it to drop noise specks. | `{"type":"number","minimum":0,"maximum":1e+30}` | `0` |
 | `maximumArea` | Largest particle area kept, in unit squared (inclusive), converted to a whole pixel count. | `{"type":"number","minimum":0,"maximum":1e+30}` | omitted |
+
+
+## measureRegions
+
+Repeats the same named rectangular regions across a short series of captured grayscale images and publishes, for every frame and region, the pixel count, calibrated area and raw mean, minimum and maximum intensity together with the frame ID, region ID and declared time. Use it to follow the same fixed areas of successive microscope or materials images without redrawing them by hand, with every number tied to the frame and calibration it came from. It does not threshold, track objects, register images or infer time; regions may overlap and are independent. Outputs: region-measurements.csv (text IDs plus numeric columns, for Calc readTypedCSV), region-measurements.json (frame hashes, calibration, conventions and every record). Every native value is checked against an exact enumeration of the rectangle pixels.
+
+Common mistakes and assumptions:
+
+- Regions are fixed in pixel coordinates; if the specimen moves between frames the numbers describe different material.
+- Intensities are raw stored values, not densities or exposure-normalised; only area uses the calibration.
+- The CSV alone omits hashes and conventions; keep the JSON with it.
+- Synthetic analytic fixtures establish semantics, not suitability for a particular experiment.
+
+Native binding: `ij.ImagePlus/ij.ImageStack, ij.gui.Roi, ij.process.ImageStatistics and ij.measure.Calibration (ImageJ 1.x)`. Output kind: `["file","text"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `frames` | The ordered captured grayscale planes to measure, 2 to 8 of them. Each has a frame ID, the image file and the declared time in seconds. Frames are measured with the same rectangles in the listed order; they are not registered, aligned or reordered. | `{"type":"array","minItems":2,"maxItems":8,"items":{"type":"object","properties":{"id":{"type":"string","minLength":1,"maxLength":32,"required":true},"image":{"type":"string","minLength":2,"maxLength":4096,"required":true},"timeSeconds":{"type":"number","minimum":0,"maximum":1000000000.0,"required":true}}}}` | **required** |
+| `regions` | The named rectangles to measure, 1 to 16, applied unchanged to every frame. Rectangles may overlap or nest; each is an independent measurement, not a partition of the image. Nothing moves or follows a feature between frames. | `{"type":"array","minItems":1,"maxItems":16,"items":{"type":"object","properties":{"id":{"type":"string","minLength":1,"maxLength":32,"required":true},"x":{"type":"integer","minimum":0,"maximum":2047,"required":true},"y":{"type":"integer","minimum":0,"maximum":2047,"required":true},"width":{"type":"integer","minimum":1,"maximum":2048,"required":true},"height":{"type":"integer","minimum":1,"maximum":2048,"required":true}}}}` | **required** |
+| `calibration` | Physical size of one pixel. It replaces any calibration stored in the file and sets the unit of every length and area column. | `{"type":"object","properties":{"pixelWidth":{"type":"number","minimum":1e-06,"maximum":1000000.0,"required":true},"pixelHeight":{"type":"number","minimum":1e-06,"maximum":1000000.0,"required":true},"unit":{"type":"enum","values":["nm","um","mm","cm","m"],"required":true}}}` | **required** |

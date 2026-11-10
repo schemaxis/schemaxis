@@ -1,0 +1,138 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "cad",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "plate",
+            "filter": "box",
+            "options": {
+              "length": 60,
+              "width": 40,
+              "height": 8
+            }
+          },
+          {
+            "id": "leftHole",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 10,
+              "origin": [
+                15,
+                20,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "rightHole",
+            "filter": "cylinder",
+            "options": {
+              "radius": 4,
+              "height": 10,
+              "origin": [
+                45,
+                20,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "drilled",
+            "filter": "cut",
+            "inputs": {
+              "base": "plate",
+              "tool": "leftHole"
+            }
+          },
+          {
+            "id": "part",
+            "filter": "cut",
+            "inputs": {
+              "base": "drilled",
+              "tool": "rightHole"
+            }
+          }
+        ],
+        "output": "part"
+      }
+    },
+    {
+      "id": "mesh",
+      "document": {
+        "version": "schemaxis.gmsh/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "solid",
+            "filter": "readSTEP",
+            "options": {
+              "file": {
+                "$artifact": "cad",
+                "index": 0
+              }
+            }
+          },
+          {
+            "id": "mesh",
+            "filter": "tetrahedral",
+            "inputs": {
+              "input": "solid"
+            },
+            "options": {
+              "size": 3,
+              "volumeName": "plate",
+              "boundaryName": "free",
+              "volumeTolerance": 0.02,
+              "faceGroups": [
+                {
+                  "name": "base",
+                  "axis": "z",
+                  "coordinate": 0,
+                  "areaTolerance": 0.02
+                }
+              ],
+              "cylinderGroups": [
+                {
+                  "name": "fixedBore",
+                  "axis": "z",
+                  "centre": [
+                    15,
+                    20,
+                    0
+                  ],
+                  "radius": 4,
+                  "side": "inner"
+                },
+                {
+                  "name": "loadBore",
+                  "axis": "z",
+                  "centre": [
+                    45,
+                    20,
+                    0
+                  ],
+                  "radius": 4,
+                  "side": "inner"
+                }
+              ],
+              "nearBoundaries": [
+                {
+                  "boundary": "loadBore",
+                  "size": 0.9,
+                  "distance": 4
+                }
+              ]
+            }
+          }
+        ],
+        "output": "mesh"
+      }
+    }
+  ]
+}

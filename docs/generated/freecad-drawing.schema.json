@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Schemaxis drawing literal settings",
+  "$defs": {
+    "json": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.freecad.drawing/1"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "object": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "units": {
+          "enum": [
+            "mm",
+            "cm",
+            "m",
+            "inch"
+          ]
+        },
+        "expect": {
+          "type": "object",
+          "properties": {
+            "volume": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "bounds": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 6,
+              "maxItems": 6
+            },
+            "centreOfMass": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "volume",
+            "bounds",
+            "centreOfMass"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "units",
+        "expect"
+      ]
+    },
+    "sheet": {
+      "type": "object",
+      "properties": {
+        "size": {
+          "enum": [
+            "A4",
+            "A3"
+          ],
+          "default": "A4"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "scale": {
+          "oneOf": [
+            {
+              "const": "fit"
+            },
+            {
+              "type": "number",
+              "minimum": 0.001,
+              "maximum": 100
+            }
+          ],
+          "default": "fit"
+        }
+      },
+      "additionalProperties": false
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "front",
+          "top",
+          "right",
+          "rear",
+          "bottom",
+          "left",
+          "isometric"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true
+    },
+    "dimensioning": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          },
+          "view": {
+            "enum": [
+              "front",
+              "top",
+              "right",
+              "rear",
+              "bottom",
+              "left"
+            ]
+          },
+          "type": {
+            "enum": [
+              "overallWidth",
+              "overallHeight",
+              "diameter",
+              "radius",
+              "edgeLength",
+              "horizontal",
+              "vertical",
+              "distance"
+            ]
+          },
+          "from": {
+            "type": "object",
+            "properties": {
+              "point": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "on": {
+                "enum": [
+                  "vertex",
+                  "circleCentre"
+                ],
+                "default": "vertex"
+              },
+              "radius": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "point"
+            ]
+          },
+          "to": {
+            "type": "object",
+            "properties": {
+              "point": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "on": {
+                "enum": [
+                  "vertex",
+                  "circleCentre"
+                ],
+                "default": "vertex"
+              },
+              "radius": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "point"
+            ]
+          },
+          "radius": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "length": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "view",
+          "type"
+        ]
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      },
+      "maxItems": 4
+    },
+    "definitions": {
+      "$ref": "#/$defs/json"
+    },
+    "settings": {
+      "$ref": "#/$defs/json"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "source"
+  ]
+}

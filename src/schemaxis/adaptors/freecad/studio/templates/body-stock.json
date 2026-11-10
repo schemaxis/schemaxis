@@ -1,0 +1,61 @@
+{
+  "version": "schemaxis.freecad/1",
+  "nodes": [
+    {
+      "id": "casting",
+      "filter": "importMesh",
+      "options": {
+        "file": {
+          "$fill": "meshFile"
+        },
+        "units": "mm",
+        "refine": true
+      }
+    },
+    {
+      "id": "part",
+      "filter": "body"
+    },
+    {
+      "id": "seed",
+      "filter": "bodySeed",
+      "inputs": {
+        "body": "part",
+        "source": "casting"
+      }
+    },
+    {
+      "id": "bore",
+      "filter": "circle",
+      "options": {
+        "radius": {
+          "$fill": "boreRadius"
+        },
+        "centre": [
+          21,
+          10
+        ],
+        "origin": [
+          0,
+          0,
+          5
+        ]
+      },
+      "inputs": {
+        "body": "part"
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "pocket",
+      "options": {
+        "direction": "backward"
+      },
+      "inputs": {
+        "base": "seed",
+        "profile": "bore"
+      }
+    }
+  ],
+  "output": "cut"
+}

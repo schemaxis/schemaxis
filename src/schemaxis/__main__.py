@@ -98,6 +98,8 @@ def build_parser():
     parser.add_argument('--version', action=_VersionAction, nargs=0,
                         help="show the installed project's version and exit")
     commands = parser.add_subparsers(dest='command', required=True)
+    from .module_cli import arguments as module_arguments
+    module_arguments(commands)
     help_command = commands.add_parser('help', help='show command help or search commands and capability topics')
     help_command.add_argument('topic', nargs='*', help='command path or operation keywords')
     help_command.add_argument('--search', action='store_true', help='search even when the topic is an exact command path')
@@ -187,6 +189,11 @@ def build_parser():
     conform.add_argument('--timeout', type=float, default=120)
     conform.add_argument('--wall-timeout', type=float, default=300, help='independent per-case wall-clock ceiling')
     conform.add_argument('--executable', help='explicit runtime for the selected adaptor')
+    compatible = kit.add_parser('compatibility', help='validate runtime compatibility profiles and select one without starting applications')
+    compatible.add_argument('provider', choices=tuple(ADAPTORS))
+    compatible.add_argument('--app-version', help='hypothetical candidate release to compare with profiles; no application is started or observed')
+    compatible.add_argument('--route', help='authored schema route (default: the adaptor route)')
+    compatible.add_argument('--mode', default='serial', help='execution mode to assess')
     record = kit.add_parser('record', help='register a successful current-source native qualification receipt')
     record.add_argument('receipt', type=Path)
     scaffold = kit.add_parser('scaffold', help='generate an unqualified source overlay without installing it')
@@ -216,6 +223,10 @@ def build_parser():
     target.add_argument('--all', dest='schema_all', action='store_true', help='standalone umbrella for all registered versions; authored unless --expanded')
     target.add_argument('--expand', metavar='INPUT', help='emit composition/inline/analytic-expanded pipeline JSON for schema checking')
     commands.add_parser('discover', help='list provider contracts without starting applications')
+    assessments = commands.add_parser('assessments', help='query scoped subjective adaptor breadth and abstraction estimates')
+    assessments.add_argument('--app', action='append', choices=tuple(ADAPTORS), help='select registered providers; default is the installed inventory')
+    assessments.add_argument('--format', choices=('json', 'text'), default='json')
+    assessments.add_argument('--compare', type=Path, help='compare with a saved assessments JSON report; deltas require unchanged scopes')
     template = commands.add_parser('template', help='inspect, bind and plan reusable workflow templates without native execution')
     template_actions = template.add_subparsers(dest='template_action', required=True)
     template_inspect = template_actions.add_parser('inspect', help='read a validated template bundle and its semantic digest')
@@ -229,6 +240,23 @@ def build_parser():
             template_action.add_argument('--document-only', action='store_true', help='emit the ordinary workflow document instead of the binding record')
     agent = commands.add_parser('agent', help='local JSON-lines agent tools over the shared execution service')
     agent.add_argument('--workspace', type=Path, required=True)
+    tool = commands.add_parser('tool', help='check, pack and import local declared tool packages')
+    tools = tool.add_subparsers(dest='tool_action', required=True)
+    tool_check = tools.add_parser('check', help='validate a local archive and host-plan its defaults')
+    tool_check.add_argument('filename', type=Path)
+    tool_pack = tools.add_parser('pack', help='pack a local data directory with derived requirements and digests')
+    tool_pack.add_argument('directory', type=Path)
+    tool_pack.add_argument('--output', type=Path, required=True)
+    tool_import = tools.add_parser('import', help='import a checked local archive into an owned package store')
+    tool_import.add_argument('filename', type=Path)
+    tool_import.add_argument('--workspace', type=Path, required=True)
+    mcp = commands.add_parser('mcp', help='bounded MCP tools over the shared execution service')
+    mcp.add_argument('--workspace', type=Path, required=True)
+    mcp.add_argument('--profile', choices=('declared-documents', 'trusted-local'), default='declared-documents')
+    mcp.add_argument('--isolation-config', type=Path, help='operator-owned pinned image profiles and immutable input inventory (stdio only)')
+    mcp.add_argument('--transport', choices=('stdio', 'streamable-http'), default='stdio')
+    mcp.add_argument('--port', type=int, default=8766, help='loopback development HTTP port')
+    mcp.add_argument('--allow-origin', action='append', default=[], help='exact permitted HTTP Origin; repeat as needed')
     capabilities = commands.add_parser('capabilities', help='bounded capability navigation and selected contracts')
     actions = capabilities.add_subparsers(dest='capability_action', required=True)
     browse = actions.add_parser('browse', help='browse root, application or group summaries')
@@ -290,12 +318,47 @@ def build_parser():
                     sub.add_argument(option['flag'], **{k: v for k, v in option.items() if k != 'flag'})
             sub.add_argument('--timeout', type=float, default=300)
         if command == 'run':
+            sub.add_argument('--backend', choices=('container', 'native'),
+                             help='execution backend; default is the managed module preference (container)')
             sub.add_argument('--resume', action='store_true', help='reuse verified workflow attempts and retry unfinished jobs')
         if command == 'inspect':
             sub.add_argument('--node', required=True)
             sub.add_argument('--visit', type=int, default=0)
     verify = commands.add_parser('verify', help='check retained receipt membership and artifact digests')
     verify.add_argument('directory')
+    captured = commands.add_parser('input', help='adopt stable saved files or directories as digest-pinned workflow inputs')
+    captured_actions = captured.add_subparsers(dest='input_action', required=True)
+    adopt = captured_actions.add_parser('adopt', help='copy a stable saved checkpoint into a new verified snapshot')
+    adopt.add_argument('source', help='saved file, or directory for file-set/directory')
+    adopt.add_argument('destination', help='new snapshot directory; it must not exist')
+    adopt.add_argument('--kind', choices=('file', 'file-set', 'directory'), default='file')
+    adopt.add_argument('--member', action='append', help='file-set member relative to the source directory')
+    adopt.add_argument('--max-files', type=int, default=10000)
+    adopt.add_argument('--max-bytes', type=int, default=1073741824)
+    revision = commands.add_parser('revision', help='edit one verified artifact of a completed workflow as an explicit child revision')
+    revision_actions = revision.add_subparsers(dest='revision_action', required=True)
+    for action in ('checkout', 'prepare'):
+        sub = revision_actions.add_parser(action, help={
+            'checkout': 'copy a verified producer artifact to a new, separate editable file',
+            'prepare': 'adopt the saved edit as a pinned snapshot and write a schemaxis.revision/1 document',
+        }[action])
+        sub.add_argument('parent', help='completed, verified parent workflow result directory')
+        sub.add_argument('--consumer', required=True, help='operation whose direct $artifact field is replaced')
+        sub.add_argument('--pointer', required=True, help='JSON pointer to that field inside the operation document')
+        if action == 'checkout':
+            sub.add_argument('--destination', required=True, help='new working-copy file outside the parent')
+        else:
+            sub.add_argument('--replacement', required=True, help='saved edited file')
+            sub.add_argument('--snapshot', required=True, help='new snapshot directory outside the parent')
+            sub.add_argument('--reason', required=True, help='why the artifact was edited')
+            sub.add_argument('--output', type=Path, required=True, help='new revision document file')
+            sub.add_argument('--max-bytes', type=int, default=1073741824)
+    check = captured_actions.add_parser('verify', help='verify a snapshot against its trusted pinned digest')
+    check.add_argument('snapshot')
+    check.add_argument('--digest', required=True, help='trusted manifest digest recorded at adoption')
+    check.add_argument('--member')
+    check.add_argument('--max-files', type=int, default=10000)
+    check.add_argument('--max-bytes', type=int, default=1073741824)
     return parser
 
 
@@ -303,6 +366,9 @@ def main():
     from .adaptors.registry import ADAPTORS
     parser = build_parser()
     args = parser.parse_args()
+    if args.command == 'modules':
+        from .module_cli import execute as module_command
+        return module_command(args)
     if args.command == 'help':
         return help_topic(parser, args)
     if args.command == 'storage':
@@ -380,6 +446,13 @@ def main():
             locations = {provider: args.executable} if args.executable else None
             return qualify(args.version, args.output_directory, native=args.native,
                            root=args.repository_root, locations=locations, timeout=args.timeout, wall_timeout=args.wall_timeout)
+        if args.adaptor_action == 'compatibility':
+            from .compatibility import assess, load
+            _, manifest, profiles = load(args.provider)
+            identity = None if args.app_version is None else {
+                'application': args.provider, 'version': args.app_version, 'source': 'supplied'}
+            return {'profiles': profiles, **assess(args.provider, identity, route=args.route or manifest['version'],
+                                                    mode=args.mode, supplied=identity is not None)}
         if args.adaptor_action == 'record':
             from .adaptor_conformance import register
             return register(args.receipt)
@@ -390,6 +463,28 @@ def main():
         from .agent_transport import serve
         serve(args.workspace)
         return None
+    if args.command == 'mcp':
+        if args.transport == 'stdio':
+            from .mcp import serve
+            serve(args.workspace, profile=args.profile, isolation_config=args.isolation_config)
+        else:
+            if args.isolation_config is not None:
+                raise ValueError('Use stdio for local image configuration; hosted HTTP supplies its own authenticated backend')
+            from .mcp_http import serve_http
+            serve_http(args.workspace, profile=args.profile, port=args.port, allowed_origins=args.allow_origin)
+        return None
+    if args.command == 'tool':
+        from .tool_packages import MAX_ARCHIVE, PackageStore, check_package, pack_directory
+        if args.tool_action == 'pack':
+            return pack_directory(args.directory, args.output)
+        if args.tool_action == 'import':
+            return PackageStore(args.workspace).import_package(args.filename)
+        if args.filename.is_symlink() or not args.filename.is_file() or args.filename.stat().st_size > MAX_ARCHIVE:
+            from .errors import fail
+            fail('INVALID_TOOL_PACKAGE', 'check a bounded regular local archive')
+        checked = check_package(args.filename.read_bytes())
+        return {'digest': checked['digest'], 'id': checked['manifest']['id'],
+                'revision': checked['manifest']['revision'], 'providers': checked['providers']}
     if args.command == 'updates':
         from .updates import report, prepare
         result = report(args.app)
@@ -432,6 +527,15 @@ def main():
             return catalogue.search(args.query, scope=args.scope, input_kind=args.input_kind,
                                     output_kind=args.output_kind, **options)
         return catalogue.browse(args.scope, **options)
+    if args.command == 'assessments':
+        from .assessments import report, human_summary, compare
+        result = report(args.app)
+        if args.compare:
+            result['comparison'] = compare(result, load_document(args.compare.read_text()))
+        if args.format == 'text':
+            print(human_summary(result), end='')
+            return None
+        return result
     if args.command == 'discover':
         from .adaptors.registry import discover
         return {**discover(), 'commands': [topic['command'] for topic in command_topics(parser)
@@ -484,14 +588,60 @@ def main():
             from .errors import fail
             fail('UNKNOWN_FILTER', 'filter is not declared', args.filter, available=sorted(values))
         return values[args.filter] if args.filter else values
+    if args.command == 'input':
+        from . import captured_inputs
+        if args.input_action == 'adopt':
+            return captured_inputs.adopt(args.source, args.destination, kind=args.kind, members=args.member,
+                                         max_files=args.max_files, max_bytes=args.max_bytes)
+        import os
+        reference = {'$resource': os.path.abspath(args.snapshot), 'digest': args.digest,
+                     'maxFiles': args.max_files, 'maxBytes': args.max_bytes,
+                     **({'member': args.member} if args.member else {})}
+        opened = captured_inputs.open_reference(reference, 'snapshot')
+        return {'verified': True, **{key: opened[key] for key in ('snapshot', 'digest', 'kind', 'member', 'totalBytes')},
+                'files': len(opened['files'])}
+    if args.command == 'revision':
+        from . import workflow_revisions as revisions
+        if args.revision_action == 'checkout':
+            return revisions.checkout(args.parent, args.consumer, args.pointer, args.destination)
+        from .storage import atomic, encoded
+        revisions._disjoint(args.output, {'parent result': args.parent, 'adopted snapshot': args.snapshot,
+                                          'replacement working copy': args.replacement}, 'revision document')
+        if args.output.exists():
+            from .errors import fail
+            fail('OUTPUT_EXISTS', 'choose a revision document path that does not exist', str(args.output))
+        document = revisions.prepare(args.parent, args.consumer, args.pointer, args.replacement,
+                                     args.snapshot, args.reason, max_bytes=args.max_bytes)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        atomic(args.output, encoded(document), exclusive=True)
+        return {'revision': str(args.output.absolute()), **document}
     if args.command == 'verify':
         directory = Path(args.directory)
         authored = load_document((directory/'authored.json').read_text()) if (directory/'authored.json').exists() else {}
+        if authored.get('version') == 'schemaxis.revision/1':
+            from .workflow_revisions import verify
+            return verify(directory)
         if authored.get('version') == 'schemaxis.workflow/1':
             from .workflow import verify
             return verify(directory)
         return registry.verify(directory, authored)
     document = authored_input(args.input, args.input_format)
+    if document.get('version') == 'schemaxis.revision/1':
+        from . import workflow_revisions as revisions
+        from .errors import fail
+        if args.command == 'plan':
+            return revisions.plan(document)
+        if args.command != 'run' or getattr(args, 'resume', False):
+            fail('UNSUPPORTED_REVISION', 'revisions are planned or run into a new directory; '
+                 'resume and inspect are not supported', args.command)
+        if str(args.input) != '-':
+            revisions._disjoint(args.output_directory, {'revision document': args.input}, 'revision output')
+        locations = {option['dest']: getattr(args, option['dest'], None)
+                     for item in ADAPTORS.values() for option in item.get('cliOptions', [])}
+        from .app_modules import ModuleManager
+        from .module_cli import execution_backend
+        return revisions.execute(document, args.output_directory, timeout=args.timeout, locations=locations,
+                                 backend=execution_backend(args, locations) or ModuleManager().settings()['backend'])
     workflow = document.get('version') == 'schemaxis.workflow/1'
     if args.command == 'plan':
         if workflow:
@@ -509,10 +659,16 @@ def main():
     if args.resume and not workflow:
         from .errors import fail
         fail('UNSUPPORTED_RESUME', 'resume requires a workflow document')
+    from .module_cli import execution_backend
+    backend = execution_backend(args, locations)
     if workflow:
         from .workflow import execute
-        return execute(document, args.output_directory, locations=locations, timeout=args.timeout, resume=args.resume)
-    return registry.run(document, args.output_directory, locations=locations, timeout=args.timeout)
+        from .module_runtime import runtime
+        with runtime(document, backend=backend):
+            return execute(document, args.output_directory, locations=locations, timeout=args.timeout, resume=args.resume)
+    from .module_runtime import runtime
+    with runtime(document, backend=backend):
+        return registry.run(document, args.output_directory, locations=locations, timeout=args.timeout)
 
 
 def console_main():

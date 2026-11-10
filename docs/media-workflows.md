@@ -47,7 +47,7 @@ interlaced images are rejected. The host decodes actual source pixels; a fresh
 Godot process reopens the saved scene and checks the texture's dimensions and
 SHA-256 of RGBA pixels. The texture is embedded, so the original PNG may disappear
 without breaking offline verification or the saved scene. Images remain flat
-sprites: this is not sprite-sheet animation playback or arbitrary game authoring.
+sprites: `sprite3D` is not animation playback or arbitrary game authoring.
 The whole sheet is displayed unless the first-frame image is selected instead.
 
 ```bash
@@ -55,6 +55,19 @@ PYTHONPATH=src python3 -m schemaxis run examples/schemaxis/sprite-to-godot.json 
   --aseprite /absolute/aseprite --godot /absolute/godot \
   --output-directory /fresh/sprite-scene
 ```
+
+## Godot timed sprite animation
+
+`animatedSprite3D` plays one forward Aseprite tag as a native `AnimatedSprite3D`
+with its own `SpriteFrames`, keeping the authored per-frame milliseconds. Give both
+source fields generic artifact references to the same Aseprite operation, the sheet
+PNG (`index` 2) and its `sheet.json` (`index` 3), and name the tag in `animation`.
+Both inputs are captured and hashed, so changing either invalidates reuse and
+unchanged bytes are reused. See `examples/schemaxis/aseprite-animation-to-godot.json`
+and the [Godot guide](godot.md#timed-sprite-animation) for meaning, bounds and the
+observed playback-timing limit. This is a product hypothesis, and the producer
+version observed locally is recorded as a hand-off observation, not a new Aseprite
+qualification.
 
 ## FFmpeg publication
 

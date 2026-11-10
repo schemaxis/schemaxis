@@ -1,0 +1,248 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "size": [
+    256,
+    256
+  ],
+  "cameras": [
+    {
+      "direction": [
+        0,
+        -1,
+        0
+      ],
+      "up": [
+        0,
+        0,
+        1
+      ],
+      "parallel": true,
+      "focalPoint": [
+        0,
+        0,
+        0
+      ],
+      "scale": 8,
+      "distance": 10
+    }
+  ],
+  "render": {
+    "samples": 1,
+    "threads": 2,
+    "denoise": false,
+    "renderer": {
+      "kind": "cycles"
+    },
+    "worldColour": [
+      1,
+      1,
+      1
+    ],
+    "worldStrength": 1,
+    "lightEnergy": 0,
+    "colourManagement": {
+      "view": {
+        "kind": "standard"
+      }
+    }
+  },
+  "production": {
+    "collections": [
+      {
+        "id": "parts"
+      },
+      {
+        "id": "occluders"
+      }
+    ],
+    "viewLayers": [
+      {
+        "id": "technical",
+        "passes": [
+          "combined"
+        ]
+      }
+    ],
+    "materialGraphs": [
+      {
+        "id": "white",
+        "nodes": [
+          {
+            "id": "emit",
+            "kind": "emission",
+            "values": {
+              "colour": [
+                1,
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "finish",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "emit",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "finish",
+              "socket": "surface"
+            }
+          }
+        ]
+      }
+    ],
+    "npr": {
+      "styles": [
+        {
+          "id": "visible",
+          "width": 3,
+          "colour": [
+            0,
+            0,
+            1,
+            1
+          ]
+        },
+        {
+          "id": "hidden",
+          "width": 2,
+          "colour": [
+            1,
+            0,
+            0,
+            1
+          ],
+          "dash": [
+            {
+              "length": 7,
+              "gap": 3
+            }
+          ]
+        }
+      ],
+      "materials": [],
+      "layers": [
+        {
+          "layer": "technical",
+          "lineSets": [
+            {
+              "id": "visible_edges",
+              "style": "visible",
+              "edges": [
+                "border",
+                "silhouette"
+              ],
+              "scope": {
+                "kind": "objects",
+                "objects": [
+                  "source"
+                ]
+              },
+              "visibility": {
+                "kind": "visible"
+              }
+            },
+            {
+              "id": "hidden_edges",
+              "style": "hidden",
+              "edges": [
+                "border",
+                "silhouette"
+              ],
+              "scope": {
+                "kind": "collection",
+                "collection": "parts"
+              },
+              "visibility": {
+                "kind": "range",
+                "minimum": 1,
+                "maximum": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "objects": [
+      {
+        "id": "source",
+        "kind": "mesh",
+        "collection": "parts",
+        "material": "white",
+        "vertices": [
+          [
+            -2,
+            0,
+            -1.5
+          ],
+          [
+            2,
+            0,
+            -1.5
+          ],
+          [
+            2,
+            0,
+            1.5
+          ],
+          [
+            -2,
+            0,
+            1.5
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ]
+      },
+      {
+        "id": "occluder",
+        "kind": "mesh",
+        "collection": "occluders",
+        "material": "white",
+        "vertices": [
+          [
+            -0.5,
+            -1,
+            -2
+          ],
+          [
+            0.5,
+            -1,
+            -2
+          ],
+          [
+            0.5,
+            -1,
+            2
+          ],
+          [
+            -0.5,
+            -1,
+            2
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ]
+      }
+    ]
+  }
+}

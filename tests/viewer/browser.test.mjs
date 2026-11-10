@@ -1,0 +1,60 @@
+// Copyright (C) 2026 David L. F. Gaden. SPDX-License-Identifier: Apache-2.0
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
+import {mkdir} from 'node:fs/promises';
+import {launch} from '../../src/schemaxis/studio_ui/tests/fixtures/editor/cdp.mjs';
+const root=fileURLToPath(new URL('../../src/schemaxis_viewer/web/',import.meta.url));
+const shot=process.env.VIEWER_SCREENSHOTS;
+const click=(session,label)=>session.evaluate(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)});if(!b)throw Error('Missing button '+${JSON.stringify(label)});b.click();})()`);
+const field=(s,label,value,event='input')=>s.evaluate(`(()=>{const n=document.querySelector('[aria-label="'+${JSON.stringify(label)}+'"]');if(!n)throw Error('Missing control');n.value=${JSON.stringify(value)};n.dispatchEvent(new Event(${JSON.stringify(event)},{bubbles:true}));})()`);
+test('standalone browser: gallery, XYZ, playback, textured 3D, mesh, text and table',async()=>{
+ const s=await launch({root,path:'/index.html',width:1500,height:1000});
+ try{
+  await s.wait('Boolean(window.artifactViewer)','viewer initialisation');
+  await click(s,'Explore demo');
+  await s.wait('window.artifactViewer.items.length === 37','sample collection');
+  assert.equal(await s.evaluate('artifactViewer.groups.length'),3);
+  if(shot){await mkdir(shot,{recursive:true});await s.screenshot(shot+'/gallery.png');}
+  await s.evaluate(`document.querySelector('[data-mode=xyz]').click()`);await s.wait('document.querySelectorAll(".sequence-panel").length===3','XYZ panels');
+  await field(s,'X slice slider','8');
+  assert.equal(await s.evaluate(`document.querySelector('[aria-label="Y slice slider"]').value`),'5');
+  await s.evaluate(`document.querySelector('.scene-toolbar input[type=checkbox]').click()`);
+  await field(s,'X slice slider','7');
+  assert.equal(await s.evaluate(`document.querySelector('[aria-label="X coordinate"]').value`),'1.4');
+  assert.equal(await s.evaluate(`document.querySelector('[aria-label="Y slice slider"]').value`),'7');
+  const before=await s.evaluate(`document.querySelector('[aria-label="X slice slider"]').value`);
+  await s.evaluate(`document.querySelector('[aria-label="X play backward"]').click()`);
+  await s.wait(`document.querySelector('[aria-label="X slice slider"]').value !== ${JSON.stringify(before)}`,'reverse playback');
+  await s.evaluate(`document.querySelector('[aria-label="X pause"]').click()`);
+  if(shot)await s.screenshot(shot+'/xyz.png');
+  await s.evaluate(`document.querySelector('[data-mode="3d"]').click()`);await s.wait('Boolean(window.artifactScene)','3D scene');
+  await s.wait('document.querySelector(".scene").width>0&&document.querySelectorAll(".sequence-panel").length===3','3D controls');
+  await s.wait(`(()=>{const gl=document.querySelector('.scene').getContext('webgl');const canvas=gl.canvas,p=new Uint8Array(canvas.width*canvas.height*4);gl.readPixels(0,0,canvas.width,canvas.height,gl.RGBA,gl.UNSIGNED_BYTE,p);let count=0;for(let y=0;y<canvas.height;y+=8)for(let x=0;x<canvas.width;x+=8){const i=(y*canvas.width+x)*4;if(Math.max(p[i],p[i+1],p[i+2])-Math.min(p[i],p[i+1],p[i+2])>60&&p[i]+p[i+1]+p[i+2]>100)count++;}return count>100;})()`,'actual textured pixels');
+  const camera=await s.evaluate('artifactScene.camera()');
+  await s.evaluate('document.querySelector(".scene").focus()');await s.key('ArrowLeft');
+  assert.notEqual(await s.evaluate('artifactScene.camera().yaw'),camera.yaw);
+  if(shot)await s.screenshot(shot+'/spatial.png');
+  await click(s,'Run records');await s.evaluate(`document.querySelector('[data-mode=gallery]').click()`);
+  await s.evaluate('artifactViewer.openFile(artifactViewer.items.find(i=>i.name.endsWith("forces.csv")))');
+  await s.wait('document.querySelectorAll("tbody tr").length===90','table rows');
+  await field(s,'Search table','0.05');assert.ok(await s.evaluate('document.querySelectorAll("tbody tr").length')<90);
+  assert.ok(await s.evaluate('document.querySelector(".chart").width')>0);
+  await click(s,'← Collection');
+  await s.evaluate('artifactViewer.openFile(artifactViewer.items.find(i=>i.name.endsWith("run.log")))');
+  await s.wait('Boolean(document.querySelector(".text-result"))','text preview');
+  await field(s,'Search text','residual');
+  await s.wait('document.querySelectorAll(".text-line mark").length===2','Find highlights both occurrences');
+  assert.equal(await s.evaluate('document.querySelectorAll(".text-line").length'),8,'Find retains surrounding text');
+  await field(s,'Text search mode','grep','change');
+  assert.equal(await s.evaluate('document.querySelectorAll(".grep-table tbody tr").length'),2,'Grep lists only matches');
+  await click(s,'← Collection');await click(s,'Geometry');
+  await s.evaluate('artifactViewer.openFile(artifactViewer.items.find(i=>i.name.endsWith("wedge.obj")))');
+  await s.wait('Boolean(document.querySelector(".scene-toolbar"))','mesh renderer');
+  assert.equal(await s.evaluate('document.querySelectorAll(".warning").length'),0);
+  await s.open('/index.html');await s.wait('Boolean(window.artifactViewer)','reload');await click(s,'Explore demo');await s.wait('artifactViewer.items.length===37','reload demo');
+  await s.send('Emulation.setDeviceMetricsOverride',{width:600,height:900,deviceScaleFactor:1,mobile:false});
+  assert.ok(await s.evaluate('document.documentElement.scrollWidth <= 600'));
+  assert.equal(s.exceptions.length,0,JSON.stringify(s.exceptions));
+ }finally{await s.close();}
+});

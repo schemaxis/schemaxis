@@ -22,6 +22,7 @@ These are JSON value markers, not shell commands or general-purpose scripting. A
 | `$object` | Reference an existing process-local graph object | Supported graph input/object context. |
 | `$create` | Declare an inline graph node | Supported graph authoring input. |
 | `$artifact` | Select verified producer artifact | Workflow handoff. |
+| `$resource` | Read a digest-pinned captured input snapshot | Workflow planning, execution and verification; adaptor reader policy. |
 | `$fill` | Retain an unfilled draft value | Authoring/templates; must be filled before ordinary execution. |
 
 `$schema`, `$defs` and `$ref` are JSON Schema keywords in schema documents, not Schemaxis runtime commands. `$proxy` in catalogue gap records is metadata about recursive proxy choices, not authored executable syntax. `$selected` in diagnostic paths is internal traversal notation. Dollar-prefixed strings in foreign file formats are not new Schemaxis commands.

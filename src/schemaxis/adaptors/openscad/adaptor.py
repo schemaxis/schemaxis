@@ -21,6 +21,7 @@ from . import geometry
 
 VERSION='schemaxis.openscad/1'
 LIMIT=4*1024*1024
+CLEARANCE_GUARD=1e-9
 DIM={'type':'number','minimum':.5,'maximum':200,'required':True}
 COORD={'type':'number','minimum':-100,'maximum':200}
 HOLE={'type':'object','properties':{'centre':{'type':'array','items':COORD,'minItems':2,'maxItems':2,'required':True},'diameter':DIM}}
@@ -36,6 +37,14 @@ LOSSES=['All dimensions are millimetres; STL itself carries no units. Explicit m
  'Absolute coordinate magnitude is at most 300 mm with minimum 0.5 mm features. Native CGAL and float32 export approximation is checked at 0.00004 mm coordinates and 0.0002 relative volume. Ideal circle error is reported separately.']
 
 
+def clearance(measured,required,message,location):
+    # Typed decimals such as 4.6-3.6 land a few ulps below the stated minimum in
+    # binary floating point. The guard is far below the 0.5 mm feature minimum and
+    # the 4e-5 mm STL check, so only a rounding artefact is forgiven, never a shape.
+    if measured<required-CLEARANCE_GUARD:
+        fail('INVALID_CAD_CLEARANCE',f'{message} (measured {measured:.6g} mm)',location,measured=round(measured,9),required=required,units='mm')
+
+
 def plan(document):
     if document.get('version')!=VERSION:fail('UNSUPPORTED_VERSION','select '+VERSION,'$.version')
     operation=document.get('operation')
@@ -47,10 +56,10 @@ def plan(document):
     if operation=='plate':
         for i,h in enumerate(q['holes']):
             x,y=h['centre'];r=h['diameter']/2;at=f'$.plate.holes[{i}]'
-            if min(x-r,y-r,q['width']-x-r,q['depth']-y-r)<.5:fail('INVALID_CAD_CLEARANCE','keep each nominal hole at least 0.5 mm inside every plate edge',at)
+            clearance(min(x-r,y-r,q['width']-x-r,q['depth']-y-r),.5,'keep each nominal hole at least 0.5 mm inside every plate edge',at)
             for other in q['holes'][:i]:
-                if math.dist(h['centre'],other['centre'])-(h['diameter']+other['diameter'])/2<.5:fail('INVALID_CAD_CLEARANCE','keep nominal circular holes separated by at least 0.5 mm',at)
-    elif q['outerDiameter']-q['boreDiameter']<1:fail('INVALID_CAD_CLEARANCE','outer diameter must exceed bore diameter by at least 1 mm','$.spacer.boreDiameter')
+                clearance(math.dist(h['centre'],other['centre'])-(h['diameter']+other['diameter'])/2,.5,'keep nominal circular holes separated by at least 0.5 mm',at)
+    else:clearance(q['outerDiameter']-q['boreDiameter'],1,'outer diameter must exceed bore diameter by at least 1 mm','$.spacer.boreDiameter')
     return {'version':'schemaxis.openscad.plan/1','operation':operation,**p,'losses':LOSSES}
 
 

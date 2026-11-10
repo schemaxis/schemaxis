@@ -64,7 +64,9 @@ more lenient float parsing is not used.
 scores and reconstruction but not analysed. Without it rows are numbered 1..n and the
 key column is called `row`. Names are identifiers (a letter, then letters, digits or
 underscores, at most 40 characters); `row`, `component`, `channelIndex` and `PC<n>`
-are reserved because they label published columns.
+are reserved because they label published columns. The one exception is a `rowKey`
+named `row`, which is how a run consumes the `row` column that a keyless run publishes
+(see the handoffs below); no channel may be named `row`.
 
 Limits: 2–32 channels, 3–10000 rows, at most 160000 analysed cells and at most 10
 retained components. Values are checked after parsing to IEEE binary64:
@@ -199,7 +201,17 @@ text. There is no `.npy`, pickle or object output.
 
 [numpy-denoise-workflow.json](../examples/schemaxis/numpy-denoise-workflow.json) reduces
 the sensors to a two-dimensional subspace and analyses that reconstruction (artifact
-2) again: only the first two analytic eigenvalues remain. Calc accepts the `table`
+2) again: only the first two analytic eigenvalues remain.
+
+A keyless
+run publishes its key as the integer column `row`. To analyse that run's
+`reconstruction.csv` (index 3 in `components` mode, index 2 in `subspace` mode),
+declare `rowKey` with the name `row` and a unit such as `count`; without it the header
+is refused as `PCA_HEADER_MISMATCH`. The second run then publishes `row` again, now
+holding the key values. `scores.csv` cannot be re-analysed because its `PC<n>` column
+names are reserved.
+
+Calc accepts the `table`
 artifacts. [numpy-calc-workflow.json](../examples/schemaxis/numpy-calc-workflow.json)
 hands the scores to Calc; that handoff is checked by host planning only.
 

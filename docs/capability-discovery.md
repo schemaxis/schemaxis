@@ -31,6 +31,13 @@ See [discovery authoring](adaptor-discovery-authoring.md) for application metada
 shared Studio/Help projections, acceptance cases and each surface’s exact matching
 and ordering behaviour.
 
+Application summaries also expose route counts and compact links to adaptor-owned
+[strength assessments](adaptor-assessments.md). The two subjective percentages use
+different explicit scopes: whole-application breadth and abstraction within the
+supported workflows. `schemaxis assessments` returns full rationale/confidence and
+evidence; `discover` includes aggregate provider and route counts. Editorial
+assessment status remains independent of runtime/qualification status.
+
 ## Identity, links and bounded listings
 
 Canonical IDs are `app/PROVIDER`, `domain/DOMAIN`, `group/PROVIDER/GROUP` and

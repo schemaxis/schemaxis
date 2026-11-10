@@ -29,6 +29,36 @@
           "purpose": "Hand the verified table to Calc."
         }
       ]
+    },
+    "measureRegions": {
+      "status": "reviewed",
+      "explanation": "Repeats the same named rectangular regions across a short series of captured grayscale images and publishes, for every frame and region, the pixel count, calibrated area and raw mean, minimum and maximum intensity together with the frame ID, region ID and declared time. Use it to follow the same fixed areas of successive microscope or materials images without redrawing them by hand, with every number tied to the frame and calibration it came from. It does not threshold, track objects, register images or infer time; regions may overlap and are independent. Outputs: region-measurements.csv (text IDs plus numeric columns, for Calc readTypedCSV), region-measurements.json (frame hashes, calibration, conventions and every record). Every native value is checked against an exact enumeration of the rectangle pixels.",
+      "sources": [
+        "docs/imagej.md#measure-regions",
+        "src/schemaxis/adaptors/imagej/regions.py",
+        "src/schemaxis/adaptors/imagej/capabilities.py"
+      ],
+      "pitfalls": [
+        "Regions are fixed in pixel coordinates; if the specimen moves between frames the numbers describe different material.",
+        "Intensities are raw stored values, not densities or exposure-normalised; only area uses the calibration.",
+        "The CSV alone omits hashes and conventions; keep the JSON with it.",
+        "Synthetic analytic fixtures establish semantics, not suitability for a particular experiment."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/imagej-regions.json",
+          "purpose": "Three overlapping rectangles over four 8-bit frames with rectangular pixels."
+        },
+        {
+          "reference": "examples/schemaxis/imagej-regions-16bit.json",
+          "purpose": "Whole-frame and inner rectangles over three 16-bit TIFF frames."
+        },
+        {
+          "reference": "examples/schemaxis/imagej-regions-to-calc.json",
+          "purpose": "Typed labelled handoff to Calc."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
     }
   },
   "routes": {
@@ -36,7 +66,7 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A particle-measurement request for one grayscale image: which file, how large its pixels are, which raw intensities count as particle pixels, how pixels connect and which particles to keep. No macro, script or plugin can be supplied.",
+          "explanation": "A measurement request for headless ImageJ: either particle analysis of one grayscale image (image, calibration, threshold, connectivity and filters) or repeated rectangular-region measurement across a short labelled series (frames, regions and calibration). No macro, script or plugin can be supplied.",
           "sources": [
             "docs/imagej.md#document",
             "src/schemaxis/adaptors/imagej/adaptor.py"
@@ -55,13 +85,14 @@
         },
         "/properties/operation": {
           "status": "reviewed",
-          "explanation": "The only operation is analyzeParticles: threshold, find particles and measure them.",
+          "explanation": "analyzeParticles thresholds one image and measures each particle. measureRegions measures the same named rectangles in each frame of a 2-8 frame series (frames, regions and calibration instead of image, threshold and filters).",
           "sources": [
-            "docs/imagej.md#document",
-            "src/schemaxis/adaptors/imagej/adaptor.py"
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
           ],
           "examples": [
-            "analyzeParticles"
+            "analyzeParticles",
+            "measureRegions"
           ]
         },
         "/properties/image": {
@@ -83,6 +114,7 @@
           "pitfalls": [
             "Relative paths are rejected; resolve the path first.",
             "Colour, compressed, multi-page, signed 16-bit or inverted-LUT files are rejected; convert to plain grayscale.",
+            "A TIFF saved by ImageJ as a stack (its description says images greater than 1) or with a density calibration (a calibration function with a value unit) is rejected before ImageJ is launched (when the run reads the image); re-save one plane without the calibration function.",
             "Calibration stored in the file is ignored; declare it in calibration."
           ]
         },
@@ -280,6 +312,754 @@
           ],
           "pitfalls": [
             "A window with no whole pixel count between minimum and maximum is rejected."
+          ]
+        },
+        "/properties/frames": {
+          "status": "reviewed",
+          "explanation": "The ordered captured grayscale planes to measure, 2 to 8 of them. Each has a frame ID, the image file and the declared time in seconds. Frames are measured with the same rectangles in the listed order; they are not registered, aligned or reordered.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Frames",
+          "examples": [
+            [
+              {
+                "id": "T0",
+                "image": "/data/series/t0.pgm",
+                "timeSeconds": 0
+              },
+              {
+                "id": "T1",
+                "image": "/data/series/t1.pgm",
+                "timeSeconds": 30
+              }
+            ]
+          ],
+          "pitfalls": [
+            "All frames need the same width, height and bit depth and the same sample coordinates; frames from different fields of view or magnifications are not comparable.",
+            "Fewer than two or more than eight frames are refused."
+          ]
+        },
+        "/properties/frames/items": {
+          "status": "reviewed",
+          "explanation": "One captured frame: its identifier, the image file and its declared time. The identifier travels with every record so a later table never loses which frame a number came from.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ]
+        },
+        "/properties/frames/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Your name for this frame, carried into every CSV row and the summary: a letter followed by up to 31 letters, digits, underscores or hyphens (for example T0 or sample-3_t2). It must be unique among frames and is a label, not a path or an instruction.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Frame ID",
+          "examples": [
+            "T0",
+            "sample-3_t2"
+          ],
+          "pitfalls": [
+            "Spaces, dots, leading digits and non-ASCII text are refused so the ID is safe literal data in tables and file names."
+          ]
+        },
+        "/properties/frames/items/properties/image": {
+          "status": "reviewed",
+          "explanation": "Absolute path to this frame: a binary P5 .pgm (maxval 255 or 65535) or an uncompressed single-plane baseline .tif/.tiff with 8- or 16-bit unsigned samples. Each file is copied into the run directory and its SHA-256 recorded, so changing any frame file prevents reuse of an earlier result.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Frame image",
+          "fileExtensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "examples": [
+            "/data/series/t0.pgm"
+          ],
+          "pitfalls": [
+            "Relative paths, colour, compressed, multi-page, stack, density-calibrated or inverted-LUT files are refused.",
+            "Each frame needs its own file: the same path twice, a ./ alias or a hard link is refused (checked by file identity), while two different files with identical pixels are accepted.",
+            "Calibration and time stored in the file are ignored; declare them here and in calibration."
+          ]
+        },
+        "/properties/frames/items/properties/timeSeconds": {
+          "status": "reviewed",
+          "explanation": "When this frame was captured, in seconds since an origin you choose (often the first frame at 0). Times must be finite and strictly increase in frame order. Schemaxis never reads time from file metadata, names or modification times and never interpolates between frames.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Time (s)",
+          "units": "seconds",
+          "examples": [
+            0,
+            30,
+            90.5
+          ],
+          "pitfalls": [
+            "Equal or decreasing times are refused; list frames in capture order.",
+            "Use one consistent time origin; a unit other than seconds must be converted first."
+          ]
+        },
+        "/properties/regions": {
+          "status": "reviewed",
+          "explanation": "The named rectangles to measure, 1 to 16, applied unchanged to every frame. Rectangles may overlap or nest; each is an independent measurement, not a partition of the image. Nothing moves or follows a feature between frames.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Regions",
+          "examples": [
+            [
+              {
+                "id": "core",
+                "x": 2,
+                "y": 1,
+                "width": 4,
+                "height": 3
+              }
+            ]
+          ],
+          "pitfalls": [
+            "The rectangle must lie fully inside every frame; one that crosses the edge of any frame is refused, not clipped.",
+            "If the sample drifts between frames, register the images first; this operation does not."
+          ]
+        },
+        "/properties/regions/items": {
+          "status": "reviewed",
+          "explanation": "One rectangle: its identifier and zero-based top-left pixel position and size. The right and bottom edges are exclusive, so x=2, width=4 covers pixel columns 2, 3, 4 and 5.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ]
+        },
+        "/properties/regions/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Your name for this rectangle, carried into every CSV row and the summary (a letter then up to 31 letters, digits, underscores or hyphens; unique among regions).",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Region ID",
+          "examples": [
+            "core",
+            "background-1"
+          ],
+          "pitfalls": [
+            "Spaces, leading digits and non-ASCII text are refused."
+          ]
+        },
+        "/properties/regions/items/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based pixel column of the left edge, counted from the left of the image. Pixel units, not the calibrated unit.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Left (px)",
+          "units": "pixels",
+          "examples": [
+            0,
+            2
+          ],
+          "pitfalls": [
+            "x + width may not exceed the image width."
+          ]
+        },
+        "/properties/regions/items/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based pixel row of the top edge, counted downward from the top of the image. Pixel units, not the calibrated unit.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Top (px)",
+          "units": "pixels",
+          "examples": [
+            0,
+            1
+          ],
+          "pitfalls": [
+            "y + height may not exceed the image height; y grows downward, unlike a plot axis."
+          ]
+        },
+        "/properties/regions/items/properties/width": {
+          "status": "reviewed",
+          "explanation": "Number of pixel columns included, at least 1. Every pixel inside the rectangle counts exactly once; the calibrated area is pixelCount times pixelWidth times pixelHeight.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Width (px)",
+          "units": "pixels",
+          "examples": [
+            4,
+            12
+          ]
+        },
+        "/properties/regions/items/properties/height": {
+          "status": "reviewed",
+          "explanation": "Number of pixel rows included, at least 1.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Height (px)",
+          "units": "pixels",
+          "examples": [
+            3,
+            8
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Particle variant of the document: version, operation analyzeParticles, one image, calibration, threshold and the connectivity and size filters. The outputs are particles.csv and particle-summary.json.",
+          "sources": [
+            "docs/imagej.md#document"
+          ]
+        },
+        "/oneOf/0/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis document; it must be \"schemaxis.imagej/1\". It is not the ImageJ release (the runtime is ImageJ 1.54).",
+          "sources": [
+            "docs/imagej.md#document",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "examples": [
+            "schemaxis.imagej/1"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reviewed",
+          "explanation": "analyzeParticles thresholds one image and measures each particle. measureRegions measures the same named rectangles in each frame of a 2-8 frame series (frames, regions and calibration instead of image, threshold and filters).",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "examples": [
+            "analyzeParticles",
+            "measureRegions"
+          ]
+        },
+        "/oneOf/0/properties/image": {
+          "status": "reviewed",
+          "explanation": "Absolute path to the image to measure: a binary P5 .pgm (maxval 255 or 65535) or an uncompressed single-plane baseline .tif/.tiff with 8- or 16-bit unsigned samples, at most 2048 px per side and 1048576 px. The bytes are copied into the run directory and their SHA-256 is recorded, so a later change to the file prevents reuse of the result.",
+          "sources": [
+            "docs/imagej.md#document",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Image file",
+          "fileExtensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "examples": [
+            "/data/targets/particles-8bit.pgm"
+          ],
+          "pitfalls": [
+            "Relative paths are rejected; resolve the path first.",
+            "Colour, compressed, multi-page, signed 16-bit or inverted-LUT files are rejected; convert to plain grayscale.",
+            "A TIFF saved by ImageJ as a stack (its description says images greater than 1) or with a density calibration (a calibration function with a value unit) is rejected before ImageJ is launched (when the run reads the image); re-save one plane without the calibration function.",
+            "Calibration stored in the file is ignored; declare it in calibration."
+          ]
+        },
+        "/oneOf/0/properties/calibration": {
+          "status": "reviewed",
+          "explanation": "Physical size of one pixel. It replaces any calibration stored in the file and sets the unit of every length and area column.",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Pixel calibration",
+          "examples": [
+            {
+              "pixelWidth": 0.5,
+              "pixelHeight": 0.5,
+              "unit": "um"
+            }
+          ],
+          "pitfalls": [
+            "Use the acquisition or stage-micrometer calibration of this image, not of a different magnification."
+          ]
+        },
+        "/oneOf/0/properties/calibration/properties/pixelWidth": {
+          "status": "reviewed",
+          "explanation": "Width of one pixel along x, in the chosen unit. Centroid x, boundsX and boundsWidth scale by it, and area by pixelWidth*pixelHeight.",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Pixel width",
+          "units": "calibration.unit per pixel",
+          "examples": [
+            0.5,
+            0.25
+          ],
+          "pitfalls": [
+            "Enter the size of one pixel, not the field of view or the scale-bar length."
+          ]
+        },
+        "/oneOf/0/properties/calibration/properties/pixelHeight": {
+          "status": "reviewed",
+          "explanation": "Height of one pixel along y (downward), in the chosen unit. Set it equal to pixelWidth for square pixels; rectangular pixels are supported.",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Pixel height",
+          "units": "calibration.unit per pixel",
+          "examples": [
+            0.5
+          ]
+        },
+        "/oneOf/0/properties/calibration/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Length unit of the pixel size and of every published length; areas use the unit squared. \"um\" means micrometres and appears in column names as um (ImageJ shows it as µm).",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Length unit",
+          "examples": [
+            "um",
+            "mm"
+          ],
+          "pitfalls": [
+            "The unit is a label for the declared numbers; nothing is converted."
+          ]
+        },
+        "/oneOf/0/properties/threshold": {
+          "status": "reviewed",
+          "explanation": "Inclusive window of raw stored intensities that defines particle pixels: lower <= value <= upper.",
+          "sources": [
+            "docs/imagej.md#threshold",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Intensity threshold",
+          "examples": [
+            {
+              "lower": 100,
+              "upper": 255
+            }
+          ],
+          "pitfalls": [
+            "Bright particles on a dark background use a high window (for example 100-255); dark particles use a low window (for example 0-80).",
+            "A window covering the whole range is rejected."
+          ]
+        },
+        "/oneOf/0/properties/threshold/properties/lower": {
+          "status": "reviewed",
+          "explanation": "Lowest raw intensity counted as a particle pixel (inclusive).",
+          "sources": [
+            "docs/imagej.md#threshold",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Lower intensity",
+          "units": "raw stored intensity",
+          "examples": [
+            100,
+            18000
+          ],
+          "pitfalls": [
+            "Values are raw: 0-255 for 8-bit and 0-65535 for 16-bit images, regardless of display contrast."
+          ]
+        },
+        "/oneOf/0/properties/threshold/properties/upper": {
+          "status": "reviewed",
+          "explanation": "Highest raw intensity counted as a particle pixel (inclusive). It must not exceed the image maximum (255 for 8-bit).",
+          "sources": [
+            "docs/imagej.md#threshold",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Upper intensity",
+          "units": "raw stored intensity",
+          "examples": [
+            255,
+            65535
+          ]
+        },
+        "/oneOf/0/properties/connectivity": {
+          "status": "reviewed",
+          "explanation": "How pixels join into particles: eight joins pixels touching at a corner; four joins only edge neighbours, so corner-touching blobs stay separate.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Connectivity",
+          "defaultMeaning": "eight: ImageJ's default particle tracing.",
+          "examples": [
+            "eight",
+            "four"
+          ],
+          "pitfalls": [
+            "four requires includeHoles true because ImageJ fills holes for 4-connected particles."
+          ]
+        },
+        "/oneOf/0/properties/includeHoles": {
+          "status": "reviewed",
+          "explanation": "When true, each particle is the whole region inside its outer boundary: interior holes, and any particle lying inside them, count towards its area and intensity statistics. When false, a particle is exactly its connected thresholded pixels.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Include holes",
+          "defaultMeaning": "false: holes are excluded and enclosed particles are reported separately.",
+          "examples": [
+            false,
+            true
+          ],
+          "pitfalls": [
+            "With holes included, enclosed background lowers the mean intensity and min becomes the background value."
+          ]
+        },
+        "/oneOf/0/properties/excludeEdges": {
+          "status": "reviewed",
+          "explanation": "When true, particles whose bounding box touches any image border are dropped, because they may be cut off. They are counted in the summary under rejected.edge.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Exclude edge particles",
+          "defaultMeaning": "false: border particles are measured as seen.",
+          "examples": [
+            true
+          ]
+        },
+        "/oneOf/0/properties/minimumArea": {
+          "status": "reviewed",
+          "explanation": "Smallest particle area kept, in unit squared (inclusive). It is converted to a whole pixel count before ImageJ runs; use it to drop noise specks.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Minimum area",
+          "units": "calibration.unit^2",
+          "defaultMeaning": "0: keep particles of any size.",
+          "examples": [
+            0.5
+          ],
+          "pitfalls": [
+            "A value smaller than one pixel area keeps single-pixel particles."
+          ]
+        },
+        "/oneOf/0/properties/maximumArea": {
+          "status": "reviewed",
+          "explanation": "Largest particle area kept, in unit squared (inclusive), converted to a whole pixel count.",
+          "sources": [
+            "docs/imagej.md#connectivity",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Maximum area",
+          "units": "calibration.unit^2",
+          "defaultMeaning": "Omitted: no upper limit.",
+          "examples": [
+            100
+          ],
+          "pitfalls": [
+            "A window with no whole pixel count between minimum and maximum is rejected."
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Region-series variant of the document: version, operation measureRegions, 2-8 frames with IDs and times, 1-16 named rectangles and calibration. The outputs are region-measurements.csv and region-measurements.json.",
+          "sources": [
+            "docs/imagej.md#measure-regions"
+          ]
+        },
+        "/oneOf/1/properties/version": {
+          "status": "reviewed",
+          "explanation": "Format identifier of this Schemaxis document; it must be \"schemaxis.imagej/1\". It is not the ImageJ release (the runtime is ImageJ 1.54).",
+          "sources": [
+            "docs/imagej.md#document",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "examples": [
+            "schemaxis.imagej/1"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reviewed",
+          "explanation": "analyzeParticles thresholds one image and measures each particle. measureRegions measures the same named rectangles in each frame of a 2-8 frame series (frames, regions and calibration instead of image, threshold and filters).",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "examples": [
+            "analyzeParticles",
+            "measureRegions"
+          ]
+        },
+        "/oneOf/1/properties/frames": {
+          "status": "reviewed",
+          "explanation": "The ordered captured grayscale planes to measure, 2 to 8 of them. Each has a frame ID, the image file and the declared time in seconds. Frames are measured with the same rectangles in the listed order; they are not registered, aligned or reordered.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Frames",
+          "examples": [
+            [
+              {
+                "id": "T0",
+                "image": "/data/series/t0.pgm",
+                "timeSeconds": 0
+              },
+              {
+                "id": "T1",
+                "image": "/data/series/t1.pgm",
+                "timeSeconds": 30
+              }
+            ]
+          ],
+          "pitfalls": [
+            "All frames need the same width, height and bit depth and the same sample coordinates; frames from different fields of view or magnifications are not comparable.",
+            "Fewer than two or more than eight frames are refused."
+          ]
+        },
+        "/oneOf/1/properties/frames/items": {
+          "status": "reviewed",
+          "explanation": "One captured frame: its identifier, the image file and its declared time. The identifier travels with every record so a later table never loses which frame a number came from.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ]
+        },
+        "/oneOf/1/properties/frames/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Your name for this frame, carried into every CSV row and the summary: a letter followed by up to 31 letters, digits, underscores or hyphens (for example T0 or sample-3_t2). It must be unique among frames and is a label, not a path or an instruction.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Frame ID",
+          "examples": [
+            "T0",
+            "sample-3_t2"
+          ],
+          "pitfalls": [
+            "Spaces, dots, leading digits and non-ASCII text are refused so the ID is safe literal data in tables and file names."
+          ]
+        },
+        "/oneOf/1/properties/frames/items/properties/image": {
+          "status": "reviewed",
+          "explanation": "Absolute path to this frame: a binary P5 .pgm (maxval 255 or 65535) or an uncompressed single-plane baseline .tif/.tiff with 8- or 16-bit unsigned samples. Each file is copied into the run directory and its SHA-256 recorded, so changing any frame file prevents reuse of an earlier result.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Frame image",
+          "fileExtensions": [
+            ".pgm",
+            ".tif",
+            ".tiff"
+          ],
+          "examples": [
+            "/data/series/t0.pgm"
+          ],
+          "pitfalls": [
+            "Relative paths, colour, compressed, multi-page, stack, density-calibrated or inverted-LUT files are refused.",
+            "Each frame needs its own file: the same path twice, a ./ alias or a hard link is refused (checked by file identity), while two different files with identical pixels are accepted.",
+            "Calibration and time stored in the file are ignored; declare them here and in calibration."
+          ]
+        },
+        "/oneOf/1/properties/frames/items/properties/timeSeconds": {
+          "status": "reviewed",
+          "explanation": "When this frame was captured, in seconds since an origin you choose (often the first frame at 0). Times must be finite and strictly increase in frame order. Schemaxis never reads time from file metadata, names or modification times and never interpolates between frames.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Time (s)",
+          "units": "seconds",
+          "examples": [
+            0,
+            30,
+            90.5
+          ],
+          "pitfalls": [
+            "Equal or decreasing times are refused; list frames in capture order.",
+            "Use one consistent time origin; a unit other than seconds must be converted first."
+          ]
+        },
+        "/oneOf/1/properties/regions": {
+          "status": "reviewed",
+          "explanation": "The named rectangles to measure, 1 to 16, applied unchanged to every frame. Rectangles may overlap or nest; each is an independent measurement, not a partition of the image. Nothing moves or follows a feature between frames.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Regions",
+          "examples": [
+            [
+              {
+                "id": "core",
+                "x": 2,
+                "y": 1,
+                "width": 4,
+                "height": 3
+              }
+            ]
+          ],
+          "pitfalls": [
+            "The rectangle must lie fully inside every frame; one that crosses the edge of any frame is refused, not clipped.",
+            "If the sample drifts between frames, register the images first; this operation does not."
+          ]
+        },
+        "/oneOf/1/properties/regions/items": {
+          "status": "reviewed",
+          "explanation": "One rectangle: its identifier and zero-based top-left pixel position and size. The right and bottom edges are exclusive, so x=2, width=4 covers pixel columns 2, 3, 4 and 5.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ]
+        },
+        "/oneOf/1/properties/regions/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Your name for this rectangle, carried into every CSV row and the summary (a letter then up to 31 letters, digits, underscores or hyphens; unique among regions).",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Region ID",
+          "examples": [
+            "core",
+            "background-1"
+          ],
+          "pitfalls": [
+            "Spaces, leading digits and non-ASCII text are refused."
+          ]
+        },
+        "/oneOf/1/properties/regions/items/properties/x": {
+          "status": "reviewed",
+          "explanation": "Zero-based pixel column of the left edge, counted from the left of the image. Pixel units, not the calibrated unit.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Left (px)",
+          "units": "pixels",
+          "examples": [
+            0,
+            2
+          ],
+          "pitfalls": [
+            "x + width may not exceed the image width."
+          ]
+        },
+        "/oneOf/1/properties/regions/items/properties/y": {
+          "status": "reviewed",
+          "explanation": "Zero-based pixel row of the top edge, counted downward from the top of the image. Pixel units, not the calibrated unit.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Top (px)",
+          "units": "pixels",
+          "examples": [
+            0,
+            1
+          ],
+          "pitfalls": [
+            "y + height may not exceed the image height; y grows downward, unlike a plot axis."
+          ]
+        },
+        "/oneOf/1/properties/regions/items/properties/width": {
+          "status": "reviewed",
+          "explanation": "Number of pixel columns included, at least 1. Every pixel inside the rectangle counts exactly once; the calibrated area is pixelCount times pixelWidth times pixelHeight.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Width (px)",
+          "units": "pixels",
+          "examples": [
+            4,
+            12
+          ]
+        },
+        "/oneOf/1/properties/regions/items/properties/height": {
+          "status": "reviewed",
+          "explanation": "Number of pixel rows included, at least 1.",
+          "sources": [
+            "docs/imagej.md#measure-regions",
+            "src/schemaxis/adaptors/imagej/regions.py"
+          ],
+          "label": "Height (px)",
+          "units": "pixels",
+          "examples": [
+            3,
+            8
+          ]
+        },
+        "/oneOf/1/properties/calibration": {
+          "status": "reviewed",
+          "explanation": "Physical size of one pixel. It replaces any calibration stored in the file and sets the unit of every length and area column.",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Pixel calibration",
+          "examples": [
+            {
+              "pixelWidth": 0.5,
+              "pixelHeight": 0.5,
+              "unit": "um"
+            }
+          ],
+          "pitfalls": [
+            "Use the acquisition or stage-micrometer calibration of this image, not of a different magnification."
+          ]
+        },
+        "/oneOf/1/properties/calibration/properties/pixelWidth": {
+          "status": "reviewed",
+          "explanation": "Width of one pixel along x, in the chosen unit. Centroid x, boundsX and boundsWidth scale by it, and area by pixelWidth*pixelHeight.",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Pixel width",
+          "units": "calibration.unit per pixel",
+          "examples": [
+            0.5,
+            0.25
+          ],
+          "pitfalls": [
+            "Enter the size of one pixel, not the field of view or the scale-bar length."
+          ]
+        },
+        "/oneOf/1/properties/calibration/properties/pixelHeight": {
+          "status": "reviewed",
+          "explanation": "Height of one pixel along y (downward), in the chosen unit. Set it equal to pixelWidth for square pixels; rectangular pixels are supported.",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Pixel height",
+          "units": "calibration.unit per pixel",
+          "examples": [
+            0.5
+          ]
+        },
+        "/oneOf/1/properties/calibration/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Length unit of the pixel size and of every published length; areas use the unit squared. \"um\" means micrometres and appears in column names as um (ImageJ shows it as µm).",
+          "sources": [
+            "docs/imagej.md#calibration",
+            "src/schemaxis/adaptors/imagej/adaptor.py"
+          ],
+          "label": "Length unit",
+          "examples": [
+            "um",
+            "mm"
+          ],
+          "pitfalls": [
+            "The unit is a label for the declared numbers; nothing is converted."
           ]
         }
       }

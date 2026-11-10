@@ -81,6 +81,42 @@ Light and dark themes use the same typography, spacing, panels and controls
 throughout the windows. Theme and editor preferences are stored in the workspace.
 Switching the theme does not change an authored document.
 
+## Variables and expressions
+
+Open **Variables & expressions** in the top bar or command palette. From Start,
+choose an existing document or create an empty workflow design. A design can hold
+shared values and Case Runner parameters before any operations exist; compilation
+and template export still require operations.
+
+Create named dimensions, settings, reusable JSON values, calculations or sweeps.
+The scope selector distinguishes shared workflow values from each operation's
+local values. For a literal shared value in a workflow design, **Expose in Case
+Runner** declares a parameter with a default, optional units and help. Units are
+labels, not automatic conversions. Existing parameter constraints remain enforced
+by host validation. Sweep sampling accepts explicit JSON values or a regular
+start/end/count sequence.
+
+Use **Value or expression…** beside an Add-form or Workbench property, **Variables
+& expressions…** in a fill prompt, or **Value at cursor…** in the Workbench or
+Designer source editor. The same picker offers named values, calculations,
+registered functions and supported runtime expressions. Incompatible named values
+are disabled with a reason. Creating a value from the picker stages its definition
+and binding together; Cancel discards both, and applying is one undoable edit.
+Add-form edits remain staged until **Add operation**.
+
+The picker previews literals, absolute document references and scalar arithmetic.
+Other functions and runtime values are explicitly deferred to host validation or
+execution. A schema-compatible marker still needs a valid resolved value and the
+required producer data. See the [shared expression reference](dollar-reference.md).
+
+Workbench and Schema Editor changes stay in the current draft until saved.
+Designer variable edits save a revision in the workspace. Editing shared workflow
+values from an operation Workbench saves the operation and workflow together;
+stale revisions are rejected. Apply or discard pending Designer table/source edits
+before opening the global manager. Saved history and local editor Undo retain
+their existing roles. Values referenced elsewhere cannot be removed through the
+manager; update their references first.
+
 ## Workflow Designer
 
 Create a design from Start or open a saved design from the recent-document list.

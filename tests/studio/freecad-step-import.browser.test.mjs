@@ -21,6 +21,7 @@ test('Checked STEP snippet authors units, orientation, expectations and linked r
       {action:'new',provider:'freecad',name:'Checked supplier part',document:${JSON.stringify(document)}});
       await c.refresh();c.windows.open('workbench',{document:r.id});})()`);
     await s.wait('document.querySelector("[data-category=io]")','Import category');
+    await s.evaluate(`document.querySelector('.library-more[aria-expanded=false]')?.click()`);
     await s.clickSelector('[data-category="io"]');
     await s.wait('document.querySelector("[data-library=add-importSTEP]")','Checked import snippet');
     const editor='window.studio.windows.active().window.editor';

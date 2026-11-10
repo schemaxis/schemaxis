@@ -1,6 +1,7 @@
 // Copyright (C) 2026 David L F Gaden
 // Studio bootstrap: context, layout, polling and global shortcuts.
 
+import {installHierarchyControls} from '../lib/hierarchy.mjs';
 import {api} from '../lib/api.mjs';
 import {h, icon} from '../lib/dom.mjs';
 import {Bus, Store} from '../lib/store.mjs';
@@ -12,12 +13,14 @@ import {openMenu} from './dialog.mjs';
 import {windowFor, identity, registerIdentities} from './providers.mjs';
 import {registerWindows} from '../windows/index.mjs';
 import {applyTheme, setSetting} from './preferences.mjs';
+import {openVariables} from '../windows/variables/panel.mjs';
 
 const RAIL = [
   {type: 'start', icon: 'home', label: 'Start'},
   {type: 'designer', icon: 'flow', label: 'Workflow Designer', roles: ['admin', 'dev']},
   {type: 'workbench', icon: 'adaptor', label: 'Adaptor Workbench', roles: ['admin', 'dev']},
   {type: 'runner', icon: 'play', label: 'Case Runner'},
+  {type: 'results', icon: 'folder', label: 'Results'},
   {type: 'schedules', icon: 'play', label: 'Schedules'},
   {type: 'schema-editor', icon: 'braces', label: 'Schema Editor', roles: ['admin', 'dev']},
   {type: 'help', icon: 'help', label: 'Help'},
@@ -35,6 +38,12 @@ function createContext() {
     panelTab: 'problems',
   });
   const ctx = {api, bus, notify, store, commands: new Commands()};
+  notify.openProblems = () => store.set({panelOpen: true, panelTab: 'problems'});
+  store.watch(state => state.settings, () => {
+    notify.suppressed = ctx.setting('notifications.suppress') === true;
+    if (notify.suppressed) notify.container.replaceChildren();
+  });
+  ctx.openVariables = () => ctx.call(() => openVariables(ctx), {title: 'Could not open variables'});
 
   /** Run an async action; report failures and return undefined on error. */
   ctx.call = async (action, {title, quiet, source} = {}) => {
@@ -75,6 +84,12 @@ function createContext() {
       return;
     }
     ctx.windows.open(windowFor(record.provider), {document: documentId});
+  };
+
+  ctx.openResults = (detail = {}) => {
+    const key = ctx.windows.open('results', detail);
+    if(detail.collection)ctx.windows.instances.get(key)?.window.openCollection(detail.collection);
+    return key;
   };
 
   ctx.openHelp = (detail = {}) => {
@@ -135,6 +150,10 @@ function buildTopbar(ctx) {
       icon('search'), 'Search commands, windows and documents', h('kbd', {}, 'Ctrl K')),
     h('div', {class: 'topbar-actions'},
       connection,
+      h('button', {class: 'button ghost small', 'aria-label': 'Bottom panel',
+        title: 'Show or hide Problems, Jobs, Log and Console (Ctrl+J)',
+        onClick: () => ctx.store.set(state => ({panelOpen: !state.panelOpen}))}, icon('panel'), 'Panel'),
+      h('button', {class: 'button ghost small', onClick: () => ctx.openVariables()}, 'Variables & expressions'),
       h('button', {class: 'button ghost small', onClick: () => ctx.openHelp()}, 'Help'),
       roleButton,
       themeButton,
@@ -223,6 +242,8 @@ function showPalette(ctx) {
 
 function registerCommands(ctx) {
   const c = ctx.commands;
+  c.register({id: 'variables.open', title: 'Variables & expressions', group: 'Authoring', icon: 'braces',
+    run: () => ctx.openVariables()});
   c.register({id: 'window.help', title: 'Open Help', group: 'Help', icon: 'help', shortcut: 'F1',
     run: () => ctx.openHelp()});
   c.register({id: 'window.start', title: 'Go to Start', group: 'Window', icon: 'home', run: () => ctx.windows.open('start')});
@@ -232,6 +253,8 @@ function registerCommands(ctx) {
     roles: ['admin', 'dev'], run: () => ctx.bus.emit('new-design')});
   c.register({id: 'adaptor.new', title: 'New adaptor instance…', group: 'Adaptor Workbench', icon: 'adaptor',
     roles: ['admin', 'dev'], run: () => ctx.bus.emit('new-instance')});
+  c.register({id: 'file.open', title: 'Open input file…', group: 'File', icon: 'folder',
+    roles: ['admin', 'dev'], run: () => ctx.bus.emit('open-file')});
   c.register({id: 'schema.open', title: 'Open Schema Editor', group: 'Schema Editor', icon: 'braces',
     roles: ['admin', 'dev'], run: () => ctx.windows.open('schema-editor', {id: 'scratch'})});
   c.register({id: 'runner.open', title: 'Open Case Runner', group: 'Case Runner', icon: 'play',
@@ -292,11 +315,12 @@ async function start() {
   const layout = h('div', {class: 'studio'},
     buildTopbar(ctx),
     buildRail(ctx),
-    h('main', {class: 'main'}, tabBar, host),
+    h('main', {class: 'main'}, h('div', {class: 'tab-row'}, tabBar), host),
     createPanel(ctx),
     buildStatusbar(ctx));
   document.body.replaceChildren(layout, ctx.notify.container);
   installShortcuts(ctx);
+  installHierarchyControls(document.body);
 
   const server = await ctx.refresh();
   const adaptors = await ctx.call(() => api.get('/api/adaptors'), {title: 'Adaptor list unavailable'});

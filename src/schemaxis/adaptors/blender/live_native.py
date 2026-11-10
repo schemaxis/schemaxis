@@ -90,7 +90,9 @@ class Worker(GraphWorker):
             frame(camera, camera_values({'direction': [1, -1, 1]}, 'live.camera'), bounds, [640, 480])
             scene.render.image_settings.file_format = 'PNG'
             scene.render.filepath = str(path)
-            bpy.ops.render.render(write_still=True)
+            from .render_writers_native import suppress
+            with suppress(scene):
+                bpy.ops.render.render(write_still=True)
             image = bpy.data.images.load(str(path), check_existing=False)
             try:
                 if list(image.size) != [640, 480] or len(set(list(image.pixels)[::4])) < 2:

@@ -1,0 +1,47 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "clip",
+      "document": {
+        "version": "schemaxis.ffmpeg/1",
+        "nodes": [
+          {
+            "id": "clip",
+            "filter": "encodeVideo",
+            "options": {
+              "file": "/replace-with-your-input/source.mkv",
+              "startFrame": 0,
+              "endFrame": 6,
+              "fps": 10,
+              "codec": "ffv1",
+              "threads": 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "review",
+      "document": {
+        "version": "schemaxis.ffmpeg/1",
+        "nodes": [
+          {
+            "id": "review",
+            "filter": "muxReview",
+            "options": {
+              "video": {
+                "$artifact": "clip",
+                "index": 0
+              },
+              "audio": "/replace-with-your-input/speech.wav",
+              "captions": "/replace-with-your-input/captions.srt",
+              "captionStatus": "machineDraft",
+              "threads": 1
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

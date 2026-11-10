@@ -208,7 +208,9 @@ def run_foam(config, normal, directory, options):
                         view.CameraParallelScale = radius * 1.1
                         Render(view)
                         actual = {'position': list(view.CameraPosition), 'focalPoint': list(view.CameraFocalPoint),
-                                  'up': list(view.CameraViewUp), 'parallelScale': view.CameraParallelScale}
+                                  'up': list(view.CameraViewUp), 'parallelScale': view.CameraParallelScale,
+                                  'parallel': bool(view.CameraParallelProjection),
+                                  'scale': float(view.CameraParallelScale)}
                         if actual['position'] != position or actual['focalPoint'] != midpoint or actual['up'] != camera['up']:
                             fail('VERIFICATION_FAILED', 'Native camera differs from the writer sample', actual=actual)
                         filename = 'image-%04d-%s-%s-%02d.png' % (state, appearance, writer['name'], camera_index)

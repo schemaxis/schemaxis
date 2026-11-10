@@ -6,6 +6,9 @@ from . import part_design as policy
 
 
 def create(doc, prepared, node, index):
+    if prepared['partDesign'].get('generation')==2:
+        from .history_native import create as action
+        return action(doc,prepared,node,index)
     from .adaptor import DECLARATIONS
     native=DECLARATIONS[node['filter']]['native'];name='N'+str(index)
     if node['id'] in prepared['partDesign']['members']:
@@ -23,7 +26,8 @@ def configure(obj,node,objects):
     if kind=='pad':
         obj.Type='Length';obj.Reversed=False;obj.Length=options['length']
     else:
-        obj.Type='ThroughAll';obj.Reversed=True
+        obj.Type='Length' if options['extent']=='length' else 'ThroughAll';obj.Reversed=True
+        if options['extent']=='length':obj.Length=options['length']
         obj.BaseFeature=objects[node['inputs']['base']]
 
 
@@ -35,6 +39,9 @@ def attach(obj,body):
 
 
 def finish(doc,prepared):
+    if prepared['partDesign'].get('generation')==2:
+        from .history_native import finish as action
+        return action(doc,prepared)
     mapped=policy.names(prepared);record=prepared['partDesign']
     body=doc.getObject(mapped[record['body']])
     body.Tip=doc.getObject(mapped[record['tip']]) if record['tip'] is not None else None
@@ -42,6 +49,9 @@ def finish(doc,prepared):
 
 
 def auxiliaries(doc,prepared):
+    if prepared['partDesign'].get('generation')==2:
+        from .history_native import auxiliaries as action
+        return action(doc,prepared)
     body=doc.getObject(policy.names(prepared)[prepared['partDesign']['body']])
     if body is None or body.TypeId!='PartDesign::Body' or body.Origin is None:
         fail('VERIFICATION_FAILED','Native Body or its Origin is absent')
@@ -60,6 +70,9 @@ def auxiliaries(doc,prepared):
 
 
 def observe(doc,prepared, *, visibility=True):
+    if prepared['partDesign'].get('generation')==2:
+        from .history_native import observe as action
+        return action(doc,prepared,visibility=visibility)
     mapped=policy.names(prepared);record=prepared['partDesign'];body=doc.getObject(mapped[record['body']])
     aux=auxiliaries(doc,prepared)
     result={'body':{'name':body.Name,'type':body.TypeId,'label':body.Label,
@@ -90,8 +103,8 @@ def observe(doc,prepared, *, visibility=True):
                 'baseFeature':obj.BaseFeature.Name if obj.BaseFeature else None,'type':obj.Type,
                 'sideType':obj.SideType,'reversed':bool(obj.Reversed),'alongSketchNormal':bool(obj.AlongSketchNormal),
                 'customVector':bool(obj.UseCustomVector),'refine':bool(obj.Refine)}
-            if node['filter']=='pad':result['features'][node['id']]['length']=float(obj.Length.Value)
-            elif not obj.Shape.Volume < obj.BaseFeature.Shape.Volume-1e-7:
+            if node['filter']=='pad' or node['options']['extent']=='length':result['features'][node['id']]['length']=float(obj.Length.Value)
+            if node['filter']=='pocket' and not obj.Shape.Volume < obj.BaseFeature.Shape.Volume-1e-7:
                 fail('INVALID_GEOMETRY','Pocket must remove a positive volume from its base',node['id'])
     if visibility:result['visibility']={o.Name:bool(o.Visibility) for o in doc.Objects}
     policy.verify_observation(prepared,result,visibility=visibility)
@@ -99,6 +112,9 @@ def observe(doc,prepared, *, visibility=True):
 
 
 def set_visibility(doc,prepared):
+    if prepared['partDesign'].get('generation')==2:
+        from .history_native import set_visibility as action
+        return action(doc,prepared)
     mapped=policy.names(prepared);record=prepared['partDesign']
     visible={mapped[prepared['output']]}
     if prepared['output']==record['tip']:visible.add(mapped[record['body']])

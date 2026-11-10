@@ -74,13 +74,13 @@ def decompose(rows, intercept):
             'triangular':[row[:columns] for row in matrix[:columns]]}
 
 
-def predicted(prepared, row, coefficients):
+def predicted(prepared, row, coefficients, location='$.heldout'):
     features = ([1.0] if prepared['intercept'] else []) + row[:-1]
     products=[value*coefficient for value,coefficient in zip(features,coefficients)]
     if any(not math.isfinite(value) for value in products):
-        fail('INVALID_PREDICTION','coefficient-feature product is not finite','$.heldout')
+        fail('INVALID_PREDICTION','coefficient-feature product is not finite',location)
     try:return math.fsum(products)
-    except (OverflowError,ValueError):fail('INVALID_PREDICTION','projected prediction is not representable','$.heldout')
+    except (OverflowError,ValueError):fail('INVALID_PREDICTION','projected prediction is not representable',location)
 
 
 def metrics(rows):
@@ -146,7 +146,7 @@ def t_quantile(level, df):
     return (low+high)/2
 
 
-def residual_variance(prepared, independent):
+def residual_variance(prepared, independent, location='$.inference', feature='standard errors, t, p and confidence intervals'):
     """Residuals, residual standard error and the inference support guards."""
     rows = prepared['training']; df = independent['residualDF']
     fitted = [predicted(prepared, row, independent['coefficients']) for row in rows]
@@ -154,8 +154,8 @@ def residual_variance(prepared, independent):
     norm = math.hypot(*residuals); sigma = norm/math.sqrt(df)
     floor = VARIANCE_RATIO*response_tolerance(rows, independent['scaledInfinityCondition'])
     if not sigma >= floor:
-        _unsupported('NO_RESIDUAL_VARIANCE', 'training residuals are zero or indistinguishable from numerical roundoff, so standard errors, t, p and confidence intervals are undefined',
-             '$.inference', 'Remove inference for an exact or synthetic fit, or supply observations with genuine measured scatter and more rows than coefficients.',
+        _unsupported('NO_RESIDUAL_VARIANCE', 'training residuals are zero or indistinguishable from numerical roundoff, so '+feature+' are undefined',
+             location, 'Remove this request for an exact or synthetic fit, or supply observations with genuine measured scatter and more rows than coefficients.',
              residualStandardError=sigma, minimumResidualStandardError=floor)
     if norm*norm < SQUARE_FLOOR:
         _unsupported('UNSUPPORTED_INFERENCE', 'residual sum of squares is below 1e-280 and cannot be compared reliably in floating point',
@@ -288,3 +288,125 @@ def _interval_assessment(prepared, requirement, inferred):
         'coverage':f'Two-sided {level:g} Student-t confidence interval from training residuals; each declared bound is a one-sided test at {(1-level)/2:g} under the stated assumptions.',
         'nextAction':'Accept this coefficient interval requirement.' if accepted else
             'The confidence interval crosses a declared bound: the estimate may be displaced or too imprecise. Review residuals and assumptions; add genuinely independent observations or revise a justified bound, then rerun a fresh attempt.'}
+
+
+# Prediction intervals. The residual-variance guard keeps response roundoff below
+# 1e-6*sigma, so sigma, se(fit) and half widths agree with the independent value to
+# far better than PREDICTION_RELATIVE; the margin is one decade.
+PREDICTION_RELATIVE = 1e-5
+# Individual and mean half widths differ by the factor sqrt(1+1/h). This leverage
+# budget only bounds the arithmetic (h, 1+h and sqrt stay well conditioned); it does
+# not by itself make the two interval types distinguishable, because the comparison
+# allowance grows with the response magnitude and design size. Detectability is
+# enforced per row by the resolution guard below.
+MAX_LEVERAGE = 1e4
+# compare_prediction accepts a native bound or half width within at most
+# allowance + PREDICTION_RELATIVE*halfIndividual of the independent value (the
+# half-width check uses max(), never more than that sum). A native result that
+# publishes one interval type for the other moves every bound and half width by
+# exactly gap = halfIndividual - halfConfidence; a native fit offset inside the
+# allowance cannot reduce the larger of the lower/upper bound errors below gap. So a
+# swap is detected whenever gap > allowance + PREDICTION_RELATIVE*halfIndividual.
+# Requiring this many times that amount keeps a margin for the independent half
+# widths' own roundoff and the bound/fit rounding of the native serialisation.
+RESOLUTION_FACTOR = 4
+
+
+def leverage(prepared, independent, row, location):
+    """h = x'(X'X)^-1 x = |R^-T x_scaled|^2 from the independent scaled QR factor."""
+    features = ([1.0] if prepared['intercept'] else []) + list(row)
+    scaled = [value/scale for value, scale in zip(features, independent['scales'])]
+    if any(not math.isfinite(value) or abs(value) > 1e100 for value in scaled):
+        fail('INVALID_PREDICTION', 'scaled new-point design exceeds the representable table budget', location)
+    triangular = independent['triangular']; z = []
+    for j in range(independent['rank']):
+        z.append((scaled[j]-math.fsum(triangular[k][j]*z[k] for k in range(j)))/triangular[j][j])
+    if any(not math.isfinite(value) for value in z):
+        fail('INVALID_PREDICTION', 'new-point leverage is not representable', location)
+    norm = math.hypot(*z); leveraged = norm*norm
+    if not math.isfinite(leveraged):
+        fail('INVALID_PREDICTION', 'new-point leverage is not representable', location)
+    if leveraged > MAX_LEVERAGE:
+        _unsupported('UNSUPPORTED_PREDICTION', 'new-point leverage exceeds the verification limit; confidence and individual intervals would be indistinguishable within verification precision',
+            location, 'Bring the new predictors closer to the training design (leverage is reported, not a validity test) or add training coverage.',
+            leverage=leveraged, maximumLeverage=MAX_LEVERAGE)
+    return leveraged, scaled
+
+
+def prediction_intervals(prepared, independent):
+    """Independent mean-confidence and individual-prediction intervals for declared new rows.
+
+    fit = x'b; se_fit = sigma*sqrt(h); individual se = sigma*sqrt(1+h);
+    bounds = fit -/+ t_{1-(1-level)/2,df} * se.
+    """
+    request = prepared['prediction']; level = request['level']
+    fitted, residuals, norm, sigma = residual_variance(prepared, independent, '$.prediction', 'prediction standard errors and intervals')
+    df = independent['residualDF']; critical = t_quantile(level, df)
+    offset = int(prepared['intercept'])
+    tolerance = response_tolerance(prepared['training'], independent['scaledInfinityCondition'])
+    training = prepared['training']; lows = [min(row[j] for row in training) for j in range(len(prepared['predictors']))]
+    highs = [max(row[j] for row in training) for j in range(len(prepared['predictors']))]
+    rows = []
+    for index, row in enumerate(request['newdata']):
+        at = f'$.prediction.newdata[{index}]'
+        h, scaled = leverage(prepared, independent, row, at)
+        fit = predicted(prepared, [*row, 0.0], independent['coefficients'], at)
+        item = {'sample': index, 'predictors': list(row), 'fit': fit, 'leverage': h, 'scaledDesign': scaled,
+                'outsideTrainingRange': [prepared['predictors'][j]['name'] for j, value in enumerate(row) if not lows[j] <= value <= highs[j]]}
+        for kind, factor in (('confidence', h), ('individual', 1+h)):
+            error = sigma*math.sqrt(factor); half = critical*error
+            if not all(math.isfinite(value) for value in (error, half)) or abs(fit) > 1e100 or abs(fit)+half > 1e100:
+                fail('INVALID_PREDICTION', 'projected prediction interval exceeds the numeric table budget', at)
+            item[kind] = {'standardError': error, 'halfWidth': half, 'lower': fit-half, 'upper': fit+half}
+        resolution_guard(item, tolerance, at)
+        rows.append(item)
+    return {'level': level, 'residualDF': df, 'criticalValue': critical, 'sigma': sigma, 'rows': rows}
+
+
+def fit_tolerance(tolerance, expected):
+    """Response-unit fit allowance for a new point: roundoff scaled by its design magnitude."""
+    return tolerance*(1+math.fsum(abs(value) for value in expected['scaledDesign']))
+
+
+def resolution_guard(item, tolerance, location):
+    """Refuse a row whose two interval types are not separated beyond the verification allowance.
+
+    Uses the independently computed half widths and the same allowance and relative
+    component that compare_prediction applies. This is a verification-resolution
+    limit of this row, not a statement about the validity of the statistical model.
+    """
+    gap = item['individual']['halfWidth'] - item['confidence']['halfWidth']
+    allowance = fit_tolerance(tolerance, item)
+    relative = PREDICTION_RELATIVE*item['individual']['halfWidth']
+    required = RESOLUTION_FACTOR*(allowance + relative)
+    if not gap > required:
+        _unsupported('UNSUPPORTED_PREDICTION', 'confidence and individual half widths differ by less than the native verification allowance at this row, so a swap of interval types could not be detected',
+            location, 'This is a verification-resolution limit of this row, not a model-validity test: supply a response whose residual scatter is larger relative to its magnitude and design scale (smaller offset or centred predictors), or move the new predictors closer to the training design.',
+            leverage=item['leverage'], halfWidthGap=gap, requiredHalfWidthGap=required, comparisonAllowance=allowance,
+            relativeComponent=relative, resolutionFactor=RESOLUTION_FACTOR)
+
+
+def compare_prediction(native, expected, tolerance):
+    """Return the first differing native prediction quantity (with row index), or None.
+
+    Relative checks only apply to widths; bounds additionally allow the response
+    roundoff of the fitted value, never a unit-free absolute floor.
+    """
+    for key in ('residualDF', 'level'):
+        if native[key] != expected[key]: return key
+    if not math.isclose(native['criticalValue'], expected['criticalValue'], rel_tol=DISTRIBUTION_RELATIVE): return 'criticalValue'
+    relative = PREDICTION_RELATIVE
+    for key in ('sigma', 'individualSigma'):
+        if not math.isclose(native[key], expected['sigma'], rel_tol=relative): return key
+    if len(native['rows']) != len(expected['rows']): return 'rows'
+    for index, (actual, item) in enumerate(zip(native['rows'], expected['rows'])):
+        if actual['sample'] != index: return f'sample[{index}]'
+        allowance = fit_tolerance(tolerance, item)
+        if abs(actual['fit']-item['fit']) > allowance: return f'fit[{index}]'
+        if not math.isclose(actual['seFit'], item['confidence']['standardError'], rel_tol=relative): return f'seFit[{index}]'
+        for kind in ('confidence', 'individual'):
+            half = item[kind]['halfWidth']
+            for bound in ('lower', 'upper'):
+                if abs(actual[kind+bound.capitalize()]-item[kind][bound]) > allowance+relative*half: return f'{kind}{bound.capitalize()}[{index}]'
+            if not math.isclose((actual[kind+'Upper']-actual[kind+'Lower'])/2, half, rel_tol=relative, abs_tol=allowance): return f'{kind}HalfWidth[{index}]'
+    return None

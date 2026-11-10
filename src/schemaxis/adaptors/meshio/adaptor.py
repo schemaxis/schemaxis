@@ -128,7 +128,7 @@ def run(document, directory, *, executable=None, timeout=300):
         try:
             reference.scaled(reference.parse(data, prepared['sourceFormat']), prepared['factor'])
         except (ValueError, UnicodeError, IndexError, KeyError) as error:
-            fail('INVALID_MESH_CONTENT', 'supply supported intact ASCII triangle/tetra mesh: '+str(error), '$.source')
+            fail('INVALID_MESH_CONTENT', 'supply supported intact ASCII triangle/tetra/hexahedron mesh: '+str(error), '$.source')
         name = 'source.'+prepared['sourceFormat']; (directory/name).write_bytes(data)
         atomic_json(directory/'capture.json', {'source': prepared['source'], 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
         (directory/'native-worker.py').write_text(worker_source()); atomic_json(directory/'native-config.json', config(prepared))

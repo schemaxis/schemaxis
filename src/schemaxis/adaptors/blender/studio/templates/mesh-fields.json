@@ -1,0 +1,267 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "id": "field-panel",
+  "prepareOnly": true,
+  "production": {
+    "units": "millimetres",
+    "objects": [
+      {
+        "id": "panel",
+        "kind": "mesh",
+        "vertices": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            40,
+            0,
+            0
+          ],
+          [
+            40,
+            30,
+            0
+          ],
+          [
+            0,
+            30,
+            0
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ],
+        "material": "fieldColour"
+      }
+    ],
+    "meshData": [
+      {
+        "object": "panel",
+        "attributes": [
+          {
+            "name": "displacement",
+            "kind": "vector",
+            "domain": "POINT",
+            "mode": "dense",
+            "values": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                0,
+                4
+              ],
+              [
+                0,
+                0,
+                2
+              ]
+            ]
+          },
+          {
+            "name": "temperature",
+            "kind": "float",
+            "domain": "POINT",
+            "mode": "dense",
+            "values": [
+              300,
+              310,
+              320,
+              310
+            ]
+          },
+          {
+            "name": "fieldColour",
+            "kind": "colour",
+            "domain": "POINT",
+            "mode": "dense",
+            "values": [
+              [
+                0,
+                0,
+                1,
+                1
+              ],
+              [
+                0,
+                1,
+                0,
+                1
+              ],
+              [
+                1,
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                1,
+                0,
+                1
+              ]
+            ]
+          }
+        ],
+        "uvMaps": [
+          {
+            "name": "Label",
+            "method": "planar",
+            "size": [
+              40,
+              30
+            ]
+          },
+          {
+            "name": "Atlas",
+            "method": "smart",
+            "pack": true,
+            "textureSize": [
+              1024,
+              512
+            ],
+            "paddingPixels": 8
+          }
+        ],
+        "activeUV": "Label",
+        "renderUV": "Label"
+      }
+    ],
+    "materialGraphs": [
+      {
+        "id": "fieldColour",
+        "nodes": [
+          {
+            "id": "colour",
+            "kind": "attribute",
+            "properties": {
+              "name": "fieldColour"
+            }
+          },
+          {
+            "id": "shader",
+            "kind": "emission"
+          },
+          {
+            "id": "out",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "colour",
+              "socket": "colour"
+            },
+            "to": {
+              "node": "shader",
+              "socket": "colour"
+            }
+          },
+          {
+            "from": {
+              "node": "shader",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "out",
+              "socket": "surface"
+            }
+          }
+        ]
+      }
+    ],
+    "geometryGraphs": [
+      {
+        "id": "deform",
+        "nodes": [
+          {
+            "id": "in",
+            "kind": "input"
+          },
+          {
+            "id": "field",
+            "kind": "namedAttribute",
+            "properties": {
+              "dataType": "FLOAT_VECTOR"
+            },
+            "values": {
+              "name": "displacement"
+            }
+          },
+          {
+            "id": "move",
+            "kind": "setPosition"
+          },
+          {
+            "id": "out",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "in",
+              "socket": "geometry"
+            },
+            "to": {
+              "node": "move",
+              "socket": "geometry"
+            }
+          },
+          {
+            "from": {
+              "node": "field",
+              "socket": "attribute"
+            },
+            "to": {
+              "node": "move",
+              "socket": "offset"
+            }
+          },
+          {
+            "from": {
+              "node": "move",
+              "socket": "geometry"
+            },
+            "to": {
+              "node": "out",
+              "socket": "geometry"
+            }
+          }
+        ]
+      }
+    ],
+    "geometryBindings": [
+      {
+        "object": "panel",
+        "graph": "deform"
+      }
+    ],
+    "exports": [
+      {
+        "id": "field-panel",
+        "format": "glb",
+        "objects": [
+          "panel"
+        ],
+        "frame": 1
+      }
+    ]
+  }
+}

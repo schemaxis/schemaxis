@@ -12,14 +12,15 @@ Constructor options must be constant after document composition.
 
 ## prepareTable
 
-Filter, select, rename and prepare an explicitly typed nullable table as independently verified Parquet and a readable report.
+Filter, select, rename and prepare an explicitly typed nullable table as independently verified Parquet and a readable report; with publishCSV true, also publish the identical rows as a canonical typed CSV that a consumer reads only by declaring the same schema.
 
 Common mistakes and assumptions:
 
 - Keep source row order, exact wide integers, Unicode text, null masks and UTC microseconds.
 - Only declared int32-to-int64 widening and explicit null replacement; no arbitrary expressions or metadata.
+- table.csv is opt-in, has no type metadata and treats formula-looking text as literal data; a consumer must declare the identical schema, and nothing is inferred or turned into a workbook.
 
-Native binding: `pyarrow.csv.read_csv / compute / Table / parquet.write_table`. Output kind: `["file","text"]`.
+Native binding: `pyarrow.csv.read_csv / compute / Table / parquet.write_table / csv.write_csv`. Output kind: `["file","text"]`.
 
 Inputs: none.
 
@@ -29,3 +30,4 @@ Inputs: none.
 | `columns` | Declare every source field in CSV header order, 1–32 columns and at most 200000 cells/10000 rows. Names are unique. Missing/extra source cells fail even in rows later filtered out. No field metadata or units are accepted. | `{"type":"array","items":{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":40,"required":true},"type":{"type":"enum","values":["bool","int32","int64","float64","utf8","timestamp_us_utc"],"required":true},"nullable":{"type":"boolean","default":false}}},"minItems":1,"maxItems":32}` | **required** |
 | `where` | Optional list of at most eight predicates, default empty (retain all rows). All predicates must pass. Filters inspect source values before selection, cast or null replacement and retain source row order. | `{"type":"array","items":{"type":"object","properties":{"column":{"type":"string","minLength":1,"maxLength":40,"required":true},"test":{"type":"enum","values":["eq","ne","lt","le","gt","ge","isNull","isValid"],"required":true},"value":{"type":"string","maxLength":4096}}},"maxItems":8}` | `[]` |
 | `select` | Required ordered list of 1–32 distinct source columns. Each maps column to a unique output name. Omitted source columns are deliberately excluded; output rows retain source order. | `{"type":"array","items":{"type":"object","properties":{"column":{"type":"string","minLength":1,"maxLength":40,"required":true},"name":{"type":"string","minLength":1,"maxLength":40,"required":true},"cast":{"type":"enum","values":["int64"]},"fillNull":{"type":"string","maxLength":4096}}},"minItems":1,"maxItems":32}` | **required** |
+| `publishCSV` | Optional boolean, default false. Omit it or give false and the output is exactly Parquet then report. Give true to append table.csv as artifact index 2: the same selected, renamed, widened and filled rows as typed CSV, in a fixed canonical form (UTF-8, LF, comma, bare header, null as bare \N, text and timestamps quoted, shortest binary64 text). The file carries no types: a consumer must declare the identical column types and nullability from table-report.json, nothing is inferred, and no workbook is created. Formula-looking text such as =1+1 is literal data; declare it as text, it is not sanitised. The encoded file must be at most 8 MiB, and nonnull text equal to \N is refused, so shorten the table or set false. There are no writer, delimiter, quoting or compression options. | `{"type":"boolean"}` | `false` |

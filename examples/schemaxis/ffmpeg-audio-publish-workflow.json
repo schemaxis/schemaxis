@@ -1,0 +1,35 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "narration",
+      "document": {
+        "version": "schemaxis.espeakng/1",
+        "operation": "narrate",
+        "text": "Welcome to the plant tour. Please wear your safety glasses and stay behind the yellow line."
+      }
+    },
+    {
+      "id": "shareable",
+      "document": {
+        "version": "schemaxis.ffmpeg/1",
+        "nodes": [
+          {
+            "id": "shareable",
+            "filter": "encodeAudio",
+            "options": {
+              "file": {
+                "$artifact": "narration",
+                "index": 0
+              },
+              "bitrateKbps": 96,
+              "maxBytes": 8388608,
+              "maxMeanPCMError": 2000,
+              "threads": 1
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

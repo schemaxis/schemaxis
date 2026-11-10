@@ -12,7 +12,9 @@ def scene_schema(catalogue, definitions):
         'cameras': {'type': 'array', 'minItems': 1, 'items': arguments_schema(CAMERA, dynamic=True)}}, ['id', 'cameras'])
     images = {'type': 'array', 'items': image}
     images.update(minItems=1, maxItems=1)
+    from .production import schema as production_schema
     scene = object_schema({'id': NAME, 'visible': {'type': 'array', 'items': NAME, 'minItems': 1},
+        'production': production_schema(),
         'render': arguments_schema(RENDER_OPTIONS), 'prepareOnly': {'type': 'boolean'}, 'meshes':{'type':'array','items':NAME,'uniqueItems':True}, 'images': images}, ['id', 'visible', 'images'])
     return scene
 

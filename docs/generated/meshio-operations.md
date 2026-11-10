@@ -12,12 +12,13 @@ Constructor options must be constant after document composition.
 
 ## convert
 
-Convert captured triangle/tetra meshes between ASCII VTU and legacyVTK 4.2 while checking coordinate units, ordered topology and point/cell arrays independently. Use for mesh interchange where preserving field associations matters.
+Convert captured triangle, tetrahedral and eight-node hexahedral meshes between ASCII VTU and legacy VTK 4.2, checking units, ordered connectivity and scalar/vector arrays independently. Useful for CAE volume interchange and post-processing handoffs.
 
 Common mistakes and assumptions:
 
 - Only coordinates change units; scalar/vector array units are not inferred.
 - Strict subset refuses binary/compressed payloads and unsupported metadata instead of silently losing them.
+- Hexahedra follow VTK type 12 node order. Positive Jacobians at eight corners, centre and eight Gauss points are a bounded geometry check, not proof of global positivity or mesh quality.
 
 Native binding: `meshio.read / Mesh.points / meshio.write(binary=False)`. Output kind: `["geometry","text"]`.
 
@@ -25,7 +26,7 @@ Inputs: none.
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `source` | Required absolute local .vtu/.vtk regular file, matching sourceFormat, at most 16 MiB. No symlinks, devices or remote fetching. Bytes are captured and hashed; same-path changes invalidate reuse. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `source` | Required absolute local .vtu/.vtk regular file, matching sourceFormat, at most 16 MiB. No symlinks, devices or remote fetching. Bytes are captured and hashed; same-path changes invalidate reuse. Supported cells are linear triangle, tetra and VTK-order eight-node hexahedron; export high-order/voxel/wedge/pyramid cells through an explicit separate preparation step. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
 | `sourceFormat` | Required vtu or vtk. vtu means a single inline ASCII UnstructuredGrid Piece; vtk means legacy 4.2 ASCII unstructured grid with FIELD arrays. The extension must match. Binary, appended, compressed and extra metadata sections are refused. | `{"type":"enum","values":["vtu","vtk"]}` | **required** |
 | `targetFormat` | Required vtu or vtk ASCII output, at most 32 MiB. Select the format the downstream consumer accepts. Ordered geometry/connectivity and supported arrays are preserved; dtype, block grouping and formatting may change. | `{"type":"enum","values":["vtu","vtk"]}` | **required** |
 | `sourceUnits` | Required coordinate length unit: m, cm, mm, in. Declare the unit already used by source XYZ; no inference from filename or scalar/vector fields. Incorrect declarations rescale an otherwise valid mesh incorrectly. | `{"type":"enum","values":["m","cm","mm","in"]}` | **required** |

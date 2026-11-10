@@ -35,6 +35,57 @@ class NgspiceAdmissionTests(unittest.TestCase):
         for bad in variants:
             with self.subTest(document=bad),self.assertRaises(SchemaxisError):adaptor.plan(bad)
 
+    def test_reserved_ground_alias_is_refused_with_located_recovery(self):
+        """ngspice lowercases the deck and rewrites a delimited gnd token to node 0."""
+        def divider(alias):
+            d=document();d['circuit']['resistors'][1]['b']=alias
+            d['circuit']['resistors'].append({'name':'r3','a':alias,'b':'0','resistance':1000})
+            return d
+        def refused(d,location):
+            with self.assertRaises(SchemaxisError) as caught:adaptor.plan(d)
+            fault=caught.exception.fault
+            self.assertEqual((fault.code,fault.location),('INVALID_CIRCUIT',location))
+            self.assertEqual(fault.observed['reservedAlias'],'gnd');self.assertIn('0 for ground',fault.recovery)
+            return fault
+        for alias in ('gnd','GND','Gnd','gND'):
+            with self.subTest(alias=alias):
+                fault=refused(divider(alias),'$.circuit.resistors[1].b');self.assertEqual(fault.observed['node'],alias)
+                d=document();d['circuit']['source']=alias;refused(d,'$.circuit.source')
+                d=document();d['circuit']['resistors'][0]['a']=alias;refused(d,'$.circuit.resistors[0].a')
+                d=document();d['circuit']['probes']=['out',alias];refused(d,'$.circuit.probes[1]')
+        d=document('rc-step');d['circuit']['capacitors'][0]['b']='gnd';refused(d,'$.circuit.capacitors[0].b')
+        d=document('rl-frequency');d['circuit']['inductors'][0]['a']='GND';refused(d,'$.circuit.inductors[0].a')
+        d=document('rc-frequency');d['circuit']['resistors'][0]['a']='gnd'
+        d['circuit']['source']='gnd';refused(d,'$.circuit.source')
+        # The refusal names the first offending authored position, in authored order.
+        d=divider('gnd');d['circuit']['source']='GND';refused(d,'$.circuit.source')
+
+    def test_names_that_only_contain_gnd_stay_valid_and_unchanged(self):
+        for alias in ('gnd1','ground','agnd','gnd_a','gnda','g'):
+            d=document();d['circuit']['resistors'][1]['b']=alias
+            d['circuit']['resistors'].append({'name':'r3','a':alias,'b':'0','resistance':1000})
+            with self.subTest(alias=alias):
+                p=adaptor.plan(d);self.assertIn(alias,p['nodes'])
+                self.assertIn(f'R_r2 out {alias} 2000\n',adaptor.netlists(p)[0])
+        # A component name is the first card token, which ngspice never rewrites.
+        d=document();d['circuit']['resistors'][0]['name']='gnd'
+        self.assertIn('R_gnd in out 1000\n',adaptor.netlists(adaptor.plan(d))[0])
+        for name in ('minimal','bridge','rc-ladder','rc-frequency','rc-step','rl-frequency','rlc-resonance','rlc-parallel'):
+            with self.subTest(example=name):
+                self.assertNotRegex(adaptor.netlists(adaptor.plan(document(name)))[0],r'(?<![\w])gnd(?![\w])')
+
+    def test_legacy_receipt_authored_with_gnd_fails_verification_closed(self):
+        d=document();d['circuit']['resistors'][1]['b']='gnd'
+        d['circuit']['resistors'].append({'name':'r3','a':'gnd','b':'0','resistance':1000})
+        with tempfile.TemporaryDirectory() as temp:
+            directory=Path(temp)
+            for name in [n for n,_ in adaptor.FILES]+adaptor.EVIDENCE+['plan.json','result.json','verification.json']:
+                (directory/name).write_text('{}')
+            (directory/'authored.json').write_text(json.dumps(d))
+            with self.assertRaises(SchemaxisError) as caught:adaptor.verify(directory)
+        self.assertEqual((caught.exception.fault.code,caught.exception.fault.location),
+                         ('INVALID_CIRCUIT','$.circuit.resistors[1].b'))
+
     def test_sweep_and_transient_bounds(self):
         for name,key,value in [('minimal','stop',0),('rc-frequency','points',2),
                                ('rc-frequency','start',0),('rc-frequency','amplitude',0),

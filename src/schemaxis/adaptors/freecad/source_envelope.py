@@ -8,10 +8,16 @@ exactly the payloads the document names, and syntactically valid payloads. Anyth
 else (Python objects, external links, DOCTYPE/entities, dynamic properties, unknown
 types, extra or missing members) is refused before FreeCAD could restore it.
 
+Spreadsheet sources additionally bind every saved cell, alias, display unit and
+formula to the host-compiled typed table, with no external links or foreign cell
+state. Native computed quantities are NoPersist and are never cache authority.
+
 Payload syntax is checked here; payload *meaning* is checked later by the native
 capture stage, which must reproduce every stored history shape by recompute.
 """
 import re
+import math
+import struct
 import zipfile
 from xml.etree import ElementTree as ET
 
@@ -127,16 +133,32 @@ def _attributes(root, location, code, vocabulary):
 def read_members(path, location, code):
     """Bounded read of every archive member (bounds already checked by check_archive)."""
     from .assembly_sources import check_archive
+    from .document_xml import read_member, ARCHIVE_ERRORS
     check_archive(path, location, code=code)
-    with zipfile.ZipFile(path) as archive:
-        members = {}
-        for info in archive.infolist():
-            if info.file_size > MEMBER_BYTES or info.is_dir():
-                fail(code, 'Archive member is a directory or exceeds 32 MiB', location, member=info.filename)
-            members[info.filename] = archive.read(info)
-            if len(members[info.filename]) != info.file_size:
-                fail(code, 'Archive member size differs from its header', location, member=info.filename)
+    try:
+        with zipfile.ZipFile(path) as archive:
+            members = {}
+            for info in archive.infolist():
+                if info.file_size > MEMBER_BYTES or info.is_dir():
+                    fail(code, 'Archive member is a directory or exceeds 32 MiB', location, member=info.filename)
+                members[info.filename] = read_member(archive, info.filename, MEMBER_BYTES)
+                if len(members[info.filename]) != info.file_size:
+                    fail(code, 'Archive member size differs from its header', location, member=info.filename)
+    except (OSError, ValueError, KeyError)+ARCHIVE_ERRORS as error:
+        fail(code, 'Saved source archive cannot be decoded safely', location, detail=str(error))
     return members
+
+
+def document_ids(root):
+    """One canonical positive object identity per name, before tag remapping."""
+    result={};seen=set()
+    for obj in root.findall('./Objects/Object'):
+        value=obj.get('id','');name=obj.get('name')
+        if (not re.fullmatch(r'[1-9][0-9]*',value) or len(value)>19 or int(value)>2**63-1
+                or int(value) in seen or not name or name in result):
+            raise ValueError('document object IDs must be canonical, positive, bounded and unique')
+        result[name]=int(value);seen.add(int(value))
+    return result
 
 
 def brep(data, location, code, member):
@@ -220,15 +242,44 @@ def string_table(data, location, code, member):
     return int(match[1])
 
 
+def string_ids(data,location,code,member):
+    """Read sparse persistent IDs, rather than mistaking entry count for max ID.
+
+    FreeCAD 1.1.4 StringHasher's public persistence format uses hexadecimal
+    absolute IDs or positive deltas prefixed with minus. Related-ID columns
+    use preceding-column deltas, then current-ID offsets for new columns.
+    https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/App/StringHasher.cpp
+    """
+    string_table(data,location,code,member)
+    known=set();last=0;previous=[]
+    for line in data.decode('ascii').splitlines()[1:]:
+        token=line.split(' ',1)[0]
+        if not re.fullmatch(r'-?[0-9a-f]+\.[0-9a-f]+(?:\.-?[0-9a-f]+)*',token):
+            fail(code,'String-table ID record is malformed',location,member=member)
+        fields=token.split('.');relative=fields[0].startswith('-')
+        identity=last+int(fields[0][1:],16) if relative else int(fields[0],16)
+        if identity<=last or identity>2**63-1:
+            fail(code,'String-table persistent IDs are not increasing positive integers',location,member=member)
+        references=[]
+        for index,field in enumerate(fields[2:]):
+            value=int(field,16)
+            ref=(previous[index]+value if index<len(previous) else identity-value) if relative else value
+            if ref not in known:fail(code,'String-table ID references an absent earlier record',location,member=member)
+            references.append(ref)
+        known.add(identity);last=identity;previous=references
+    return known
+
+
 def gui_record(data, objects, location, code):
     """Phase-one minimal view record: one Visibility property per source object, nothing else."""
+    from .gui_state import valid_header
     prolog(data, location, code, gui=True)
     try:
         root = ET.fromstring(data)
     except ET.ParseError as error:
         fail(code, 'GuiDocument.xml is malformed', location, detail=str(error))
     providers = root.findall('./ViewProviderData/ViewProvider')
-    if (root.tag != 'Document' or root.attrib != {'SchemaVersion': '1'} or len(root) != 1
+    if (not valid_header(root)
             or root[0].attrib != {'Count': str(len(providers))} or {p.get('name') for p in providers} != set(objects)
             or len(providers) != len(objects)):
         fail(code, 'GuiDocument.xml membership differs from the minimal source view record', location)
@@ -251,8 +302,37 @@ def inspect(path, facts, location, code='UNSUPPORTED_SOURCE'):
         root = ET.fromstring(document)
     except ET.ParseError as error:
         fail(code, 'Source Document.xml is malformed', location, detail=str(error))
-    _attributes(root, location, code, ATTRIBUTES)
-    if root.tag != 'Document' or [c.tag for c in root] != ROOT_CHILDREN:
+    generation=facts.get('generation',1)
+    vocabulary=ATTRIBUTES;properties=PROPERTIES;extensions_by_type=EXTENSIONS;transient_by_type=TRANSIENT
+    if generation==2:
+        from . import history_source_policy as history
+        vocabulary={**ATTRIBUTES,**{key:ATTRIBUTES.get(key,[])+value for key,value in history.ATTRIBUTES.items()}}
+        properties={**PROPERTIES,**history.PROPERTIES};extensions_by_type={**EXTENSIONS,**history.EXTENSIONS}
+        transient_by_type={**TRANSIENT,**history.TRANSIENT}
+    elif generation!=1:
+        fail(code,'Unknown saved design-history generation',location)
+    seed_assets={};inline_seed=False
+    from . import source_bridge
+    if source_bridge.capability(facts):
+        seeded,properties,extensions_by_type,transient_by_type,vocabulary=source_bridge.policy(path,facts,properties,extensions_by_type,transient_by_type,vocabulary)
+        from .source_assets import descriptors,verify_members
+        seed_assets=descriptors(seeded)
+        verify_members(members,root,seed_assets,location)
+        if root.find('StringHasher2') is None:
+            inline_seed=source_bridge.inline_seed_history(seeded,root,location,code)
+            vocabulary={**vocabulary,'StringHasher':[{'count','saveall','threshold'}]}
+    if 'spreadsheet' in facts:
+        from .spreadsheet import PERSISTENT
+        if facts['objects'].get('SchemaxisParameters')!='Spreadsheet::Sheet':
+            fail(code,'Spreadsheet source descriptor has no matching native Sheet',location)
+        vocabulary={**vocabulary,'Cells':[{'Count','xlink'}],'XLinks':[{'count'}],
+                    'Cell':[{'address','content'},{'address','content','displayUnit','alias'}],
+                    'ColumnInfo':[{'Count'}],'RowInfo':[{'Count'}]}
+        properties={**properties,'Spreadsheet::Sheet':PERSISTENT}
+        transient_by_type={**transient_by_type,'Spreadsheet::Sheet':{}}
+    _attributes(root, location, code, vocabulary)
+    root_children=[tag for tag in ROOT_CHILDREN if not (inline_seed and tag=='StringHasher2')]
+    if root.tag != 'Document' or [c.tag for c in root] != root_children:
         fail(code, 'Source document structure differs from the qualified phase-one form', location)
     props = {p.get('name'): p.get('type') for p in root.find('Properties')}
     if props != DOCUMENT_PROPERTIES or len(root.find('Properties')) != len(DOCUMENT_PROPERTIES):
@@ -260,7 +340,8 @@ def inspect(path, facts, location, code='UNSUPPORTED_SOURCE'):
     objects = {o.get('name'): o.get('type') for o in root.find('Objects').findall('Object')}
     if objects != facts['objects'] or len(root.find('Objects').findall('Object')) != len(objects):
         fail(code, 'Source object membership or types differ from its verified plan', location)
-    ids = {int(o.get('id')) for o in root.find('Objects').findall('Object')}
+    try:ids=set(document_ids(root).values())
+    except ValueError as error:fail(code,'Source object identity allocation is malformed',location,detail=str(error))
     references = set()
     for record in root.find('Objects').findall('ObjectDeps'):
         references.update([record.get('Name')] + [d.get('Name') for d in record])
@@ -271,32 +352,43 @@ def inspect(path, facts, location, code='UNSUPPORTED_SOURCE'):
     files = {}
     for obj in data:
         name, kind = obj.get('name'), objects[obj.get('name')]
-        expected = dict(PROPERTIES.get(kind, {}))
+        expected = dict(properties.get(kind, {}))
         if kind == 'App::VarSet':
             expected.update(parameters)
         container = obj.find('Properties')
         found = {p.get('name'): p.get('type') for p in container.findall('Property')}
         transient = {p.get('name'): p.get('type') for p in container.findall('_Property')}
         if (not expected or found != expected or len(container.findall('Property')) != len(found)
-                or transient != TRANSIENT.get(kind) or len(container.findall('_Property')) != len(transient)
+                or transient != transient_by_type.get(kind) or len(container.findall('_Property')) != len(transient)
                 or any(len(p) for p in container.findall('_Property')) or len(container) != len(found) + len(transient)
                 or container.get('Count') != str(len(found)) or container.get('TransientCount') != str(len(transient))):
             fail(code, 'Source object properties differ from the qualified set for its type', location, object=name)
+        if kind=='Spreadsheet::Sheet':
+            from .spreadsheet import verify_saved_object
+            from schemaxis.core.faults import SchemaxisError
+            try:
+                verify_saved_object(facts['spreadsheet'],obj,location+'.'+name)
+            except SchemaxisError as error:
+                fail(code,'Source spreadsheet state differs from typed intent: '+error.fault.message,location,object=name)
         extensions = [e.get('type') for e in obj.findall('./Extensions/Extension')]
-        if extensions != EXTENSIONS.get(kind, []) or (('Extensions' in obj.attrib) != bool(extensions)):
+        if extensions != extensions_by_type.get(kind, []) or (('Extensions' in obj.attrib) != bool(extensions)):
             fail(code, 'Source object extensions differ from the qualified set for its type', location, object=name)
         for prop in obj.find('Properties').findall('Property'):
-            if set(prop.attrib) == {'attr', 'doc', 'group', 'hide', 'name', 'ro', 'status', 'type'} and prop.get('name') not in parameters:
+            if set(prop.attrib) == {'attr', 'doc', 'group', 'hide', 'name', 'ro', 'status', 'type'} and prop.get('name') not in parameters and not (name in seed_assets and prop.get('name') in ('SourceAsset','SourceSHA256')):
                 fail(code, 'Only declared VarSet parameters may be dynamic properties', location, object=name)
             for element in prop.iter():
                 for key in ('value', 'obj'):
                     if element.tag in ('Link', 'LinkSub') and element.get(key):
                         references.add(element.get(key))
                 # No qualified reference names a sub-element, so element-map names are never consumed.
-                if (element.tag == 'Link' and element.get('sub', '') != '') or (
-                        element.tag == 'LinkSub' and (element.get('count') != '0' or len(element))):
+                if generation==1 and ((element.tag == 'Link' and element.get('sub', '') != '') or (
+                        element.tag == 'LinkSub' and (element.get('count') != '0' or len(element)))):
                     fail(code, 'Source references a sub-element by name; the qualified route references whole objects only',
                          location, object=name, property=prop.get('name'))
+                if generation==2:
+                    sub=element.get('sub','') if element.tag=='Link' else element.get('value','') if element.tag=='Sub' else ''
+                    if sub and not re.fullmatch(r'(?:Face|Edge|Vertex)[1-9][0-9]*',sub):
+                        fail(code,'Source subelement is outside the typed design-history contract',location,object=name)
                 if element.tag == 'Expression' and ('<<' in element.get('expression') or '#' in element.get('expression')):
                     fail(code, 'Source expressions may not use label or cross-document references', location, object=name)
                 if element.get('file'):
@@ -305,28 +397,61 @@ def inspect(path, facts, location, code='UNSUPPORTED_SOURCE'):
                     files[element.get('file')] = (name, prop.get('name'), element.tag)
     if references - set(objects) - {''}:
         fail(code, 'Source references objects outside itself', location, objects=sorted(references - set(objects)))
-    table_member = root.find('StringHasher2').get('file')
-    expected_members = {'Document.xml', table_member, *files}
+    table_member = None if inline_seed else root.find('StringHasher2').get('file')
+    expected_members = {'Document.xml', *([] if inline_seed else [table_member]), *files}
     if set(members) - {'GuiDocument.xml'} != expected_members:
         fail(code, 'Source archive members differ from the payloads its document names', location,
              extra=sorted(set(members) - expected_members - {'GuiDocument.xml'}), missing=sorted(expected_members - set(members)))
-    table = string_table(members[table_member], location, code, table_member)
+    # Both generations use the same persisted StringHasher2 grammar. Entry
+    # count is not an ID maximum after native saves prune/reallocate records.
+    # Decode actual sparse identities, including their structural Related links;
+    # a missing low ID must not become admitted merely because it is <= count.
+    table_ids=set() if inline_seed else string_ids(members[table_member],location,code,table_member)
+    if generation==2:
+        for element in root.iter():
+            shadow=element.get('shadow')
+            if shadow:
+                if len(shadow)>4096 or not re.fullmatch(r'[-.;:#,_A-Za-z0-9]+',shadow):
+                    fail(code,'Source topological shadow is malformed',location)
+                encoded=shadow.encode('ascii')
+                if any(int(tag,16) not in ids for tag in TAG_REFERENCE.findall(encoded)) or any(int(h,16) not in table_ids for h in HASH_REFERENCE.findall(encoded)):
+                    fail(code,'Source topological shadow refers outside its owned object/hash table',location)
     postfix_tables, used_tables = {}, set()
     for member, (owner, prop, tag) in files.items():
         if tag == 'Part' and member.endswith('.brp'):
             brep(members[member], location, code, member)
         elif tag == 'ElementMap2' and member.endswith('.Map.txt'):
             parsed = element_map(members[member], location, code, member)
-            if not parsed['tags'] <= ids or any(h > table for h in parsed['hashes']):
+            if not parsed['tags'] <= ids or generation==1 and any(h not in table_ids for h in parsed['hashes']):
                 fail(code, 'Element map refers outside its source or string table', location, member=member)
-            if parsed['postfixId'] in postfix_tables:
+            if generation==1 and parsed['postfixId'] in postfix_tables:
                 fail(code, 'Element map postfix table is defined twice', location, member=member)
             postfix_tables[parsed['postfixId']] = member
             used_tables.update(table_id for table_id, _ in parsed['maps'])
+        elif generation==2 and tag=='FileIncluded' and owner in seed_assets and prop=='SourceAsset' and member==seed_assets[owner]['member']:
+            # Exact type/role/member and independent original-byte admission ran
+            # above. This never interprets submitted BREP as original authority.
+            pass
+        elif generation==2 and tag=='FloatList':
+            payload=members[member]
+            if len(payload)<4:fail(code,'Native float-list payload is truncated',location,member=member)
+            count=struct.unpack_from('<I',payload)[0]
+            if count>1000000 or len(payload)!=4+8*count or any(not math.isfinite(value[0]) for value in struct.iter_unpack('<d',payload[4:])):
+                fail(code,'Native float-list payload is malformed or nonfinite',location,member=member)
         else:
             fail(code, 'Source payload member kind is not qualified', location, member=member)
-    if not used_tables <= set(postfix_tables):
+    if generation==1 and not used_tables <= set(postfix_tables):
         fail(code, 'Element maps use a postfix table that this source does not define', location)
+    if generation==2:
+        try:
+            if inline_seed:
+                from .part_reconstruction import literal_maps
+                literal_maps(members,root,{value:value for value in document_ids(root).values()})
+            else:
+                from .history_element_maps import archive_maps
+                archive_maps(members,root)
+        except (ValueError,KeyError,IndexError,TypeError) as error:
+            fail(code,'Design-history element-map encoding is malformed',location,detail=str(error))
     if 'GuiDocument.xml' in members:
         gui_record(members['GuiDocument.xml'], objects, location, code)
     return {'members': {k: len(v) for k, v in sorted(members.items())}, 'payloads': files, 'table': table_member,

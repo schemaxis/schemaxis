@@ -1,0 +1,102 @@
+{
+ "version": "schemaxis.hdf5/1",
+ "operation": "createFile",
+ "file": {
+  "name": "grid.h5",
+  "libver": "v110"
+ },
+ "access": {
+  "chunkCache": {
+   "bytes": 4194304,
+   "slots": 1009,
+   "preemption": 0.25
+  },
+  "alignment": {
+   "threshold": 4096,
+   "interval": 4096
+  },
+  "metaBlockBytes": 8192,
+  "memoryBytes": 65536
+ },
+ "objects": [
+  {
+   "path": "/row",
+   "type": {
+    "class": "float",
+    "bits": 64
+   },
+   "shape": [
+    3000
+   ],
+   "data": {
+    "source": "range",
+    "start": 0,
+    "step": 1
+   },
+   "units": "m",
+   "scale": "row"
+  },
+  {
+   "path": "/grid",
+   "type": {
+    "class": "float",
+    "bits": 64
+   },
+   "shape": [
+    3000,
+    200
+   ],
+   "data": {
+    "source": "range",
+    "start": 0,
+    "step": 0.5
+   },
+   "units": "K",
+   "storage": {
+    "chunks": [
+     100,
+     200
+    ],
+    "compression": "gzip",
+    "level": 1,
+    "shuffle": true
+   },
+   "dimensions": [
+    {
+     "axis": 0,
+     "label": "row",
+     "scales": [
+      "/row"
+     ]
+    }
+   ]
+  }
+ ],
+ "extracts": [
+  {
+   "id": "grid",
+   "dataset": "/grid",
+   "format": "npy"
+  },
+  {
+   "id": "corner",
+   "dataset": "/grid",
+   "selection": {
+    "kind": "hyperslab",
+    "start": [
+     2990,
+     198
+    ],
+    "count": [
+     2,
+     2
+    ],
+    "stride": [
+     9,
+     1
+    ]
+   },
+   "format": "json"
+  }
+ ]
+}

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.ifcopenshell/1"
+    },
+    "operation": {
+      "const": "scheduleWalls"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ]
+    },
+    "class": {
+      "enum": [
+        "IfcWall"
+      ],
+      "default": "IfcWall"
+    },
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "source": {
+            "enum": [
+              "property",
+              "quantity"
+            ]
+          },
+          "set": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "property": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "valueType": {
+            "enum": [
+              "text",
+              "number",
+              "boolean"
+            ]
+          },
+          "quantityName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "quantity": {
+            "enum": [
+              "length",
+              "area",
+              "volume"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "source",
+          "set"
+        ]
+      },
+      "minItems": 2,
+      "maxItems": 6
+    },
+    "missing": {
+      "enum": [
+        "refuse",
+        "null"
+      ],
+      "default": "refuse"
+    },
+    "inheritance": {
+      "enum": [
+        "occurrence-only",
+        "occurrence-overrides-type"
+      ],
+      "default": "occurrence-only"
+    },
+    "zeroQuantity": {
+      "enum": [
+        "accept",
+        "refuse"
+      ],
+      "default": "accept"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "source",
+    "columns"
+  ]
+}

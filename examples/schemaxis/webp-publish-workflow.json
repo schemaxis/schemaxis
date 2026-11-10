@@ -1,0 +1,31 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "prepare",
+      "document": {
+        "version": "schemaxis.imagemagick/1",
+        "operation": "raster",
+        "images": [
+          {
+            "id": "badge",
+            "source": "/replace/with/swatch-rgba.png",
+            "crop": {"x": 0, "y": 0, "width": 5, "height": 3},
+            "scale": 4,
+            "quarterTurns": 0
+          }
+        ],
+        "colourPolicy": "assume-srgb",
+        "alpha": "preserve"
+      }
+    },
+    {
+      "id": "publish",
+      "document": {
+        "version": "schemaxis.webp/1",
+        "operation": "encodeLossless",
+        "source": {"$artifact": "prepare", "index": 0}
+      }
+    }
+  ]
+}

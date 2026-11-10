@@ -16,7 +16,7 @@ from schemaxis.errors import fail, keys
 from .parallel_files import file_digest, verify_manifest, verify_piece_evidence, verify_reduction_evidence
 from schemaxis.adaptors.paraview.filters import catalogue, validate_options
 from schemaxis.pipeline import DefinitionGraph, markers, evaluate, digest
-from schemaxis.adaptors.paraview.publication import scenes, style, camera_values
+from schemaxis.adaptors.paraview.publication import scenes, style, camera_values, scene_bounds, default_distance
 
 
 def plan(document):
@@ -50,13 +50,34 @@ def identities(scene, visit):
             for camera in range(len(writer['cameras'])):
                 yield {**common, 'kind': 'image', 'appearance': appearance,
                        'writer': writer['id'], 'camera': camera}
+    if scene.get('stateBundle'):
+        yield {**common, 'kind': 'state-bundle'}
 
 
+
+
+def verify_default_distance(artifact, camera, size, scene, state, directory):
+    """Check that a default perspective camera was placed at the aspect-aware distance."""
+    import math
+    try:
+        bounds = camera.get('bounds') or scene_bounds(scene, state['observations'])
+        position, focal = artifact['camera']['position'], artifact['camera']['focalPoint']
+        diagonal = math.dist(bounds[0::2], bounds[1::2])
+        actual = math.dist(position, focal)
+    except (KeyError, TypeError, ValueError, SchemaxisError):
+        fail('VERIFICATION_FAILED', 'default perspective camera distance evidence is absent', str(directory))
+    if not math.isclose(actual, default_distance(diagonal, size, False), rel_tol=1e-6):
+        fail('VERIFICATION_FAILED', 'default perspective camera distance differs from the aspect-aware framing', str(directory),
+             expected=default_distance(diagonal, size, False), actual=actual)
 
 
 def verify_receipt(directory, master, outputs):
+    from schemaxis.artifact_names import VERSION as NAMING_VERSION, stem
     directory = Path(directory).resolve()
     receipt = json.loads((directory / 'verification.json').read_text())
+    naming = receipt.get('artifactNamingVersion')
+    if naming is not None and naming != NAMING_VERSION:
+        fail('VERIFICATION_FAILED', 'unsupported artifact naming version', str(directory))
     if receipt.get('status') != 'succeeded' or not receipt.get('verified'):
         fail('INCOMPLETE_EXECUTION', 'native execution did not complete verification', str(directory),
              nativeFault=receipt.get('fault'))
@@ -71,6 +92,8 @@ def verify_receipt(directory, master, outputs):
         expected_digest = expected_plan['digest']
     if receipt.get('planDigest') != expected_digest:
         fail('VERIFICATION_FAILED', 'native plan differs from submitted plan', str(directory))
+    if 'cameraFramingVersion' in receipt and (type(receipt['cameraFramingVersion']) is not int or receipt['cameraFramingVersion'] != 1):
+        fail('VERIFICATION_FAILED', 'unsupported camera framing version', str(directory))
     expected = [identity for scene, visit in schedule(master, outputs) for identity in identities(scene, visit)]
     artifacts = receipt.get('artifacts', [])
     if [a.get('identity') for a in artifacts] != expected:
@@ -150,6 +173,16 @@ def verify_receipt(directory, master, outputs):
             if (artifact.get('resources',{})!=resources or artifact.get('resourceProxyIds',{})!=
                     {key:state['proxyIds'][node] for key,node in resources.items()}):
                 fail('VERIFICATION_FAILED','writer resources differ from the planned native identities',str(directory))
+            from .export_integrity import verify_export_evidence
+            basename = 'data'
+            if naming is not None:
+                ordinal = Path(artifact['file']).parent.name
+                if len(ordinal) != 6 or not ordinal.isascii() or not ordinal.isdigit():
+                    fail('VERIFICATION_FAILED', 'indexed export directory must be a six-digit ordinal', str(directory))
+                basename = stem(int(ordinal), {'kind': 'export', 'scene': identity['scene'],
+                                               'name': expected['id'], 'time': visit['time']})
+            verify_export_evidence(directory, artifact, expected, master.declarations[expected['writer']]['native'],
+                                   f"{identity['scene']}.exports[{identity['output']}]", basename=basename)
         if artifact['identity']['kind'] == 'image' and not legacy:
             identity = artifact['identity']
             scene, visit, state = by_state[(identity['scene'], identity['timeIndex'], tuple(sorted(identity['indices'].items())))]
@@ -162,12 +195,40 @@ def verify_receipt(directory, master, outputs):
                 fail('VERIFICATION_FAILED', 'presentation sample evidence is absent', source)
             def resolve(value):
                 return evaluate(value, visit['axes'], state['observations'], visit['time'], scene['id'], sample)
-            appearance = {k: style(resolve(v), scene['id'] + '.' + k)
+            text = scene.get('text', [])
+            appearance = {k: style(resolve(v), scene['id'] + '.' + k, text=k in text)
                           for k, v in scene['appearances'][identity['appearance']].items()}
+            annotations = artifact.get('annotations', {}) if receipt.get('renderTimeVersion') == 1 else None
+            if annotations is not None and (sorted(annotations) != text or any(
+                    not isinstance(item, dict) or not isinstance(item.get('text'), str) or not item['text']
+                    or item.get('viewTime') != visit['time'] or item.get('fontSize') != appearance[node]['fontSize']
+                    or item.get('bold') != appearance[node]['bold'] or item.get('italic') != appearance[node]['italic']
+                    for node, item in annotations.items())):
+                fail('VERIFICATION_FAILED', 'rendered text annotation evidence differs from authored settings', str(directory))
             writer = next(w for w in scene['images'] if w['id'] == identity['writer'])
             camera = camera_values(resolve(writer['cameras'][identity['camera']]), writer['id'])
             if artifact.get('effectiveAppearance') != appearance or artifact.get('effectiveCamera') != camera:
                 fail('VERIFICATION_FAILED', 'effective presentation differs from authored settings', str(directory))
+            background = {k: writer[k] for k in ('background', 'transparentBackground')}
+            if receipt.get('backgroundVersion') == 1:
+                observed = artifact.get('background', {})
+                if (artifact.get('effectiveBackground') != background
+                        or observed.get('transparent') != background['transparentBackground']
+                        or any(abs(a - b) > 1e-12 for a, b in zip(observed.get('colour', []), background['background']))
+                        or len(observed.get('colour', [])) != 3):
+                    fail('VERIFICATION_FAILED', 'image background differs from authored settings', str(directory))
+            elif background != {'background': [1, 1, 1], 'transparentBackground': False}:
+                # Runtimes before backgroundVersion 1 always rendered opaque white.
+                fail('VERIFICATION_FAILED', 'receipt predates image backgrounds', str(directory))
+            if receipt.get('cameraFramingVersion') == 1 and not camera['parallel'] and 'distance' not in camera:
+                verify_default_distance(artifact, camera, writer['size'], scene, state, directory)
+        if artifact['identity']['kind'] == 'state-bundle':
+            from .handback import verify_artifact
+            identity = artifact['identity']
+            scene, visit, state = by_state[(identity['scene'], identity['timeIndex'], tuple(sorted(identity['indices'].items())))]
+            image = next((a for a in artifacts if a['identity'] == {**identity, 'kind': 'image', 'appearance': 0,
+                          'writer': scene['images'][0]['id'], 'camera': 0}), None)
+            verify_artifact(directory, artifact, master, scene, state, image)
         if receipt.get('distributedPublicationVersion') == 1:
             kind = artifact['identity']['kind']
             if kind == 'geometry' and artifact.get('publicationMode') != 'native-distributed':
@@ -224,8 +285,10 @@ def run(document, directory, *, roots=None, timeout=300):
     atomic_json(directory / 'verification.json', {'status': 'incomplete', 'verified': False, 'artifacts': []})
     snapshot = runtime_archive()
     (directory / 'runtime.zip').write_bytes(snapshot)
+    from schemaxis.artifact_names import run_root
     runner = SubprocessRunner(interpreter, directory, arguments=PARAVIEW_OFFSCREEN, timeout=timeout,
-                              environment={'PYTHONDONTWRITEBYTECODE': '1'})
+                              environment={'PYTHONDONTWRITEBYTECODE': '1',
+                                           'SCHEMAXIS_OUTPUT_RUN_ROOT': str(run_root(directory))})
     try:
         prefix = f'import sys, json\nsys.path.insert(0, {str(directory / "runtime.zip")!r})\n'
         if time_request is not None:
@@ -249,10 +312,17 @@ def run(document, directory, *, roots=None, timeout=300):
                   f'execute(json.loads({json.dumps(master.document)!r}), {str(directory)!r})\n')
         submission = runner(source)
         atomic_json(directory / 'submission.json', submission.to_dict())
+        if any(scene.get('stateBundle') for scene in outputs):
+            # Independent proof: a fresh process loads a relocated copy of each bundle.
+            from .handback import reload as reload_bundles
+            reload_bundles(directory, json.loads((directory / 'verification.json').read_text()),
+                           lambda code: runner(prefix + code))
         receipt = verify_receipt(directory, master, outputs)
         result = {'status': 'succeeded', 'verified': True, 'directory': str(directory),
                   'artifacts': len(receipt['artifacts']), 'planDigest': master.to_dict()['digest'],
                   'runtimeSha256': hashlib.sha256(snapshot).hexdigest()}
+        from .integration import compatibility
+        result['compatibility'] = compatibility(directory, receipt)
         atomic_json(directory / 'result.json', result)
         return result
     except SchemaxisError as error:

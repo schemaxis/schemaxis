@@ -1,0 +1,174 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "reduceProfile": {
+      "status": "reviewed",
+      "explanation": "Reduce a captured classic NetCDF measurement cube to a coordinate-labelled profile. The route decodes the file with a bounded standard-library reader, asserts dimension names, order, units and the missing sentinel, selects inclusive numeric coordinate ranges, averages the other named dimensions with an explicit missing policy, and publishes a smaller NetCDF profile, a numeric CSV with valid and missing counts, and a summary with source, axis and selection hashes. Isolated xarray does the work and an independent verifier checks every coordinate, value, unit and count.",
+      "sources": [
+        "docs/xarray.md#start-with-the-analytic-cube",
+        "docs/xarray.md#gnuplot-handoff"
+      ],
+      "pitfalls": [
+        "Dimensions must be declared in the exact storage order as a deliberate layout assertion; a permuted order is refused, never silently reinterpreted.",
+        "The mean is unweighted over selected cells: it is not area, volume or time weighted, and no uncertainty is claimed.",
+        "Strongly cancelling means (relative error bound above 1e-9) are refused as ill-conditioned; a profile of all-missing points is refused, never zero.",
+        "Only classic NetCDF CDF-1 with double data, a small attribute allowlist and strictly increasing coordinates; other information is refused, not dropped.",
+        "To plot the profile, connect Gnuplot with source {\"$artifact\": \"<id>\", \"index\": 1} (profile.csv). Declare its four columns and units yourself: the CSV has none, nothing is converted, and a propagate profile with an empty mean cell is refused by Gnuplot's CSV validation."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/xarray-profile.json",
+          "purpose": "Depth profile from an analytic time, depth and station cube."
+        },
+        {
+          "reference": "examples/schemaxis/xarray-profile-variant.json",
+          "purpose": "Range selection with a skip policy and valid-count threshold."
+        },
+        {
+          "reference": "examples/schemaxis/xarray-profile-plot-workflow.json",
+          "purpose": "Reduce a cube, then plot profile.csv with Gnuplot through a workflow $artifact connection."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.xarray/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Reduce one captured classic NetCDF measurement cube to a coordinate-labelled profile. Name the variable and its unit, list every dimension in the exact storage order of that variable with its coordinate unit and an optional inclusive numeric range, choose the one dimension to keep, and state how the declared missing sentinel is handled. All other dimensions are averaged. Results are a smaller NetCDF profile, a numeric CSV and a summary, each checked by an independent standard-library reader.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Required Schemaxis document contract schemaxis.xarray/1. It is an input-format version, separate from the qualified native xarray 2026.9.0 runtime.",
+          "sources": [
+            "docs/xarray.md#runtime-public-api-and-maintenance"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Required. reduceProfile is the only operation: select ranges, reduce the other named dimensions by an unweighted mean and publish one retained dimension as a profile.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Required absolute path of one local regular .nc file in classic NetCDF CDF-1 form (fixed dimensions, no record dimension, no compression). It is at most 4 MiB. The bytes are captured and hashed once; a changed file at the same path is a different source. NetCDF-4/HDF5, 64-bit-offset, CDF-5 and remote locations are refused.",
+          "sources": [
+            "docs/xarray.md#limits-and-losses"
+          ]
+        },
+        "/properties/variable": {
+          "status": "reviewed",
+          "explanation": "Required. Names the single double-precision data variable to reduce and asserts its unit. The file must hold exactly this variable plus the coordinate variables of its dimensions; any other variable is refused rather than dropped.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/variable/properties/name": {
+          "status": "reviewed",
+          "explanation": "Required identifier (a letter, then letters, digits or underscore, at most 40 characters) of the data variable as stored in the file. It must differ from the coordinate names and from validCount and missingCount, which the profile publishes.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/variable/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Required unit text (at most 32 characters) that must equal the file's units attribute on the variable exactly. The adaptor never converts or infers units, so a file without units or with a different string is refused. Calendar units such as 'hours since ...' are refused.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/coordinates": {
+          "status": "reviewed",
+          "explanation": "Required list of 2 to 4 entries, one per file dimension, in the exact storage order of the variable (slowest-varying first). Dimension identity and order are asserted: a missing, extra, renamed or permuted dimension is refused. The order is a deliberate layout assertion that catches an upstream change in the file's storage layout; named dimensions keep their meaning under transposition, so it is not required for correctness. The list is an assertion, not order-agnostic: a permuted file is reduced by name only when its declarations are reordered to match the stored order.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube",
+            "docs/xarray.md#storage-order-and-declared-order"
+          ]
+        },
+        "/properties/coordinates/items": {
+          "status": "reviewed",
+          "explanation": "One named coordinate axis: its dimension name and coordinate-variable unit, plus an optional inclusive range. The axis must be strictly increasing, finite doubles of at most 4096 values with magnitude up to 1e100.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/coordinates/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Required name of the dimension and of its same-named coordinate variable in the file. Distinct identifiers; the position of the entry is the storage index of that dimension.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/coordinates/items/properties/unit": {
+          "status": "reviewed",
+          "explanation": "Required unit text for this coordinate, asserted equal to the coordinate variable's units attribute (for example m, km, h or s). Elapsed-time axes use plain hours or seconds with no calendar or epoch meaning. No conversion is applied.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/coordinates/items/properties/range": {
+          "status": "reviewed",
+          "explanation": "Optional inclusive numeric selection in the unit of this coordinate. Omitted means the whole axis. Both bounds are required; the range must lie within the stored first and last coordinate, otherwise it is refused as out of bounds, and it must contain at least one stored coordinate.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/coordinates/items/properties/range/properties/minimum": {
+          "status": "reviewed",
+          "explanation": "Required lower bound, inclusive, in the coordinate's unit, finite and at most the maximum. A coordinate equal to the bound is selected.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/coordinates/items/properties/range/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Required upper bound, inclusive, in the coordinate's unit, finite and at least the minimum. It must not exceed the last stored coordinate.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/retain": {
+          "status": "reviewed",
+          "explanation": "Required name of the one declared dimension kept as the profile axis. Its selected range must give at least two published points (at most 2048). Every other declared dimension is reduced by the unweighted arithmetic mean of its selected cells.",
+          "sources": [
+            "docs/xarray.md#declare-the-cube"
+          ]
+        },
+        "/properties/missing": {
+          "status": "reviewed",
+          "explanation": "Required missing-value contract: the finite sentinel stored in the file, what to do when a selected cell equals it, and for skip a valid-count threshold. Silently treating missing data as zero is never done; counts of valid and missing cells are always published.",
+          "sources": [
+            "docs/xarray.md#missing-values"
+          ]
+        },
+        "/properties/missing/properties/value": {
+          "status": "reviewed",
+          "explanation": "Required finite sentinel (magnitude at most 1e100) in the variable's own unit. It must equal the file's _FillValue attribute exactly, otherwise the run is refused. NaN or infinity in the data is refused, not treated as missing. A mean equal to the sentinel is refused as a collision.",
+          "sources": [
+            "docs/xarray.md#missing-values"
+          ]
+        },
+        "/properties/missing/properties/policy": {
+          "status": "reviewed",
+          "explanation": "Required choice: skip averages only valid cells (and refuses a point with fewer valid cells than minimumValid); propagate publishes an empty mean (the sentinel in the NetCDF) for any point with a missing cell; refuse stops if any selected cell is missing. An all-missing result is always refused, never published as zero.",
+          "sources": [
+            "docs/xarray.md#missing-values"
+          ]
+        },
+        "/properties/missing/properties/minimumValid": {
+          "status": "reviewed",
+          "explanation": "Optional integer of at least 1, only valid with the skip policy; omitted means 1. Each profile point must have at least this many valid cells or the run is refused. It is a count of cells, not a fraction, and is not a statistical confidence claim.",
+          "sources": [
+            "docs/xarray.md#missing-values"
+          ]
+        }
+      }
+    }
+  }
+}

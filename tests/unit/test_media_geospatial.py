@@ -12,7 +12,7 @@ import zlib
 
 from schemaxis.core.faults import SchemaxisError
 from schemaxis import png, workflow
-from schemaxis.adaptors.ffmpeg import adaptor as video
+from schemaxis.adaptors.ffmpeg import adaptor as video, fresh
 from schemaxis.adaptors.qgis import adaptor as gis
 from schemaxis.adaptors.godot import adaptor as godot
 
@@ -101,6 +101,14 @@ class ImageContractTests(unittest.TestCase):
 
 
 class MediaDeliverableTests(unittest.TestCase):
+    def setUp(self):
+        # These cases use a synthetic native stand-in and exercise the retained consistency pass. The fresh native decision
+        # (trusted runtime, private decode, coherent forgeries) is covered natively by test_ffmpeg_fresh.
+        stub={'frames':1,'fps':25,'runtime':'ffmpeg version stub','errors':[0.0],'duration':.04}
+        for patcher in (patch.object(fresh,'trusted',return_value={'ffmpeg':'/native/ffmpeg','ffprobe':'/native/ffprobe'}),
+                        patch.object(fresh,'observe',return_value=stub),patch.object(fresh,'bind')):
+            patcher.start();self.addCleanup(patcher.stop)
+
     def test_host_safe_policy_schema_and_defaults(self):
         document=video_doc(['/missing-frame.png'])
         document['deliverable']={'width':32,'height':24,'frames':2,
@@ -152,7 +160,8 @@ class MediaDeliverableTests(unittest.TestCase):
             elif stage=='version':(directory/'version.stdout').write_text('ffmpeg fixture\n')
             elif stage=='probe':atomic_json(directory/'probe.stdout',{'streams':[{
                 'codec_type':'video','codec_name':codec,'pix_fmt':'bgr0' if codec=='ffv1' else 'yuv420p','width':4,'height':2,
-                'nb_read_frames':'1','avg_frame_rate':'25/1'}],'format':{'duration':'0.04'}})
+                'nb_read_frames':'1','avg_frame_rate':'25/1',
+                **({'color_space':'smpte170m','color_range':'tv'} if codec=='h264' else {})}],'format':{'duration':'0.04'}})
         with patch.object(video,'execute',side_effect=execute),patch('os.access',return_value=True):
             video.run(document,output,executable='/native/ffmpeg')
         return output
@@ -267,12 +276,12 @@ class MediaDeliverableTests(unittest.TestCase):
             (output/'authored.json').write_text(json.dumps(authored))
             (output/'plan.json').write_text(json.dumps(video.plan(authored)))
             receipt=json.loads((output/'verification.json').read_text())
-            forged=video.assess_deliverable({'maxBytes':1,'maxMeanRGBError':0},4,2,1,25,1,[0])
+            forged=video.assess_deliverable({'maxBytes':1,'maxMeanRGBError':0},4,2,1,25,1,[0.0])
             receipt['deliverable']=forged;(output/'verification.json').write_text(json.dumps(receipt))
             with self.assertRaises(SchemaxisError) as caught:video.verify(output)
             self.assertEqual(caught.exception.fault.code,'VERIFICATION_FAILED')
             receipt['deliverable']=video.assess_deliverable({'maxBytes':1,'maxMeanRGBError':0},4,2,1,25,
-                (output/'video.mkv').stat().st_size,[0])
+                (output/'video.mkv').stat().st_size,[0.0])
             (output/'verification.json').write_text(json.dumps(receipt))
             with self.assertRaises(SchemaxisError) as caught:video.verify(output)
             self.assertEqual(caught.exception.fault.code,'DELIVERABLE_NOT_MET')
@@ -313,7 +322,7 @@ class MediaDeliverableTests(unittest.TestCase):
             # output evidence as well as the independent deliverable decision.
             receipt['nativeReadback']['probe']['outputSHA256']=video.file_digest(output/'probe.stdout')
             receipt['deliverable']=video.assess_deliverable({'durationSeconds':.04,'durationToleranceSeconds':0},
-                4,2,1,25,(output/'video.mkv').stat().st_size,[0],.041)
+                4,2,1,25,(output/'video.mkv').stat().st_size,[0.0],.041)
             (output/'verification.json').write_text(json.dumps(receipt))
             with self.assertRaises(SchemaxisError) as caught:video.verify(output)
             self.assertEqual(caught.exception.fault.code,'DELIVERABLE_NOT_MET')
@@ -380,8 +389,10 @@ class ExpansionContractTests(unittest.TestCase):
     def test_empty_native_exit_is_not_video_success(self):
         with tempfile.TemporaryDirectory() as temp:
             path=Path(temp)/'image.png';path.write_bytes(png_bytes())
-            with patch.object(video,'execute'),patch('os.access',return_value=True),self.assertRaises(SchemaxisError):
-                video.run(video_doc([str(path)]),Path(temp)/'run',executable='/bin/true')
+            tools=Path(temp)/'tools';tools.mkdir()
+            for tool in ('ffmpeg','ffprobe'):(tools/tool).write_text('#!/bin/sh\nexit 0\n');(tools/tool).chmod(0o755)
+            with patch.object(video,'execute'),self.assertRaises(SchemaxisError):
+                video.run(video_doc([str(path)]),Path(temp)/'run',executable=str(tools/'ffmpeg'))
             self.assertFalse(json.loads((Path(temp)/'run/result.json').read_text())['verified'])
 
 

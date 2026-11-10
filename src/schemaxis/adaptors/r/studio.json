@@ -79,6 +79,11 @@
       "icon": "layers"
     },
     {
+      "id": "prediction",
+      "title": "New-row prediction intervals",
+      "icon": "layers"
+    },
+    {
       "id": "requirements",
       "title": "Acceptance requirements",
       "icon": "layers"
@@ -178,6 +183,64 @@
           }
         ]
       }
+    },
+    {
+      "id": "enable-prediction",
+      "title": "Prediction interval at a new row",
+      "category": "prediction",
+      "icon": "layers",
+      "description": "Add a mean confidence interval or an individual prediction interval for new predictor-only rows. Separate from coefficient inference; not held-out validation or a coverage guarantee.",
+      "fields": {
+        "interval": {
+          "label": "Interval type",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "individual",
+            "confidence"
+          ],
+          "default": "individual",
+          "description": "individual bounds one future observation at the new row; confidence bounds only the fitted mean response and is narrower."
+        },
+        "level": {
+          "label": "Confidence level",
+          "type": "number",
+          "required": true,
+          "default": 0.95,
+          "minimum": 0.5,
+          "maximum": 0.999,
+          "description": "Two-sided nominal level of the prediction or confidence interval, for example 0.95 for 95%. Independent of any coefficient inference level."
+        },
+        "x": {
+          "label": "New predictor value",
+          "type": "number",
+          "required": true,
+          "default": 3,
+          "description": "Value of the first predictor at one new row with no known response, in the predictor unit. Values outside the training range are flagged as extrapolation."
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "merge": {
+            "prediction": {
+              "interval": {
+                "$fill": "interval"
+              },
+              "level": {
+                "$fill": "level"
+              },
+              "newdata": [
+                [
+                  {
+                    "$fill": "x"
+                  }
+                ]
+              ]
+            }
+          }
+        }
+      ]
     },
     {
       "id": "coefficient-interval",
@@ -373,6 +436,84 @@
           "level": {
             "$fill": "level"
           }
+        }
+      }
+    },
+    {
+      "id": "calibration-prediction",
+      "title": "Calibration line with new-row prediction intervals",
+      "description": "Fit reading = intercept + slope*temperature to four training rows and report mean-confidence or individual prediction intervals at new temperatures 0, 1 and 3 degC (3 is outside the training range and flagged).",
+      "fields": {
+        "interval": {
+          "label": "Interval type",
+          "type": "enum",
+          "required": true,
+          "values": [
+            "individual",
+            "confidence"
+          ],
+          "default": "individual",
+          "description": "individual bounds one future observation at the new row; confidence bounds only the fitted mean response and is narrower."
+        },
+        "level": {
+          "label": "Confidence level",
+          "type": "number",
+          "required": true,
+          "default": 0.95,
+          "minimum": 0.5,
+          "maximum": 0.999,
+          "description": "Two-sided nominal level of the prediction or confidence interval, for example 0.95 for 95%. Independent of any coefficient inference level."
+        }
+      },
+      "document": {
+        "version": "schemaxis.r/1",
+        "operation": "linearRegression",
+        "predictors": [
+          {
+            "name": "temperature",
+            "unit": "degC"
+          }
+        ],
+        "response": {
+          "name": "reading",
+          "unit": "V"
+        },
+        "training": [
+          [
+            -2,
+            6.1
+          ],
+          [
+            -1,
+            7.8
+          ],
+          [
+            1,
+            12.2
+          ],
+          [
+            2,
+            13.9
+          ]
+        ],
+        "prediction": {
+          "interval": {
+            "$fill": "interval"
+          },
+          "level": {
+            "$fill": "level"
+          },
+          "newdata": [
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              3
+            ]
+          ]
         }
       }
     },

@@ -72,3 +72,30 @@ for (const theme of ['light', 'dark']) {
     } finally { await session.close(); }
   });
 }
+
+test('browser wait retries navigation transitions within its bound and preserves other errors', {timeout: 90000}, async () => {
+  const session = await launch({provider: 'paraview'});
+  const evaluate = session.evaluate.bind(session);
+  const navigation = new Error(JSON.stringify({code: -32000, message: 'Inspected target navigated or closed'}));
+  try {
+    let calls = 0;
+    session.evaluate = async (expression) => {
+      calls += 1;
+      if (calls === 1) throw navigation;
+      return evaluate(expression);
+    };
+    await session.wait('document.readyState === "complete"', 'document after navigation');
+    assert.ok(calls >= 2, 'the successful predicate must be observed after the protocol interruption');
+    const application = new Error('application predicate failed');
+    session.evaluate = async () => { throw application; };
+    await assert.rejects(session.wait('true', 'application failure'), (error) => error === application);
+    const unrelated = new Error(JSON.stringify({code: -32000, message: 'No such target id'}));
+    session.evaluate = async () => { throw unrelated; };
+    await assert.rejects(session.wait('true', 'unrelated protocol failure'), (error) => error === unrelated);
+    session.evaluate = async () => { throw navigation; };
+    await assert.rejects(session.wait('true', 'closed target stays unavailable', 1), /Timed out: closed target stays unavailable/);
+  } finally {
+    session.evaluate = evaluate;
+    await session.close();
+  }
+});

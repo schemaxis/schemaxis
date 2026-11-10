@@ -100,15 +100,21 @@ class LiveContractTests(unittest.TestCase):
         self.assertIn('dimensions', doc)
         self.assertNotIn('dimensions', prepared)
 
-    def test_all_declared_profile_kinds_support_preview(self):
+    def test_profile_preview_or_explicit_body_only_boundary(self):
         from schemaxis.adaptors.freecad.adaptor import DECLARATIONS
         for kind, declaration in DECLARATIONS.items():
             if declaration['kinds'] != ['profile']:
                 continue
-            options = {'points': [[0, 0], [4, 0], [0, 4]]} if kind == 'polygon' else {}
+            options = ({'points': [[0, 0], [4, 0], [0, 4]]} if kind in ('polygon','draftProfile') else
+                       {'geometry':[{'id':'circle','kind':'circle','centre':[0,0],'radius':4}]} if kind=='sketch' else
+                       {'centres':[[0,0]]} if kind=='holeLocations' else {})
             doc = {'version': 'schemaxis.freecad/1', 'nodes': [{'id': 'p', 'filter': kind, 'options': options}], 'output': 'p'}
             with self.subTest(kind=kind):
-                self.assertEqual(prepare(doc)['output'], 'p')
+                if declaration['inputs'].get('body',{}).get('required') or kind=='draftProfile':
+                    if kind!='draftProfile':doc['nodes'][0]['inputs']={'body':'owner'}
+                    with self.assertRaises(SchemaxisError) as error:prepare(doc)
+                    self.assertEqual(error.exception.fault.code,'UNSUPPORTED_LIVE_INPUT')
+                else:self.assertEqual(prepare(doc)['output'], 'p')
 
     def test_command_allowlist_and_exact_arguments(self):
         for command, args in [('exec', {'code': 'pass'}), ('status', {'x': 1}), ('apply', {}),

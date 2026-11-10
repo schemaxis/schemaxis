@@ -21,9 +21,8 @@ test('a non-graph adaptor shows existing concepts and exports a scoped missing-f
     await session.wait(`document.querySelector('.operation-form')`, 'form');
     assert.match(await session.evaluate(`document.querySelector('.operation-form').textContent`), /trapezoidal integral/);
     assert.match(await session.evaluate(`document.querySelector('.operation-form').textContent`), /strictly increasing/);
-    await session.evaluate(`(() => {const container=document.querySelector('.operation-form > details > .operation-concept-help');
-      container.parentElement.open=true;
-      const d=[...container.querySelectorAll('details')].find(d=>d.querySelector('summary')?.textContent==='Improve this explanation');d.open=true;
+    await session.evaluate(`(() => {
+      const d=[...document.querySelectorAll('.operation-form > details')].find(d=>d.querySelector('summary')?.textContent==='Suggest a correction');d.open=true;
       d.querySelector('button').click();})()`);
     await session.wait('window.guidanceCopy', 'copied record');
     const record = JSON.parse(await session.evaluate('window.guidanceCopy'));

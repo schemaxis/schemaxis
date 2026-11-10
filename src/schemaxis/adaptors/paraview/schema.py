@@ -2,16 +2,17 @@
 """Application-owned scene and settings schemas; host-safe."""
 from schemaxis.schema import NAME, DRAFT, object_schema, arguments_schema, argument_schema, option_schema, graph_document_schema
 from schemaxis.camera import CAMERA
-from .publication import STYLE
+from .publication import APPEARANCE, IMAGE_BACKGROUND, STYLE
 
 
 def scene_schema(catalogue, definitions):
     image = object_schema({'id': NAME, 'size': {'type': 'array', 'items': {'type': 'integer',
         'minimum': 32, 'maximum': 8192}, 'minItems': 2, 'maxItems': 2,
         'default': [640, 480]},
+        **{key: argument_schema(spec) for key, spec in IMAGE_BACKGROUND.items()},
         'cameras': {'type': 'array', 'minItems': 1, 'items': arguments_schema(CAMERA, dynamic=True)}}, ['id', 'cameras'])
     images = {'type': 'array', 'items': image}
-    styles = {'type': 'object', 'additionalProperties': arguments_schema(STYLE, dynamic=True)}
+    styles = {'type': 'object', 'additionalProperties': arguments_schema(APPEARANCE, dynamic=True)}
     readbacks = []
     for reader, declaration in catalogue.items():
         filenames = [k for k, v in declaration['options'].items() if v.get('constructor') and 'vtkSMFileListDomain' in v.get('nativeDomains', [])]
@@ -40,6 +41,7 @@ def scene_schema(catalogue, definitions):
     scene = object_schema({'id': NAME, 'visible': styles, 'images': images,
         'exports': {'type': 'array', 'items': {'oneOf': export_variants}},
         'geometry': {'type': 'array', 'items': NAME}, 'gltf': {'type': 'boolean', 'default': False},
+        'stateBundle': {'type': 'boolean', 'default': False},
         'appearances': {'type': 'array', 'minItems': 1, 'items': styles, 'default': [{}]},
         'measurements': {'type': 'array', 'items': object_schema({'node': NAME,
             'association': {'enum': ['POINTS', 'CELLS', 'ROWS'], 'default': 'POINTS'}}, ['node'])}}, ['id'])

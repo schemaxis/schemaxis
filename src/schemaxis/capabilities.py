@@ -50,11 +50,13 @@ class CapabilityCatalogue:
 
     def __init__(self, providers=None):
         selected = list(registry.ADAPTORS if providers is None else providers)
+        from .assessments import assessment
         # A plugin whose bindings fail is excluded (see registry.exclude_plugin).
         found = {p: registry.isolated(p, lambda p=p: (registry.declarations(p), self._extra(p)))[0]
                  for p in selected}
         self._manifests = copy.deepcopy({p: registry.metadata(p) for p in selected if found[p] is not None})
         self._declarations = {p: found[p][0] for p in self._manifests}
+        self._assessments = {p: assessment(p) for p in self._manifests}
         self._metadata = {}
         self._entries = {'root': {'id': 'root', 'kind': 'root', 'label': 'Capabilities',
                                  'purpose': 'Browse applications or curated task domains.', 'parents': []}}
@@ -67,7 +69,8 @@ class CapabilityCatalogue:
             self._metadata[provider] = copy.deepcopy(extra)
             self._add_provider(provider, manifest, extra)
         self.revision = digest({'protocol': PROTOCOL, 'manifests': self._manifests,
-                                'declarations': self._declarations, 'navigation': self._metadata})
+                                'declarations': self._declarations, 'navigation': self._metadata,
+                                'assessments': self._assessments})
 
     @staticmethod
     def _extra(provider):
@@ -183,7 +186,11 @@ class CapabilityCatalogue:
         else:
             entry['childCount'] = len(self._children[identity])
             if entry['kind'] == 'application':
+                from .assessments import summary
+                provider = identity.partition('/')[2]
                 entry['status'] = self._status()
+                entry['routeCount'] = len(self._manifests[provider]['routes'])
+                entry['assessment'] = summary(self._assessments[provider])
         return entry
 
     def _descendants(self, identity):

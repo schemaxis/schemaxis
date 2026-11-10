@@ -39,7 +39,7 @@ def _json(payload, location):
         result = json.loads(payload, object_pairs_hook=pairs, parse_constant=constant)
         canonical(result)
         return result
-    except (TypeError, ValueError, UnicodeError, OverflowError) as error:
+    except (TypeError, ValueError, UnicodeError, OverflowError, RecursionError) as error:
         _invalid('invalid finite JSON: ' + str(error), location)
 
 
@@ -93,7 +93,10 @@ def _standalone(schema, location):
             _invalid('malformed schema dependencies', location)
         for child in dependencies.values():
             visit(child)
-    visit(schema)
+    try:
+        visit(schema)
+    except RecursionError:
+        _invalid('schema keyword nesting exceeds the supported depth', location)
 
 
 def _safe_path(path):
@@ -258,7 +261,7 @@ def _default_root(directory):
         try:
             document = json.loads(authored.read_text(encoding='utf-8'))
             result = json.loads(receipt.read_text(encoding='utf-8')) if receipt.is_file() and not receipt.is_symlink() else {}
-        except (OSError, ValueError):
+        except (OSError, ValueError, RecursionError):
             continue
         if (isinstance(document, dict) and document.get('version') == 'schemaxis.workflow/1'
                 or isinstance(result, dict) and result.get('protocol') == 'schemaxis.adaptor-execution/1'):

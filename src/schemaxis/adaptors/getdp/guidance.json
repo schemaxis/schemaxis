@@ -1,0 +1,249 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "steadyHeat": {
+      "status": "reviewed",
+      "explanation": "Evaluate temperature and heat loss through a layered wall with volumetric heat and prescribed temperature, outward heat flux or convection ends.",
+      "sources": [
+        "docs/getdp.md",
+        "https://getdp.info/doc/texinfo/getdp.html"
+      ],
+      "pitfalls": [
+        "Generates a bounded line finite element mesh and scalar diffusion weak formulation.",
+        "Native node field and element-midpoint flux are checked against independent piecewise-quadratic exact conduction and global/interface source conservation.",
+        "Optional sampled field/flux limits block unmet results; generated inputs and explicit losses remain inspectable."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/getdp-composite.json",
+          "purpose": "Evaluate temperature and heat loss through a layered wall with volumetric heat and prescribed temperature, outward heat flux or convection ends."
+        }
+      ]
+    },
+    "steadyCurrent": {
+      "status": "reviewed",
+      "explanation": "Evaluate potential and current through layered DC resistors with fixed potential or outward current density ends.",
+      "sources": [
+        "docs/getdp.md",
+        "https://getdp.info/doc/texinfo/getdp.html"
+      ],
+      "pitfalls": [
+        "Generates a bounded line finite element mesh and scalar diffusion weak formulation.",
+        "Native node field and element-midpoint flux are checked against independent piecewise-quadratic exact conduction and global/interface source conservation.",
+        "Optional sampled field/flux limits block unmet results; generated inputs and explicit losses remain inspectable."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/getdp-current.json",
+          "purpose": "Evaluate potential and current through layered DC resistors with fixed potential or outward current density ends."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.getdp/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A steady layered thermal or electrical conduction document. Layers, sources and ends specify the physical problem; native field/flux and exact conservation checks determine success. All layer/end values use the units for the selected operation.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "The fixed authored input contract schemaxis.getdp/1; this is separate from the external GetDP runtime version 3.5.0. Always retain this literal.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose steadyHeat for temperature and heat flux, or steadyCurrent for DC potential and current density. Both share layer records but their conductivity/source/field units differ; there is no Joule-heating coupling.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/layers": {
+          "status": "reviewed",
+          "explanation": "One to sixteen material layers ordered from left x=0 toward right. Interfaces share nodes and enforce perfect contact with continuous field and flux; no contact resistance or imported mesh. Total cells may not exceed 512.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/layers/items": {
+          "status": "reviewed",
+          "explanation": "A constant-property layer. Thickness and conductivity control resistance; uniform source controls the flux gradient. Optional cells default to 16 and source to zero; names must be unique.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Unique descriptive layer name, 1\u201348 characters. It identifies material intent in the summary; native labels are generated integers, so names are never executable GetDP source.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/thickness_m": {
+          "status": "reviewed",
+          "explanation": "Positive layer thickness in metres (1e-5 to 1000). It extends the x coordinate and contributes thickness/conductivity to resistance per area; required, with no inferred thickness.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/conductivity": {
+          "status": "reviewed",
+          "explanation": "Required positive thermal conductivity in W/(m K) for heat or electrical conductivity in S/m for current (1e-5 to 1e8). Constant within this layer. Conductivity/element-length contrast across layers must not exceed 1e8.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/source": {
+          "status": "reviewed",
+          "explanation": "Uniform volumetric generation: W/m3 for heat or A/m3 distributed current injection for current. Defaults to zero; negative values remove heat/current. This is not automatic Joule heating. Magnitude is bounded at 1e8.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/cells": {
+          "status": "reviewed",
+          "explanation": "Two to 128 equal line cells within this layer; defaults to 16. Mesh-node fields and midpoint flux are published, so place enough cells to sample an intended source-driven extremum; internal continuum peaks are not certified by limits.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/left": {
+          "status": "reviewed",
+          "explanation": "Boundary at x=0. Positive outward flux points toward negative x, so negative flux injects heat/current. Choose fixed value, outward flux or thermal convection. No default end condition is inserted.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/left/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Select value, flux or convection. value/flux requires only a numeric value; convection requires only positive coefficient and ambient and is thermal only. Two flux ends are unanchored and refused.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/left/properties/value": {
+          "status": "reviewed",
+          "explanation": "For kind=value, fixed temperature in nonnegative K or electrical potential in V. For kind=flux, signed outward heat flux W/m2 or current density A/m2. Zero flux is insulation; negative flux injects. Required for these two kinds and forbidden for convection.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/left/properties/coefficient": {
+          "status": "reviewed",
+          "explanation": "Positive thermal convection coefficient in W/(m2 K), from 1e-6 to 1e8. Convection outflow is coefficient times (surface temperature minus ambient). Required only for convection; electrical operation does not support it.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/left/properties/ambient": {
+          "status": "reviewed",
+          "explanation": "Nonnegative thermal ambient temperature in kelvin. Required for convection; no Celsius conversion or radiation is implied. Do not provide it for fixed-value or flux ends.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/right": {
+          "status": "reviewed",
+          "explanation": "Boundary at total thickness. Positive outward flux points toward positive x. Choose fixed value, outward flux or thermal convection. At least one end must fix a value or use thermal convection.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/right/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Select value, flux or convection. value/flux requires only a numeric value; convection requires only positive coefficient and ambient and is thermal only. Two flux ends are unanchored and refused.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/right/properties/value": {
+          "status": "reviewed",
+          "explanation": "For kind=value, fixed temperature in nonnegative K or electrical potential in V. For kind=flux, signed outward heat flux W/m2 or current density A/m2. Zero flux is insulation; negative flux injects. Required for these two kinds and forbidden for convection.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/right/properties/coefficient": {
+          "status": "reviewed",
+          "explanation": "Positive thermal convection coefficient in W/(m2 K), from 1e-6 to 1e8. Convection outflow is coefficient times (surface temperature minus ambient). Required only for convection; electrical operation does not support it.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/right/properties/ambient": {
+          "status": "reviewed",
+          "explanation": "Nonnegative thermal ambient temperature in kelvin. Required for convection; no Celsius conversion or radiation is implied. Do not provide it for fixed-value or flux ends.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/area_m2": {
+          "status": "reviewed",
+          "explanation": "Constant cross-sectional area in m2, default 1, bounded 1e-8 to 1e6. It scales integrated end power/current and generation; temperature/potential and flux density are unchanged. Variable area is excluded.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/limits": {
+          "status": "reviewed",
+          "explanation": "Optional sampled acceptance bounds; omitted or empty means physics verification only. Bounds compare actual native mesh-node field and element-midpoint flux. They do not certify unsampled continuum extrema or all tolerance variants; unmet limits fail with retained margins.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/limits/properties/minimumField": {
+          "status": "reviewed",
+          "explanation": "Minimum acceptable native mesh-node temperature in K or potential in V. Every node must meet this lower bound. Omission disables this bound; if maximumField exists the lower bound must not exceed it.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/limits/properties/maximumField": {
+          "status": "reviewed",
+          "explanation": "Maximum acceptable native mesh-node temperature in K or potential in V. Every node must meet this upper bound. Omission disables this bound. A source-driven peak between nodes is outside this sampled promise.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        },
+        "/properties/limits/properties/maxAbsFlux": {
+          "status": "reviewed",
+          "explanation": "Nonnegative upper bound for absolute native element-midpoint heat flux W/m2 or current density A/m2. Omission disables this bound. Source-corrected boundary flux can differ from a midpoint value and is reported separately.",
+          "sources": [
+            "docs/getdp.md",
+            "src/schemaxis/adaptors/getdp/adaptor.py"
+          ]
+        }
+      }
+    }
+  }
+}

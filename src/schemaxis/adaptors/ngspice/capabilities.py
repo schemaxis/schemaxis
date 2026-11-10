@@ -6,7 +6,7 @@ from importlib.resources import files
 
 def catalogue():
     return {'application': {'label': 'ngspice',
-                'purpose': 'Analyse ideal linear resistor, capacitor and AC inductor circuits with independently verified DC voltage sweeps, frequency responses and first-order RC charging curves.',
+                'purpose': 'Analyse ideal linear resistor, capacitor and AC inductor circuits with independently verified DC voltage sweeps, frequency/electrical responses and first-order RC charging curves.',
                 'keywords': ['SPICE', 'analogue circuits', 'linear circuit simulation', 'RLC']},
         'searchCases': json.loads(files(__package__).joinpath('search-cases.json').read_text()),
         'requirements':[
@@ -22,10 +22,11 @@ def catalogue():
                        'semantics':['start and stop are source volts; stop must exceed start; points includes both endpoints.',
                                     'Capacitors are open circuits at steady DC; all node voltages are independently checked by nodal equations.'],
                        'examples':[{'reference':'examples/schemaxis/ngspice-minimal.json','purpose':'Verify a resistive divider across six source voltages.'}]},
-            'acSweep':{'purpose':'Compute linear RLC network phasor responses, RL filters and damped resonance across linearly spaced frequencies.',
-                       'keywords': ['frequency response', 'small signal', 'Bode', 'RLC', 'low pass', 'band pass', 'AC analysis'],
-                       'semantics':['start/stop are positive Hz, amplitude is source volts; output includes real, imaginary, magnitude and phase degrees.',
+            'acSweep':{'purpose':'Compute linear RLC network phasor responses, RL filters and damped resonance across linear, decade or octave frequencies with optional source-current/KCL, impedance and passive branch power characterisation.',
+                       'keywords': ['frequency response', 'small signal', 'Bode', 'RLC', 'low pass', 'band pass', 'AC analysis', 'input impedance', 'reactive power', 'branch current', 'resistor heating', 'logarithmic frequency', 'samples per octave', 'phase requirement', 'gain dB', 'RMS'],
+                       'semantics':['start/stop are positive Hz; spacing selects linear total points or logarithmic decade/octave density; amplitudeConvention explicitly selects peak or rms source volts; output includes real, imaginary, magnitude and phase degrees.',
                                     'Phasors use exp(+j*omega*t); inductor admittance is 1/(j*omega*L). Inductors use henries and are supported only in acSweep.',
+                                    'branchProbes derive passive a-to-b currents and powers from checked voltages; portMetrics additionally verifies native -i(vdrive) and derives input impedance/power; phase requirements use principal relative transfer phase and refuse zero magnitude.',
                                     'Reject ideal-inductor loops, inductive shorts across the source and singular/ill-conditioned systems at any requested sample. No mutual coupling or nonlinear models.'],
                        'examples':[{'reference':'examples/schemaxis/ngspice-rc-frequency.json','purpose':'Verify the analytic RC cutoff and phase lag.'},
                                    {'reference':'examples/schemaxis/ngspice-rl-frequency.json','purpose':'Verify an RL low-pass at and above cutoff.'},

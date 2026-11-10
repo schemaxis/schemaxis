@@ -43,7 +43,7 @@ BUILTIN = 'schemaxis.adaptors'
 _PACKAGE = re.compile(r'[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*')
 _COLOUR = re.compile(r'#[0-9a-fA-F]{6}')
 _BINDING_KEYS = ('registerFunctions', 'runtimeSchema', 'coverage', 'liveGraph', 'optionSchema',
-                 'capabilities', 'studioCatalogue', 'studioInspect', 'liveModule', 'documentValidation')
+                 'capabilities', 'studioCatalogue', 'studioInspect', 'studioPeek', 'liveModule', 'documentValidation')
 _FLAG = re.compile(r'--[a-z0-9][a-z0-9-]*')
 RUNTIME_PLUGINS = 'runtime-plugins.json'
 
@@ -54,17 +54,23 @@ FRAMEWORK_SECTIONS = frozenset({'camera', 'series', 'workflow', 'execution', 'op
                                 'composition', 'analytic'})
 FRAMEWORK_DOCUMENTS = frozenset('schemaxis.' + stem for stem in (
     'workflow', 'workflow-design', 'workflow-template', 'workflow-values', 'study', 'plan', 'reference',
-    'resource', 'views', 'agent', 'feedback', 'observation', 'output-naming', 'capabilities', 'readiness',
+    'resource', 'resource.adoption', 'views', 'agent', 'feedback', 'observation', 'output-naming', 'capabilities', 'readiness',
     'artifact-metadata', 'adaptor-delivery', 'adaptor-execution', 'adaptor-qualification',
+    'adaptor-assessment', 'adaptor-assessments', 'strength-rubric',
+    'captured-content-policy', 'mcp-admission-coverage',
     'studio-adaptor', 'studio-guidance', 'studio-settings', 'schema-snapshot', 'schema-bundle',
-    'schema-index', 'storage-policy', 'storage-plan', 'storage-bundle'))
+    'schema-index', 'storage-policy', 'storage-plan', 'storage-bundle', 'compatibility', 'tool', 'tool-package',
+    'workflow.graph', 'workflow.plan', 'study.plan', 'feedback.report',
+    'revision', 'revision.checkout', 'revision.plan', 'revision.result',
+    'app-module', 'module-run', 'module-cleanup',
+    'timedtext', 'timedtext.reviewed', 'whispercpp.segments'))
 # Options that the run, inspect and console parsers define themselves.
 FRAMEWORK_FLAGS = frozenset({'-h', '--help', '--input-format', '--output-directory', '--executable',
                              '--timeout', '--resume', '--node', '--visit', '--provider', '--workspace',
-                             '--web', '--port', '--command'})
+                             '--web', '--port', '--command', '--backend'})
 FRAMEWORK_DESTS = frozenset({'help', 'command', 'input', 'input_format', 'output_directory', 'executable',
                              'timeout', 'resume', 'node', 'visit', 'provider', 'workspace', 'web', 'port',
-                             'console_commands'})
+                             'console_commands', 'backend'})
 
 
 class AdaptorPluginWarning(UserWarning):
@@ -446,7 +452,10 @@ def resolve(document, *, legacy=False):
     if legacy and 'version' not in document:
         version = metadata()['version']
     found = routes().get(version) if isinstance(version, str) else None
-    if found is None: fail('UNSUPPORTED_VERSION', 'document version has no registered adaptor', version=str(version))
+    if found is None:
+        try: observed_version = str(version)
+        except (ValueError, RecursionError): observed_version = '<'+type(version).__name__+'>'
+        fail('UNSUPPORTED_VERSION', 'document version has no registered adaptor', version=observed_version)
     return found
 
 
@@ -484,6 +493,9 @@ def plan(document, *, raw=False, legacy=False):
 
 
 def run(document, directory, *, locations=None, timeout=300, **legacy_locations):
+    from schemaxis.module_runtime import current
+    if current() is not None:
+        return current().run(document, directory, timeout=timeout)
     from schemaxis.unfilled import reject_unfilled
     reject_unfilled(document)
     provider, route = resolve(document, legacy=True)
@@ -501,6 +513,13 @@ def run(document, directory, *, locations=None, timeout=300, **legacy_locations)
 
 def verify(directory, document=None):
     from pathlib import Path
+    from schemaxis.module_runtime import current, module_run, runtime
+    if current() is not None:
+        return current().verify(directory, document)
+    if module_run(directory):
+        logical = json.loads((Path(directory)/'authored.json').read_text())
+        with runtime(logical, backend='container') as session:
+            return session.verify(directory, document)
     directory = Path(directory)
     from schemaxis.schema_snapshots import verify_run
     verify_run(directory)
@@ -519,6 +538,9 @@ def verify(directory, document=None):
 
 
 def _verify_native(directory, document):
+    from schemaxis.module_runtime import module_run
+    if module_run(directory):
+        return verify(directory, document)
     from pathlib import Path
     directory = Path(directory)
     from schemaxis.schema_snapshots import verify_run
@@ -535,12 +557,16 @@ def _verify_native(directory, document):
 
 
 def discover():
+    from schemaxis.assessments import assessment, summary
     providers = []
     for name, item in list(ADAPTORS.items()):
         operations, fault = isolated(name, declarations, name)
         if fault is not None:
             continue
+        strength = assessment(name)
         providers.append({'id': name, 'documentVersion': item['version'],
+            'routes': sorted(item['routes']), 'routeCount': len(item['routes']),
+            'assessment': summary(strength),
             'authoring': {'documentReferences': True, 'valueFunctions': True, 'expressions': True,
                           'analytics': True, 'operationValues': True},
             'runtimeFamily': item['runtimeFamily'], 'scope': item['execution'],
@@ -552,7 +578,8 @@ def discover():
             'executionCapabilities': copy.deepcopy(item.get('executionCapabilities', {})),
             'schema': 'docs/generated/'+name+'.schema.json',
             'reference': 'docs/generated/'+name+'-operations.md'})
-    result = {'providers': providers}
+    result = {'providers': providers, 'providerCount': len(providers),
+              'routeCount': sum(p['routeCount'] for p in providers)}
     if PLUGIN_FAULTS:
         result['pluginFaults'] = [fault.to_dict() for fault in PLUGIN_FAULTS]
     return result

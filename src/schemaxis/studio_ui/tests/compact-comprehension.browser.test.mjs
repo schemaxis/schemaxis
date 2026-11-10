@@ -31,7 +31,7 @@ test('both authoring surfaces compact, expand and navigate a draft comprehension
     await session.evaluate(`document.querySelector('.wb-comprehension [data-pointer="/nodes/1"]').click()`);
     assert.equal(await session.evaluate('window.studio.windows.active().window.store.get().selected'), '/nodes/1');
     await session.screenshot('/tmp/schemaxis-comprehension.png');
-    assert.ok(await session.evaluate(`[...document.querySelectorAll('.wb-editor-tools button')].some(b=>b.textContent==='Preview with live data')`));
+    assert.ok(await session.evaluate(`document.querySelector('.window:not([hidden]) [data-action=live]').textContent==='Live data'`));
     await session.evaluate(`window.studio.windows.open('schema-editor',{document:window.readableDocument})`);
     await session.wait(`document.querySelector('.schema-editor .wb-comprehension')?.textContent.includes('mag(U)')`, 'schema reference');
     await click('.schema-toolbar', 'Compact');

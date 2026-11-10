@@ -1,0 +1,43 @@
+{
+  "version": "schemaxis.oracle/1",
+  "operation": "mutate",
+  "connection": {"profile": "free_local"},
+  "tables": [
+    {
+      "name": "accounts",
+      "external": true,
+      "columns": [
+        {"name": "id", "type": "number", "precision": 10, "scale": 0},
+        {"name": "owner", "type": "varchar2", "length": 20},
+        {"name": "balance", "type": "number", "precision": 12, "scale": 2}
+      ],
+      "primaryKey": ["id"]
+    },
+    {
+      "name": "change_ledger",
+      "external": true,
+      "columns": [
+        {"name": "idempotency_key", "type": "varchar2", "length": 64},
+        {"name": "plan_digest", "type": "varchar2", "length": 64}
+      ],
+      "primaryKey": ["idempotency_key"]
+    }
+  ],
+  "transaction": {
+    "steps": [
+      {
+        "kind": "update",
+        "table": "accounts",
+        "computed": [{"name": "debited", "function": "subtract", "arguments": [{"column": "accounts.balance"}, {"literal": {"type": "number", "value": "25"}}]}],
+        "conditions": [{"name": "payer", "terms": [{"left": {"column": "accounts.id"}, "operator": "equals", "right": {"literal": {"type": "number", "value": "1"}}}]}],
+        "set": [{"column": "balance", "value": {"derived": "debited"}}],
+        "where": "payer",
+        "expectRows": 1
+      }
+    ],
+    "isolation": "serializable",
+    "enforcement": "database",
+    "idempotency": {"table": "change_ledger", "key": "transfer-2026-11-alice-debit"},
+    "finish": "commit"
+  }
+}

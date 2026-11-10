@@ -1,0 +1,48 @@
+{
+  "version": "schemaxis.adaptor-assessment/1",
+  "rubric": "schemaxis.strength-rubric/1",
+  "assessmentVersion": "2026-10-26.1",
+  "assessedOn": "2026-10-26",
+  "assessor": "Schemaxis editorial assessment",
+  "provider": "gdal",
+  "providerVersion": "schemaxis.gdal/1",
+  "routes": [
+    "schemaxis.gdal/1"
+  ],
+  "sourceFingerprint": "sha256:fc7c2ddcb09277f65770bd7d77dbc62c737c66a27717dc280906043763241531",
+  "coverage": {
+    "percent": 5,
+    "status": "subjective",
+    "scope": {
+      "kind": "whole-application",
+      "description": "Whole gdal application/library breadth across useful functional families.",
+      "denominator": "Raster/vector formats and translation, georeferencing/reprojection, resampling, mosaics, analysis and dataset/metadata management."
+    },
+    "rationale": "Named grid-aligned zone summaries deepen bounded raster analysis alongside window preparation. General drivers, vector workflows, reprojection, mosaics and most analysis remain outside this integration, so the whole-application estimate remains 5%.",
+    "confidence": "medium"
+  },
+  "abstraction": {
+    "percent": 65,
+    "status": "subjective",
+    "scope": {
+      "kind": "declared-workflows",
+      "description": "Single-band north-up GeoTIFF windows and nearest-neighbour grid resizing, plus named grid-aligned rectangular-zone summaries with explicit CRS, value units and missing-data policy.",
+      "denominator": "User intent and domain decisions within the named supported workflows, including declared inputs, composition and useful outputs; excluded application features do not enter this score."
+    },
+    "rationale": "Named zones and explicit missing-data intent hide GeoJSON construction, native aggregation, fresh readback and publication handling. Authors still choose pixel rectangles and sampling decisions and judge whether summing the values is meaningful. The existing 65% estimate is retained within these declared workflows.",
+    "confidence": "medium"
+  },
+  "evidence": [
+    "src/schemaxis/adaptors/gdal/adaptor.json",
+    "src/schemaxis/adaptors/gdal/readiness.json",
+    "docs/gdal.md",
+    "verification/2026-10-24-gdal-allocation.md",
+    "verification/2026-10-26-gdal-zonal-completion.md"
+  ],
+  "limitations": [
+    "Bounded single-band classic GeoTIFFs in EPSG:4326/3857 only; no general vector polygons, reprojection, interpolation beyond nearest, masks, overviews or arbitrary driver/metadata handling.",
+    "Zones are pixel-aligned rectangles in the current source grid and may overlap as independent summaries. Value sums are not area integrals, and angular pixels do not establish ground area or uncertainty.",
+    "Every included pixel is visited by the independent source oracle. Sum/mean checks use an explicit roundoff allowance and refuse unresolved cancellation; this is numerical consistency, not scientific validity or acquisition-quality certification.",
+    "Subjective source-contract assessment rounded to five points, with no exhaustive native API denominator. Native qualification, exact tested cases and runtime availability are separate readiness facts; this record does not register a native receipt."
+  ]
+}

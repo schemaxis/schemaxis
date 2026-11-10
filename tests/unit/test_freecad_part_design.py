@@ -45,7 +45,7 @@ class PartDesignTests(unittest.TestCase):
 
     def test_ownership_and_branching_are_not_implicit(self):
         d=document();d['nodes'][1].pop('inputs');self.fault(d,'INVALID_BODY_OWNERSHIP')
-        d=document();d['nodes'].insert(1,{'id':'other','filter':'body'});self.fault(d,'UNSUPPORTED_BODY')
+        d=document();d['nodes'].insert(1,{'id':'other','filter':'body'});self.assertEqual(set(adaptor.plan(d)['partDesign']['bodies']),{'part','other'})
         d=document();d['nodes'].append({'id':'second','filter':'pad','inputs':{'body':'part','profile':'bore'}});self.fault(d,'INVALID_BODY_HISTORY')
         d=document();d['nodes'].append({'id':'branch','filter':'pocket','inputs':{'base':'slab','profile':'bore'}});self.fault(d,'INVALID_BODY_HISTORY')
         d=document();d['nodes'].append({'id':'reuse','filter':'pocket','inputs':{'base':'finished','profile':'bore'}});self.fault(d,'INVALID_BODY_OWNERSHIP')
@@ -63,8 +63,8 @@ class PartDesignTests(unittest.TestCase):
 
     def test_unqualified_attachment_and_extent_modes_refuse(self):
         for key,value in [('plane','XZ'),('origin',[0,0,1])]:
-            d=document();d['nodes'][1]['options'][key]=value;self.fault(d,'UNSUPPORTED_ATTACHMENT')
-        d=document();d['nodes'][4]['options']['extent']='length'
+            d=document();d['nodes'][1]['options'][key]=value;self.assertEqual(adaptor.plan(d)['partDesign']['generation'],2)
+        d=document();d['nodes'][4]['options']['extent']='upToFace'
         with self.assertRaises(SchemaxisError):adaptor.plan(d)
         d=document();d['nodes'][3]['options']['centre']=[float('nan'),0]
         with self.assertRaises(SchemaxisError):adaptor.plan(d)

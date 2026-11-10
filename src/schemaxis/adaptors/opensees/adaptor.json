@@ -1,0 +1,131 @@
+{
+  "id": "opensees",
+  "version": "schemaxis.opensees/1",
+  "adaptor": "schemaxis.adaptors.opensees.adaptor",
+  "runtimeFamily": "3.8.0",
+  "execution": "Isolated OpenSeesPy: independently verified planar linear elastic truss networks and measured serviceability requirements",
+  "executables": [],
+  "keywords": [
+    "truss",
+    "structural mechanics",
+    "CAE",
+    "FEA",
+    "pin joints",
+    "axial",
+    "displacement",
+    "reaction",
+    "OpenSeesPy"
+  ],
+  "capabilities": "schemaxis.adaptors.opensees.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.opensees/1",
+    "operation": "trussStatic",
+    "nodes": [
+      {
+        "id": "a",
+        "x_m": 0,
+        "y_m": 0,
+        "fixed": [
+          true,
+          true
+        ]
+      },
+      {
+        "id": "b",
+        "x_m": 2,
+        "y_m": 0,
+        "fixed": [
+          false,
+          true
+        ]
+      },
+      {
+        "id": "c",
+        "x_m": 1,
+        "y_m": 1
+      }
+    ],
+    "members": [
+      {
+        "id": "ab",
+        "a": "a",
+        "b": "b",
+        "youngsModulus_Pa": 200000000000.0,
+        "area_m2": 0.001
+      },
+      {
+        "id": "ac",
+        "a": "a",
+        "b": "c",
+        "youngsModulus_Pa": 200000000000.0,
+        "area_m2": 0.001
+      },
+      {
+        "id": "bc",
+        "a": "b",
+        "b": "c",
+        "youngsModulus_Pa": 200000000000.0,
+        "area_m2": 0.001
+      }
+    ],
+    "loads": [
+      {
+        "node": "c",
+        "force_N": [
+          0,
+          -1000
+        ]
+      }
+    ],
+    "requirements": [
+      {
+        "name": "apex_serviceability",
+        "quantity": "displacement_m",
+        "target": "c",
+        "maximum": 0.0001
+      },
+      {
+        "name": "diagonal_stress",
+        "quantity": "stress_Pa",
+        "target": "ac",
+        "maximum": 10000000.0
+      }
+    ]
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "routes": {
+    "schemaxis.opensees/1": {
+      "module": "schemaxis.adaptors.opensees.adaptor",
+      "schema": "schemaxis.adaptors.opensees.adaptor:schema",
+      "schemaName": "opensees",
+      "graphEditing": false,
+      "workflow": true,
+      "scheduled": true,
+      "compose": true,
+      "acceptedArtifacts": [],
+      "hooks": {
+        "query": "schemaxis.adaptors.opensees.adaptor:query",
+        "reusableInputs": "schemaxis.adaptors.opensees.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.opensees.adaptor:resources"
+      }
+    }
+  },
+  "cliOptions": [
+    {
+      "flag": "--opensees",
+      "dest": "opensees",
+      "help": "Absolute Python with qualified OpenSeesPy3.8.0.0"
+    }
+  ]
+}

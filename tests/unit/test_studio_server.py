@@ -114,6 +114,31 @@ class StudioServerTests(unittest.TestCase):
                 self.assertIn(index['guides'].get(provider), topics)
                 self.assertNotEqual(index['guides'][provider], index['home'])
 
+    def test_shared_results_viewer_is_embeddable_and_local_files_are_authenticated(self):
+        status, body, headers = self.call('/artifact-viewer/index.html', raw=True)
+        self.assertEqual(status, 200)
+        self.assertIn(b'ARTIFACT', body)
+        self.assertIn("frame-ancestors 'self'", headers['Content-Security-Policy'])
+        self.assertEqual(self.call('/artifact-viewer/api/library', token=False)[0], 403)
+        directory = self.session.workspace/'run-output'
+        directory.mkdir()
+        (directory/'movie.mp4').write_bytes(b'0123456789')
+        (directory/'movie.mp4.metadata.json').write_text('{}')
+        status, selected, _ = self.call('/artifact-viewer/api/open', {'paths': [str(directory)]})
+        self.assertEqual(status, 200, selected)
+        self.assertEqual(len(selected['records']), 2)
+        movie = next(row for row in selected['records'] if row['relativePath'] == 'movie.mp4')
+        self.assertEqual(self.call(movie['url'], token=False)[0], 403)
+        status, payload, _ = self.call(movie['url'], raw=True)
+        self.assertEqual((status, payload), (200, b'0123456789'))
+        request = Request(self.server.origin+movie['url'], headers={
+            'X-Schemaxis-Token': self.server.token, 'Range': 'bytes=2-4'})
+        with urlopen(request) as response:
+            self.assertEqual(response.status, 206)
+            self.assertEqual(response.read(), b'234')
+        (directory/'movie.mp4').write_bytes(b'changed')
+        self.assertEqual(self.call(movie['url'])[0], 409)
+
     def test_api_requires_token(self):
         status, body, _ = self.call('/api/state', token=False)
         self.assertEqual((status, body['fault']['code']), (403, 'ACCESS_DENIED'))
@@ -168,6 +193,20 @@ class StudioServerTests(unittest.TestCase):
         self.assertIn('operation/blender/plane', [item['id'] for item in found['items']])
         self.assertTrue(all(item['kind'] == 'operation' for item in found['items']))
 
+    def test_secondary_route_library_keeps_matching_templates(self):
+        _, primary, _ = self.call('/api/studio/adaptor?id=freecad')
+        self.assertTrue(primary['snippets'])
+        for version in ('schemaxis.freecad.cam/1', 'schemaxis.freecad.assembly/1',
+                        'schemaxis.freecad.drawing/1'):
+            with self.subTest(version=version):
+                expected = [item for item in primary['templates']
+                            if item['document']['version'] == version]
+                self.assertTrue(expected)
+                status, library, _ = self.call('/api/studio/adaptor?id=freecad&version=' + version)
+                self.assertEqual(status, 200)
+                self.assertEqual(library['templates'], expected)
+                self.assertEqual(library['snippets'], [])
+                self.assertEqual(library['categories'], [])
     def test_design_actions_are_revision_checked(self):
         _, state, _ = self.call('/api/state')
         document = state['documents'][0]

@@ -5,10 +5,10 @@
       "guide": "docs/r.md",
       "context": {
         "purpose": "Fit a small numeric calibration or explanatory model, optionally quantify classical coefficient uncertainty, and decide whether actual finite training/held-out fit/prediction results and coefficient intervals meet named requirements.",
-        "assumptions": "Unweighted additive numeric ordinary least squares. Rows use declared predictor order followed by observed response, with plain unit labels. Fixed native symbols and vanilla Rscript; fresh RDS replay, independent QR verification. Optional inference assumes a correct additive mean, independent constant-variance normal errors and fixed predictors.",
+        "assumptions": "Unweighted additive numeric ordinary least squares. Rows use declared predictor order followed by observed response, with plain unit labels. Fixed native symbols and vanilla Rscript; fresh RDS replay, independent QR verification. Optional inference assumes a correct additive mean, independent constant-variance normal errors and fixed predictors. Optional prediction intervals for declared new predictor-only rows assume fixed error-free predictors, a correct additive mean and independent constant-variance normal errors.",
         "constraints": "One to eight predictors, four to 512 training rows and optional one to 512 separate held-out rows. Training rows exceed coefficient count; full rank and actual scaled rectangular infinity-norm condition at most1e6. Inference level 0.5 to 0.999 and residual scatter at least 1e6 times the comparison roundoff allowance. No categorical/missing values, arbitrary formulas/scripts/models, weights, interactions, prediction intervals, multiplicity adjustment or generalisation guarantee.",
-        "inspection": "Review coefficients with original predictor/response units in regression-summary.json, actual training/held-out residuals in CSV and each signed requirement margin/worst sampled condition. With inference, review standard errors, t, p, intervals, residual degrees of freedom, R-squared basis and stated assumptions in the summary and inference.csv. Native comparison uses relative1e-10 plus128*ULP(max training response magnitude)*max(1,scaled condition); inference uses 1e-4 relative with propagated p-value intervals and exact level/df readback.",
-        "recovery": "RANK_DEFICIENT_DATA/ILL_CONDITIONED_DATA/INSUFFICIENT_DATA need independent predictors and a supported design. NO_RESIDUAL_VARIANCE means an exact or roundoff-level fit: remove inference or use measured data with scatter. UNSUPPORTED_INFERENCE needs a rescaled response. INVALID_REQUIREMENT needs valid scopes/indices/terms/bounds and inference for coefficient intervals. FIT_REQUIREMENT_NOT_MET retains valid fit evidence and needs review of data/model or justified requirements then a fresh attempt. Configure qualified Rscript for INTERPRETER_NOT_FOUND; retain logs for native faults."
+        "inspection": "Review coefficients with original predictor/response units in regression-summary.json, actual training/held-out residuals in CSV and each signed requirement margin/worst sampled condition. With inference, review standard errors, t, p, intervals, residual degrees of freedom, R-squared basis and stated assumptions in the summary and inference.csv. Native comparison uses relative1e-10 plus128*ULP(max training response magnitude)*max(1,scaled condition); inference uses 1e-4 relative with propagated p-value intervals and exact level/df readback. With prediction, review prediction.csv and the summary prediction block: input row identity and units, fit, requested interval, leverage, extrapolation flags, residual degrees of freedom and sigma; native confidence and individual intervals are both compared with independent QR leverage at 1e-5 relative.",
+        "recovery": "MISSING_VALUE (null/NaN/NA cell) needs the incomplete row removed or the measurement supplied; UNSUPPORTED_VALUE_TYPE (text/boolean cell) needs a plain numeric measurement. Neither is coerced or imputed. RANK_DEFICIENT_DATA/ILL_CONDITIONED_DATA/INSUFFICIENT_DATA need independent predictors and a supported design. NO_RESIDUAL_VARIANCE means an exact or roundoff-level fit: remove inference or use measured data with scatter. UNSUPPORTED_INFERENCE needs a rescaled response. INVALID_REQUIREMENT needs valid scopes/indices/terms/bounds and inference for coefficient intervals. FIT_REQUIREMENT_NOT_MET retains valid fit evidence and needs review of data/model or justified requirements then a fresh attempt. Configure qualified Rscript for INTERPRETER_NOT_FOUND; retain logs for native faults. INVALID_TABLE for a new-data row of the wrong width needs predictor values only in declared order. NO_RESIDUAL_VARIANCE also refuses prediction intervals for an exact or roundoff-level fit. UNSUPPORTED_PREDICTION at $.prediction.newdata[i] means that row's interval types cannot be verified apart: its leverage exceeds 1e4 or its confidence and individual half widths differ by less than four times the comparison allowance plus relative component. It is a verification-resolution limit, not model validity: supply residual scatter that is larger relative to the response magnitude and design scale (smaller offset, centred predictors) or move the row toward the training design. INVALID_PREDICTION means the projected prediction or interval exceeds the numeric table budget."
       },
       "examples": [
         {
@@ -48,21 +48,56 @@
           "expect": "invalid",
           "fault": "NO_RESIDUAL_VARIANCE",
           "schemaValid": true
+        },
+        {
+          "id": "prediction",
+          "reference": "examples/schemaxis/r-prediction.json"
+        },
+        {
+          "id": "prediction-variant",
+          "reference": "examples/schemaxis/r-prediction-variant.json"
+        },
+        {
+          "id": "prediction-exact-fit",
+          "reference": "examples/schemaxis/r-prediction-exact-invalid.json",
+          "expect": "invalid",
+          "fault": "NO_RESIDUAL_VARIANCE",
+          "schemaValid": true
+        },
+        {
+          "id": "prediction-response-column",
+          "reference": "examples/schemaxis/r-prediction-response-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_TABLE",
+          "schemaValid": true
+        },
+        {
+          "id": "missing-cell",
+          "reference": "examples/schemaxis/r-missing-invalid.json",
+          "expect": "invalid",
+          "fault": "MISSING_VALUE",
+          "schemaValid": false
         }
       ],
       "conformance": [
         "tests/unit/test_r_admission.py",
-        "tests/unit/test_r_inference.py"
+        "tests/unit/test_r_inference.py",
+        "tests/unit/test_r_prediction.py",
+        "tests/unit/test_r_allocation.py"
       ],
       "acceptance": [
-        "tools/qualify_r.py"
+        "tools/qualify_r.py",
+        "tools/qualify_r_prediction.py",
+        "tools/qualify_r_prediction_gnuplot.py"
       ],
       "profiles": {
         "workflow": {
-          "scope": "Verified numeric prediction/fit tables into Calc with preserved numeric columns and independently checked workbook values.",
+          "scope": "Verified numeric prediction/fit tables into Calc with preserved numeric columns and independently checked workbook values. Optional prediction.csv with one explicit symmetric halfWidth column feeds one Gnuplot error series through an exact $artifact edge; the x axis is the first declared predictor of the new rows.",
           "references": [
             "docs/r.md",
-            "tools/qualify_r.py"
+            "tools/qualify_r.py",
+            "examples/schemaxis/r-prediction-to-gnuplot.json",
+            "tools/qualify_r_prediction_gnuplot.py"
           ]
         },
         "composition": {
@@ -82,10 +117,10 @@
           "https://stat.ethz.ch/R-manual/R-devel/library/stats/html/confint.html"
         ],
         "lifecycle": {
-          "timeout": "One total deadline covers fit, saved-model reopen and final independent CPU verification; shared native kit has a separate bounded watchdog.",
-          "cancellation": "Owned process cancellation covers native stages; cancellation is checked again before successful publication.",
-          "logs": "Retain authored/effective plans, canonical numeric inputs, fixed native worker, launcher/input bindings, model.rds, native tables, optional native inference/statistics tables, runtime records, stage stdout/stderr/submissions and failed/success results.",
-          "verification": "Independent column-scaled Householder QR reconstructs coefficients/predictions/residuals; actual rectangular infinity-norm condition from QR unit-vector solves gates unsupported designs. Compare native model rank/df, fit values and fresh-process RDS replay; recompute finite requirements from checked native values. Launcher/source/model bindings reject stale readback even with refreshed ordinary hashes. Retained regular descriptor reads are nonblocking and bounded8MiB. Optional inference compares native summary.lm/confint/pf values with QR-derived standard errors and standard-library Student-t/F tails, exact level/df readback and fit/reopen equality."
+          "timeout": "One total deadline covers fit, saved-model reopen and final independent CPU verification; shared native kit has a separate bounded watchdog. Qualified live: with a prediction request the runner times out while the genuine R engine of the reopen/predict.lm stage is running (qualifier-owned clock advanced once the engine PID exists), the stage process group is gone and no success is published; predict.lm position is not instrumented.",
+          "cancellation": "Owned process cancellation covers native stages; cancellation is checked again before successful publication. Qualified live: a cancel event raised while the genuine R engine of the reopen/predict.lm stage runs ends RUNNER_CANCELLED with the stage PID and process group gone and no success publication.",
+          "logs": "Retain authored/effective plans, canonical numeric inputs, fixed native worker, launcher/input bindings, model.rds, native tables, optional native inference/statistics tables, runtime records, stage stdout/stderr/submissions and failed/success results. With prediction, also prediction-input.csv and native prediction/prediction-statistics tables for both fit and reopen.",
+          "verification": "Independent column-scaled Householder QR reconstructs coefficients/predictions/residuals; actual rectangular infinity-norm condition from QR unit-vector solves gates unsupported designs. Compare native model rank/df, fit values and fresh-process RDS replay; recompute finite requirements from checked native values. Launcher/source/model bindings reject stale readback even with refreshed ordinary hashes. Retained regular descriptor reads are nonblocking and bounded8MiB. Optional inference compares native summary.lm/confint/pf values with QR-derived standard errors and standard-library Student-t/F tails, exact level/df readback and fit/reopen equality. Optional prediction intervals call stats::predict.lm for both interval types and compare fit, se.fit, sigma, df, critical value and all four bounds with independent QR leverage h=|R^-T x|^2 and Student-t bisection, relative 1e-5 on widths plus a response-roundoff fit allowance scaled by design magnitude; leverage above 1e4 is refused before native execution."
         },
         "data": [
           {
@@ -112,7 +147,7 @@
               "model": "additive numeric OLS"
             },
             "losses": [
-              "No causal inference, prediction intervals, multiplicity adjustment or continuous/future prediction proof; optional coefficient inference holds only under the stated error assumptions."
+              "No causal inference, multiplicity adjustment or continuous/future prediction proof; optional coefficient inference and optional new-row prediction intervals hold only under the stated error assumptions, and extrapolation is reported, not validated."
             ],
             "scope": "Named coefficients/unit descriptors, numerical conditioning/rank, actual native fit metrics, optional classical inference with assumptions, and explicit acceptance."
           },
@@ -130,6 +165,21 @@
               "Valid only under independent, constant-variance, normal errors and a correct additive mean."
             ],
             "scope": "Optional per-coefficient estimate, standard error, t statistic, two-sided p-value and confidence limits, appended after the summary."
+          },
+          {
+            "id": "prediction-table",
+            "direction": "output",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "columns": "numeric",
+              "rows": "at most64"
+            },
+            "losses": [
+              "Predictor names, units, interval type, level, degrees of freedom and assumptions require the accompanying summary.",
+              "Nominal interval under independent, constant-variance, normal errors and a correct additive mean; not a coverage guarantee, held-out validation or calibration certificate."
+            ],
+            "scope": "Optional new-row identity, predictors x1..xN, fit, requested interval lower/upper bounds and symmetric half width, appended after any inference table."
           }
         ],
         "inspection": [
@@ -499,13 +549,171 @@
                 "relative": 1e-05
               }
             ]
+          },
+          {
+            "id": "new-temperature-individual-interval",
+            "example": "prediction",
+            "edits": [],
+            "scope": "Closed-form two-df individual 95% prediction interval at new temperature 3 degC: h=.25+x^2/10=1.15, sigma sqrt(.05), t=.95*sqrt(2/.0975); the new row is extrapolation (flagged), not an observation.",
+            "checks": [
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/rows/2/prediction",
+                "expected": 16,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/rows/2/leverage",
+                "expected": 1.15,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/rows/2/halfWidth",
+                "expected": 1.4107190383376145,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/rows/2/lower",
+                "expected": 14.589280961662386,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/rows/2/upper",
+                "expected": 17.410719038337614,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/criticalValue",
+                "expected": 4.302652729749463,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/residualStandardError/value",
+                "expected": 0.22360679774997896,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/residualDF",
+                "expected": 2,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "mean-confidence-interval-level-0-9",
+            "example": "prediction-variant",
+            "edits": [],
+            "scope": "Closed-form mean confidence interval at 0.5 degC and level 0.9: h=.275, narrower than any individual interval at the same row.",
+            "checks": [
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/rows/1/prediction",
+                "expected": 11.0,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/rows/1/leverage",
+                "expected": 0.275,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/rows/1/halfWidth",
+                "expected": 0.342398659613707,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/criticalValue",
+                "expected": 2.9199855803537265,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
+          },
+          {
+            "id": "changed-newdata-level-and-type",
+            "example": "prediction",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/prediction/newdata",
+                "value": [
+                  [
+                    0.5
+                  ]
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/prediction/interval",
+                "value": "confidence"
+              },
+              {
+                "op": "replace",
+                "path": "/prediction/level",
+                "value": 0.9
+              }
+            ],
+            "scope": "Edit new row, interval type and level together; the new row 0.5 degC at 0.9 confidence propagates to the published summary.",
+            "checks": [
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/rows/0/halfWidth",
+                "expected": 0.342398659613707,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              },
+              {
+                "file": "regression-summary.json",
+                "format": "json",
+                "pointer": "/prediction/criticalValue",
+                "expected": 2.9199855803537265,
+                "absolute": 1e-10,
+                "relative": 1e-10
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Opt-in classical coefficient inference (inference.level), coefficientInterval requirements, NO_RESIDUAL_VARIANCE/UNSUPPORTED_INFERENCE guards, appended inference.csv publication, plus route-level Studio library, discovery metadata and search cases. Covers these changes; existing regression/Calc behaviour is re-run but not re-reviewed beyond its regression evidence.",
+        "scope": "2026-10-26 optional prediction request (prediction.interval/level/newdata): native stats::predict.lm mean confidence and individual prediction intervals for declared predictor-only rows, independent QR leverage verification with a per-row interval-type resolution guard (UNSUPPORTED_PREDICTION when a swap of types could not be detected under the comparison allowance), appended prediction.csv, summary prediction block, guidance, examples and cases. Existing coefficient inference, held-out, requirement paths and legacy artifact indices are unchanged. Host and native-qualified evidence is recorded in the review note; Gnuplot workflow, Studio and discovery coverage are as stated there. 2026-10-24 host-only boundary repair: MISSING_VALUE/UNSUPPORTED_VALUE_TYPE faults for missing, text and boolean table cells, and structured VERIFICATION_FAILED for malformed or unplannable retained authored evidence (no native change). Earlier: opt-in classical coefficient inference (inference.level), coefficientInterval requirements, NO_RESIDUAL_VARIANCE/UNSUPPORTED_INFERENCE guards, appended inference.csv publication, plus route-level Studio library, discovery metadata and search cases. Covers these changes; existing regression/Calc behaviour is re-run but not re-reviewed beyond its regression evidence.",
         "review": [
-          "verification/2026-10-16-r-completion.md"
+          "verification/2026-10-16-r-completion.md",
+          "verification/2026-10-24-r-allocation.md",
+          "verification/2026-10-26-r-prediction.md"
         ],
         "notApplicable": {
           "native-inspection": "Batch fits keep no live native model browser; users inspect verified summary/CSV publications, and RDS is replay evidence only.",

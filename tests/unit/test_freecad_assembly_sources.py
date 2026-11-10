@@ -295,13 +295,21 @@ class SourcedAssemblyTests(unittest.TestCase):
             archive.writestr('extra.txt', 'changed')
         self.assertEqual(self.fault(doc), 'INPUT_CHANGED')
 
-    def test_gui_capture_stage_is_refused_for_sourced_assemblies(self):
+    def test_gui_inspection_cannot_run_before_complete_host_admission(self):
+        from unittest.mock import patch
+        from schemaxis.errors import fail
         target = self.root/'out'
-        with self.assertRaises(SchemaxisError) as caught:
-            sources.run(assembly(self.plate, self.spacer), plan(assembly(self.plate, self.spacer)), target,
-                        executable='/bin/true', timeout=10, gui_executable='/bin/true')
-        self.assertEqual(caught.exception.fault.code, 'UNSUPPORTED_STAGE')
-        self.assertFalse(target.exists())
+        with patch('schemaxis.adaptors.freecad.process.SubprocessRunner',WholeRunDeadlineTests.Runner), \
+             patch('schemaxis.adaptors.freecad.adaptor.verify',return_value={'verified':True}), \
+             patch.object(sources,'check_captured'), \
+             patch.object(sources,'verify',side_effect=lambda *a,**k:fail('VERIFICATION_FAILED','withheld complete admission')), \
+             patch('schemaxis.adaptors.freecad.assembly_sources_gui.inspect_verified') as gui:
+            with self.assertRaises(SchemaxisError) as caught:
+                sources.run(assembly(self.plate, self.spacer), plan(assembly(self.plate, self.spacer)), target,
+                            executable='/bin/true', timeout=10, gui_executable='/bin/true')
+            self.assertEqual(caught.exception.fault.code,'VERIFICATION_FAILED')
+            gui.assert_not_called()
+        self.assertEqual(json.loads((target/'result.json').read_text())['status'],'failed')
 
     def test_schema_offers_mounts_and_clocking(self):
         contract = json.dumps(schema())
@@ -358,7 +366,7 @@ class SourceEnvelopeTests(unittest.TestCase):
         with self.assertRaises(SchemaxisError) as planned:
             plan(doc)
         from unittest import mock
-        with mock.patch('schemaxis.dispatch.SubprocessRunner', LauncherSpy), self.assertRaises(SchemaxisError) as ran:
+        with mock.patch('schemaxis.adaptors.freecad.process.SubprocessRunner', LauncherSpy), self.assertRaises(SchemaxisError) as ran:
             run(doc, self.root/(label+'-run'), executable='/bin/true', timeout=30)
         self.assertEqual(LauncherSpy.calls, [], label)
         return planned.exception.fault.code, ran.exception.fault.code
@@ -407,6 +415,46 @@ class SourceEnvelopeTests(unittest.TestCase):
                 self.assertIn(planned, ('UNSUPPORTED_SOURCE',), label)
                 self.assertIn(ran, ('UNSUPPORTED_SOURCE',), label)
 
+    def test_generation1_sparse_string_references_bind_actual_ids_not_entry_count(self):
+        from schemaxis.adaptors.freecad.source_envelope import string_ids,HASH_REFERENCE
+        import io
+        with zipfile.ZipFile(io.BytesIO(self.plate_bytes)) as z:
+            table=z.read('StringHasher.Table.txt')
+            map_name=next(n for n in z.namelist() if n.endswith('.Map.txt') and HASH_REFERENCE.search(z.read(n)))
+            mapped=z.read(map_name)
+        known=string_ids(table,'fixture','UNSUPPORTED_SOURCE','table');high=max(known)+32
+        count=len(known)+1;missing=next(i for i in range(1,count+1) if i not in known)
+        self.assertNotEqual(missing,high)
+        extended=re.sub(rb'StringTableStart v1 [0-9]+',b'StringTableStart v1 '+str(count).encode(),table,count=1)
+        extended+=b'-20.0 0:sparse_saved_record\n'
+        self.assertEqual(string_ids(extended,'fixture','UNSUPPORTED_SOURCE','table'),known|{high})
+        token=HASH_REFERENCE.search(mapped)
+        def changed(identity):return mapped[:token.start()]+b'#'+format(identity,'x').encode()+mapped[token.end():]
+        admitted=rezip(self.plate_bytes,replace={'StringHasher.Table.txt':lambda b:extended,map_name:lambda b:changed(high)})
+        path=producer(self.root/'sparse',data=admitted)
+        self.assertEqual(sources.admit(str(path),'sparse').get('generation',1),1)
+        # This low ID is <= entry count but absent from the actual table. The
+        # old count-range predicate admitted it; decode must refuse prelaunch.
+        missing_data=rezip(self.plate_bytes,replace={'StringHasher.Table.txt':lambda b:extended,map_name:lambda b:changed(missing)})
+        self.assertEqual(self.refuse('missing-low-sid',missing_data),('UNSUPPORTED_SOURCE','UNSUPPORTED_SOURCE'))
+        duplicate=extended+b'-0.0 0:duplicate\n'
+        duplicate=re.sub(rb'StringTableStart v1 [0-9]+',b'StringTableStart v1 '+str(count+1).encode(),duplicate,count=1)
+        duplicate_data=rezip(self.plate_bytes,replace={'StringHasher.Table.txt':lambda b:duplicate})
+        self.assertEqual(self.refuse('duplicate-sid',duplicate_data),('UNSUPPORTED_SOURCE','UNSUPPORTED_SOURCE'))
+
+    def test_object_id_corruption_is_refused_before_native_launch(self):
+        def change(text,value):
+            if value=='duplicate':
+                value=re.search(r'<Object\b[^>]*name="N0"[^>]*id="([0-9]+)"',text)[1]
+            return re.sub(r'(<Object\b[^>]*name="Origin001"[^>]*id=")[^"]+',
+                          lambda match:match[1]+value,text,count=1)
+        for value in ['duplicate','0','-1','01','+1',str(2**63)]:
+            with self.subTest(value=value):
+                data=rezip(self.plate_bytes,document=lambda text:change(text,value))
+                self.assertNotEqual(data,self.plate_bytes)
+                self.assertEqual(self.refuse('bad-id-'+value.replace('+','plus'),data),
+                                 ('UNSUPPORTED_SOURCE','UNSUPPORTED_SOURCE'))
+
     def test_retained_bytes_are_guarded_immediately_before_launch(self):
         from unittest import mock
         plate = producer(self.root/'plate', data=self.plate_bytes)
@@ -420,7 +468,7 @@ class SourceEnvelopeTests(unittest.TestCase):
             retained.write_bytes(rezip(retained.read_bytes(), document=lambda t: in_object(
                 t, 'N0', '<Properties Count="12" TransientCount="2">', '<Properties Count="12" TransientCount="2">'+INERT_PYTHON)))
             return original()
-        with mock.patch('schemaxis.dispatch.SubprocessRunner', LauncherSpy), \
+        with mock.patch('schemaxis.adaptors.freecad.process.SubprocessRunner', LauncherSpy), \
                 mock.patch('schemaxis.adaptors.freecad.adaptor.verify', lambda *a, **k: {'verified': True}), \
                 mock.patch('schemaxis.artifacts.runtime_archive', tamper_then_archive), \
                 self.assertRaises(SchemaxisError) as caught:
@@ -439,7 +487,7 @@ class SourceEnvelopeTests(unittest.TestCase):
 
 
 class PayloadBindingTests(unittest.TestCase):
-    """B2: every saved assembly payload is bound to the retained producer or to a deterministic rule."""
+    """Legacy B2 fixture: strict direct payload binding without a new replay contract."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -449,6 +497,11 @@ class PayloadBindingTests(unittest.TestCase):
         doc = json.loads((FIXTURES/'assembly.json').read_text())
         doc['parts'][0]['source'], doc['parts'][1]['source'] = str(plate), str(spacer)
         self.prepared = plan(doc)
+        # This historical assembly fixture predates captured bodyHistory. Keep
+        # exercising its unchanged legacy direct binder; new typed Body copies
+        # require full regeneration (independently tested in bridge/native gates).
+        for part in self.prepared['parts']:
+            part['source'].pop('bodyHistory',None);part['source'].pop('sourceFrame',None)
         self.renames = json.loads((FIXTURES/'renames.json').read_text())
         self.retained = {'plate': plate, 'spacer': spacer}
         self.data = (FIXTURES/'assembly.FCStd').read_bytes()
@@ -704,9 +757,12 @@ class WholeRunDeadlineTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def execute(self, target, final_verify, clock=None, cancelled=lambda: False):
+    def execute(self, target, final_verify, clock=None, cancelled=lambda: False,gui=False):
         from unittest import mock
-        patches = [mock.patch('schemaxis.dispatch.SubprocessRunner', WholeRunDeadlineTests.Runner),
+        patches = [mock.patch('schemaxis.adaptors.freecad.process.SubprocessRunner', WholeRunDeadlineTests.Runner),
+                   # This fixture isolates the outer serial-stage deadline;
+                   # independent reconstruction has its own native controls.
+                   mock.patch('schemaxis.adaptors.freecad.source_bridge.verify_before_open', lambda *a, **k: None),
                    mock.patch('schemaxis.dispatch.cancellation_requested', cancelled),
                    mock.patch('schemaxis.adaptors.freecad.adaptor.verify', lambda *a, **k: {'verified': True}),
                    mock.patch.object(sources, 'check_captured', lambda *a, **k: None),
@@ -716,7 +772,8 @@ class WholeRunDeadlineTests(unittest.TestCase):
         for item in patches:
             item.start()
         try:
-            return sources.run(self.doc, self.prepared, target, executable='/bin/true', timeout=60)
+            return sources.run(self.doc, self.prepared, target, executable='/bin/true', timeout=60,
+                               gui_executable='/bin/true' if gui else None)
         finally:
             for item in reversed(patches):
                 item.stop()
@@ -726,6 +783,45 @@ class WholeRunDeadlineTests(unittest.TestCase):
         self.assertEqual(result['status'], 'succeeded')
         self.assertEqual(len(WholeRunDeadlineTests.Runner.launched), 3)
         self.assertEqual(json.loads((self.root/'ok'/'result.json').read_text())['status'], 'succeeded')
+
+    def test_optional_gui_runs_after_admission_and_is_within_the_same_budget(self):
+        from unittest.mock import patch
+        events=[];now=[0.0]
+        def verified(*a,**k):events.append('verified');return {'verified':True,'nativeSha256':'a'*64}
+        def inspect(*a,**k):
+            self.assertEqual(k['verified_sha256'],'a'*64)
+            events.append('gui');return {'completed':True}
+        with patch('schemaxis.adaptors.freecad.assembly_sources_gui.inspect_verified',inspect):
+            result=self.execute(self.root/'gui-ok',verified,clock=lambda:now[0],gui=True)
+        self.assertEqual(events,['verified','gui']);self.assertTrue(result['guiInspection']['completed'])
+        def slow(*a,**k):now[0]=61;return {'completed':True}
+        with patch('schemaxis.adaptors.freecad.assembly_sources_gui.inspect_verified',slow), self.assertRaises(SchemaxisError) as caught:
+            self.execute(self.root/'gui-late',verified,clock=lambda:now[0],gui=True)
+        self.assertEqual(caught.exception.fault.code,'RUNNER_TIMED_OUT')
+        self.assertEqual(json.loads((self.root/'gui-late/result.json').read_text())['status'],'failed')
+
+    def test_gui_cancellation_cannot_publish_success(self):
+        from unittest.mock import patch
+        flag=[False]
+        def cancelled_gui(*a,**k):flag[0]=True;return {'completed':True}
+        with patch('schemaxis.adaptors.freecad.assembly_sources_gui.inspect_verified',cancelled_gui), self.assertRaises(SchemaxisError) as caught:
+            self.execute(self.root/'gui-cancel',lambda *a,**k:{'verified':True,'nativeSha256':'a'*64},cancelled=lambda:flag[0],gui=True)
+        self.assertEqual(caught.exception.fault.code,'RUNNER_CANCELLED')
+        self.assertEqual(json.loads((self.root/'gui-cancel/result.json').read_text())['status'],'failed')
+
+    def test_concurrent_publication_change_after_verified_digest_never_launches_gui(self):
+        from unittest.mock import patch
+        target=self.root/'gui-changed'
+        def verified_then_changed(directory,*a,**k):
+            native=Path(directory)/'model.FCStd';native.write_bytes((self.root/'plate/model.FCStd').read_bytes())
+            checked=hashlib.sha256(native.read_bytes()).hexdigest()
+            native.write_bytes(native.read_bytes()+b'concurrent unverified save')
+            return {'verified':True,'nativeSha256':checked}
+        with patch('schemaxis.adaptors.freecad.gui_process.run') as launch, self.assertRaises(SchemaxisError) as caught:
+            self.execute(target,verified_then_changed,gui=True)
+        self.assertEqual(caught.exception.fault.code,'INPUT_CHANGED');launch.assert_not_called()
+        self.assertFalse((target/'source-gui-request.json').exists())
+        self.assertEqual(json.loads((target/'result.json').read_text())['status'],'failed')
 
     def test_overrun_during_final_verification_is_not_published_as_success(self):
         now = [0.0]
@@ -751,6 +847,31 @@ class WholeRunDeadlineTests(unittest.TestCase):
 
 
 class GuiStateProxyTests(unittest.TestCase):
+    def test_empty_native_camera_and_legacy_visibility_record(self):
+        from xml.etree import ElementTree as ET
+        from schemaxis.adaptors.freecad import source_envelope
+        visibility={'N0':True}
+        root=ET.fromstring(gui_state.serialize(visibility))
+        self.assertEqual(root[-1].tag,'Camera')
+        self.assertEqual(root[-1].attrib,{'settings':''})
+        current=ET.tostring(root,encoding='utf-8',xml_declaration=True)
+        root.remove(root[-1]);legacy=ET.tostring(root,encoding='utf-8',xml_declaration=True)
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'x.FCStd'
+            def check(data):
+                with zipfile.ZipFile(path,'w') as archive:
+                    archive.writestr('GuiDocument.xml',data)
+                gui_state.verify(path,visibility)
+                source_envelope.gui_record(data,visibility,'source','UNSUPPORTED_SOURCE')
+            check(current);check(legacy)
+            for camera in ('<Camera/>','<Camera settings="authored"/>','<Camera settings=""><Foreign/></Camera>',
+                           '<Camera settings="" extra="x"/>','<Camera settings=""/><Camera settings=""/>'):
+                with self.subTest(camera=camera):
+                    changed=legacy.replace(b'</Document>',camera.encode()+b'</Document>')
+                    with self.assertRaises(ValueError):check(changed)
+                    with self.assertRaises(SchemaxisError):
+                        source_envelope.gui_record(changed,visibility,'source','UNSUPPORTED_SOURCE')
+
     def test_controlled_proxies_round_trip_and_refuse_changes(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)/'x.FCStd'
@@ -771,7 +892,7 @@ class SavedIsomorphismTests(unittest.TestCase):
     """Synthetic Document.xml pairs: renamed sources must not reach another owner."""
 
     def document(self, path, objects):
-        rows = ''.join('<Object type="%s" name="%s" id="%d"/>' % (t, n, i) for i, (n, t, _) in enumerate(objects))
+        rows = ''.join('<Object type="%s" name="%s" id="%d"/>' % (t, n, i) for i, (n, t, _) in enumerate(objects,1))
         data = ''.join('<Object name="%s"><Properties Count="%d" TransientCount="0">%s</Properties></Object>' % (n, len(p), ''.join(p))
                        for n, _, p in objects)
         with zipfile.ZipFile(path, 'w') as archive:

@@ -1,0 +1,291 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.zstandard/1": {
+      "guide": "docs/zstandard.md",
+      "context": {
+        "purpose": "Compress and restore captured files or reusable directory selections, inspect dictionaries and frames, train reusable dictionaries, encode reference deltas, compare profile sizes and measure native throughput.",
+        "assumptions": "Trusted configured Zstandard 1.5.7, bounded absolute regular local files, exact retained dictionaries and references. Workflows also admit digest-pinned adopted files or complete directory snapshots at their corresponding input positions.",
+        "constraints": "64 MiB raw, 72 MiB compressed, 128 MiB total inputs; 256 produced chunks, 4096 inspected frames, 256 MiB decoder window; no filesystem metadata preservation.",
+        "inspection": "summary.json records freshly decoded size/SHA-256 and complete Zstandard frame metadata. Profiles publish size and observational timing; later timing authentication is explicitly false.",
+        "recovery": "Select relevant codec/algorithm controls, retain exact dependencies, inspect stage stderr on native failure, reduce memory/output on budget refusal and rerun into a fresh directory after any verification failure."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/zstandard-baseline.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/zstandard-variant.json"
+        },
+        {
+          "id": "compress",
+          "reference": "examples/schemaxis/zstandard-compress.json"
+        },
+        {
+          "id": "restore",
+          "reference": "examples/schemaxis/zstandard-restore.json"
+        },
+        {
+          "id": "inspect",
+          "reference": "examples/schemaxis/zstandard-inspect.json"
+        },
+        {
+          "id": "encode-delta",
+          "reference": "examples/schemaxis/zstandard-encodeDelta.json"
+        },
+        {
+          "id": "concatenate",
+          "reference": "examples/schemaxis/zstandard-concatenate.json"
+        },
+        {
+          "id": "compare-profiles",
+          "reference": "examples/schemaxis/zstandard-compareProfiles.json"
+        },
+        {
+          "id": "train-dictionary",
+          "reference": "examples/schemaxis/zstandard-trainDictionary.json"
+        },
+        {
+          "id": "benchmark",
+          "reference": "examples/schemaxis/zstandard-benchmark.json"
+        },
+        {
+          "id": "benchmark-decode",
+          "reference": "examples/schemaxis/zstandard-benchmarkDecode.json"
+        },
+        {
+          "id": "inspect-dictionary",
+          "reference": "examples/schemaxis/zstandard-inspectDictionary.json"
+        },
+        {
+          "id": "compress-files",
+          "reference": "examples/schemaxis/zstandard-compressFiles.json"
+        },
+        {
+          "id": "restore-files",
+          "reference": "examples/schemaxis/zstandard-restoreFiles.json"
+        },
+        {
+          "id": "invalid-codec",
+          "reference": "examples/schemaxis/zstandard-invalid-codec.json",
+          "expect": "invalid",
+          "fault": "INVALID_ZSTANDARD_OPTION",
+          "schemaValid": true
+        },
+        {
+          "id": "invalid-path",
+          "reference": "examples/schemaxis/zstandard-invalid-path.json",
+          "expect": "invalid",
+          "fault": "INVALID_ZSTANDARD_SOURCE",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_zstandard.py",
+        "tests/unit/test_zstandard_frames.py",
+        "tests/unit/test_zstandard_streaming.py"
+      ],
+      "acceptance": [
+        "tools/qualify_zstandard.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "File and text artifact bindings can supply captured compression sources, dictionaries and delta references.",
+          "references": [
+            "docs/zstandard.md",
+            "tools/qualify_zstandard.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, finite parameter studies and pure expressions resolve before planning.",
+          "references": [
+            "docs/zstandard.md",
+            "tools/qualify_zstandard.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/facebook/zstd/releases/tag/v1.5.7",
+          "https://github.com/facebook/zstd/blob/v1.5.7/programs/zstd.1",
+          "https://github.com/facebook/zstd/blob/v1.5.7/doc/zstd_compression_format.md"
+        ],
+        "lifecycle": {
+          "timeout": "One deadline covers version checks, compression/training and fresh verification; each native stage is capped at remaining time or 180 seconds.",
+          "cancellation": "Shared owned process-group cancellation; no success before the final cancellation/deadline check.",
+          "logs": "Authored/effective plans, captured input membership and bytes, stage launchers/stdout/stderr/process submissions, checked summary and verification inventory.",
+          "verification": "Independent host frame/header/block/XXH64 inspection, actual fresh native decoding, exact byte comparison with captured sources and deterministic compression/training reconstruction."
+        },
+        "data": [
+          {
+            "id": "captured-input",
+            "direction": "input",
+            "kind": "file",
+            "format": "raw or compressed bytes",
+            "traits": {
+              "paths": "absolute regular local files"
+            },
+            "losses": [
+              "Original path metadata is not embedded in the compressed result."
+            ],
+            "scope": "Raw source, compressed stream, dictionary, delta reference or representative sample corpus."
+          },
+          {
+            "id": "compressed-output",
+            "direction": "output",
+            "kind": "file",
+            "format": "Zstandard, gzip, xz, lzma, lz4 or trained dictionary",
+            "traits": {
+              "content": "lossless bytes"
+            },
+            "losses": [
+              "No original filename, permissions, ownership or timestamp preservation."
+            ],
+            "scope": "One payload, restored byte file, trained dictionary or finite comparison candidates."
+          },
+          {
+            "id": "captured-text",
+            "direction": "input",
+            "kind": "text",
+            "format": "literal text artifact bytes",
+            "traits": {
+              "capture": "exact encoded bytes"
+            },
+            "losses": [
+              "Compression does not infer character encoding or preserve the original text publication name."
+            ],
+            "scope": "A workflow text artifact can supply source, dictionary/reference history or a sample; its actual encoded file bytes are captured."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Checked decoded byte count and hash, complete Zstandard frame metadata and comparison sizes.",
+            "limits": "Other codec internals are read by the trusted native decoder; historical elapsed timing is observational."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit named controls or source bytes to invalidate reuse; keep captured dependencies with their parent run."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "File and text artifact bindings can supply captured compression sources, dictionaries and delta references."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, finite parameter studies and pure expressions resolve before planning."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Exact source, dictionary, reference and sample byte digests participate in reuse identity."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable JSON documents with shared validation, undo and source editing."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Twelve named Studio task starters and typed controls, including file sets, nested tuning, adaptive bounds and profile lists."
+          },
+          "conversion": {
+            "status": "supported",
+            "scope": "Lossless codec conversion can compose restoration with compression; each side proves decoded content."
+          },
+          "native-save": {
+            "status": "supported",
+            "scope": "Compressed payloads and trained dictionaries are durable native-format files and reopen in fresh native processes."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No persistent interactive native application; checked JSON frame and content observations use the text viewer."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The Zstandard CLI is a bounded shared-memory compressor; no MPI command is exposed."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "File-set tasks capture multiple named or recursively selected files. The compressor has no native time axis; ordinary workflow studies supply finite parameter states."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "The CLI has no persistent application document. Edit intent and rerun into a new publication directory."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/zstandard/sensor.txt"
+            },
+            "scope": "Exact authored literal fixture bytes, independently counted and hashed; fresh native decoding and host frame/checksum inspection must agree.",
+            "checks": [
+              {
+                "file": "summary.json",
+                "format": "json",
+                "pointer": "/observations/decodedBytes",
+                "expected": 1888,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "summary.json",
+                "format": "json",
+                "pointer": "/observations/decodedSha256",
+                "expected": "8d7c9ee288457fc8260cc82b851e711cba8031c8ca9f32f43553be37070f8e56",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/zstandard/mixed.bin"
+            },
+            "scope": "Exact authored literal fixture bytes, independently counted and hashed; fresh native decoding and host frame/checksum inspection must agree.",
+            "checks": [
+              {
+                "file": "summary.json",
+                "format": "json",
+                "pointer": "/observations/decodedBytes",
+                "expected": 3088,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "summary.json",
+                "format": "json",
+                "pointer": "/observations/decodedSha256",
+                "expected": "34932aa6c3fec5bbdd68ad14a9645d6ef899f80691793ac46f6c17c2fb05cff5",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Accepted twelve stable CLI content tasks and their nested finite controls, captured file/directory handoffs and complete product delivery. Whole-inventory review and integrated acceptance are recorded in the dated verification note; this is local engineering acceptance, not public release approval.",
+        "review": [
+          "verification/2026-11-05-zstandard.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "A command-line compressor has no persistent interactive document; checked frame, dictionary and content observations are text publications.",
+          "mpi": "The stable Zstandard CLI has shared-memory workers and no native MPI interface. The existing process scheduler owns independent jobs.",
+          "time-batches": "The file codec has no native time axis. Captured file sets and finite workflow studies supply multiple input states.",
+          "live-editing": "There is no persistent native application document or reverse-edit protocol. Edit declarative intent and rerun into a fresh directory."
+        }
+      }
+    }
+  }
+}

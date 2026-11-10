@@ -107,8 +107,8 @@ capture names. Offline verification needs the captures, never the original sourc
 location. Workflow reuse fingerprints the actual validated source bytes, so
 changed artwork invalidates reuse. The [PNG handoff example](../examples/schemaxis/aseprite-import-workflow.json)
 places a separately verified procedural icon preview into another editable sprite.
-Keep captures with exported/copied runs; do
-not hand-edit their manifest. Fresh runs use this capture contract, including an
+Keep captures with exported runs (see
+[relocating evidence](#relocating-verified-evidence)); do not hand-edit their manifest. Fresh runs use this capture contract, including an
 empty manifest for procedural documents. Earlier procedural evidence without a
 manifest remains verifiable only with the exact previous trusted worker SHA-256
 and all original result/publication/readback checks. Imports always require the
@@ -156,6 +156,22 @@ sheet metadata and SHA-256 digests of every publication, receipt and retained
 worker. It is offline verification of retained evidence, not a new native reopen
 and not a cryptographic attestation against coordinated evidence forgery. Missing,
 altered, incomplete and invalid evidence fails with structured Schemaxis faults.
+
+## Relocating verified evidence
+
+Receipts record the absolute location where each publication was produced, and the
+receipt is never rewritten. A run exported with `schemaxis` export, or later moved
+and re-exported, records its origin in `publication-metadata.json`; `verify()` maps
+each recorded publication into the selected directory through that origin and still
+requires the exact four publications, their kinds and SHA-256 digests, the retained
+worker, captures and independent pixel checks. Run-relative publication names are
+accepted under the shared portable-receipt rule. A hand-copied directory without
+that origin, a recorded path outside the run, a symbolic link, or a changed digest,
+kind or name fails `VERIFICATION_FAILED`; the fault's recovery says to verify the
+original directory or copy with `schemaxis export`. A malformed `result.json`
+`sha256` map reports location `result.json`. This is offline verification of
+retained bytes, not a new native reopen, and it does not make hand-moved folders
+verifiable.
 
 ## Qualification
 

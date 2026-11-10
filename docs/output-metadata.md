@@ -1,5 +1,8 @@
 # Output metadata
 
+See [Descriptive output filenames](output-filenames.md) for ParaView publication
+names, run-wide indices and the viewer's filename-property filters.
+
 Published artifacts now carry a versioned `<filename>.metadata.json` companion.
 `publication-metadata.json` commits the ordered membership and companion hashes
 for an execution. Companions do not consume workflow artifact indices. Native
@@ -25,7 +28,9 @@ applications.
 ParaView image companions include camera observations and four ordered world
 coordinates: top-left, top-right, bottom-right and bottom-left image edges.
 For a single, native planar, non-crinkle Slice, these are the image-edge ray
-intersections with the observed slice plane. Rows increase downward. Orthographic
+intersections with the observed slice plane. A native Slice with multiple planes
+or a nonzero `SliceOffsetValues` is conservatively treated as a camera image;
+its base plane is not assumed to contain the rendered cut. Rows increase downward. Orthographic
 and perspective projections are supported when the plane intersects every ray
 in front of the perspective camera. These coordinates describe the viewport
 mapping; overlays, background and pixels without slice geometry are not surface
@@ -59,3 +64,57 @@ digests. `inspect_resource_metadata(resource_id, ...)` returns bounded structure
 metadata after checking the artifact, receipt, companion and manifest. Modifying
 any of these blocks resource reuse. Workflow studies collect their aggregate
 publications without changing artifact indices.
+
+## Fields for independent viewers
+
+The filename suffix is a discovery hint. Consumers must check that `version`
+equals `schemaxis.artifact-metadata/1`, `artifact.file` matches the sibling's
+basename and `artifact.sha256` matches its contents before trusting the placement.
+Another application's `.metadata.json` file is not Schemaxis metadata merely
+because its suffix matches. A standalone consumer can use a companion without
+the run manifest; it must describe this as a checked companion, rather than claim
+that the whole execution passed Schemaxis verification.
+
+Producers can supply these optional artifact descriptor fields to
+`publish_artifacts(directory, artifacts)`. They are retained in the version 1
+companion and included in normal metadata verification:
+
+```json
+{
+  "group": "Pressure slices",
+  "sequence": {"id": "pressure-x", "axis": "x", "value": 2.5, "units": "m"},
+  "overview": {"file": "../domain.png"}
+}
+```
+
+`group` is a nonempty display group name. `sequence.id` identifies one ordered
+series within the group; `axis` is `x`, `y`, `z` or `time`, and `value` is the
+finite observed coordinate or timestamp. Units are optional and never inferred.
+Series with different cameras, scalar fields, appearances or other varying
+parameters should have distinct IDs. One `sequence` describes one series; it does
+not encode a general multidimensional grid. `viewTime`, identity indices and
+spatial planes remain available for richer grouping by consumers.
+
+`overview.file` is a relative POSIX path from the artifact's directory. It is a
+presentation reference, not proof of the overview's contents or spatial frame.
+The overview should have its own companion when published. Consumers must resolve
+the path inside their selected data roots and refuse references that escape them;
+URLs, absolute paths and Windows paths are not producer hints. Parent references
+allow a shared overview above per-series directories. Finalisation does not
+require the optional overview to exist or manufacture its metadata.
+
+The publisher copies these hints only when a producer explicitly supplies them.
+It does not interpret filename pieces, axis names, timestamps or an image's
+camera direction as scientific sequence declarations. Older companions remain
+valid without the hints. A viewer may offer filename-based grouping separately
+and identify that grouping as inferred.
+
+For image placement, honour `spatial.state`, `mapping`, `frame`, `units`,
+`cornerOrder`, `pixelOrigin` and `rowDirection`. The four `corners` are outer pixel
+edges in the stated frame, not pixel-centre samples. Use the recorded `plane`
+and corners to texture the image in 3D only when `mapping` is
+`pixel-edge-rays-to-slice-plane`. A `camera-focal-plane` image can be displayed as
+a camera card but does not establish a CFD slice. Read `boundsOrder` whenever
+using bounds: producers can use different orderings. Do not combine `unknown`
+units or unrelated frames by assuming a shared physical scale. Background and
+legend pixels must not be presented as measured values on the slice.

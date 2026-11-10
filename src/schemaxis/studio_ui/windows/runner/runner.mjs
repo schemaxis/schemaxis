@@ -6,7 +6,7 @@ import {confirmDialog} from '../../shell/dialog.mjs';
 import {ApiError} from '../../lib/api.mjs';
 import {collectValues, parameterField} from './parameters.mjs';
 import {renderProgress} from './progress.mjs';
-import {createOutputBrowser} from './artifacts.mjs';
+import {createResultsFrame} from '../results.mjs';
 
 export const runnerWindow = {
   type: 'runner',
@@ -48,10 +48,10 @@ export const runnerWindow = {
     const planDetails = h('details', {class: 'runner-plan-details'});
     const outputList = h('div', {class: 'runner-output-list'});
     const viewerHost = h('div', {class: 'runner-output-browser'});
-    const outputBrowser = createOutputBrowser(ctx, viewerHost);
+    let resultsViewer = null;
     const outputsPanel = h('section', {class: 'runner-outputs', hidden: true},
       h('div', {class: 'runner-section-heading'}, h('h3', {}, 'Outputs'),
-        h('span', {class: 'hint'}, 'Select a publication to inspect it')), outputList, viewerHost);
+        h('span', {class: 'hint'}, 'All run files · local collection viewer')), outputList, viewerHost);
     const inspectButton = button('Inspect template', 'folder', () => inspect());
     const loadButton = button('Load case', 'folder', () => load());
     const saveButton = button('Save case', 'file', () => save());
@@ -270,19 +270,13 @@ export const runnerWindow = {
       outputsPanel.hidden = !outputs;
       if (outputs !== outputsKey) {
         outputsKey = outputs;
-        outputBrowser.dispose();
+        resultsViewer?.dispose();
+        resultsViewer = null;
         mount(viewerHost);
-        mount(outputList, (outputs || []).map((output) => h('button', {class: 'button small runner-output',
-          title: output.path, onClick: (event) => {
-            outputList.querySelectorAll('button').forEach((element) => element.setAttribute('aria-pressed', 'false'));
-            event.currentTarget.setAttribute('aria-pressed', 'true');
-            outputBrowser.open(output);
-          }}, icon('file'), output.name)));
-        if (outputs?.length) {
-          outputList.firstElementChild.setAttribute('aria-pressed', 'true');
-          outputBrowser.open(outputs[0]);
-        } else if (outputs) {
-          mount(viewerHost, h('p', {class: 'hint'}, 'The workflow verified without file publications.'));
+        mount(outputList, outputs ? h('button', {class: 'button small', onClick: () => ctx.openResults?.({collection: 'job-' + current.job})}, 'Open in Results') : null);
+        if (outputs) {
+          resultsViewer = createResultsFrame(ctx, 'job-' + current.job);
+          viewerHost.append(resultsViewer.element);
         }
       }
     }
@@ -323,7 +317,7 @@ export const runnerWindow = {
       disposed = true;
       clearTimeout(pollTimer);
       unsubscribe();
-      outputBrowser.dispose();
+      resultsViewer?.dispose();
     }};
   },
 };

@@ -2,6 +2,7 @@
 import {yamlRender} from './yaml-parse.mjs';
 // Fill mode is a small editor controller. Markers stay ordinary, durable JSON.
 import {h} from '../lib/dom.mjs';
+import {dragSurface} from '../lib/drag.mjs';
 import {documentValue} from './json-parse.mjs';
 import {rangeOfPointer, pointerAt} from './json-pointer.mjs';
 import {resolveSchemaContext} from './schema-registry.mjs';
@@ -12,6 +13,7 @@ import {
 import {expressionKinds, missingProperties, checkSchemaValue, fieldFromSchemas} from './fill-schema.mjs';
 import {schemasAt} from './schema-core.mjs';
 import {createExpressionForm} from './fill-expressions.mjs';
+import {valueLabel, VALUE_LABELS} from './value-labels.mjs';
 
 /** core is the editor's internal editing bridge; options may provide getFunctions, observations and nodeKinds. */
 export function createFillMode(core, options = {}) {
@@ -31,6 +33,7 @@ export function createFillMode(core, options = {}) {
   let applying = false;
   let disposed = false;
   let followups = [];
+  let pinned = null;
   const popover = h('section', {class: 'sx-fill-popover', hidden: true, role: 'dialog',
     'aria-label': 'Fill a value', onKeydown: (event) => {
       if (controller.keydown(event)) {
@@ -63,6 +66,7 @@ export function createFillMode(core, options = {}) {
   const item = () => markers.find((marker) => marker.pointer === current);
   const close = () => {
     current = null;
+    pinned = null;
     active.clear();
     popover.hidden = true;
     core.requestRender();
@@ -76,21 +80,40 @@ export function createFillMode(core, options = {}) {
   const reposition = () => {
     const marker = item();
     if (!marker || popover.hidden) return;
-    const anchor = core.anchorAt(marker.from);
     const width = core.view.root.clientWidth;
     const height = core.view.root.clientHeight;
+    if (pinned) {
+      popover.style.left = `${Math.round(Math.max(0, Math.min(pinned.x, width - popover.offsetWidth)))}px`;
+      popover.style.top = `${Math.round(Math.max(0, Math.min(pinned.y, height - 40)))}px`;
+      return;
+    }
+    const anchor = core.anchorAt(marker.from);
     const x = Math.max(0, Math.min(anchor.x, width - popover.offsetWidth));
     const below = anchor.y + anchor.lineHeight;
     const y = Math.max(0, Math.min(below, height - popover.offsetHeight - badge.offsetHeight));
     popover.style.left = `${Math.round(x)}px`;
     popover.style.top = `${Math.round(y)}px`;
   };
+  // A list of names may be typed plainly ("internalMesh, patch/inlet") where JSON is expected.
+  const literal = (marker, context) => {
+    try {
+      return parseField(input.value, marker.field);
+    } catch (error) {
+      const text = input.value.trim();
+      if (!(error instanceof SyntaxError) || (marker.field.type || 'json') !== 'json' || !text) throw error;
+      const names = text.split(/[\n,]+/).map((name) => name.trim()).filter(Boolean);
+      for (const candidate of [names, text]) {
+        if (!checkSchemaValue(context.schema, context.value, context.pointer, substituteField(marker.field, candidate))) return candidate;
+      }
+      throw error;
+    }
+  };
   const read = () => {
     const marker = item();
     if (!marker) throw new Error('This field is no longer present.');
     const context = resolved(marker.pointer);
     const expression = mode?.value !== 'literal';
-    const result = expression ? expressions.read() : {value: parseField(input.value, marker.field)};
+    const result = expression ? expressions.read() : {value: literal(marker, context)};
     const problem = expression ? '' : checkField(result.value, marker.field);
     if (problem) throw new Error(problem);
     const group = markers.filter((entry) => entry.field.$fill === marker.field.$fill
@@ -118,7 +141,7 @@ export function createFillMode(core, options = {}) {
       acceptButton.disabled = false;
       return true;
     } catch (error) {
-      message.textContent = error instanceof SyntaxError ? 'Enter a complete JSON value.' : error.message;
+      message.textContent = error instanceof SyntaxError ? 'Enter a complete JSON value, such as ["internalMesh"]. For a list of names, plain names separated by commas also work.' : error.message;
       message.classList.add('sx-fill-error');
       acceptButton.disabled = true;
       return false;
@@ -148,7 +171,8 @@ export function createFillMode(core, options = {}) {
         ? 'Type a value' : 'Type a JSON value', onInput: changed});
     mode = h('select', {'aria-label': 'Value or expression'},
       h('option', {value: 'literal'}, 'Type a value'),
-      kinds.map((kind) => h('option', {value: kind}, `${kind} expression`)));
+      kinds.map((kind) => h('option', {value: kind}, valueLabel(kind))));
+    const modeHelp = h('p', {class: 'sx-fill-help'});
     message = h('div', {class: 'sx-fill-message', role: 'status', 'aria-live': 'polite'});
     acceptButton = h('button', {type: 'button', class: 'button small primary', onClick: () => accept(1)}, 'Accept');
     const body = h('div', {class: 'sx-fill-body'}, input);
@@ -171,6 +195,7 @@ export function createFillMode(core, options = {}) {
       body.append(select);
     }
     mode.addEventListener('change', () => {
+      modeHelp.textContent = VALUE_LABELS[mode.value]?.[1] || '';
       if (mode.value === 'literal') {
         body.replaceChildren(input);
       } else {
@@ -183,12 +208,22 @@ export function createFillMode(core, options = {}) {
       reposition();
     });
     const index = list().findIndex((entry) => entry.pointer === pointer);
-    popover.replaceChildren(
-      h('div', {class: 'sx-fill-heading'}, h('strong', {}, marker.field.label || marker.field.$fill),
-        h('span', {}, `${index + 1} of ${list().length}${marker.field.required !== false ? ' · required' : ''}`)),
+    const heading = h('div', {class: 'sx-fill-heading', title: 'Drag to move this window off the text'},
+      h('strong', {}, marker.field.label || marker.field.$fill),
+      h('span', {}, `${index + 1} of ${list().length}${marker.field.required !== false ? ' · required' : ''}`));
+    let grabbed = null;
+    dragSurface(heading, {
+      onStart: () => { grabbed = {x: popover.offsetLeft, y: popover.offsetTop}; },
+      onMove: (dx, dy) => { pinned = {x: grabbed.x + dx, y: grabbed.y + dy}; reposition(); },
+    });
+    popover.replaceChildren(heading,
       h('div', {class: 'sx-fill-pointer'}, pointer || '/'),
       guide?.binding ? h('p', {class: 'sx-fill-help'}, `${guide.binding.operation}.${guide.binding.property}`) : null,
-      description ? h('p', {class: 'sx-fill-help'}, description) : null, mode, body, message,
+      description ? h('p', {class: 'sx-fill-help'}, description) : null,
+      core.state.options.chooseValue ? h('button', {type: 'button', class: 'button small',
+        onClick: () => core.state.options.chooseValue({pointer, pointers: markers.filter(entry =>
+          entry.field.$fill === marker.field.$fill && active.has(entry.pointer)).map(entry => entry.pointer)})},
+      'Variables & expressions…') : null, mode, modeHelp, body, message,
       h('div', {class: 'sx-fill-actions'}, acceptButton,
         h('button', {type: 'button', class: 'button small', onClick: () => move(1)}, 'Leave for later'),
         h('button', {type: 'button', class: 'button small',

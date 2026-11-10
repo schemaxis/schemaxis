@@ -1,0 +1,52 @@
+{
+  "version": "schemaxis.oracle/1",
+  "operation": "report",
+  "connection": {"profile": "free_local"},
+  "tables": [
+    {
+      "name": "customers",
+      "columns": [
+        {"name": "id", "type": "number", "precision": 10, "scale": 0},
+        {"name": "name", "type": "varchar2", "length": 40},
+        {"name": "region", "type": "varchar2", "length": 12, "nullable": true},
+        {"name": "credit", "type": "number", "precision": 12, "scale": 2}
+      ],
+      "primaryKey": ["id"],
+      "checks": [
+        {"name": "credit_ok", "terms": [{"left": {"column": "customers.credit"}, "operator": "greaterOrEqual", "right": {"literal": {"type": "number", "value": "0"}}}]}
+      ],
+      "source": {"path": "/replace/with/customers.json"}
+    },
+    {
+      "name": "orders",
+      "columns": [
+        {"name": "id", "type": "number", "precision": 10, "scale": 0},
+        {"name": "customer_id", "type": "number", "precision": 10, "scale": 0, "nullable": true},
+        {"name": "placed", "type": "date"},
+        {"name": "total", "type": "number", "precision": 12, "scale": 2, "nullable": true}
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [{"columns": ["customer_id"], "table": "customers", "references": ["id"], "onDelete": "setNull"}],
+      "source": {"path": "/replace/with/orders.json"}
+    }
+  ],
+  "report": {
+    "selects": [
+      {
+        "from": {"table": "customers", "alias": "c"},
+        "joins": [{"type": "left", "table": "orders", "alias": "o", "on": [{"left": "c.id", "right": "o.customer_id"}]}],
+        "groupBy": [{"column": "c.region"}],
+        "measures": [
+          {"name": "orders", "function": "count", "argument": {"column": "o.id"}},
+          {"name": "revenue", "function": "sum", "argument": {"column": "o.total"}}
+        ],
+        "columns": [
+          {"name": "region", "operand": {"column": "c.region"}},
+          {"name": "orders", "operand": {"measure": "orders"}},
+          {"name": "revenue", "operand": {"measure": "revenue"}}
+        ]
+      }
+    ],
+    "orderBy": [{"column": "region"}]
+  }
+}

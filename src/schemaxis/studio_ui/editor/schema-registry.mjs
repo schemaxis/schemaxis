@@ -130,7 +130,7 @@ function caretFor(ast, offset) {
 }
 
 /** Completions at an offset using the schema that governs the caret. */
-export function completionsFor(registry, ast, offset, fallbackSchema) {
+export function completionsFor(registry, ast, offset, fallbackSchema, valueNames) {
   const caret = caretFor(ast, offset);
   if (caret.position !== 'key' && caret.position !== 'value') {
     return [];
@@ -141,7 +141,8 @@ export function completionsFor(registry, ast, offset, fallbackSchema) {
   if (!resolved.schema) {
     return [];
   }
-  const items = completionsAt(resolved.schema, resolved.value, rebaseCaret(caret, resolved.base), ast.text);
+  const names = caret.position === 'value' && valueNames ? valueNames(caret.pointer || '') : [];
+  const items = completionsAt(resolved.schema, resolved.value, rebaseCaret(caret, resolved.base), ast.text, names);
   if (ast.format !== 'yaml') return items;
   return items.map(item => {
     if (item.kind !== 'property') return {...item, insertText: item.insertText.replace(/,$/, '')}; // JSON flow values are valid YAML.

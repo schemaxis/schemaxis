@@ -6,7 +6,12 @@
       "const": "schemaxis.sox/1"
     },
     "operation": {
-      "const": "assemble"
+      "enum": [
+        "assemble",
+        "conform",
+        "normalise",
+        "mix"
+      ]
     },
     "clips": {
       "type": "array",
@@ -56,12 +61,300 @@
       },
       "minItems": 1,
       "maxItems": 8
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "channelPolicy": {
+      "enum": [
+        "average",
+        "left",
+        "right"
+      ]
+    },
+    "targetPeak": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32767
+    },
+    "maxGain": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "narration": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "gain": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4,
+          "default": 1
+        },
+        "offsetFrames": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 262144,
+          "default": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source"
+      ]
+    },
+    "background": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "gain": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4,
+          "default": 1
+        },
+        "offsetFrames": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 262144,
+          "default": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source"
+      ]
+    },
+    "durationPolicy": {
+      "enum": [
+        "longest",
+        "narration"
+      ]
     }
   },
   "additionalProperties": false,
   "required": [
     "version",
-    "operation",
-    "clips"
+    "operation"
+  ],
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.sox/1"
+        },
+        "operation": {
+          "const": "assemble"
+        },
+        "clips": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "startFrame": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 262144,
+                "default": 0
+              },
+              "frameCount": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 262144
+              },
+              "gain": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 4,
+                "default": 1
+              },
+              "fadeInFrames": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 262144,
+                "default": 0
+              },
+              "fadeOutFrames": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 262144,
+                "default": 0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "frameCount"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 8
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "clips"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.sox/1"
+        },
+        "operation": {
+          "const": "conform"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "channelPolicy": {
+          "enum": [
+            "average",
+            "left",
+            "right"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "channelPolicy"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.sox/1"
+        },
+        "operation": {
+          "const": "normalise"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "targetPeak": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32767
+        },
+        "maxGain": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 16
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "targetPeak",
+        "maxGain"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.sox/1"
+        },
+        "operation": {
+          "const": "mix"
+        },
+        "narration": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "gain": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 4,
+              "default": 1
+            },
+            "offsetFrames": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144,
+              "default": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "source"
+          ]
+        },
+        "background": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "gain": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 4,
+              "default": 1
+            },
+            "offsetFrames": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144,
+              "default": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "source"
+          ]
+        },
+        "durationPolicy": {
+          "enum": [
+            "longest",
+            "narration"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "narration",
+        "background",
+        "durationPolicy"
+      ]
+    }
   ]
 }

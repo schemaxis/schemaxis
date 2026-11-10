@@ -269,7 +269,8 @@ def runtime_identity(stdout):
     first = stdout.decode('utf-8', 'replace').splitlines()[:1]
     match = re.match(r'PrusaSlicer-(\d+\.\d+\.\d+)(\+\S+)?(\s|$)', first[0] if first else '')
     if not match or match.group(1) != RUNTIME:
-        fault('UNSUPPORTED_RUNTIME', 'target stable PrusaSlicer ' + RUNTIME, observed=first[0][:200] if first else '')
+        fault('UNSUPPORTED_RUNTIME', 'target stable PrusaSlicer ' + RUNTIME, stage='version',
+              observed=first[0][:200] if first else '')
     return first[0].split()[0]
 
 
@@ -284,10 +285,11 @@ def native_info(stdout, mesh):
                 'facets': int(values['number_of_facets']), 'manifold': values['manifold'],
                 'parts': int(values['number_of_parts']), 'volume': float(values['volume'])}
     except (KeyError, ValueError):
-        fault('VERIFICATION_FAILED', 'native model information is incomplete', observed=sorted(values))
+        fault('VERIFICATION_FAILED', 'native model information is incomplete', stage='info', observed=sorted(values))
     if 'open_edges' in values or any(key in values for key in ('degenerate_facets', 'edges_fixed', 'facets_removed',
                                                                'facets_reversed', 'backwards_edges')):
-        fault('VERIFICATION_FAILED', 'native reader reported repair or open edges for a host-accepted mesh', observed=values)
+        fault('VERIFICATION_FAILED', 'native reader reported repair or open edges for a host-accepted mesh', stage='info',
+              observed=values)
     scale = max(mesh['size'])
     # PrusaSlicer 2.9.6 ModelObject::print_info uses fixed six-decimal output.
     # Add its half-unit rounding error to the native geometry allowance, in raw
@@ -300,7 +302,7 @@ def native_info(stdout, mesh):
             or any(abs(a-b) > coordinate_tolerance for a, b in zip(info['size'], mesh['size']))
             or any(abs(a-b) > coordinate_tolerance for a, b in zip(info['minimum'], mesh['minimum']))
             or abs(info['volume'] - mesh['volume']) > volume_tolerance):
-        fault('VERIFICATION_FAILED', 'native model readback differs from independent STL analysis', native=info,
+        fault('VERIFICATION_FAILED', 'native model readback differs from independent STL analysis', stage='info', native=info,
               independent={k: mesh[k] for k in ('size', 'minimum', 'triangles', 'volume')})
     return info
 
@@ -526,7 +528,7 @@ def run(document, directory, *, executable=None, timeout=300):
     deadline = time.monotonic() + timeout
     # Validate the model and placement before creating evidence or launching.
     data = source(prepared['model']['file'])
-    analyse_model(prepared, data)
+    mesh = analyse_model(prepared, data)
     try:
         directory.mkdir(parents=True)
         atomic_json(directory/'authored.json', document)
@@ -549,6 +551,13 @@ def run(document, directory, *, executable=None, timeout=300):
                 digests['model.gcode'] = hashlib.sha256(bounded(directory/'model.gcode')).hexdigest()
             execute(native_command(executable, stage, prepared, digests), target, stage, deadline - time.monotonic(),
                     environment=env)
+            # Gate each stage on its own evidence so an unsupported runtime or a
+            # native reader that disagrees with the independent STL analysis is
+            # refused before PrusaSlicer is asked to slice. checked() repeats both.
+            if stage == 'version':
+                runtime_identity(bounded(target/'version.stdout'))
+            elif stage == 'info':
+                native_info(bounded(target/'info.stdout'), mesh)
             output = {'slice': target/'model.gcode', 'reopen': target/'reopened.gcode'}.get(stage)
             if output is not None and not output.is_file():
                 # PrusaSlicer 2.9.6 can report a configuration refusal on

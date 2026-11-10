@@ -1,0 +1,46 @@
+{
+  "version": "schemaxis.adaptor-assessment/1",
+  "rubric": "schemaxis.strength-rubric/1",
+  "assessmentVersion": "2026-11-03.1",
+  "assessedOn": "2026-11-03",
+  "assessor": "Schemaxis editorial assessment",
+  "provider": "oracle",
+  "providerVersion": "schemaxis.oracle/1",
+  "routes": [
+    "schemaxis.oracle/1"
+  ],
+  "sourceFingerprint": "sha256:5212b80e0792c2ad4a4430f9bc804a32ca1b66b54c32175fffa00f1afcaac1cb",
+  "coverage": {
+    "percent": 30,
+    "status": "subjective",
+    "scope": {
+      "kind": "whole-application",
+      "description": "Whole Oracle Database application/driver breadth across the 24 public capability families in docs/design/oracle-coverage.md.",
+      "denominator": "Connection/session, dictionary, scalar types, table definitions, loading, selection, joins/set operations, aggregation/analytics, typed expressions, mutation, transactions, schema evolution, LOBs, JSON, PL/SQL routines, object/collection/XML types, vector, spatial/graph/text, AQ, notifications, performance/observability, Thin/Thick and authentication, administration, other Oracle products."
+    },
+    "rationale": "Useful partial coverage across relational tables, reports, transactions and bounded document storage: CLOB/BLOB and native JSON with typed scalar extraction now join the existing shared table contract. Existing-table mutation has snapshot, idempotency and precommit verification. Major Oracle families remain unimplemented; this is an editorial estimate, not an API ratio.",
+    "confidence": "medium"
+  },
+  "abstraction": {
+    "percent": 75,
+    "status": "subjective",
+    "scope": {
+      "kind": "declared-workflows",
+      "description": "Declared typed tables to inspect, load, relational report and atomic mutation workflows with independent verification.",
+      "denominator": "User intent and domain decisions within the named supported workflows, including declared inputs, composition and useful outputs; excluded application features do not enter this score."
+    },
+    "rationale": "Shared typed tables and named relations/conditions/steps express relational and bounded document intent without SQL, scripts, driver code or transaction replay logic. Users still choose schema, keys, joins, paths and business preconditions.",
+    "confidence": "medium"
+  },
+  "evidence": [
+    "src/schemaxis/adaptors/oracle/adaptor.json",
+    "src/schemaxis/adaptors/oracle/readiness.json",
+    "docs/oracle.md",
+    "docs/design/oracle-coverage.md",
+    "verification/2026-11-03-oracle-completion.md"
+  ],
+  "limitations": [
+    "The whole application includes 24 retained capability families; none is claimed exhaustively covered. Native acceptance is bounded to the recorded Thin driver and Free server; registration freshness is reported independently.",
+    "Streaming and empty LOBs, NCLOB/BFILE, advanced SQL/JSON, schema evolution, PL/SQL, vector, spatial/graph/text, AQ and other specialist families remain unimplemented."
+  ]
+}

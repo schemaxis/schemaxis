@@ -1,0 +1,58 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "narration",
+      "document": {
+        "version": "schemaxis.espeakng/1",
+        "operation": "narrate",
+        "text": "Welcome to the plant tour. Please wear your safety glasses and stay behind the yellow line."
+      }
+    },
+    {
+      "id": "archive",
+      "document": {
+        "version": "schemaxis.flac/1",
+        "operation": "encodeLossless",
+        "source": {
+          "$artifact": "narration",
+          "index": 0
+        }
+      }
+    },
+    {
+      "id": "package",
+      "document": {
+        "version": "schemaxis.infozip/1",
+        "operation": "bundle",
+        "files": [
+          {
+            "name": "narration.flac",
+            "source": {
+              "$artifact": "archive",
+              "index": 0
+            }
+          },
+          {
+            "name": "narration-summary.json",
+            "source": {
+              "$artifact": "narration",
+              "index": 1
+            }
+          },
+          {
+            "name": "archive-summary.json",
+            "source": {
+              "$artifact": "archive",
+              "index": 1
+            }
+          },
+          {
+            "name": "captions.srt",
+            "source": "/replace/with/captions.srt"
+          }
+        ]
+      }
+    }
+  ]
+}

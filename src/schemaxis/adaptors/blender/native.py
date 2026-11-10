@@ -21,9 +21,10 @@ MATERIAL_SOCKETS = {'roughness': 'Roughness', 'metallic': 'Metallic', 'ior': 'IO
 
 
 class Backend:
-    def __init__(self, sources=None):
+    def __init__(self, sources=None,features=None):
         self.records = {}
         self.sources = sources or {}
+        self.features=features
 
     def create(self, node, declaration, inputs, constructor):
         kind = declaration['id']
@@ -58,6 +59,7 @@ class Backend:
             obj['schemaxisSourceSha256'] = hashlib.sha256(path.read_bytes()).hexdigest()
         elif kind == 'material':
             obj = bpy.data.materials.new(node)
+            obj.use_fake_user = True
             obj.use_nodes = True
         else:
             mesh = bpy.data.meshes.new(node + '-mesh')
@@ -193,6 +195,8 @@ class Backend:
 
     def observe(self, obj):
         if isinstance(obj, bpy.types.Material):
+            from .render_policy_native import verify_material_tree
+            verify_material_tree(obj,set(MATERIAL_SOCKETS.values())|{'Base Color','Alpha','Emission Color'},features=self.features)
             return {'kind': 'material', 'colour': list(obj.diffuse_color),
                     'shaderColour': list(obj.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value),
                     'shaderAlpha': obj.node_tree.nodes['Principled BSDF'].inputs['Alpha'].default_value,
@@ -244,12 +248,14 @@ def shading_snapshot(obj):
     finally:evaluated.to_mesh_clear()
 
 
-def snapshot(names):
-    backend = Backend()
+def snapshot(names,include_render=True,features=None):
+    backend = Backend(features=features)
     result = {}
     for name in names:
         if name in bpy.data.objects:
             obj = bpy.data.objects[name]
+            from .settings import matching
+            if not matching(list(obj.color),[1,1,1,1]):fail('VERIFICATION_FAILED','undeclared DAG object display colour',name)
             result[name] = {**backend.observe(obj), 'matrix': [list(row) for row in obj.matrix_world],
                             'materials': [m.name if m else None for m in obj.data.materials],
                             'hidden': obj.hide_render, 'shading': shading_snapshot(obj)}
@@ -260,7 +266,7 @@ def snapshot(names):
     camera = bpy.context.scene.camera
     result['camera'] = {'matrix': [list(row) for row in camera.matrix_world],
                         'type': camera.data.type, 'scale': camera.data.ortho_scale, 'clipStart':camera.data.clip_start, 'clipEnd':camera.data.clip_end}
-    result['render'] = render_observation()
+    if include_render:result['render'] = render_observation(features=features)
     return result
 
 
@@ -268,6 +274,7 @@ def frame(camera, settings, bounds, size):
     bounds = settings.get('bounds', bounds)
     centre = Vector(settings.get('focalPoint', [(bounds[i]+bounds[i+1])/2 for i in (0,2,4)]))
     diagonal = math.hypot(*(bounds[i+1]-bounds[i] for i in (0,2,4)))
+    if not math.isfinite(diagonal) or diagonal<=0:fail('INVALID_SCENE','selected geometry has no finite spatial extent; check empty procedural output or convert curve components with curveToMesh')
     direction = Vector(settings['direction']).normalized()
     camera.location = centre + direction * settings.get('distance', diagonal*2)
     forward = -direction
@@ -335,24 +342,45 @@ def execute(directory):
             for name, obj in active.handles.items():
                 if isinstance(obj, bpy.types.Object):
                     obj.hide_render = name not in spec['visible']
+            production=None
+            if 'production' in spec:
+                from .production_native import Production
+                production=Production(spec['production'],active.handles,sources)
+                if production.features is not None:production.features.prefix=f'{index:04d}'
+                def cache_event(event,identity):
+                    target=directory/'cache-events.json'
+                    events=json.loads(target.read_text()) if target.exists() else []
+                    events.append({'event':event,'cache':identity,'state':index})
+                    atomic_json(target,events)
+                production.prepare_caches(sources,directory/f'{index:04d}.blend',cache_event)
+                for name,obj in active.handles.items():state['observations'][name]=backend.observe(obj)
+                from .production_native import group_observation
+                for name in spec['visible']:
+                    if name not in active.handles:
+                        obj=production.objects[name]
+                        state['observations'][name]=group_observation(obj) if obj.type in ('EMPTY','ARMATURE') else backend.observe(obj)
+            else:
+                from .shader_budget_native import ShaderBudget
+                from .object_materials_native import admit_objects
+                admit_objects(active.handles.values(),ShaderBudget())
             data = [state['observations'][name]['bounds'] for name in spec['visible']]
             bounds = [min(b[i] for b in data) if i%2 == 0 else max(b[i] for b in data) for i in range(6)]
             for ci, authored in enumerate(writer['cameras']):
                 settings = camera_values(evaluate(authored, visit['axes'], state['observations'], visit['time'], 'camera'), 'camera')
                 actual_camera = frame(camera, settings, bounds, writer['size'])
+                if production and production.features:production.features.prepare_shading()
                 if spec.get('prepareOnly'):
                     continue
                 path = directory / f'{index:04d}-{ci:03d}.png'
                 scene.render.filepath = str(path)
                 started = clock.monotonic()
-                bpy.ops.render.render(write_still=True)
+                from .render_writers_native import suppress
+                with suppress(scene):
+                    bpy.ops.render.render(write_still=True)
                 state['timings']['renderSeconds'] += clock.monotonic()-started
-                image = bpy.data.images.load(str(path), check_existing=False)
-                try:
-                    if list(image.size) != writer['size'] or len(set(list(image.pixels)[::4])) < 2:
-                        fail('VERIFICATION_FAILED', 'render is empty or has wrong dimensions', str(path))
-                finally:
-                    bpy.data.images.remove(image)
+                from .production_outputs import image_snapshot
+                if image_snapshot(path)['size'] != writer['size']:
+                    fail('VERIFICATION_FAILED', 'render has wrong dimensions', str(path))
                 artifact(path)
                 receipt['artifacts'][-1].update(camera=actual_camera, effectiveCamera=settings, state=index, cameraIndex=ci, kind='image', units='Blender units')
             from .export_native import publish
@@ -368,9 +396,22 @@ def execute(directory):
                                     'translationUnits':'Blender units', 'application':'already baked into exported vertices'},
                                 'sourceObjectTransform': state['observations'][mesh_node]['transform'],
                                 'coordinateRepresentation': 'world coordinates baked into STL'}})
+            if production:
+                from .production_output_native import publish_outputs
+                for record in publish_outputs(scene,production.objects,spec['production'],directory,f'{index:04d}'):
+                    receipt['artifacts'].append({**record,'state':index})
+                if production.features:
+                    receipt['artifacts'].extend({**record,'state':index} for record in production.features.publish(directory))
+                state['production']=production.snapshot()
+                if production.caches is not None:
+                    receipt['artifacts'].extend({**record,'state':index} for record in production.caches.publication_records())
             path = directory / f'{index:04d}.blend'
             started = clock.monotonic()
-            bpy.ops.wm.save_as_mainfile(filepath=str(path))
+            old_backups=bpy.context.preferences.filepaths.save_version
+            try:
+                bpy.context.preferences.filepaths.save_version=0
+                bpy.ops.wm.save_as_mainfile(filepath=str(path),relative_remap=False)
+            finally:bpy.context.preferences.filepaths.save_version=old_backups
             state['timings']['saveSeconds'] = clock.monotonic()-started
             artifact(path)
             receipt['artifacts'][-1].update(state=index, kind='scene',
@@ -379,9 +420,10 @@ def execute(directory):
                          'transformConvention': {'storage':'row-major nested rows','vector':'homogeneous column',
                             'composition':'world = objectTransform @ local','translationUnits':'Blender units'},
                          'objectTransforms': {name: state['observations'][name].get('transform') for name in spec['visible']}})
-            state['snapshot'] = snapshot(selection.order)
+            state['snapshot'] = snapshot(selection.order,features=production.features if production else None)
             state['blend'] = str(path)
             receipt['states'].append(state)
+            if production:production.close()
             atomic_json(directory / 'verification.json', receipt)
         active.close()
         receipt.update(status='succeeded', events=active.events)
@@ -391,23 +433,102 @@ def execute(directory):
             active.close()
 
 
-def reopen(directory):
+def reopen(directory, output=None, *, trusted_input=None, trusted_digest=None):
     directory = Path(directory)
     receipt = json.loads((directory / 'verification.json').read_text())
+    from .verification_input import lowered,verify_lowered
+    if trusted_input is None:
+        root,_,root_prepared=plan(json.loads((directory/'authored.json').read_text()))
+        trusted=lowered(root);trusted_digest=root_prepared['pipeline']['digest']
+    else:
+        trusted=json.loads(Path(trusted_input).read_text())
+        if not isinstance(trusted_digest,str):fail('VERIFICATION_FAILED','fresh reader lacks a trusted current plan digest')
+    master,selection,prepared=plan(trusted)
+    if prepared['pipeline']['digest']!=trusted_digest:
+        fail('VERIFICATION_FAILED','fresh native lowering differs from the trusted host plan')
+    verify_lowered(directory,lowered(master))
+    visits=list(selection.visits())
+    if len(receipt['states'])!=len(visits) or [s.get('visit') for s in receipt['states']]!=visits:
+        fail('VERIFICATION_FAILED','fresh native state membership differs from trusted authored intent')
+    expected_production=master.document['scenes'][0].get('production')
     states = []
-    for state in receipt['states']:
-        bpy.ops.wm.open_mainfile(filepath=state['blend'])
-        states.append(snapshot(list(state['effective'])))
+    productions=[]
+    sources=json.loads((directory/'sources.json').read_text()) if (directory/'sources.json').exists() else {}
+    import tempfile
+    reference_workspace=tempfile.TemporaryDirectory(prefix='schemaxis-blender-reference-')
+    try:
+        reference_directory=Path(reference_workspace.name)
+        for state_index,(state,visit) in enumerate(zip(receipt['states'],visits)):
+            baselines=[]
+            from .asset_verify_native import verify as verify_assets
+            from .material_assignments_native import verify as verify_materials
+            from .production_references_native import references,shader_names
+            expected=references(master,selection,prepared,visit,sources,reference_directory=reference_directory,state_index=state_index)
+            if expected.get('bundles'):
+                from .render_bundle_layout import jobs
+                from .render_bundle_data import verify as verify_bundle_data,layout as verify_bundle_layout
+                spec=expected_production
+                declared=jobs(spec,f'{state_index:04d}')
+                records=[record for record in receipt['artifacts'] if record.get('kind')=='renderBundle' and record.get('state')==state_index]
+                if len(records)!=len(declared):fail('VERIFICATION_FAILED','scientific publication membership differs')
+                for job,record,fresh in zip(declared,records,expected['bundles']):
+                    target=directory/'renders'/'bundles'/job['file']
+                    if record.get('file')!=str(target):fail('VERIFICATION_FAILED','render data path differs from trusted output')
+                    if job['format']=='exr':verify_bundle_data(job,target,master.document['scenes'][0]['images'][0]['size'],fresh_reference=fresh['file'])
+                    else:verify_bundle_layout(job,target,master.document['scenes'][0]['images'][0]['size'])
+            if expected_production is not None and expected_production.get('meshEdits'):
+                from .mesh_edits_native import source_baselines
+                baselines=source_baselines(master,selection,prepared,visit,sources)
+            if expected.get('caches') is not None:expected['caches'].verify_fresh_files(state['blend'])
+            bpy.ops.wm.open_mainfile(filepath=state['blend'],use_scripts=False)
+            if expected.get('caches') is not None:expected['caches'].verify_submitted(bpy.context.scene,project_path=state['blend'])
+            from .shader_budget_native import ShaderBudget
+            shader_budget=ShaderBudget()
+            features=None
+            if expected.get('featureBindings') is not None:
+                from .render_features_native import Features
+                features=Features.current(expected_production,expected['featureBindings'],shader_budget=shader_budget)
+                features.caches=expected.get('caches')
+                if features.needs_shading:features.admit_source(expected['featureShading'])
+            if expected['renderContext'] is not None:
+                from .render_context_native import observe as observe_render_context,verify as verify_render_context
+                verify_render_context(observe_render_context(features=features),expected['renderContext'])
+            if features is not None and features.needs_shading:features.verify_render(expected['featureShading'])
+            if expected_production is not None:
+                if bpy.data.libraries:fail('VERIFICATION_FAILED','linked libraries are outside declared production dependencies')
+                if json.loads(bpy.context.scene.get('schemaxisProduction','null'))!=expected_production:fail('VERIFICATION_FAILED','saved production contract differs')
+                from .production_native import observe
+                observed=observe(expected_production,shader_budget=shader_budget,features=features);observed['meshEditBaselines']=baselines;productions.append(observed)
+                verify_assets(observed,expected['assets'])
+                verify_materials(observed,expected['materials'])
+            if expected['shaders'] is not None:
+                from .shader_fidelity_native import observe as observe_shaders,verify as verify_shaders
+                current=observe_shaders(*shader_names(master,selection),shader_budget=shader_budget,features=features)
+                # Mandatory fresh source authority, independent of retained witness
+                # layout. Do not add an unnecessary persisted shader-state field.
+                verify_shaders(current,expected['shaders'])
+            if expected['objectMaterials'] is not None:
+                from .object_materials_native import current as current_materials
+                from .shader_fidelity_native import verify as verify_shaders
+                names=shader_names(master,selection)
+                verify_shaders(current_materials(expected['objectMaterials'],names[0],shader_budget,names[2],features=features),expected['objectMaterials'])
+            states.append(snapshot(list(state['effective']),features=features))
+    finally:reference_workspace.cleanup()
     from .export_native import readback
-    meshes=[readback(Path(a['file'])) for a in receipt['artifacts'] if a.get('kind')=='geometry']
-    atomic_json(directory / 'reopened.json', {'states': states,'meshes':meshes})
+    meshes=[readback(Path(a['file'])) for a in receipt['artifacts'] if a.get('kind')=='geometry' and not a.get('productionOutput')]
+    result={'states':states,'meshes':meshes}
+    if productions:
+        from .production_output_native import readback_outputs
+        result.update(production=productions,productionOutputs=readback_outputs([a for a in receipt['artifacts'] if a.get('productionOutput')]))
+    atomic_json(Path(output) if output else directory/'reopened.json',result)
 
 
 def configure_render(scene, settings):
-    scene.render.engine = 'CYCLES'
+    from .render_policy_native import configure as configure_policy
+    configure_policy(scene,settings)
     scene.cycles.device = 'CPU' if settings['device'] == 'CPU' else 'GPU'
     devices = []
-    if settings['device'] != 'CPU':
+    if settings['renderer']['kind']=='cycles' and settings['device'] != 'CPU':
         prefs = bpy.context.preferences.addons['cycles'].preferences
         try:
             prefs.compute_device_type = settings['device']
@@ -443,16 +564,38 @@ def configure_render(scene, settings):
     return devices
 
 
-def render_observation():
+def render_observation(features=None):
     scene = bpy.context.scene
     lamp = bpy.data.objects['__schemaxis_light']
     expected_device = 'CPU' if scene.get('schemaxisDevice', 'CPU') == 'CPU' else 'GPU'
-    if scene.render.engine != 'CYCLES' or scene.cycles.device != expected_device:
+    if scene.render.engine=='CYCLES' and scene.cycles.device != expected_device:
         fail('VERIFICATION_FAILED', 'native render engine/device changed')
-    background = scene.world.node_tree.nodes['Background']
+    from .settings import matching
+    from .render_policy_native import observe as observe_policy
+    policy=observe_policy(scene)
+    # The legacy render options retain their default World settings. A typed
+    # sceneWorld is separately nominated and fully checked in renderFeatures.
+    world=features.previous_world if features is not None else scene.world
+    if not world or not world.use_nodes or world.animation_data or world.node_tree.animation_data:
+        fail('VERIFICATION_FAILED','render world shading changed')
+    tree=world.node_tree;background=tree.nodes.get('Background');output=tree.nodes.get('World Output')
+    if not background or not output or len(tree.nodes)!=2 or len(tree.links)!=1 or background.bl_idname!='ShaderNodeBackground' or output.bl_idname!='ShaderNodeOutputWorld' or not output.is_active_output or output.target!='ALL' or background.mute or output.mute:
+        fail('VERIFICATION_FAILED','render world graph changed')
+    link=tree.links[0]
+    if link.from_node!=background or link.to_node!=output or link.from_socket!=background.outputs['Background'] or link.to_socket!=output.inputs['Surface'] or link.is_muted or background.inputs[0].default_value[3]!=1:
+        fail('VERIFICATION_FAILED','render world connection changed')
+    if lamp.type!='LIGHT' or lamp.data.type!='AREA' or lamp.parent or lamp.constraints or lamp.animation_data or lamp.data.animation_data or lamp.data.shape!='SQUARE' or lamp.hide_render or not matching(list(lamp.data.color),[1,1,1]) or not matching(list(lamp.scale),[1,1,1]):
+        fail('VERIFICATION_FAILED','fixed render light changed')
+    from .render_policy_native import verify_light_tree
+    verify_light_tree(lamp.data)
+    expected_rotation=(-lamp.location).to_track_quat('-Z','Y').to_euler()
+    if not matching(list(lamp.rotation_euler),list(expected_rotation)):
+        fail('VERIFICATION_FAILED','fixed render light direction changed')
+    if scene.render.threads_mode!='FIXED' or scene.render.image_settings.file_format!='PNG':
+        fail('VERIFICATION_FAILED','native execution/output settings changed')
     # GPU backend is retained explicitly because Blender preferences are not saved
     # in .blend files; the selected physical devices are separately in the receipt.
-    return {'device': scene.get('schemaxisDevice', 'CPU'), 'samples': scene.cycles.samples,
+    return {**policy,'device': scene.get('schemaxisDevice', 'CPU'), 'samples': scene.cycles.samples,
             'threads': scene.render.threads, 'denoise': scene.cycles.use_denoising,
             'transparent': scene.render.film_transparent, 'seed': scene.cycles.seed,
             'worldColour': list(background.inputs[0].default_value)[:3],

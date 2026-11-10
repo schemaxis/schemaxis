@@ -1,0 +1,19 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "parameters": {
+    "thickness": {"kind": "length", "value": 10, "minimum": 6, "maximum": 20},
+    "bossRadius": {"kind": "length", "value": 5, "minimum": 4, "maximum": 8},
+    "bossHeight": {"kind": "length", "value": 8, "minimum": 4, "maximum": 12}
+  },
+  "nodes": [
+    {"id": "housing", "filter": "body"},
+    {"id": "outline", "filter": "rectangle", "options": {"width": 40, "height": 30}, "inputs": {"body": "housing"}},
+    {"id": "stock", "filter": "pad", "inputs": {"body": "housing", "profile": "outline"}, "drive": {"length": {"terms": {"thickness": 1}}}},
+    {"id": "bossProfile", "filter": "circle", "options": {"onFace": {"face": "top"}}, "inputs": {"body": "housing", "support": "stock"}, "drive": {"radius": {"terms": {"bossRadius": 1}}}},
+    {"id": "boss", "filter": "pad", "inputs": {"body": "housing", "profile": "bossProfile", "base": "stock"}, "drive": {"length": {"terms": {"bossHeight": 1}}}},
+    {"id": "boreProfile", "filter": "circle", "options": {"radius": 2, "onFace": {"face": "top"}}, "inputs": {"body": "housing", "support": "boss"}},
+    {"id": "finished", "filter": "pocket", "options": {"extent": "throughAll", "direction": "backward"}, "inputs": {"base": "boss", "profile": "boreProfile"}}
+  ],
+  "output": "finished"
+}

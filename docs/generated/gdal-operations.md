@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[window](#window)
+[window](#window), [zonalSummary](#zonalsummary)
 
 ## window
 
@@ -18,6 +18,7 @@ Common mistakes and assumptions:
 
 - Nearest downsampling loses unsampled pixels and is not an average.
 - CRS assertion never reprojects coordinates; EPSG:4326 raster axes are longitude then latitude.
+- EPSG:4326 latitude outside -90..90 is refused with RASTER_EXTENT_INVALID; this may indicate mislabelled metre-scale northings. Longitude conventions and projected coordinates are preserved.
 
 Native binding: `osgeo.gdal.Translate(srcWin, width, height, resampleAlg=nearest)`. Output kind: `["image","text"]`.
 
@@ -36,4 +37,34 @@ Inputs: none.
 | `units` | Required assertion of band value units: m for metres, K for kelvin, 1 for dimensionless. Distinct from horizontal CRS units. Source units must match and output units are preserved, without vertical-datum inference. | `{"type":"enum","values":["m","K","1"]}` | **required** |
 | `nodata` | Required finite source nodata sentinel. Must match the tag and fit the source dtype exactly. Nearest sampling copies a nodata pixel unchanged; statistics exclude it and use null extrema/mean when every pixel is nodata. | `{"type":"number"}` | **required** |
 | `resampling` | Only nearest is supported. Output centres select source indices floor((2*i+1)*sourceSize/(2*outputSize)); ties select the higher index. No averaging or conservation; bilinear is deliberately refused. | `{"type":"enum","values":["nearest"]}` | **required** |
+| `lossPolicy` | Choose strict to refuse unsupported bands, masks, overviews, compression or metadata. Only TIFF strip layout, byte order and descriptive CRS citations may change; no silent semantic metadata loss. | `{"type":"enum","values":["strict"]}` | **required** |
+
+
+## zonalSummary
+
+Measure named pixel-aligned rectangles of the captured raster grid. For each zone you declare, you get eight columns tied to your zone ID: valid and missing (how many pixels held a real value and how many equalled nodata), coverage (valid as a fraction of the rectangle, so you can judge how much was measured), minimum and maximum (the exact spread of values), sum (the total, meaningful for additive quantities) and mean (the unweighted typical value). It is published as a typed CSV, with a JSON summary that keeps units, CRS and rectangle corners. Use it for bounded elevation, temperature or categorical-index grids when you already know the rectangles in pixel indices. It does not classify land, weight by ground area, reproject, read polygons or infer meaning beyond the band values.
+
+Common mistakes and assumptions:
+
+- Zones are rectangles in this raster's own pixel grid, counted from the top-left. After a window or resize, re-author the zones for the new grid.
+- Overlapping zones are summarised independently; their pixel visits are not unique pixels and totals must not be added.
+- sum is the total of band values, not an area integral. It is only meaningful for additive quantities; for elevation or temperature read the mean, minimum and maximum instead.
+- mean is unweighted: every valid pixel counts equally. EPSG:4326 pixels are angular, so ground area varies with latitude and no area-weighted quantity is implied.
+- coverage says how much of the rectangle held real values, not how accurate they are. Check it, with valid, before trusting a mean.
+- A zone with no valid pixel reports valid 0, coverage 0 and null statistics, not zero.
+- A zone whose positive and negative values nearly cancel (for example +1 and -1) is refused with ZONE_SUM_UNRESOLVABLE before any native work: its derived roundoff allowance exceeds 2**-26 of the sum, so a native sum could no longer be told from a wrong one. Choose a zone that does not cancel; the threshold checks that two computations agree, not how accurate the measurement is.
+- The CSV carries no units; minimum, maximum, sum and mean take the asserted band units, recorded in zones-summary.json and the publication metadata.
+
+Native binding: `osgeo.gdal.Run("raster", "zonal-stats", input=source.tif, zones=zones.geojson, stat=[count,min,max,sum,mean], pixels="default", include_field=["zone"], output_format="GeoJSON"); fresh OGR reopening of summary.geojson`. Output kind: `["table","text"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `source` | Absolute local .tif/.tiff regular file, at most 8 MiB and 262144 pixels. Single-band north-up uncompressed strips only, no symlink/device/remote input. Source bytes are captured; changes invalidate reuse. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `epsg` | Required assertion of source CRS, 4326 or 3857. 4326 raster coordinates are x longitude and y latitude in degrees; 3857 uses easting/northing metres. A mismatch is refused; this field does not reproject. | `{"type":"enum","values":[4326,3857]}` | **required** |
+| `units` | Required assertion of band value units: m for metres, K for kelvin, 1 for dimensionless. Distinct from horizontal CRS units. Source units must match and output units are preserved, without vertical-datum inference. | `{"type":"enum","values":["m","K","1"]}` | **required** |
+| `nodata` | Required finite source nodata sentinel. Must match the tag and fit the source dtype exactly. Nearest sampling copies a nodata pixel unchanged; statistics exclude it and use null extrema/mean when every pixel is nodata. | `{"type":"number"}` | **required** |
+| `zones` | One to 16 named rectangles in the captured raster's pixel grid, summarised in the order you author them. Each is an independent measurement region; overlap is allowed and nothing is merged, so pixels inside two zones are counted in both. | `{"type":"array","items":{"type":"object","properties":{"id":{"type":"string","minLength":1,"maxLength":32,"required":true},"x":{"type":"integer","minimum":0,"maximum":4096,"required":true},"y":{"type":"integer","minimum":0,"maximum":4096,"required":true},"width":{"type":"integer","minimum":1,"maximum":4096,"required":true},"height":{"type":"integer","minimum":1,"maximum":4096,"required":true}}},"minItems":1,"maxItems":16}` | **required** |
+| `missing` | What to do with nodata pixels inside a zone. exclude leaves them out and reports the missing count and coverage; refuse fails the run if any zone contains one. Nodata is the exact sentinel you assert and the raster declares; nothing is imputed, and a zone with no valid pixel gets null statistics. | `{"type":"enum","values":["exclude","refuse"]}` | **required** |
 | `lossPolicy` | Choose strict to refuse unsupported bands, masks, overviews, compression or metadata. Only TIFF strip layout, byte order and descriptive CRS citations may change; no silent semantic metadata loss. | `{"type":"enum","values":["strict"]}` | **required** |

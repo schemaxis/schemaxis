@@ -1,0 +1,373 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.getdp/1": {
+      "guide": "docs/getdp.md",
+      "context": {
+        "purpose": "Solve steady heat flow through layered slabs or DC current through layered resistors from material and boundary intent; publish independently verified field and flux tables and optional sampled-limit margins.",
+        "assumptions": "Stable GetDP 3.5.0, serial linear nodal finite elements, metres and constant cross-sectional area. Thermal field is kelvin, conductivity W/(m K), source W/m3, flux W/m2; electrical field V, conductivity S/m, source A/m3 and current density A/m2. Flux is outward at either boundary and positive along +x in element tables.",
+        "constraints": "One to sixteen perfectly contacting constant-property layers, two to 128 cells each and 512 total. Stiffness contrast at most 1e8. At least one value or thermal convection boundary anchors the field. No arbitrary .pro files, imported meshes, 2D/3D, radiation, transient, nonlinear/coupled electrothermal or MPI. Limits inspect mesh-node field and element-midpoint flux only.",
+        "inspection": "field.csv retains node positions and temperature/potential; flux.csv retains element centres, signed axial flux and one-based layer indices. conduction-summary.json reports source-corrected boundary outflow, global balance, exact-solution discrepancies, units, losses and limit margins. model.pro and model.msh are generated inspectable solver inputs.",
+        "recovery": "UNANCHORED_FIELD: supply a value or thermal convection end. INVALID_BOUNDARY: value/flux needs value only; convection needs coefficient and ambient. INVALID_TEMPERATURE: use nonnegative kelvin. ILL_CONDITIONED_FIELD: reduce conductivity/element-size contrast. PERFORMANCE_NOT_MET: inspect signed margins, change material/source/boundary or documented limits, then rerun. Configure stable 3.5.0 for INTERPRETER_NOT_FOUND/UNSUPPORTED_RUNTIME; retain native logs on failure."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/getdp-baseline.json"
+        },
+        {
+          "id": "composite",
+          "reference": "examples/schemaxis/getdp-composite.json"
+        },
+        {
+          "id": "source",
+          "reference": "examples/schemaxis/getdp-source.json"
+        },
+        {
+          "id": "convection",
+          "reference": "examples/schemaxis/getdp-convection.json"
+        },
+        {
+          "id": "current",
+          "reference": "examples/schemaxis/getdp-current.json"
+        },
+        {
+          "id": "unanchored",
+          "document": {
+            "version": "schemaxis.getdp/1",
+            "operation": "steadyHeat",
+            "layers": [
+              {
+                "name": "slab",
+                "thickness_m": 0.1,
+                "conductivity": 10,
+                "cells": 10
+              }
+            ],
+            "left": {
+              "kind": "flux",
+              "value": 0
+            },
+            "right": {
+              "kind": "flux",
+              "value": 0
+            },
+            "area_m2": 0.5
+          },
+          "expect": "invalid",
+          "fault": "UNANCHORED_FIELD",
+          "schemaValid": true
+        },
+        {
+          "id": "invalid-conductivity",
+          "document": {
+            "version": "schemaxis.getdp/1",
+            "operation": "steadyHeat",
+            "layers": [
+              {
+                "name": "slab",
+                "thickness_m": 0.1,
+                "conductivity": 0,
+                "cells": 10
+              }
+            ],
+            "left": {
+              "kind": "value",
+              "value": 400
+            },
+            "right": {
+              "kind": "value",
+              "value": 300
+            },
+            "area_m2": 0.5
+          },
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_getdp_admission.py"
+      ],
+      "acceptance": [
+        "tools/qualify_getdp.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Shared workflow execution publishes field/flux tables and generated inputs; no imported artifact inputs.",
+          "references": [
+            "docs/getdp.md",
+            "tools/qualify_getdp.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure functions and finite analytic visits resolve before native validation.",
+          "references": [
+            "docs/getdp.md",
+            "tools/qualify_getdp.py"
+          ]
+        }
+      },
+      "completion": {
+        "scope": "New steadyHeat and steadyCurrent document route: layers, source, three thermal end types, two electrical end types, sampled limits, exact/energy verification, JSON/Studio reuse.",
+        "review": [
+          "verification/2026-11-03-getdp-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The bounded serial batch conduction product does not implement native-inspection.",
+          "mpi": "The bounded serial batch conduction product does not implement mpi.",
+          "time-batches": "The bounded serial batch conduction product does not implement time-batches.",
+          "live-editing": "The bounded serial batch conduction product does not implement live-editing.",
+          "native-save": "The bounded serial batch conduction product does not implement native-save.",
+          "conversion": "The bounded serial batch conduction product does not implement conversion."
+        }
+      },
+      "development": {
+        "api": [
+          "https://getdp.info/",
+          "https://getdp.info/doc/texinfo/getdp.html"
+        ],
+        "lifecycle": {
+          "timeout": "One deadline bounds version identification, solve, fresh-process postprocessing and final verification; shared process-tree supervisor terminates timed-out commands.",
+          "cancellation": "Shared owned-process cancellation plus final cancellation gate; no resident solver.",
+          "logs": "Retains version, solve and reopen stdout/stderr, deterministic formulation/mesh, authored/effective plans, native .pre/.res and original/reopened .pos fields, tables, summary and failed results.",
+          "verification": "Independent piecewise-quadratic exact conduction transfer equations check all native node fields and element-midpoint flux, source-corrected end and interface conservation. Fresh GetDP process reloads .pre/.res and regenerates fields. Offline verifier reconstructs generated inputs, publication membership, evidence hashes and analytic expectations."
+        },
+        "data": [
+          {
+            "id": "field",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV",
+            "traits": {
+              "units": "SI; thermal K/W or electrical V/A"
+            },
+            "losses": [
+              "One-dimensional perfect-contact constant-property conduction; retain JSON and generated inputs for physical meaning."
+            ],
+            "scope": "Node coordinate and field."
+          },
+          {
+            "id": "flux",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV",
+            "traits": {
+              "units": "SI; thermal K/W or electrical V/A"
+            },
+            "losses": [
+              "One-dimensional perfect-contact constant-property conduction; retain JSON and generated inputs for physical meaning."
+            ],
+            "scope": "Element midpoint axial flux and layer index."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "units": "SI; thermal K/W or electrical V/A"
+            },
+            "losses": [
+              "One-dimensional perfect-contact constant-property conduction; retain JSON and generated inputs for physical meaning."
+            ],
+            "scope": "Independent exact discrepancy, source/outflow balance, sampled-limit margins and losses."
+          },
+          {
+            "id": "formulation",
+            "direction": "output",
+            "kind": "text",
+            "format": "GetDP .pro",
+            "traits": {
+              "units": "SI; thermal K/W or electrical V/A"
+            },
+            "losses": [
+              "One-dimensional perfect-contact constant-property conduction; retain JSON and generated inputs for physical meaning."
+            ],
+            "scope": "Deterministically generated scalar diffusion weak formulation; no authored source."
+          },
+          {
+            "id": "mesh",
+            "direction": "output",
+            "kind": "text",
+            "format": "Gmsh MSH 2.2 ASCII",
+            "traits": {
+              "units": "SI; thermal K/W or electrical V/A"
+            },
+            "losses": [
+              "One-dimensional perfect-contact constant-property conduction; retain JSON and generated inputs for physical meaning."
+            ],
+            "scope": "Internally generated line elements and end points; no Gmsh runtime needed."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "Inspect numeric node field and element-centre flux with SI column names.",
+            "limits": "At most 513 nodes and 512 elements; flux sign is +x."
+          },
+          {
+            "panel": "text",
+            "scope": "Review generated mesh/formulation and JSON physical balance and sampled-limit margins.",
+            "limits": "No native interactive geometry or solution editing."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit layer material, source, cells or boundary JSON pointers in the shared source/property editor or terminal; plan a new revision and inspect/verify each fresh result. Layer records serve heat/current operations with the documented units."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Shared workflow execution publishes field/flux tables and generated inputs; no imported artifact inputs."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Serial batch conduction does not implement native-inspection."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure functions and finite analytic visits resolve before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial batch conduction does not implement mpi."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "All inputs are inline; source-bound verified completed runs can be reused."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "Serial batch conduction does not implement time-batches."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared durable JSON source editing, revision and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON pointer edits of layer, boundary, area and sampled limits."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Serial batch conduction does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Serial batch conduction does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Serial batch conduction does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Independent literal expectation from q=(Tleft-Tright)/sum(L/k), q'=source and outward end convention; constant area scales totals.",
+            "checks": [
+              {
+                "file": "conduction-summary.json",
+                "format": "json",
+                "pointer": "/rightOutflowTotal",
+                "expected": 5000,
+                "relative": 1e-07,
+                "absolute": 1e-07
+              }
+            ]
+          },
+          {
+            "id": "conductivity-variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/layers/0/conductivity",
+                "value": 5
+              }
+            ],
+            "scope": "Independent literal expectation from q=(Tleft-Tright)/sum(L/k), q'=source and outward end convention; constant area scales totals.",
+            "checks": [
+              {
+                "file": "conduction-summary.json",
+                "format": "json",
+                "pointer": "/rightOutflowTotal",
+                "expected": 2500,
+                "relative": 1e-07,
+                "absolute": 1e-07
+              }
+            ]
+          },
+          {
+            "id": "composite",
+            "example": "composite",
+            "edits": [],
+            "scope": "Independent literal expectation from q=(Tleft-Tright)/sum(L/k), q'=source and outward end convention; constant area scales totals.",
+            "checks": [
+              {
+                "file": "conduction-summary.json",
+                "format": "json",
+                "pointer": "/rightOutflowTotal",
+                "expected": 454.54545454545456,
+                "relative": 1e-07,
+                "absolute": 1e-07
+              }
+            ]
+          },
+          {
+            "id": "generated-heat",
+            "example": "source",
+            "edits": [],
+            "scope": "Independent literal expectation from q=(Tleft-Tright)/sum(L/k), q'=source and outward end convention; constant area scales totals.",
+            "checks": [
+              {
+                "file": "conduction-summary.json",
+                "format": "json",
+                "pointer": "/maximumField",
+                "expected": 312.5,
+                "relative": 1e-07,
+                "absolute": 1e-07
+              }
+            ]
+          },
+          {
+            "id": "flux-convection",
+            "example": "convection",
+            "edits": [],
+            "scope": "Independent literal expectation from q=(Tleft-Tright)/sum(L/k), q'=source and outward end convention; constant area scales totals.",
+            "checks": [
+              {
+                "file": "conduction-summary.json",
+                "format": "json",
+                "pointer": "/maximumField",
+                "expected": 320,
+                "relative": 1e-07,
+                "absolute": 1e-07
+              }
+            ]
+          },
+          {
+            "id": "dc-current",
+            "example": "current",
+            "edits": [],
+            "scope": "Independent literal expectation from q=(Tleft-Tright)/sum(L/k), q'=source and outward end convention; constant area scales totals.",
+            "checks": [
+              {
+                "file": "conduction-summary.json",
+                "format": "json",
+                "pointer": "/rightOutflowTotal",
+                "expected": 5000,
+                "relative": 1e-07,
+                "absolute": 1e-07
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

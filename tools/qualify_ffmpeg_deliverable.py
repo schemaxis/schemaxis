@@ -4,7 +4,9 @@
 import argparse
 import copy
 import json
+import os
 from pathlib import Path
+import subprocess
 import struct
 import zlib
 
@@ -24,6 +26,18 @@ def image(width, height, colour):
             +chunk(b'IDAT', zlib.compress(raw))+chunk(b'IEND', b''))
 
 
+def probe_stream(executable, path):
+    """Independent FFprobe read of one video stream, outside the adaptor."""
+    command = [str(Path(executable).with_name('ffprobe')), '-v', 'error', '-show_streams', '-of', 'json', str(path)]
+    return json.loads(subprocess.run(command, check=True, timeout=40, capture_output=True).stdout)['streams'][0]
+
+
+def decode_rgb(executable, path):
+    command = [executable, '-v', 'error', '-i', str(path), '-map', '0:v:0', '-an', '-fps_mode', 'passthrough',
+               '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-']
+    return subprocess.run(command, check=True, timeout=40, capture_output=True).stdout
+
+
 def expect_fault(callback, code):
     try:
         callback()
@@ -40,6 +54,8 @@ def main():
     parser.add_argument('--output-directory', type=Path, required=True)
     parser.add_argument('--timeout', type=float, default=60)
     args=parser.parse_args()
+    # Verification decodes the published bytes again and takes its trusted runtime from the environment (never PATH or receipts).
+    os.environ['FFMPEG_EXECUTABLE']=str(Path(args.executable).absolute())
     root=args.output_directory.absolute();root.mkdir(parents=True, exist_ok=False)
     sources=[]
     for index, colour in enumerate(((220, 30, 10, 255), (20, 130, 210, 255))):
@@ -81,7 +97,16 @@ def main():
             stage_tamper=expect_fault(lambda:adaptor.verify(output),'VERIFICATION_FAILED')
         finally:
             stage.write_bytes(original)
-        checks[codec]={'verification':observed,'changedPublication':tamper['code'],
+        stream=probe_stream(args.executable,publication)
+        if codec=='h264':
+            # Independent declaration check; the adaptor's own probe must agree.
+            assert (stream['profile'],stream['pix_fmt'],stream.get('color_space'),stream.get('color_range'))==(
+                'High','yuv420p','smpte170m','tv'),stream
+        else:
+            # FFV1 stays full-range RGB (bgr0); no YUV conversion is introduced.
+            assert (stream['pix_fmt'],stream.get('color_space'),stream.get('color_range'))==('bgr0','gbr','pc'),stream
+        checks[codec]={'independentStream':{k:stream.get(k) for k in ('codec_name','profile','pix_fmt','color_space','color_range')},
+            'verification':observed,'changedPublication':tamper['code'],
             'changedCompletion':stage_tamper['code'],'refreshedPublicationReadbackTamper':readback_tamper['code']}
     sheet=root/'sheet.png';sheet.write_bytes(image(64,24,(40,80,120,255)))
     metadata=root/'sheet.json'
@@ -94,6 +119,28 @@ def main():
             'maxBytes':100000,'maxMeanRGBError':0}}
     adaptor.run(sprite,root/'sheet',executable=args.executable,timeout=args.timeout)
     checks['sheet']=adaptor.verify(root/'sheet')
+    # HD saturated colours are where an undeclared YUV matrix would be guessed
+    # differently by players; the published stream must declare what was applied.
+    hd_colours=((255,0,0),(0,255,0),(0,0,255),(255,255,0))
+    hd_sources=[]
+    for index,colour in enumerate(hd_colours):
+        path=root/f'hd-{index}.png';path.write_bytes(image(640,360,(*colour,255)));hd_sources.append(str(path))
+    hd={'version':'schemaxis.ffmpeg/1','nodes':[{'id':'movie','filter':'encodeFrames',
+        'options':{'files':hd_sources,'codec':'h264','fps':25}}],
+        'deliverable':{'width':640,'height':360,'frames':4,'maxMeanRGBError':16}}
+    adaptor.run(hd,root/'hd-h264',executable=args.executable,timeout=args.timeout)
+    hd_verified=adaptor.verify(root/'hd-h264')
+    hd_stream=probe_stream(args.executable,root/'hd-h264'/'video.mp4')
+    assert (hd_stream['color_space'],hd_stream['color_range'])==('smpte170m','tv'),hd_stream
+    independent=decode_rgb(args.executable,root/'hd-h264'/'video.mp4');stride=640*360*3
+    hd_errors=[]
+    for index,colour in enumerate(hd_colours):
+        frame=independent[index*stride:(index+1)*stride]
+        error=sum(abs(frame[i+c]-colour[c]) for i in range(0,stride,3) for c in range(3))/stride
+        assert error<=2.0,(index,error);hd_errors.append(error)
+    assert len(independent)==4*stride
+    checks['hd-h264']={'verification':hd_verified,'independentMeanRGBError':hd_errors,
+        'independentStream':{k:hd_stream.get(k) for k in ('profile','pix_fmt','color_space','color_range')}}
     for label, requirements in (('byte-budget',{'maxBytes':1}), ('wrong-duration',{'durationSeconds':1}),
                                 ('wrong-size',{'width':30}), ('strict-lossy-quality',{'maxMeanRGBError':0})):
         candidate=copy.deepcopy(document);candidate['deliverable']=requirements
@@ -106,8 +153,8 @@ def main():
         assert json.loads((output/'result.json').read_text())['verified'] is False
         checks[label]={'fault':fault['code'],'assessment':receipt['deliverable']}
     # Offline evidence remains useful after original input paths disappear.
-    for path in [*map(Path,sources),sheet,metadata]:path.unlink()
-    for label in ('ffv1','h264','sheet'):assert adaptor.verify(root/label)['verified']
+    for path in [*map(Path,sources),*map(Path,hd_sources),sheet,metadata]:path.unlink()
+    for label in ('ffv1','h264','sheet','hd-h264'):assert adaptor.verify(root/label)['verified']
     # Version-3 single-slice encoders can accept tiny fixtures yet fail an
     # ordinary diagram. Nonuniform pixels expose row/edge loss in skinny images.
     shapes={}
@@ -124,7 +171,7 @@ def main():
         assert (output/'decoded.rgb').read_bytes()==expected
         source.unlink();assert adaptor.verify(output)['verified']
     receipt={'version':'schemaxis.ffmpeg.deliverable-qualification/1','verified':True,
-        'scope':'Two ordered 32x24 solid-colour PNGs, H.264/FFV1 full decode; timed 8-frame FFV1 sheet; '
+        'scope':'Two ordered 32x24 solid-colour PNGs, H.264/FFV1 full decode with independent FFprobe profile/pixel-format/BT.601 limited-range colour declaration; four saturated 640x360 H.264 frames with independent decode; timed 8-frame FFV1 sheet; '
                 'size/duration/byte-budget/strict lossy-quality rejection, publication/completion tamper, encoded-byte replacement with refreshed ordinary publication metadata, stage-bound native readback and offline retained sources. '
                 'FFV1 version-1 nonuniform RGB checks at 2x2,32x24,400x200,1x1,1x64,64x1,3x17,17x3,640x360 '
                 'independently compare every decoded row, edge and channel. '

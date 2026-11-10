@@ -1,0 +1,84 @@
+{
+  "version": "schemaxis.freecad/1",
+  "nodes": [
+    {
+      "id": "casting",
+      "filter": "importMesh",
+      "options": {
+        "file": "examples/schemaxis/freecad-body-stock.stl",
+        "units": "mm",
+        "placement": {
+          "position": [
+            3,
+            4,
+            5
+          ],
+          "clocking": 31
+        },
+        "refine": true
+      }
+    },
+    {
+      "id": "part",
+      "filter": "body",
+      "options": {
+        "frame": {
+          "origin": [
+            7,
+            8,
+            9
+          ],
+          "xAxis": [
+            0.8191520442889918,
+            0,
+            -0.573576436351046
+          ],
+          "normal": [
+            0.573576436351046,
+            0,
+            0.8191520442889918
+          ]
+        }
+      }
+    },
+    {
+      "id": "seed",
+      "filter": "bodySeed",
+      "inputs": {
+        "body": "part",
+        "source": "casting"
+      }
+    },
+    {
+      "id": "bore",
+      "filter": "circle",
+      "options": {
+        "radius": 1,
+        "centre": [
+          8.481444557560799,
+          14.293384553313215
+        ],
+        "origin": [
+          0,
+          0,
+          10
+        ]
+      },
+      "inputs": {
+        "body": "part"
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "pocket",
+      "options": {
+        "direction": "backward"
+      },
+      "inputs": {
+        "base": "seed",
+        "profile": "bore"
+      }
+    }
+  ],
+  "output": "cut"
+}

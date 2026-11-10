@@ -15,17 +15,17 @@ def resources(document, spec, identity):
 
 
 def reusableInputs(document):
-    """Current bytes of every STEP input; importSTEP planning reads and hashes the authored path now."""
+    """Current bytes of every external geometry input, read and hashed by host planning."""
     from .adaptor import plan
     prepared = plan(document)
     paths = [node['options']['file'] for node in prepared['nodes'] if node['filter'] == 'readSTEP']
     result = {str(Path(path).absolute()): file_digest(path) for path in paths}
     for node in prepared['nodes']:
-        if node['filter'] == 'importSTEP':
+        if node['filter'] in ('importSTEP','importMesh'):
             path, digest = node['source']['path'], node['source']['sha256']
             if result.get(path, digest) != digest:
                 from schemaxis.errors import fail
-                fail('INPUT_CHANGED', 'STEP input changed while collecting provenance', path)
+                fail('INPUT_CHANGED', 'External geometry input changed while collecting provenance', path)
             result[path] = digest
     return result
 

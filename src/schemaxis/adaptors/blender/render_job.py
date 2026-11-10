@@ -1,5 +1,5 @@
 # Copyright (C) 2026 David L F Gaden
-"""Render verified saved Schemaxis scenes without reconstructing their geometry."""
+"""Render a newly supplied saved scene without reconstructing its geometry."""
 import hashlib
 import json
 import math
@@ -40,8 +40,8 @@ def run(document, directory, *, executable=None, timeout=300):
     if not executable:
         fail('INTERPRETER_NOT_FOUND', 'provide a Blender executable')
     runtime = Interpreter('blender', str(Path(executable).resolve())).probe()
-    if runtime.version != '5.2.2':
-        fail('UNSUPPORTED_RUNTIME', 'saved scene rendering requires Blender 5.2.2')
+    if runtime.version != '5.2.3':
+        fail('UNSUPPORTED_RUNTIME', 'saved scene rendering requires Blender 5.2.3')
     directory = Path(directory).absolute()
     if directory.exists():
         fail('OUTPUT_EXISTS', 'choose a fresh output directory', str(directory))

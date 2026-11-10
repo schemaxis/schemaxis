@@ -4,11 +4,11 @@
     "schemaxis.gnuplot/1": {
       "guide": "docs/gnuplot.md",
       "context": {
-        "purpose": "Plot named numeric CSV series with units, explicit ranges and optional symmetric y uncertainty.",
+        "purpose": "Plot named numeric CSV series with units, explicit ranges and optional symmetric y uncertainty or an asserted asymmetric lower/upper range envelope.",
         "assumptions": "Finite increasing x data, matching units, bounded local CSV; fixed margins and typography.",
-        "constraints": "2\u20132048 rows, 2\u201312 columns, 1\u20134 series; linear/log10, no missing data or clipping, ASCII labels.",
+        "constraints": "2\u20132048 rows, 2\u201312 columns, 1\u20134 series; linear/log10, no missing data or clipping, ASCII labels. A bounds envelope: linear axes, one series, lower < upper, lower <= y <= upper, each row at least 24 pixels tall.",
         "inspection": "Inspect raw native plot.svg/plot.png, captured.csv and trusted plot.gp. plot-summary.json records independent host inspection and is not native readback.",
-        "recovery": "INVALID_PLOT_RANGE: increasing separated positive log ranges. INVALID_LOG_DATA: positive values and uncertainty endpoints. PLOT_UNIT_MISMATCH: declare matching column/axis units. INVALID_PLOT_DATA: rectangular numeric cells/header. INTERPRETER_NOT_FOUND: configure Gnuplot."
+        "recovery": "INVALID_PLOT_RANGE: increasing separated positive log ranges. INVALID_LOG_DATA: positive values and uncertainty endpoints. PLOT_UNIT_MISMATCH: declare matching column/axis units. INVALID_PLOT_DATA: rectangular numeric cells/header. INTERPRETER_NOT_FOUND: configure Gnuplot. INVALID_PLOT_BOUNDS: use distinct columns with lower < upper and lower <= y <= upper; not together with error. PLOT_BOUNDS_UNSUPPORTED: linear axes and one series only. PLOT_BAND_UNVERIFIABLE: widen, flatten or rescale the envelope so its pixels can be verified."
       },
       "examples": [
         {
@@ -32,6 +32,28 @@
           "reference": "examples/schemaxis/gnuplot-range-invalid.json",
           "expect": "invalid",
           "fault": "INVALID_PLOT_RANGE",
+          "schemaValid": true
+        },
+        {
+          "id": "band",
+          "reference": "examples/schemaxis/gnuplot-band.json"
+        },
+        {
+          "id": "band-variant",
+          "reference": "examples/schemaxis/gnuplot-band-variant.json"
+        },
+        {
+          "id": "band-symmetric-invalid",
+          "reference": "examples/schemaxis/gnuplot-band-symmetric-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_PLOT_BOUNDS",
+          "schemaValid": true
+        },
+        {
+          "id": "band-log-invalid",
+          "reference": "examples/schemaxis/gnuplot-band-log-invalid.json",
+          "expect": "invalid",
+          "fault": "PLOT_BOUNDS_UNSUPPORTED",
           "schemaValid": true
         }
       ],
@@ -69,13 +91,13 @@
           "timeout": "One total deadline covers native version/render and final verification; native CPU 60s, address space 512MiB, file 16MiB.",
           "cancellation": "Shared process-group cancellation terminates the owned native process; check cancellation before publication.",
           "logs": "Authored/effective plans, source capture/digest, trusted script, stage input hashes, launcher, command submissions/stdout/stderr, raw SVG/PNG and host inspection summary are retained.",
-          "verification": "Independent standard-library SVG geometry/labels and decoded PNG dimensions/series pixels use the captured CSV and declared axis transforms. Exact native/evidence/publication membership and trusted script/input bindings are checked."
+          "verification": "Independent standard-library SVG geometry/labels and decoded PNG dimensions/series pixels use the captured CSV and declared axis transforms. Exact native/evidence/publication membership and trusted script/input bindings are checked. A bounds envelope is read back as exactly the expected native polygon vertices in order, fill colour and 0.2 opacity, a legend swatch at the native key-sample size and offset and the central curve, with every polygon in the document required to be one of those two in the envelope group, and with independent PNG interior probes at every row and segment midpoint, plus exterior probes where observable with at least one across the plot."
         },
         "data": [
           {
             "id": "csv",
             "direction": "input",
-            "kind": "file",
+            "kind": "table",
             "format": "CSV",
             "traits": {
               "columns": "named numeric values with units"
@@ -83,7 +105,21 @@
             "losses": [
               "ASCII numeric cells only, no missing values/dates or automatic unit conversion."
             ],
-            "scope": "At most 1MiB, 2048 data rows, 12 named columns captured before execution."
+            "scope": "At most 1MiB, 2048 data rows, 12 named columns captured before execution; a local CSV path or a workflow table artifact (for example an xarray profile.csv, index 1)."
+          },
+          {
+            "id": "csv-file",
+            "direction": "input",
+            "kind": "file",
+            "format": "CSV",
+            "traits": {
+              "columns": "named numeric values with units asserted by the consuming document; the CSV carries no schema or units",
+              "handoff": "verified producer publication of kind file, for example an Apache Arrow publishCSV table.csv (artifact index 2)"
+            },
+            "losses": [
+              "ASCII numeric cells only; no missing values/dates or automatic unit conversion. Kind alone does not establish CSV: the captured bytes are parsed with the same closed rules before Gnuplot starts, and non-CSV or binary files are refused."
+            ],
+            "scope": "At most 1MiB, 2048 data rows, 12 named columns captured before execution from a verified workflow file artifact."
           },
           {
             "id": "plot",
@@ -367,13 +403,193 @@
                 "relative": 0
               }
             ]
+          },
+          {
+            "id": "range-envelope",
+            "example": "band",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gnuplot/band.csv"
+            },
+            "scope": "Asserted lower/upper range envelope: independent SVG polygon vertices (lower edge left to right, then upper edge right to left), central curve, legend and fill colour/opacity plus PNG interior/exterior probes, against literal pixel coordinates derived from fixed plot margins and declared linear axis transforms. Bounds are asserted by the data; no quantile or confidence level is computed. The summary is adaptor-authored inspection, not raw native output.",
+            "checks": [
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/series",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/points",
+                "expected": [
+                  [
+                    120,
+                    340
+                  ],
+                  [
+                    440,
+                    200
+                  ],
+                  [
+                    760,
+                    270
+                  ]
+                ],
+                "absolute": 0.002,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/band/polygon",
+                "expected": [
+                  [
+                    120,
+                    410
+                  ],
+                  [
+                    440,
+                    256
+                  ],
+                  [
+                    760,
+                    340
+                  ],
+                  [
+                    760,
+                    200
+                  ],
+                  [
+                    440,
+                    130
+                  ],
+                  [
+                    120,
+                    270
+                  ]
+                ],
+                "absolute": 0.002,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/band/opacity",
+                "expected": 0.2,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "changed-range-envelope",
+            "example": "band-variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/gnuplot/band-variant.csv"
+            },
+            "scope": "Asserted lower/upper range envelope: independent SVG polygon vertices (lower edge left to right, then upper edge right to left), central curve, legend and fill colour/opacity plus PNG interior/exterior probes, against literal pixel coordinates derived from fixed plot margins and declared linear axis transforms. Bounds are asserted by the data; no quantile or confidence level is computed. The summary is adaptor-authored inspection, not raw native output.",
+            "checks": [
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/series",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/points",
+                "expected": [
+                  [
+                    120,
+                    340
+                  ],
+                  [
+                    440,
+                    200
+                  ],
+                  [
+                    760,
+                    270
+                  ]
+                ],
+                "absolute": 0.002,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/band/polygon",
+                "expected": [
+                  [
+                    120,
+                    452
+                  ],
+                  [
+                    440,
+                    256
+                  ],
+                  [
+                    760,
+                    340
+                  ],
+                  [
+                    760,
+                    116
+                  ],
+                  [
+                    440,
+                    130
+                  ],
+                  [
+                    120,
+                    270
+                  ]
+                ],
+                "absolute": 0.002,
+                "relative": 0
+              },
+              {
+                "file": "plot-summary.json",
+                "format": "json",
+                "pointer": "/geometry/0/band/opacity",
+                "expected": 0.2,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Initial numeric CSV plotting route, all declared fields, trusted script, independent SVG/PNG verification and source-byte reuse.",
+        "scope": "Initial numeric CSV plotting route, all declared fields, trusted script, independent SVG/PNG verification and source-byte reuse; 24 October 2026 review adds verification of runs copied with schemaxis export.; 26 October 2026 review adds the asserted asymmetric lower/upper range envelope (series bounds), its independent SVG polygon and PNG verification, and file-kind CSV workflow handoff.",
         "review": [
-          "verification/2026-10-17-gnuplot-completion.md"
+          "verification/2026-10-17-gnuplot-completion.md",
+          "verification/2026-10-24-gnuplot-allocation.md",
+          "verification/2026-10-26-gnuplot-range-envelope.md"
         ],
         "notApplicable": {
           "native-inspection": "The serial batch plotting route does not implement native-inspection; its editable generated script is an output artifact, not an interactive native session.",

@@ -1,0 +1,57 @@
+{
+  "version": "schemaxis.freecad/1",
+  "nodes": [
+    {
+      "id": "casting",
+      "filter": "importMesh",
+      "options": {
+        "file": "examples/schemaxis/freecad-mesh-bracket.stl",
+        "units": "mm",
+        "refine": true
+      }
+    },
+    {
+      "id": "part",
+      "filter": "body"
+    },
+    {
+      "id": "seed",
+      "filter": "bodySeed",
+      "inputs": {
+        "body": "part",
+        "source": "casting"
+      }
+    },
+    {
+      "id": "bore",
+      "filter": "circle",
+      "options": {
+        "radius": 2.5,
+        "centre": [
+          21,
+          10
+        ],
+        "origin": [
+          0,
+          0,
+          5
+        ]
+      },
+      "inputs": {
+        "body": "part"
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "pocket",
+      "options": {
+        "direction": "backward"
+      },
+      "inputs": {
+        "base": "seed",
+        "profile": "bore"
+      }
+    }
+  ],
+  "output": "cut"
+}

@@ -1,0 +1,27 @@
+{
+  "version": "schemaxis/1",
+  "maxPublications": 12,
+  "nodes": [
+    {"id": "source", "filter": "wavelet"},
+    {"id": "velocity", "filter": "calculator", "inputs": {"input": "source"},
+     "options": {"expression": "(coordsX+11)*iHat+coordsY*jHat", "result": "U"}},
+    {"id": "pressure", "filter": "calculator", "inputs": {"input": "velocity"},
+     "options": {"expression": "coordsZ", "result": "p"}},
+    {"id": "cut0", "filter": "slice", "inputs": {"input": "pressure"},
+     "options": {"origin": [-0.0483, 0, 0], "normal": [1, 0, 0]}},
+    {"id": "cut1", "filter": "slice", "inputs": {"input": "pressure"},
+     "options": {"origin": [0.083, 0, 0], "normal": [1, 0, 0]}}
+  ],
+  "scenes": [
+    {"id": "sliceX00", "visible": {"cut0": {"field": ["POINTS", "U"]}},
+     "geometry": ["cut0"], "measurements": [{"node": "cut0"}],
+     "appearances": [{}, {"cut0": {"field": ["POINTS", "p"]}}],
+     "images": [{"id": "view", "size": [480, 300],
+                 "cameras": [{"direction": [1, 0, 0], "up": [0, 0, 1]}]}]},
+    {"id": "sliceX01", "visible": {"cut1": {"field": ["POINTS", "U"]}},
+     "geometry": ["cut1"], "measurements": [{"node": "cut1"}],
+     "appearances": [{}, {"cut1": {"field": ["POINTS", "p"]}}],
+     "images": [{"id": "view", "size": [480, 300],
+                 "cameras": [{"direction": [1, 0, 0], "up": [0, 0, 1]}]}]}
+  ]
+}

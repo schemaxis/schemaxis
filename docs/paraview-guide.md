@@ -152,10 +152,23 @@ No stored times or an empty selection is a fault. Selected times are deduplicate
 | `images` | `[{"id":"view","size":[640,480],"cameras":[{}]}]` | PNG outputs, default `[]`. Each writer requires unique id and nonempty cameras. |
 | `appearances` | `[{},{"cut":{"opacity":0.5}}]` | Nonempty list of overrides on visible nodes, default `[{}]`; cannot introduce other nodes. |
 | `gltf` | `true` | Visible scene glTF publication, default false. Bounded exporter support applies. |
+| `stateBundle` | `true` | Editable ParaView state bundle for the scene, default false. See [Editable state bundles](#editable-state-bundles). |
 
 Images/glTF require visible objects. Geometry, measurements and explicit exports do not. `visible` by itself is not a requested output. Geometry/measurement/export entries publish once per selected state. Images/glTF additionally multiply by appearances; PNG count also multiplies by each writer's camera count.
 
-Per state: `geometry count + measurement count + export count + appearance count × (glTF enabled + sum of camera counts)`. Total publications sum each scene's count across its selected visits. Native handles and resources do not become durable cross-workflow artifacts.
+Per state: `geometry count + measurement count + export count + appearance count × (glTF enabled + sum of camera counts) + state bundle enabled`. Total publications sum each scene's count across its selected visits. Native handles and resources do not become durable cross-workflow artifacts.
+
+### Editable state bundles
+
+`"stateBundle": true` hands the scene back to ParaView as editable state rather than final geometry. After the visit is applied and before anything is published, the serial run captures each file its readers opened with the shared bounded capture used by `schemaxis input adopt` into `<state>-<scene>-state-bundle/data/<node>/` (a `resource.json` manifest plus `data/<file>`), points those readers at the captured copies and checks that the rebound pipeline reproduces the run's observations. The image and the bundle therefore consume the same pinned bytes. The visit receipt keeps the authored file in its effective settings and records the rebinding (origin, captured path and digests) in `inputRebinding`. After the image the run reverifies each capture, rehashes the original with bounded reads, refuses pipeline objects whose native file-list-domain properties name files outside the bundle, and saves `state.pvsm` with `bundle.json`, which pins each `resource.json` digest. Readers and filters stay ParaView objects with their settings; the view keeps the display colouring, representation, opacity, colour legend and the image camera.
+
+The run succeeds only after independent proof. The host copies the bundle to a new location, renames the original bundle aside so its paths cannot be read, and starts a fresh pvbatch with the receipt's manifest digest, which is required before anything is copied and which the copy must match before ParaView is imported. That process loads the copy with ParaView's data-directory search restricted to the copy's `data/`. That process records every native file-list-domain property of each pipeline object, pipeline objects and connections (by node id; proxy IDs differ between processes), the native properties bound to the authored options (for example the clip plane origin and normal), dataset counts, bounds and fields, display settings, lookup-table points and log scale, legend visibility and title, view size, view time and camera in `<bundle>.reload.json`. Other ParaView properties are saved in the state but not independently compared. The host and later `schemaxis verify` first take a bounded inventory without following links (special files, links, unexpected or oversized members fail before anything is read), then recheck each capture with the shared resource verification, the bundle and `.pvsm` digests, that the `.pvsm` names only bundle copies and never the original inputs (decoded XML values are compared at path boundaries, so a copy path that merely ends with an origin's text is not a reference), that the saved scene and time match the planned scene, the planned visit time and the image view time, that saved property readback matches the authored values and the legend and range match the authored appearance, and that the reload evidence came from a different positive process ID, used the restricted relocated data directory and matches the plan, the run's observations and the image. Each reader must resolve to exactly its own capture, so readers that share a file name cannot silently swap. Tampered, missing, extra or malformed files, a reader rebound outside the relocated copy, or missing or malformed reload evidence fail verification with `VERIFICATION_FAILED`. Change detection is for ordinary concurrent writers; it is not a sandbox against an adversary replacing directories during the run.
+
+The relocated copy is checked again after the fresh process consumes it, before its evidence is accepted or the copy is removed. Native file-property discovery refuses a property with more than 64 values, more than 16 child proxies, or nesting beyond two proxy levels; it never silently truncates a dependency check.
+
+Open the bundle in ParaView with **File > Load State...**, select `state.pvsm`, set **Load State Data File Options** to *Search files under specified directory*, set **Data Directory** to the bundle's `data/` folder and tick **Only Use Files In Data Directory**. ParaView then lists each relocated reader under its file name (for example `plate.vtp`) in the Pipeline Browser. The default *Use File Names From State* reads the absolute paths recorded at save time, which no longer name the bundle after it moves. Verification uses the same load options through `paraview.simple.LoadState`; the GUI dialog itself is not exercised.
+
+This first slice is deliberately bounded and refused at planning otherwise (`UNSUPPORTED_STATE_BUNDLE`): one scene, one visit (one time, no axes), one appearance, exactly one image writer with one camera, no glTF, exports or text labels, no dynamic option or presentation values, no plugins, resources or visit commands, and serial runs only. Generator sources, filters without file options and the self-contained single-file readers (absolute paths to regular files without symbolic links in their path) `readSurface`, `readUnstructuredGrid`, `readImageData`, `readStructuredGrid`, `readRectilinearGrid`, `readSTL` and `readPLY` are supported; OpenFOAM cases, multiblock and parallel VTK files are not yet bundled. Each copied file is at most 64 MiB, with at most 16 files and 256 MiB per bundle. Units and coordinate frames are recorded as unknown, and the state is verified only with the ParaView version that saved it. Schemaxis never loads externally authored state files or scripts: the only state loading is the internal reload of the run's own bundle.
 
 ### Appearance keys
 
@@ -180,20 +193,51 @@ Per state: `geometry count + measurement count + export count + appearance count
 
 Field existence and component count are checked natively. Constant observed ranges are widened for rendering. Camera/style runtime expressions resolve after upstream observations. [All exact constraints](paraview-settings-reference.md#appearance).
 
+### Text annotation keys
+
+A visible node produced by `pvAnnotateTimeFilter` is drawn as a 2D time label over the image instead of as geometry. It is the only supported text annotation: it is the only text-producing operation verified natively, and only with serial `pvbatch` from ParaView 5.13.3. Other text or table outputs in a scene fail with `UNSUPPORTED_TEXT_ANNOTATION` rather than receiving geometry styles. A time label takes only these keys, in `visible` and in `appearances`:
+
+| Key | Meaning / syntax / default |
+| --- | --- |
+| `colour` | Text colour, same syntax as above; default black `[0,0,0]`. Alpha multiplies opacity. |
+| `opacity` | Text opacity 0–1, default 1. |
+| `fontSize` | Integer screen points 4–256, default 18. |
+| `position` | Upper Left Corner (default), Upper Right Corner, Upper Center, Lower Left Corner, Lower Right Corner, Lower Center. |
+| `justification` | Left (default), Center or Right alignment of the label's lines; position places the label. |
+| `bold`, `italic` | Booleans, default false. |
+
+```json
+{"nodes":[{"id":"clock","filter":"pvTimeSource"},{"id":"ball","filter":"sphere"},
+  {"id":"label","filter":"pvAnnotateTimeFilter","inputs":{"Input":"clock"},"options":{"Format":"t = {time:.3f}"}}],
+ "scenes":[{"id":"labelled","visible":{"ball":{},"label":{"fontSize":28,"position":"Upper Center","bold":true}},
+  "images":[{"id":"view","cameras":[{}]}]}]}
+```
+
+The label shows the native view time that each image is rendered at, formatted by the operation's `Format`, `Shift` and `Scale` options. Planning rejects geometry keys (`field`, `representation`, `legend` and so on) on a label with `UNSUPPORTED_TEXT_STYLE`, label keys on geometry with `UNSUPPORTED_GEOMETRY_STYLE`, labels in a glTF scene with `UNSUPPORTED_TEXT_ANNOTATION`, and images whose only visible nodes are labels with `EMPTY_SCENE`; labels are overlays and are never used to frame the camera. ParaView's free `Any Location` placement is not offered. Live previews reject scenes with labels (`UNSUPPORTED_LIVE_INPUT`); publish them as batch images.
+
+Each image receipt records the applied text-display settings under `appearance` and, under `annotations`, the text and font actually drawn by the rendered text actor together with the view time. ParaView reports centred justification as `Centered`. Host verification requires a non-empty drawn label whose view time, font size, bold and italic match the authored settings; it does not reproduce the label wording from `Format`. [Time-label example](../examples/schemaxis/paraview-time-annotation.json) with its independent check, `check_time_annotation.py`.
+
 ### Image and camera keys
 
 Image writer `id` names the writer; `size` is `[width,height]`, default `[640,480]`, integer dimensions from 32 to 8192. `cameras` is a required nonempty array. An empty camera object uses camera defaults.
+
+`background` sets the solid colour behind the model for every image of that writer: a named colour, `#rrggbb`, or `[r,g,b]` from 0 to 1; default white. It must be opaque. `transparentBackground: true` instead writes RGBA PNGs whose background pixels have zero alpha; anti-aliased model edges keep the model colour with partial alpha. Each image receipt records the native background read back from ParaView, the PNG channel count and the number of background pixels.
+
+```json
+{"id":"thumbnail","size":[1024,1024],"transparentBackground":true,
+ "cameras":[{"direction":{"azimuth":113,"elevation":10}}]}
+```
 
 | Camera key | Meaning / default |
 | --- | --- |
 | `direction` | Side of focal point from which camera looks; default `[1,0,0]`. Accepts XYZ or the declared direction grammar (e.g. `"x+"`). |
 | `up` | View-up direction, default `[0,0,1]`; must be nonzero and nonparallel to direction. |
 | `focalPoint` | XYZ, default centre of visible bounds. |
-| `parallel` | Boolean, default true for orthographic projection. |
+| `parallel` | Boolean, default true for orthographic projection. `false` selects perspective projection with ParaView's vertical view angle (30° unless the runtime says otherwise; each image receipt records `camera.viewAngle`). |
 | `scale` | Positive parallel half-height; omitted computes framing from bounds, padding and aspect ratio. |
-| `distance` | Positive camera distance; omitted uses twice the bounds diagonal. |
+| `distance` | Positive camera distance, used as authored. Omitted: parallel projection uses twice the bounds diagonal; perspective uses twice the bounds diagonal, multiplied by height ÷ width for portrait images (width below height), because the view angle is vertical and would otherwise crop the narrower horizontal field. Landscape and square images keep twice the diagonal. |
 | `bounds` | `[xmin,xmax,ymin,ymax,zmin,zmax]` framing override, each min ≤ max. |
-| `padding` | Nonnegative framing fraction, default 0.1. |
+| `padding` | Nonnegative framing fraction, default 0.1. It sizes the parallel scale only; it does not change the default perspective distance, and `scale` is ignored by perspective cameras. |
 
 ```json
 {"id":"views","size":[800,600],"cameras":[
@@ -281,7 +325,7 @@ The ordinary serial runner retains these named files. Common runtime studies and
 
 Successful ordinary result keys: `status:"succeeded"`, `verified:true`, `directory` (absolute output directory), `artifacts` (count), `planDigest` and `runtimeSha256`. Failed results carry `status:"failed"`, `verified:false`, `directory` and `fault`. Faults identify a stable code, location and available recovery/observation information.
 
-Artifact receipts contain `identity` (scene, timeIndex, indices, kind and kind-specific selectors), `file`, `sha256`, `verified`, and format-specific verification evidence. Geometry/measurement/export identities add `output` and `node`; exports add the export writer ID. Images add appearance, writer and camera indices; glTF adds appearance. Multi-file formats additionally retain member file hashes. Image receipts retain effective camera/appearance and view-time evidence; export receipts retain writer, comparison, tolerance, accepted losses, readback, effective options and resource identity evidence.
+Artifact receipts contain `identity` (scene, timeIndex, indices, kind and kind-specific selectors), `file`, `sha256`, `verified`, and format-specific verification evidence. Geometry/measurement/export identities add `output` and `node`; exports add the export writer ID. Images add appearance, writer and camera indices; glTF adds appearance; state bundles add only `kind:"state-bundle"` and retain the bundle manifest digest, member hashes and the GUI open steps, with reload proof beside the bundle. Multi-file formats additionally retain member file hashes. Image receipts retain effective camera/appearance and view-time evidence; export receipts retain writer, comparison, tolerance, accepted losses, readback, effective options and resource identity evidence.
 
 ```mermaid
 flowchart LR
@@ -345,7 +389,10 @@ Example observation access: `{"$observe":"data","path":["fields","POINTS","RTDat
 | [Writer resources](../examples/schemaxis/paraview-writer-resources.json) | Lookup-table input to a writer. |
 | [Writers](../examples/schemaxis/paraview-writers.json) | Format-specific explicit exports and loss contracts. |
 | [Native times](../examples/schemaxis/paraview-native-times.json) | Metadata-driven source-time selection. |
+| [Editable state](../examples/schemaxis/paraview-state-bundle.json) | Generated source, calculator and clip saved as an editable state bundle. `check_state_bundle.py prepare` adopts a synthetic `.vtp` and writes a captured-input workflow; `check_state_bundle.py check` rechecks the pinned capture, bundle and relocated reload, including the clip plane, colour legend, view size and time. |
+| [Time label](../examples/schemaxis/paraview-time-annotation.json) | Styled `pvAnnotateTimeFilter` label; `check_time_annotation.py` compares the drawn text with each view time. |
 | [Commands](../examples/schemaxis/paraview-commands.json) | Declared native command before update. |
+| [Image backgrounds](../examples/schemaxis/paraview-image-background.json) | Default white, hex-coloured and transparent backgrounds; `check_image_background.py` recounts background pixels independently. |
 | [Static mesh](../examples/schemaxis/paraview-static-mesh.json) | `pvForceStaticMesh` caches the first geometry; ParaView 5.13.3 offers no way to force recomputation. |
 | [Admission line](../examples/schemaxis/paraview-admission.json) | Bounded analytic/lifecycle acceptance fixture. |
 | [ParaView to Blender](../examples/schemaxis/paraview-to-blender.json) | Durable cross-adaptor artifacts. |

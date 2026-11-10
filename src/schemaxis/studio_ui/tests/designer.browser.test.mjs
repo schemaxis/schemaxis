@@ -170,7 +170,9 @@ for (const theme of ['light', 'dark']) {
       await session.key('Enter');
       await session.evaluate(`document.querySelector('.dz-port.in[data-node="response"]').focus()`);
       await session.key('Enter');
-      await session.wait(`${state}.projection.connections.length === 1`, 'keyboard connection');
+      await session.wait(`${state}.projection.connections.length === 1 && !${state}.busy
+        && ${state}.selection?.kind === 'edge'
+        && ${state}.selection.id === ${state}.projection.connections[0].id`, 'keyboard connection');
       await session.evaluate(`${designer}.model.select({kind: 'nodes', ids: ['source']})`);
       await session.wait(`document.querySelector('.dz-runtime-item')`, 'runtime inputs');
       await session.evaluate(`(() => {

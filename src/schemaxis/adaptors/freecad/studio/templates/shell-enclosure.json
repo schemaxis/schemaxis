@@ -1,0 +1,322 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "parameters": {
+    "wall": {
+      "kind": "length",
+      "value": {
+        "$fill": "wall"
+      },
+      "minimum": 2,
+      "maximum": 3.5
+    },
+    "height": {
+      "kind": "length",
+      "value": 20,
+      "minimum": 18,
+      "maximum": 24
+    },
+    "bossHeight": {
+      "kind": "length",
+      "value": 6,
+      "minimum": 4,
+      "maximum": 8
+    },
+    "mountDiameter": {
+      "kind": "length",
+      "value": 2,
+      "minimum": 1.5,
+      "maximum": 3
+    }
+  },
+  "nodes": [
+    {
+      "id": "enclosure",
+      "filter": "body"
+    },
+    {
+      "id": "outline",
+      "filter": "rectangle",
+      "options": {
+        "width": 40,
+        "height": 30
+      },
+      "inputs": {
+        "body": "enclosure"
+      }
+    },
+    {
+      "id": "stock",
+      "filter": "pad",
+      "inputs": {
+        "body": "enclosure",
+        "profile": "outline"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "height": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "cavity",
+      "filter": "shell",
+      "options": {
+        "openings": [
+          {
+            "face": "top"
+          }
+        ]
+      },
+      "inputs": {
+        "base": "stock"
+      },
+      "drive": {
+        "thickness": {
+          "terms": {
+            "wall": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "bossProfile1",
+      "filter": "circle",
+      "options": {
+        "radius": 2,
+        "centre": [
+          -14,
+          -9
+        ],
+        "onFace": {
+          "face": "top",
+          "position": "innermost"
+        }
+      },
+      "inputs": {
+        "body": "enclosure",
+        "support": "cavity"
+      }
+    },
+    {
+      "id": "boss1",
+      "filter": "pad",
+      "inputs": {
+        "body": "enclosure",
+        "base": "cavity",
+        "profile": "bossProfile1"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "bossHeight": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "bossProfile2",
+      "filter": "circle",
+      "options": {
+        "radius": 2,
+        "centre": [
+          14,
+          -9
+        ],
+        "onFace": {
+          "face": "top",
+          "position": "innermost"
+        }
+      },
+      "inputs": {
+        "body": "enclosure",
+        "support": "boss1"
+      }
+    },
+    {
+      "id": "boss2",
+      "filter": "pad",
+      "inputs": {
+        "body": "enclosure",
+        "base": "boss1",
+        "profile": "bossProfile2"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "bossHeight": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "bossProfile3",
+      "filter": "circle",
+      "options": {
+        "radius": 2,
+        "centre": [
+          14,
+          9
+        ],
+        "onFace": {
+          "face": "top",
+          "position": "innermost"
+        }
+      },
+      "inputs": {
+        "body": "enclosure",
+        "support": "boss2"
+      }
+    },
+    {
+      "id": "boss3",
+      "filter": "pad",
+      "inputs": {
+        "body": "enclosure",
+        "base": "boss2",
+        "profile": "bossProfile3"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "bossHeight": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "bossProfile4",
+      "filter": "circle",
+      "options": {
+        "radius": 2,
+        "centre": [
+          -14,
+          9
+        ],
+        "onFace": {
+          "face": "top",
+          "position": "innermost"
+        }
+      },
+      "inputs": {
+        "body": "enclosure",
+        "support": "boss3"
+      }
+    },
+    {
+      "id": "boss4",
+      "filter": "pad",
+      "inputs": {
+        "body": "enclosure",
+        "base": "boss3",
+        "profile": "bossProfile4"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "bossHeight": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "mountingLocations",
+      "filter": "boltGrid",
+      "options": {
+        "columns": 2,
+        "rows": 2,
+        "xPitch": 28,
+        "yPitch": 18,
+        "onFace": {
+          "face": "top"
+        }
+      },
+      "inputs": {
+        "body": "enclosure",
+        "support": "boss4"
+      }
+    },
+    {
+      "id": "finished",
+      "filter": "hole",
+      "inputs": {
+        "body": "enclosure",
+        "base": "boss4",
+        "profile": "mountingLocations"
+      },
+      "drive": {
+        "diameter": {
+          "terms": {
+            "mountDiameter": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "lid",
+      "filter": "body"
+    },
+    {
+      "id": "lidOutline",
+      "filter": "rectangle",
+      "options": {
+        "width": 40,
+        "height": 30,
+        "origin": [
+          60,
+          0,
+          0
+        ]
+      },
+      "inputs": {
+        "body": "lid"
+      }
+    },
+    {
+      "id": "lidStock",
+      "filter": "pad",
+      "inputs": {
+        "body": "lid",
+        "profile": "lidOutline"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "wall": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "ventProfile",
+      "filter": "slot",
+      "options": {
+        "length": 12,
+        "radius": 1,
+        "onFace": {
+          "face": "top",
+          "anchor": "centroid"
+        }
+      },
+      "inputs": {
+        "body": "lid",
+        "support": "lidStock"
+      }
+    },
+    {
+      "id": "lidFinished",
+      "filter": "pocket",
+      "options": {
+        "extent": "throughAll",
+        "direction": "backward"
+      },
+      "inputs": {
+        "base": "lidStock",
+        "profile": "ventProfile"
+      }
+    }
+  ],
+  "output": "finished"
+}

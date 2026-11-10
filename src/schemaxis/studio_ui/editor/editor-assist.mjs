@@ -34,7 +34,8 @@ export class Assist {
     }
     let items = [];
     try {
-      items = completionsFor(core.state.registry, core.ensureAst(), offset, core.state.schema);
+      items = completionsFor(core.state.registry, core.ensureAst(), offset, core.state.schema,
+        core.state.options.valueNames);
     } catch (error) {
       console.warn('Completion failed', error);
     }

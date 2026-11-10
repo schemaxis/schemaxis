@@ -1,0 +1,326 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "id": "technical-enclosure",
+  "prepareOnly": false,
+  "production": {
+    "units": "millimetres",
+    "objects": [
+      {
+        "id": "housing",
+        "kind": "mesh",
+        "vertices": [
+          [
+            -20,
+            -15,
+            0
+          ],
+          [
+            20,
+            -15,
+            0
+          ],
+          [
+            20,
+            15,
+            0
+          ],
+          [
+            -20,
+            15,
+            0
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ],
+        "material": "shellFinish",
+        "displayColour": {
+          "kind": "colour",
+          "value": [
+            0.05,
+            0.2,
+            0.45
+          ]
+        }
+      },
+      {
+        "id": "lid",
+        "kind": "mesh",
+        "vertices": [
+          [
+            -20,
+            -15,
+            0
+          ],
+          [
+            20,
+            -15,
+            0
+          ],
+          [
+            20,
+            15,
+            0
+          ],
+          [
+            -20,
+            15,
+            0
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ],
+        "location": [
+          0,
+          0,
+          27
+        ],
+        "material": "lidFinish",
+        "displayColour": {
+          "kind": "colour",
+          "value": [
+            0.7,
+            0.3,
+            0.05
+          ]
+        }
+      }
+    ],
+    "materialGraphs": [
+      {
+        "id": "shellFinish",
+        "nodes": [
+          {
+            "id": "surface",
+            "kind": "principled",
+            "values": {
+              "roughness": 0.35,
+              "colour": [
+                0.08,
+                0.2,
+                0.35,
+                1
+              ]
+            }
+          },
+          {
+            "id": "out",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "surface",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "out",
+              "socket": "surface"
+            }
+          }
+        ]
+      },
+      {
+        "id": "lidFinish",
+        "nodes": [
+          {
+            "id": "surface",
+            "kind": "principled",
+            "values": {
+              "roughness": 0.35,
+              "colour": [
+                0.6,
+                0.65,
+                0.7,
+                1
+              ]
+            }
+          },
+          {
+            "id": "out",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "surface",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "out",
+              "socket": "surface"
+            }
+          }
+        ]
+      }
+    ],
+    "meshEdits": [
+      {
+        "object": "housing",
+        "steps": [
+          {
+            "id": "outer-wall",
+            "kind": "extrudeFaces",
+            "selection": {
+              "kind": "all"
+            },
+            "offset": [
+              0,
+              0,
+              20
+            ],
+            "keepBase": true
+          },
+          {
+            "id": "rim",
+            "kind": "insetFaces",
+            "selection": {
+              "kind": "normal",
+              "direction": [
+                0,
+                0,
+                1
+              ]
+            },
+            "distance": 2
+          },
+          {
+            "id": "cavity",
+            "kind": "extrudeFaces",
+            "selection": {
+              "kind": "box",
+              "minimum": [
+                -18,
+                -13,
+                20
+              ],
+              "maximum": [
+                18,
+                13,
+                20
+              ]
+            },
+            "offset": [
+              0,
+              0,
+              -17
+            ]
+          }
+        ]
+      },
+      {
+        "object": "lid",
+        "steps": [
+          {
+            "id": "lid-thickness",
+            "kind": "extrudeFaces",
+            "selection": {
+              "kind": "all"
+            },
+            "offset": [
+              0,
+              0,
+              3
+            ],
+            "keepBase": true
+          }
+        ]
+      }
+    ],
+    "meshData": [
+      {
+        "object": "housing",
+        "attributes": [
+          {
+            "name": "temperature",
+            "kind": "float",
+            "domain": "POINT",
+            "mode": "constant",
+            "value": 315
+          }
+        ],
+        "uvMaps": [
+          {
+            "name": "Label",
+            "method": "planar",
+            "axis": "Z",
+            "size": [
+              40,
+              30
+            ]
+          }
+        ]
+      }
+    ],
+    "exports": [
+      {
+        "id": "enclosure",
+        "format": "glb",
+        "objects": [
+          "housing",
+          "lid"
+        ]
+      }
+    ]
+  },
+  "size": [
+    384,
+    288
+  ],
+  "cameras": [
+    {
+      "direction": [
+        1,
+        -2,
+        1.5
+      ]
+    }
+  ],
+  "render": {
+    "threads": 2,
+    "renderer": {
+      "kind": "workbench",
+      "lighting": {
+        "kind": "studio",
+        "preset": "rim.sl",
+        "worldSpace": true,
+        "rotation": 0.5
+      },
+      "colourSource": {
+        "kind": "object"
+      },
+      "shadows": {
+        "kind": "on",
+        "direction": [
+          1,
+          -1,
+          2
+        ]
+      },
+      "cavity": {
+        "kind": "both"
+      },
+      "outline": {
+        "kind": "on"
+      }
+    },
+    "colourManagement": {
+      "view": {
+        "kind": "standard"
+      }
+    }
+  }
+}

@@ -4,11 +4,18 @@ import ast
 from functools import partial
 import inspect
 import textwrap
+import types
 import unittest
 
 from schemaxis.schema import export_schema
 from schemaxis.schema_authoring import VERSIONS
 from schemaxis.errors import keys, keys as _closed
+from schemaxis.adaptors.whispercpp import corrections as corrections_module
+from schemaxis.adaptors.whispercpp.corrections import exact
+
+# The closed-key helpers the reader recognises. A module-qualified call counts
+# only when the module really exports exactly one of these functions.
+TRUSTED_HELPERS = {'keys': keys, '_closed': keys, 'exact': exact}
 
 PARITY_FIELDS = {'payload': {}}
 
@@ -24,8 +31,40 @@ def closed_parser_fixture(document):
     _closed(document, ('version', *PARITY_FIELDS), '$')
 
 
+def exact_parser_fixture(document):
+    exact(document, ('version', *PARITY_FIELDS), '$', 'remove unsupported root members')
+
+
 def delegated_parser_fixture(document, *, fields):
     keys(document, ('version', *fields), '$')
+
+
+def qualified_parser_fixture(document):
+    corrections_module.exact(document, ('version', *PARITY_FIELDS), '$', 'remove unsupported root members')
+
+
+def untrusted_module_helper(document, names, location, recovery):
+    pass
+
+
+untrusted_module = types.ModuleType('untrusted_module')
+untrusted_module.exact = untrusted_module_helper
+
+
+class UntrustedNamespace:
+    exact = staticmethod(untrusted_module_helper)
+
+
+def untrusted_module_fixture(document):
+    untrusted_module.exact(document, ('version', *PARITY_FIELDS), '$', 'remove unsupported root members')
+
+
+def untrusted_object_fixture(document):
+    UntrustedNamespace.exact(document, ('version', *PARITY_FIELDS), '$', 'remove unsupported root members')
+
+
+def mismatched_module_attribute_fixture(document):
+    corrections_module.plan(document, ('version', *PARITY_FIELDS), '$')
 
 
 PARITY_BRANCHES = {'left': {'leftField': {}}, 'right': {'rightField': {}}}
@@ -35,6 +74,16 @@ def selected_parser_fixture(document):
     operation = document.get('operation')
     fields = PARITY_BRANCHES[operation]
     keys(document, ('version', 'operation', *fields), '$')
+
+
+def conditional_parser_fixture(document):
+    fields = PARITY_BRANCHES['left'] if document.get('condition') else PARITY_BRANCHES['right']
+    keys(document, ('version', *fields), '$')
+
+
+def invalid_conditional_parser_fixture(document):
+    fields = PARITY_BRANCHES['left'] if document.get('condition') else 3
+    keys(document, ('version', *fields), '$')
 
 
 def key_contract(function, *, root=True):
@@ -51,14 +100,35 @@ def key_contract(function, *, root=True):
     assignments = {target.id: node.value for node in tree.body[0].body
                    if isinstance(node, ast.Assign) for target in node.targets
                    if isinstance(target, ast.Name)}
+
+    def closed_helper(node):
+        # Plain names keep their legacy meaning. A qualified name is trusted
+        # only through a real module global whose own attribute (read from the
+        # module dictionary, so no module hook runs) is one of the helpers.
+        if isinstance(node, ast.Name):
+            return node.id in TRUSTED_HELPERS
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            module = function.__globals__.get(node.value.id)
+            return (node.value.id not in assignments and node.attr in TRUSTED_HELPERS
+                    and isinstance(module, types.ModuleType)
+                    and vars(module).get(node.attr) is TRUSTED_HELPERS[node.attr])
+        return False
+
     calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
-             and isinstance(node.func, ast.Name) and node.func.id in ('keys', '_closed')
-             and len(node.args) >= 2]
+             and closed_helper(node.func) and len(node.args) >= 2]
     if root:
         calls = [call for call in calls if len(call.args) >= 3
                  and isinstance(call.args[2], ast.Constant) and call.args[2].value == '$']
 
     def declaration(node):
+        if isinstance(node, ast.IfExp):
+            # Inspect both declared envelopes, without evaluating the runtime
+            # selection or borrowing the schema's list of allowed keys.
+            branches = [declaration(node.body), declaration(node.orelse)]
+            if any(type(value) not in (dict, list, tuple, set, frozenset)
+                   for value in branches):
+                raise AssertionError('Every conditional declaration must be a plain collection')
+            return set().union(*branches)
         if isinstance(node, ast.Name):
             if node.id in assignments and node.id not in bindings:
                 return declaration(assignments[node.id])
@@ -106,6 +176,7 @@ class ParserSchemaParityTests(unittest.TestCase):
         from schemaxis.pipeline import DefinitionGraph
         from schemaxis.adaptors.blender.adaptor import plan as blender
         from schemaxis.adaptors.blender.render_job import plan as render
+        from schemaxis.adaptors.blender.production_job import lower as production
         from schemaxis.adaptors.freecad.adaptor import plan as freecad
         from schemaxis.adaptors.freecad.assembly import plan as assembly
         from schemaxis.adaptors.godot.adaptor import plan as godot
@@ -113,16 +184,22 @@ class ParserSchemaParityTests(unittest.TestCase):
         from schemaxis.adaptors.premiere.adaptor import plan as premiere, LAYOUT_OPTIONS
         from schemaxis.adaptors.premiere.layout import plan as premiere_layout
         from schemaxis.adaptors.pyproj.contract import validate as pyproj
+        from schemaxis.adaptors.imagej.adaptor import plan as imagej
+        from schemaxis.adaptors.imagej.regions import plan as imagej_regions
+        from schemaxis.adaptors.oracle.planning import plan_document as oracle
         from schemaxis.workflow import validate as workflow
 
         parsers = {
             'schemaxis/1': DefinitionGraph.__init__, 'schemaxis.blender/1': blender,
-            'schemaxis.blender.render/1': render, 'schemaxis.freecad/1': freecad,
+            'schemaxis.blender.render/1': render,
+            'schemaxis.blender.production/1': production, 'schemaxis.freecad/1': freecad,
             'schemaxis.freecad.assembly/1': assembly, 'schemaxis.godot/1': godot,
             'schemaxis.aseprite/1': aseprite, 'schemaxis.workflow/1': workflow,
             'schemaxis.premiere/1': (
                 premiere, partial(premiere_layout, definitions=LAYOUT_OPTIONS)),
             'schemaxis.pyproj/1': pyproj,
+            'schemaxis.imagej/1': (imagej, imagej_regions),
+            'schemaxis.oracle/1': oracle,
         }
         from schemaxis.adaptors.registry import routes
         from importlib import import_module
@@ -146,12 +223,17 @@ class ParserSchemaParityTests(unittest.TestCase):
 
     def test_contract_reader_ignores_type_guards_and_nested_keys(self):
         expected = {'version', 'payload'}
-        for parser in (guarded_parser_fixture, closed_parser_fixture):
+        for parser in (guarded_parser_fixture, closed_parser_fixture, exact_parser_fixture):
             self.assertEqual(key_contract(parser), expected)
         self.assertEqual(key_contract(partial(delegated_parser_fixture,
                                              fields={'tracks': {}})), {'version', 'tracks'})
         self.assertEqual(key_contract(selected_parser_fixture),
                          {'version', 'operation', 'leftField', 'rightField'})
+        self.assertEqual(key_contract(conditional_parser_fixture),
+                         {'version', 'leftField', 'rightField'})
+        with self.assertRaisesRegex(AssertionError, 'conditional declaration'):
+            key_contract(invalid_conditional_parser_fixture)
+        self.assertEqual(key_contract(qualified_parser_fixture), expected)
         # The reader owns an independent parser-derived set. Either schema
         # drift direction must remain visible, even with descriptive metadata.
         schema = {'properties': {'version': {'const': 'fixture/1', 'description': 'An annotation'}, 'payload': {}}}
@@ -159,6 +241,15 @@ class ParserSchemaParityTests(unittest.TestCase):
         for altered in (expected | {'extra'}, expected - {'payload'}):
             with self.assertRaises(AssertionError):
                 self.assertEqual(altered, key_contract(guarded_parser_fixture))
+
+    def test_contract_reader_rejects_untrusted_qualified_helpers(self):
+        # A module, class or attribute that merely shares a helper's name is not
+        # a closed-key declaration, so the reader must not report its keys.
+        for parser in (untrusted_module_fixture, untrusted_object_fixture,
+                       mismatched_module_attribute_fixture):
+            with self.subTest(parser=parser.__name__):
+                with self.assertRaisesRegex(AssertionError, 'nonempty closed-key contract'):
+                    key_contract(parser)
 
     def test_execution_keyword_sets_match_the_scheduler(self):
         from schemaxis.parallel import configuration, requests

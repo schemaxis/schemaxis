@@ -7,7 +7,8 @@ operations. Geometry uses native coordinates and surface-cell face IDs scoped
 to the revision and composite leaf; these are not stable CAD topology names.
 Lifecycle, rollback, transfer limits and context management match blender.live.
 image(path) writes a fixed-camera 640x480 neutral-surface PNG; authored batch
-publications are not executed. Tables and non-dataset geometry are rejected.
+publications are not executed. Tables, non-dataset geometry and scenes with
+text annotations are rejected.
 save(path) / request('save', path=...) creates .pvsm plus .pvsm.receipt.json.
 Verification checks XML and live proxy membership, not an independent data reload.
 State files reference external datasets; no dataset is copied. The receipt lists

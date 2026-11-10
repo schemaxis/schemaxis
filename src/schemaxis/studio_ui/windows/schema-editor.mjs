@@ -3,6 +3,7 @@
 import {createComprehension, formattingControls} from './workbench/comprehension.mjs';
 import {h, icon, mount} from '../lib/dom.mjs';
 import {createJsonEditor} from '../editor/editor.mjs';
+import {bindVariables} from './variables/editor.mjs';
 import {SchemaRegistry, resolveSchemaContext} from '../editor/schema-registry.mjs';
 import {backgroundValidation, reportDiagnostics} from '../editor/settle-server.mjs';
 import {identity} from '../shell/providers.mjs';
@@ -353,8 +354,9 @@ export const schemaEditorWindow = {
     applySchemas();
     refreshLibrary();
     if (params.document) load();
+    const variables = bindVariables(ctx, editor);
     return {
-      element, editor,
+      element, editor, variableContext: variables.context,
       isDirty: dirty,
       onShow: () => {
         libraryActive = true;

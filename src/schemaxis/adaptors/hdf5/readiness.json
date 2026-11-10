@@ -1,0 +1,1432 @@
+{
+ "version": "schemaxis.readiness/1",
+ "routes": {
+  "schemaxis.hdf5/1": {
+   "guide": "docs/hdf5.md",
+   "context": {
+    "purpose": "Create, inspect, audit, extract, edit, compare and exchange HDF5 scientific data files (typed hierarchical datasets, units, scales, compression, links, virtual/external storage, mesh/field series, SWMR acquisition). parallelWrite adds MPI-IO with a parallel h5py build. Unsuitable for remote S3/HDFS reads or third-party filter plugins.",
+    "assumptions": "Isolated Python with exactly h5py 3.16.0 (bundled HDF5 2.0.0) and NumPy 2.5.4; HDF Group h5dump 2.2.0 as independent consumer; absolute local inputs captured into the run; row-major values.",
+    "constraints": "256 objects, 4M elements per dataset and 16M in total, 65,536-element attributes, rank 8, one-level compound/vlen bases, 1-D scales, 512 MiB sources; MPI on one local machine only (no multi-node), no ros3, filter plugins or arbitrary code.",
+    "inspection": "Inspect hdf5-report.json, inventory/expectations/comparison JSON and extracts; host expectations must equal both the fresh h5py readback and the stdlib-parsed h5dump XML, and verify reruns h5dump on current bytes.",
+    "recovery": "Correct located INVALID_HDF5_* faults (path, type, value, selection, storage, dimension, edit, extract), configure --hdf5 and --hdf5-h5dump, retain failed evidence and retry in a fresh directory."
+   },
+   "examples": [
+    {
+     "id": "sensor-run",
+     "reference": "examples/schemaxis/hdf5-sensor-run.json"
+    },
+    {
+     "id": "campaign",
+     "reference": "examples/schemaxis/hdf5-campaign.json"
+    },
+    {
+     "id": "inspect",
+     "reference": "examples/schemaxis/hdf5-inspect.json"
+    },
+    {
+     "id": "extract",
+     "reference": "examples/schemaxis/hdf5-extract.json"
+    },
+    {
+     "id": "edit",
+     "reference": "examples/schemaxis/hdf5-edit.json"
+    },
+    {
+     "id": "compare",
+     "reference": "examples/schemaxis/hdf5-compare.json"
+    },
+    {
+     "id": "mesh-fields",
+     "reference": "examples/schemaxis/hdf5-mesh-fields.json"
+    },
+    {
+     "id": "swmr-monitor",
+     "reference": "examples/schemaxis/hdf5-swmr-monitor.json"
+    },
+    {
+     "id": "raw-export",
+     "reference": "examples/schemaxis/hdf5-raw-export.json"
+    },
+    {
+     "id": "import-group",
+     "reference": "examples/schemaxis/hdf5-import-group.json"
+    },
+    {
+     "id": "streamed-grid",
+     "reference": "examples/schemaxis/hdf5-streamed-grid.json"
+    },
+    {
+     "id": "parallel-extract",
+     "reference": "examples/schemaxis/hdf5-parallel-extract.json"
+    },
+    {
+     "id": "human-names",
+     "reference": "examples/schemaxis/hdf5-human-names.json"
+    },
+    {
+     "id": "filter-rows",
+     "reference": "examples/schemaxis/hdf5-filter-rows.json"
+    },
+    {
+     "id": "chunk-index",
+     "reference": "examples/schemaxis/hdf5-chunk-index.json"
+    },
+    {
+     "id": "copy-chunks",
+     "reference": "examples/schemaxis/hdf5-copy-chunks.json"
+    },
+    {
+     "id": "sieve-columns",
+     "reference": "examples/schemaxis/hdf5-sieve-columns.json"
+    },
+    {
+     "id": "large-attributes",
+     "reference": "examples/schemaxis/hdf5-large-attributes.json"
+    },
+    {
+     "id": "edit-fields",
+     "reference": "examples/schemaxis/hdf5-edit-fields.json"
+    },
+    {
+     "id": "parallel-write",
+     "reference": "examples/schemaxis/hdf5-parallel-write.json"
+    },
+    {
+     "id": "invalid-scale-length",
+     "reference": "examples/schemaxis/hdf5-invalid-scale-length.json",
+     "expect": "invalid",
+     "fault": "INVALID_HDF5_DIMENSION",
+     "schemaValid": true
+    },
+    {
+     "id": "invalid-int-range",
+     "reference": "examples/schemaxis/hdf5-invalid-int-range.json",
+     "expect": "invalid",
+     "fault": "INVALID_HDF5_VALUE",
+     "schemaValid": true
+    }
+   ],
+   "conformance": [
+    "tests/unit/test_hdf5.py"
+   ],
+   "acceptance": [
+    "tools/qualify_hdf5.py"
+   ],
+   "profiles": {
+    "workflow": {
+     "scope": "HDF5 files, CSV tables, NPY/JSON arrays, XDMF descriptions and reports are verified artifacts for scheduled handoffs; HDF5 file artifacts can be consumed as sources, inputs or dependencies.",
+     "references": [
+      "docs/hdf5.md",
+      "tools/qualify_hdf5.py",
+      "examples/schemaxis/hdf5-chain-workflow.json",
+      "examples/schemaxis/hdf5-numpy-workflow.json"
+     ]
+    },
+    "composition": {
+     "scope": "Shared references, expressions and finite studies resolve to the same literal HDF5 document contract.",
+     "references": [
+      "docs/hdf5.md",
+      "tests/unit/test_hdf5.py"
+     ]
+    }
+   },
+   "development": {
+    "api": [
+     "https://docs.h5py.org/en/stable/high/file.html",
+     "https://docs.h5py.org/en/stable/high/group.html",
+     "https://docs.h5py.org/en/stable/high/dataset.html",
+     "https://docs.h5py.org/en/stable/high/attr.html",
+     "https://docs.h5py.org/en/stable/high/dims.html",
+     "https://docs.h5py.org/en/stable/special.html",
+     "https://docs.h5py.org/en/stable/strings.html",
+     "https://docs.h5py.org/en/stable/refs.html",
+     "https://docs.h5py.org/en/stable/vds.html",
+     "https://docs.h5py.org/en/stable/swmr.html",
+     "https://support.hdfgroup.org/documentation/hdf5/latest/",
+     "https://www.xdmf.org/index.php/XDMF_Model_and_Format"
+    ],
+    "lifecycle": {
+     "timeout": "Single total deadline across capture, native stages and h5dump (default 300 s, at most 3600 s).",
+     "cancellation": "Shared runner cancellation before each stage and a prepublication check.",
+     "logs": "Captured inputs/sources/dependencies, authored/plan/native config/payloads/worker/implementation fingerprints, per-stage submissions/stdout/stderr/results and h5dump XML.",
+     "verification": "Host expectations from authored intent (generators, rounding, CSV/NPY/raw parsing, selections, edit simulation) compared with a fresh-process h5py readback and HDF Group h5dump 2.2.0 XML parsed by the standard library; verify reruns h5dump on current bytes."
+    },
+    "data": [
+     {
+      "id": "hdf5-output",
+      "direction": "output",
+      "kind": "file",
+      "format": "HDF5 (superblock 0/2/3 by libver; sec2/stdio/core/family/split)",
+      "traits": {
+       "types": "numeric/complex/bool/string/enum/compound/vlen/reference/opaque",
+       "units": "units attribute",
+       "coordinates": "dimension scales"
+      },
+      "losses": [
+       "No third-party filter plugins or remote drivers; MPI-IO only on one local machine (parallelWrite, parallel extraction); compound/vlen bases one level deep."
+      ],
+      "scope": "Verified by both consumers."
+     },
+     {
+      "id": "hdf5-source",
+      "direction": "input",
+      "kind": "file",
+      "format": "Existing HDF5 file",
+      "traits": {
+       "capture": "immutable copy"
+      },
+      "losses": [
+       "Unknown filters, region references and very large datasets are reported or refused rather than reinterpreted."
+      ],
+      "scope": "inspect/extract/edit/compare sources and dependencies."
+     },
+     {
+      "id": "csv-extract",
+      "direction": "output",
+      "kind": "table",
+      "format": "UTF-8 CSV with quoted header",
+      "traits": {
+       "header": "name [units]",
+       "coordinates": "axis-0 scale column"
+      },
+      "losses": [
+       "No HDF5 type metadata; enum codes as integers; floats as shortest round-trip text."
+      ],
+      "scope": "extract records in CSV format."
+     },
+     {
+      "id": "npy-json-extract",
+      "direction": "output",
+      "kind": "file",
+      "format": "NPY or JSON arrays",
+      "traits": {
+       "json": "natural numbers, non-finite as text"
+      },
+      "losses": [
+       "JSON carries a type descriptor but no attributes."
+      ],
+      "scope": "extract records in npy/json format."
+     },
+     {
+      "id": "xdmf",
+      "direction": "output",
+      "kind": "file",
+      "format": "XDMF 3 XML",
+      "traits": {
+       "mesh": "unstructured temporal collection"
+      },
+      "losses": [
+       "One HDF5 heavy-data file; cell fields need one cell block."
+      ],
+      "scope": "writeMeshFields."
+     },
+     {
+      "id": "csv-input",
+      "direction": "input",
+      "kind": "table",
+      "format": "UTF-8 CSV / NPY / raw binary",
+      "traits": {
+       "header": "required for CSV"
+      },
+      "losses": [
+       "No type inference: the dataset type is declared."
+      ],
+      "scope": "inputs[] for createFile/editFile/appendSeries."
+     }
+    ],
+    "inspection": [
+     {
+      "panel": "text",
+      "scope": "Inspect hdf5-report.json, inventory.json, expectations.json, comparison.json and extracts.",
+      "limits": "No live native file browser."
+     }
+    ],
+    "authoring": {
+     "model": "document",
+     "example": "sensor-run",
+     "reuse": "Every captured byte digest participates in reuse identity; same-path edits invalidate reuse."
+    },
+    "features": {
+     "workflow": {
+      "status": "supported",
+      "scope": "HDF5 files, CSV tables, NPY/JSON arrays, XDMF descriptions and reports are verified artifacts for scheduled handoffs; HDF5 file artifacts can be consumed as sources, inputs or dependencies."
+     },
+     "composition": {
+      "status": "supported",
+      "scope": "Shared references, expressions and finite studies resolve to the same literal HDF5 document contract."
+     },
+     "reusable-inputs": {
+      "status": "supported",
+      "scope": "Every captured input, source, reference and dependency byte digest participates in reuse identity."
+     },
+     "source-authoring": {
+      "status": "supported",
+      "scope": "Editable typed object, attribute, link, edit, extract and expectation records through common authoring."
+     },
+     "property-authoring": {
+      "status": "supported",
+      "scope": "Nested type, data, selection, storage, virtual, dimension and file settings are editable fields."
+     },
+     "native-save": {
+      "status": "supported",
+      "scope": "Publish new HDF5 files (createFile, editFile copies, mesh and SWMR series) only after both independent consumers agree."
+     },
+     "native-inspection": {
+      "status": "unsupported",
+      "scope": "No interactive native session; inspectFile publishes a verified inventory and expectation decisions."
+     },
+     "mpi": {
+      "status": "unsupported",
+      "scope": "Scheduler MPI ranks are not used; parallelWrite and extractData with parallel launch the configured mpiexec on localhost only (shared-memory transport, so an inherited scheduler allocation cannot place ranks on other nodes) with a separately built parallel h5py (mpio driver) and reserve one CPU per rank. Qualified only on one local workstation with 2-3 Open MPI 4.1.7 ranks, not on a cluster or with other MPI implementations. Other operations are serial."
+     },
+     "time-batches": {
+      "status": "unsupported",
+      "scope": "No time-list batches; mesh time steps and SWMR batches are declared inside one document."
+     },
+     "live-editing": {
+      "status": "unsupported",
+      "scope": "No persistent native state or reverse editing; edits are ordered declarations on captured copies."
+     },
+     "conversion": {
+      "status": "unsupported",
+      "scope": "No general format converter; CSV/NPY/raw import and CSV/NPY/JSON extraction are named operations with explicit losses."
+     }
+    },
+    "cases": [
+     {
+      "id": "sensor-run",
+      "example": "sensor-run",
+      "edits": [],
+      "resources": {},
+      "scope": "Baseline typed file: counts are range(-5, 3) in a 6x2 big-endian int16 array, so rows 1-3 are [1,4],[7,10],[13,16]; the attached time scale is linspace(0, 2.5, 6) giving 0.5, 1.0, 1.5 s.",
+      "checks": [
+       {
+        "file": "counts_window.csv",
+        "format": "csv",
+        "pointer": "/rows",
+        "expected": [
+         [
+          0.5,
+          1,
+          4
+         ],
+         [
+          1.0,
+          7,
+          10
+         ],
+         [
+          1.5,
+          13,
+          16
+         ]
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/datasets/~1run~1raw~1counts/shape",
+        "expected": [
+         6,
+         2
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/superblock",
+        "expected": 3,
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "campaign",
+      "example": "campaign",
+      "edits": [],
+      "resources": {
+       "/inputs/0/path": "examples/schemaxis/hdf5-fixtures/temperatures.csv",
+       "/inputs/1/path": "examples/schemaxis/hdf5-fixtures/matrix.npy",
+       "/dependencies/0/path": "examples/schemaxis/hdf5-fixtures/run-a.h5",
+       "/dependencies/1/path": "examples/schemaxis/hdf5-fixtures/run-b.h5",
+       "/dependencies/2/path": "examples/schemaxis/hdf5-fixtures/probe-counts.bin"
+      },
+      "scope": "Materially different project: run A /signal = 0.5..3.5 fills slots 0-3, run B /signal[1:4] = 5.5..7.5 fills slots 5-7, fill -999 elsewhere; float32 temperatures 293.15..294.5 within float32 relative precision 1e-7.",
+      "checks": [
+       {
+        "file": "stitched.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         0.5,
+         1.5,
+         2.5,
+         3.5,
+         -999.0,
+         5.5,
+         6.5,
+         7.5,
+         -999.0,
+         -999.0
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "temperature.csv",
+        "format": "csv",
+        "pointer": "/rows",
+        "expected": [
+         [
+          0.0,
+          293.15
+         ],
+         [
+          0.5,
+          293.4
+         ],
+         [
+          1.0,
+          294.05
+         ],
+         [
+          1.5,
+          294.5
+         ]
+        ],
+        "relative": 1e-07,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "inspect-vendor",
+      "example": "inspect",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/vendor-export.h5"
+      },
+      "scope": "Adoption of a plain-h5py vendor export (superblock 0): six expectations hold and frames_kelvin is unmet because the frames are in counts. Storage audit: the 4 gzip chunks of 12 logical bytes are stored as 20 bytes each (48 logical, 80 allocated per h5py and h5ls), so frames_compressed is unmet at ratio 0.6.",
+      "checks": [
+       {
+        "file": "expectations.json",
+        "format": "json",
+        "pointer": "/met",
+        "expected": 6,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "expectations.json",
+        "format": "json",
+        "pointer": "/unmet",
+        "expected": 2,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "expectations.json",
+        "format": "json",
+        "pointer": "/decisions/6/reasons",
+        "expected": [
+         "units are ['counts']"
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "expectations.json",
+        "format": "json",
+        "pointer": "/indeterminate",
+        "expected": 0,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "expectations.json",
+        "format": "json",
+        "pointer": "/decisions/7/reasons",
+        "expected": [
+         "compression ratio 0.6"
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "inventory.json",
+        "format": "json",
+        "pointer": "/objects/~1acquisition~1frames/storage",
+        "expected": {
+         "logicalBytes": 48,
+         "allocatedBytes": 80,
+         "chunks": {
+          "count": 4,
+          "minBytes": 20,
+          "maxBytes": 20,
+          "skippedFilters": 0
+         }
+        },
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "extract-vendor",
+      "example": "extract",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/vendor-export.h5"
+      },
+      "scope": "frames = 10*(6t+3y+x); hyperslab t in {1,3}, y in {0,1}, x in {1,2} gives 70,80,100,110,190,200,220,230; the first-pixel column is 0,60,120,180 against time 0..0.75 ms.",
+      "checks": [
+       {
+        "file": "frame_pixels.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         70,
+         80,
+         100,
+         110,
+         190,
+         200,
+         220,
+         230
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "first_column.csv",
+        "format": "csv",
+        "pointer": "/rows",
+        "expected": [
+         [
+          0.0,
+          0
+         ],
+         [
+          0.25,
+          60
+         ],
+         [
+          0.5,
+          120
+         ],
+         [
+          0.75,
+          180
+         ]
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "edit-vendor",
+      "example": "edit",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/vendor-export.h5"
+      },
+      "scope": "Edited copy: the created mean series 25,85,145,205 is attached to the time scale (0..0.75 ms) and extracted with those coordinates.",
+      "checks": [
+       {
+        "file": "mean_counts.csv",
+        "format": "csv",
+        "pointer": "/rows",
+        "expected": [
+         [
+          0.0,
+          25
+         ],
+         [
+          0.25,
+          85
+         ],
+         [
+          0.5,
+          145
+         ],
+         [
+          0.75,
+          205
+         ]
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/edits",
+        "expected": [
+         "setAttribute",
+         "write",
+         "create",
+         "attachScale",
+         "copy",
+         "move",
+         "relayout",
+         "renameAttribute"
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "mesh-fields",
+      "example": "mesh-fields",
+      "edits": [],
+      "resources": {},
+      "scope": "Two tetrahedra in a 0.1 m cube corner: volumes 1/6 and 1/3 of 0.001 m^3 sum to 5e-4 m^3 with no inverted cell; three XDMF steps.",
+      "checks": [
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/mesh/measures/solid/volume",
+        "expected": 0.0005,
+        "relative": 1e-12,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/mesh/measures/solid/negativeCells",
+        "expected": 0,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/xdmf/steps",
+        "expected": 3,
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "swmr-monitor",
+      "example": "swmr-monitor",
+      "edits": [],
+      "resources": {},
+      "scope": "Batches of 2, 1 and 3 rows of width 3 give cumulative 2, 3 and 6 rows, each observed by both concurrent readers.",
+      "checks": [
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/rows",
+        "expected": 6,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/writerTimeline",
+        "expected": [
+         {
+          "batch": 0,
+          "rows": 2
+         },
+         {
+          "batch": 1,
+          "rows": 3
+         },
+         {
+          "batch": 2,
+          "rows": 6
+         }
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/observations",
+        "expected": [
+         {
+          "reader": 0,
+          "batchesObserved": 3
+         },
+         {
+          "reader": 1,
+          "batchesObserved": 3
+         }
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "compare-runs",
+      "example": "compare",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/run-a.h5",
+       "/reference": "examples/schemaxis/hdf5-fixtures/run-b.h5"
+      },
+      "scope": "Run A signal 0.5..3.5 and run B 4.5..7.5 differ by 4 V in all four samples (> 0.5 V tolerance); the run attribute differs (a vs b).",
+      "checks": [
+       {
+        "file": "comparison.json",
+        "format": "json",
+        "pointer": "/equal",
+        "expected": false,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "comparison.json",
+        "format": "json",
+        "pointer": "/differences",
+        "expected": [
+         {
+          "path": "/meta",
+          "kind": "attributes"
+         },
+         {
+          "path": "/signal",
+          "kind": "values",
+          "count": 4
+         }
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "raw-export",
+      "example": "raw-export",
+      "edits": [],
+      "resources": {},
+      "scope": "New external raw file: big-endian uint16 range(1000, 250) over two 8-byte segments reads back 1000..2750; float16 keeps 0.5, 1.0, 1.5 and the half-precision maximum 65504; N-bit + gzip chunking on uint32.",
+      "checks": [
+       {
+        "file": "adc.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         1000,
+         1250,
+         1500,
+         1750,
+         2000,
+         2250,
+         2500,
+         2750
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "gain.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         0.5,
+         1.0,
+         1.5,
+         65504.0
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "import-group",
+      "example": "import-group",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/run-a.h5",
+       "/dependencies/0/path": "examples/schemaxis/hdf5-fixtures/vendor-export.h5"
+      },
+      "scope": "Cross-file copy of a vendor acquisition group: the copied frames keep their copied time scale, so the first-pixel profile 0,60,120,180 carries time 0..0.75 ms.",
+      "checks": [
+       {
+        "file": "imported_first.csv",
+        "format": "csv",
+        "pointer": "/rows",
+        "expected": [
+         [
+          0.0,
+          0
+         ],
+         [
+          0.25,
+          60
+         ],
+         [
+          0.5,
+          120
+         ],
+         [
+          0.75,
+          180
+         ]
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "parallel-write",
+      "example": "parallel-write",
+      "edits": [],
+      "resources": {},
+      "scope": "Two MPI ranks: linspace 300..317 K over 6x3 elements sums to 5553 K (min 300, max 317); cell ids 100+7i for i<7 sum to 847; rank 0 writes rows 0-2 and rank 1 rows 3-5 (temperature) / 3-6 (ids).",
+      "checks": [
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/parallel/reduction",
+        "expected": {
+         "/field/temperature": {
+          "count": 18,
+          "sum": 5553.0,
+          "minimum": 300.0,
+          "maximum": 317.0
+         },
+         "/field/cell_id": {
+          "count": 7,
+          "sum": 847,
+          "minimum": 100,
+          "maximum": 142
+         }
+        },
+        "relative": 1e-12,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/parallel/partitions",
+        "expected": {
+         "/field/temperature": [
+          [
+           0,
+           3
+          ],
+          [
+           3,
+           6
+          ]
+         ],
+         "/field/cell_id": [
+          [
+           0,
+           3
+          ],
+          [
+           3,
+           7
+          ]
+         ]
+        },
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "streamed-grid",
+      "example": "streamed-grid",
+      "edits": [],
+      "resources": {},
+      "scope": "grid = 0.5*(200i+j) over 3000x200 float64 (1600-byte rows); memoryBytes 65536 gives 40-row blocks, so the full extraction streams in 75 blocks; corner hyperslab rows 2990 and 2999, columns 198-199 = 0.5*(200i+j): 299099, 299099.5, 299999, 299999.5.",
+      "checks": [
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/extracts/0/blocks",
+        "expected": 75,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/extracts/0/count",
+        "expected": 600000,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "corner.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         299099.0,
+         299099.5,
+         299999.0,
+         299999.5
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "parallel-extract",
+      "example": "parallel-extract",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/vendor-export.h5"
+      },
+      "scope": "Two MPI ranks each read two of the four frames (10*(6t+3y+x)); the gathered extraction equals the serial values 0..230 and the first-pixel column 0,60,120,180.",
+      "checks": [
+       {
+        "file": "frames.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         0,
+         10,
+         20,
+         30,
+         40,
+         50,
+         60,
+         70,
+         80,
+         90,
+         100,
+         110,
+         120,
+         130,
+         140,
+         150,
+         160,
+         170,
+         180,
+         190,
+         200,
+         210,
+         220,
+         230
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/extracts/0/rankRows",
+        "expected": [
+         2,
+         2
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "first_column.csv",
+        "format": "csv",
+        "pointer": "/rows",
+        "expected": [
+         [
+          0.0,
+          0
+         ],
+         [
+          0.25,
+          60
+         ],
+         [
+          0.5,
+          120
+         ],
+         [
+          0.75,
+          180
+         ]
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "human-names",
+      "example": "human-names",
+      "edits": [],
+      "resources": {},
+      "scope": "Ordinary HDF5 link names with spaces, Unicode (°C, μ), punctuation (# , \" & < >) and a leading dot: temperature 4x2 float32 [20.5,21; 22.25,23; 24.5,25; 26.75,27] under /Experiment 1 with scale Zeit (s) = 0,0.5,1,1.5; CSV headers quoted where they hold commas or quotes. Compound /Run #2, \"warm\" & <dry>/Messwerte fields \"Zeit (s)\" and \"Druck, kPa\" = (0, 101.25), (0.5, 101.5), extracted in requested (reversed) field order; /Kanal[2] = Druck = 1.5, 2.5, 3.5 kPa, sliced from index 1 through h5dump --no-compact-subset.",
+      "checks": [
+       {
+        "file": "temperature.csv",
+        "format": "csv",
+        "pointer": "/columns",
+        "expected": [
+         "Zeit (s) [s]",
+         "left, °C",
+         "right \"°C\""
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "temperature.csv",
+        "format": "csv",
+        "pointer": "/rows",
+        "expected": [
+         [
+          0.0,
+          20.5,
+          21.0
+         ],
+         [
+          0.5,
+          22.25,
+          23.0
+         ],
+         [
+          1.0,
+          24.5,
+          25.0
+         ],
+         [
+          1.5,
+          26.75,
+          27.0
+         ]
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "readings.csv",
+        "format": "csv",
+        "pointer": "/columns",
+        "expected": [
+         "Druck, kPa",
+         "Zeit (s)"
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "readings.csv",
+        "format": "csv",
+        "pointer": "/rows",
+        "expected": [
+         [
+          101.25,
+          0.0
+         ],
+         [
+          101.5,
+          0.5
+         ]
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "channel.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         2.5,
+         3.5
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "filter-rows",
+      "example": "filter-rows",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/sensor-run.h5"
+      },
+      "scope": "sensor-run.h5: state = IDLE, ACQUIRE, ACQUIRE, ACQUIRE, FAULT, IDLE; pressure (float32) = 101.325, 101.3, 101.27, 101.31, NaN, 101.4; counts (6x2, big-endian int16) = -5+3k. Rows in {ACQUIRE, FAULT} with finite pressure are 1-3: time 0.5/1.0/1.5 s, counts (1,4), (7,10), (13,16). Pressure > 101.305 compares stored float32 values: rows 0, 3, 5 (101.325, 101.31 stored as 101.30999755859375 > 101.305, 101.4). Events with level >= 100: sample 1, code OVR. FAULT rows with finite pressure: none (shape [0, 2]).",
+      "checks": [
+       {
+        "file": "acquiring.csv",
+        "format": "csv",
+        "pointer": "/rows",
+        "expected": [
+         [
+          0.5,
+          1,
+          4
+         ],
+         [
+          1.0,
+          7,
+          10
+         ],
+         [
+          1.5,
+          13,
+          16
+         ]
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "high_pressure.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         101.325,
+         101.31,
+         101.4
+        ],
+        "relative": 1e-06,
+        "absolute": 0
+       },
+       {
+        "file": "overloads.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         [
+          1,
+          "OVR"
+         ]
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "faults_with_pressure.json",
+        "format": "json",
+        "pointer": "/shape",
+        "expected": [
+         0,
+         2
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/extracts/0/where",
+        "expected": {
+         "rows": 3,
+         "of": 6
+        },
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "chunk-index",
+      "example": "chunk-index",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/sensor-run.h5"
+      },
+      "scope": "sensor-run.h5 /run/raw/counts: 6x2 big-endian int16 -5+3k in 3x2 chunks with shuffle, gzip 6 and Fletcher-32: two allocated chunks at offsets [0,0] and [3,0] whose stored bytes the host checksums, inflates and unshuffles to -5..10 and 13..28; their sizes add up to the 44 allocated bytes h5ls reports.",
+      "checks": [
+       {
+        "file": "counts.chunks.json",
+        "format": "json",
+        "pointer": "/chunkShape",
+        "expected": [
+         3,
+         2
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "counts.chunks.json",
+        "format": "json",
+        "pointer": "/filters",
+        "expected": [
+         "shuffle",
+         "gzip",
+         "fletcher32"
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "counts.chunks.json",
+        "format": "json",
+        "pointer": "/chunks/1/offset",
+        "expected": [
+         3,
+         0
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/extracts/0/chunks",
+        "expected": {
+         "count": 2,
+         "bytes": 44
+        },
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "counts_values.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         -5,
+         -2,
+         1,
+         4,
+         7,
+         10,
+         13,
+         16,
+         19,
+         22,
+         25,
+         28
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "copy-chunks",
+      "example": "copy-chunks",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/sensor-run.h5"
+      },
+      "scope": "A new /archive/counts with the layout of /run/raw/counts (6x2 big-endian int16, 3x2 chunks, shuffle+gzip 6+Fletcher-32) receives both stored chunks unchanged: values -5+3k, and a fresh HDF5 chunk listing shows the same chunk digests and masks as the captured source.",
+      "checks": [
+       {
+        "file": "archived.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         -5,
+         -2,
+         1,
+         4,
+         7,
+         10,
+         13,
+         16,
+         19,
+         22,
+         25,
+         28
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "archived_chunks.chunks.json",
+        "format": "json",
+        "pointer": "/chunks/0/size",
+        "expected": 23,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "archived_chunks.chunks.json",
+        "format": "json",
+        "pointer": "/chunks/1/size",
+        "expected": 21,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/edits",
+        "expected": [
+         "create",
+         "copyChunks"
+        ],
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "sieve-columns",
+      "example": "sieve-columns",
+      "edits": [],
+      "resources": {},
+      "scope": "Contiguous 2000x64 float64 grid g[i,j] = 64i + j read with a 1 MiB data sieve buffer: the strided column rows 0, 500, 1000, 1500 at column 5 are 5, 32005, 64005, 96005; the band rows 1000-1499 x columns 8-11 starts 64008; the extraction open reports the declared sieve size from its file access property list.",
+      "checks": [
+       {
+        "file": "column.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         5,
+         32005,
+         64005,
+         96005
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "extract-result.json",
+        "format": "json",
+        "pointer": "/access/sieveBufferBytes",
+        "expected": 1048576,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "readback-result.json",
+        "format": "json",
+        "pointer": "/access/sieveBufferBytes",
+        "expected": 1048576,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "hdf5-report.json",
+        "format": "json",
+        "pointer": "/extracts/1/count",
+        "expected": 2000,
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "large-attributes",
+      "example": "large-attributes",
+      "edits": [],
+      "resources": {},
+      "scope": "Attributes above the 64 KiB compact limit on the root (128x160 float32 pixel gains, 80 KiB), a group (256x160 uint16 dark frame 100+k, 80 KiB) and a dataset (9000 float64 lookup table 0..8999, 72 KiB), all objects tracking creation order: the dataset attributes read back as zeta, lookup table, alpha, units in creation order.",
+      "checks": [
+       {
+        "file": "readback-result.json",
+        "format": "json",
+        "pointer": "/result/objects/~1detector~1counts/attributeOrder",
+        "expected": [
+         "zeta",
+         "lookup table",
+         "alpha",
+         "units"
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "readback-result.json",
+        "format": "json",
+        "pointer": "/result/objects/~1detector/attributeOrder",
+        "expected": [
+         "serial",
+         "dark frame",
+         "model"
+        ],
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "readback-result.json",
+        "format": "json",
+        "pointer": "/result/objects/~1detector~1counts/trackOrder",
+        "expected": true,
+        "relative": 0,
+        "absolute": 0
+       },
+       {
+        "file": "counts.json",
+        "format": "json",
+        "pointer": "/values/31",
+        "expected": 93,
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     },
+     {
+      "id": "edit-fields",
+      "example": "edit-fields",
+      "edits": [],
+      "resources": {
+       "/source": "examples/schemaxis/hdf5-fixtures/sensor-run.h5"
+      },
+      "scope": "sensor-run.h5 /run/events records (sample uint32, level float64 kPa, code ascii[4], position float32[3]) = (1, 101.3, OVR, [0,0.5,1]), (4, 99.5, LOW, [1,1,1]). Field writes: level of record 1 -> 98.25; code+sample of both -> FIX/10, FIX/40; position of record 0 -> [0.25, 0.5, 0.75]; untouched members keep their stored values. A null-dataspace float64 /run/pending with units kPa is created (no shape, no values).",
+      "checks": [
+       {
+        "file": "events.json",
+        "format": "json",
+        "pointer": "/values",
+        "expected": [
+         [
+          10,
+          101.3,
+          "FIX",
+          [
+           0.25,
+           0.5,
+           0.75
+          ]
+         ],
+         [
+          40,
+          98.25,
+          "FIX",
+          [
+           1.0,
+           1.0,
+           1.0
+          ]
+         ]
+        ],
+        "relative": 1e-12,
+        "absolute": 0
+       },
+       {
+        "file": "readback-result.json",
+        "format": "json",
+        "pointer": "/result/objects/~1run~1pending/null",
+        "expected": true,
+        "relative": 0,
+        "absolute": 0
+       }
+      ]
+     }
+    ]
+   },
+   "completion": {
+    "scope": "Eight typed scientific-file operations and their nested records, including local MPI read/write, captured-file lifecycle and product delivery. The dated completion review records independent whole-inventory findings, evidence and reviewed boundaries; multi-node correctness and scaling remain future work under the accepted local-MPI v1 scope.",
+    "review": [
+     "verification/2026-11-05-hdf5-completion.md"
+    ],
+    "notApplicable": {
+     "native-inspection": "No interactive native session; inspectFile publishes a verified inventory and expectation decisions.",
+     "mpi": "Scheduler MPI ranks are not used; parallelWrite and extractData with parallel launch the configured mpiexec on localhost only (shared-memory transport, so an inherited scheduler allocation cannot place ranks on other nodes) with a separately built parallel h5py (mpio driver) and reserve one CPU per rank. Qualified only on one local workstation with 2-3 Open MPI 4.1.7 ranks, not on a cluster or with other MPI implementations. Other operations are serial.",
+     "time-batches": "No time-list batches; mesh time steps and SWMR batches are declared inside one document.",
+     "live-editing": "No persistent native state or reverse editing; edits are ordered declarations on captured copies.",
+     "conversion": "No general format converter; CSV/NPY/raw import and CSV/NPY/JSON extraction are named operations with explicit losses."
+    }
+   }
+  }
+ }
+}

@@ -1,5 +1,5 @@
 # Copyright (C) 2026 David L F Gaden
-"""Independent geometry checks for blender-showcase and the sphere bridge."""
+"""Independent geometry checks for blender-primitives and the sphere bridge."""
 import argparse
 import json
 import math

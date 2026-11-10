@@ -166,6 +166,13 @@ def integrity(directory, document):
 
 
 def _native_worker(request):
+    """Carry trusted caller runtime locations through native run and all verification."""
+    from .configuration import location_context
+    with location_context(request.get('locations')):
+        return _native_worker_at_locations(request)
+
+
+def _native_worker_at_locations(request):
     """Fixed trusted worker; authored documents cannot select code or shell commands."""
     document, run = request['document'], Path(request['run'])
     options = {'locations': request['locations'], 'timeout': request['timeout']}
@@ -230,7 +237,7 @@ def qualify(version, directory, *, native=False, root=None, locations=None, time
     report = {'protocol': PROTOCOL, 'provider': provider, 'documentVersion': version,
               'mode': 'native' if native else 'host', 'verified': False,
               'sourceDigest': start_digest, 'recordedAt': datetime.now(timezone.utc).isoformat(),
-              'scope': 'Only named cases, recorded runtimes and tested lifecycle paths. No MPI or exhaustive operation qualification.',
+              'scope': 'Only named cases, recorded runtimes and tested lifecycle paths; no qualification beyond these records.',
               'cases': [], 'lifecycle': [], 'host': None}
     directory.mkdir(parents=True)
     try:

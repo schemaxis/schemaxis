@@ -14,6 +14,8 @@ export function openLibraryPopover({anchor, title, items, card, preview, clear})
   let limit = 60;
   const close = () => {
     element.remove();
+    window.removeEventListener('resize', position);
+    window.removeEventListener('scroll', position, true);
     document.removeEventListener('pointerdown', outside);
     clear();
     anchor.setAttribute('aria-expanded', 'false');
@@ -64,7 +66,18 @@ export function openLibraryPopover({anchor, title, items, card, preview, clear})
     clear();
     render();
   });
-  anchor.parentElement.append(element);
+  function position() {
+    if (!anchor.isConnected || anchor.closest('[hidden]')) { close(); return; }
+    const rect = anchor.getBoundingClientRect(), width = Math.min(760, innerWidth - 24);
+    element.style.position = 'fixed'; element.style.width = width + 'px';
+    element.style.left = Math.max(12, Math.min(rect.left, innerWidth - width - 12)) + 'px';
+    element.style.top = Math.max(12, Math.min(rect.bottom, innerHeight - 300)) + 'px';
+    element.style.maxHeight = Math.max(120, innerHeight - parseFloat(element.style.top) - 12) + 'px';
+  }
+  document.body.append(element);
+  position();
+  window.addEventListener('resize', position);
+  window.addEventListener('scroll', position, true);
   anchor.setAttribute('aria-expanded', 'true');
   document.addEventListener('pointerdown', outside);
   render();

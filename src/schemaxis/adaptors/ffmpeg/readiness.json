@@ -4,11 +4,11 @@
     "schemaxis.ffmpeg/1": {
       "guide": "docs/ffmpeg.md",
       "context": {
-        "purpose": "Publish PNG frames, timed sprite sheets or an exclusive frame range from an existing silent MP4/H.264 or Matroska/FFV1 source. Output fps retimes the selected presentation frames. Optional deliverable requirements constrain dimensions, duration, bytes and per-frame RGB error.",
-        "assumptions": "Exactly one node; explicit input order and constant frame rate. A matching ffprobe executable is required beside FFmpeg. The adaptor uses their public command-line interfaces.",
-        "constraints": "One node, no audio or arbitrary filter graph. Existing-video sources: 1..600 frames, 32 MiB input, 192 MiB RGB, 4096 px per side, integer constant rate; no interlacing, non-square pixels or rotation/stream side data. MP4 edit lists use native presentation semantics. PNG alpha composites black; H.264 is lossy and needs even dimensions.",
-        "inspection": "Inspect video and retained native decode/probe evidence. Verify dimensions, frame count, rate and duration, and every decoded frame. FFV1 must match RGB bytes; H.264 mean RGB error is bounded at 16/255 per frame. These are bounded fidelity checks, not perceptual certification. Deliverable acceptance is independently reconstructed from authored requirements and actual retained native observations.",
-        "recovery": "INVALID_RESOURCE requires absolute PNG/metadata paths. Missing inputs need actual files, not placeholder paths. Correct dimensions or frame timing for native rejection; use FFV1 if H.264 exceeds the fidelity bound. Replan and rerun with retained failure logs. DELIVERABLE_NOT_MET retains a correct video with observed requirements and corrective next actions; revise sources, fps or codec before a fresh run. INVALID_FRAME_RANGE requires a nonempty zero-based inclusive-start/exclusive-end range within the complete source. UNSUPPORTED_VIDEO requires a supported silent progressive source with uniform presentation timestamps."
+        "purpose": "Publish PNG frames, timed sprite sheets or an exclusive frame range from an existing silent MP4/H.264 or Matroska/FFV1 source. Output fps retimes the selected presentation frames. Optional deliverable requirements constrain dimensions, duration, bytes and per-frame RGB error. The muxReview operation also combines a captured silent Matroska/FFV1 video, a canonical PCM16 WAV and a strict SubRip file into one verified three-stream Matroska review movie (stream-copied, soft captions, machine-draft status declared). The extractAudio operation decodes the AAC-LC audio stream of one captured MP4/M4A recording (optionally with one H.264 stream) into a verified canonical PCM16 WAV and a machine-draft audio summary; AAC is lossy, so equality with the recording that was encoded is not claimed. The encodeAudio operation encodes one captured canonical PCM16 WAV to AAC-LC/M4A and publishes it only after a fresh native decode reproduces the exact source frame count on a zero-origin timeline, every interleaved sample is compared, and the exact rational mean absolute sample error and the byte size meet the authored budgets; AAC is lossy and the error budget is a waveform number, never a listening, recognition or identity certification.",
+        "assumptions": "Exactly one node; explicit input order and constant frame rate. A matching ffprobe executable is required beside FFmpeg. The adaptor uses their public command-line interfaces. muxReview takes explicit local video, audio and caption files (or earlier verified artifacts); caption provenance is declared, never verified. extractAudio takes one explicit local .mp4 or .m4a file (or an earlier verified file artifact) and a required global streamIndex; nothing is inferred, and the captured file is an unauthenticated trust anchor. Running and verifying it need a trusted FFmpeg with ffprobe beside it (explicit executable, stored configuration or FFMPEG_EXECUTABLE; never PATH or receipt paths).",
+        "constraints": "One node and no arbitrary filter graph; audio only through muxReview (canonical PCM16 WAV in) and extractAudio (AAC-LC in, PCM16 WAV out), and no operation resamples, mixes, trims or pads it. Existing-video sources: 1..600 frames, 32 MiB input, 192 MiB RGB, 4096 px per side, integer constant rate; no interlacing, non-square pixels or rotation/stream side data. MP4 edit lists use native presentation semantics. PNG alpha composites black; H.264 is lossy and needs even dimensions. muxReview: Matroska/FFV1 bgr0 video only; canonical mono/stereo PCM16 WAV up to 32 MiB; plain-text SubRip of at most 1000 cues and 256 KiB; audio within one video frame period of the video; captions inside the video; no burn-in, AAC, H.264, WebVTT, metadata, attachments or arbitrary streams. extractAudio: an intact, non-fragmented, self-contained .mp4/.m4a of at most 64 MiB with exactly one AAC-LC stream (mono or stereo, 8000 to 96000 Hz) chosen by streamIndex 0 to 15 and at most one H.264 stream; no extra audio, subtitle, data or cover-art streams, chapters, HE-AAC or other codecs; at most 600 s and a 32 MiB canonical WAV. The decoded frame count is listed by a bounded ffprobe pass (probe output of at most 4 MiB, so very large metadata tags are refused; at most 17600 packets and 17500 decoded frames, which covers 960-sample AAC-LC frames within 32 MiB but not a source with a very long edit-list lead-in); the first limit reached is refused as RESOURCE_LIMIT, never truncated. This is not exhaustive AAC-LC or MP4 coverage. encodeAudio: canonical PCM16 WAV only, mono or stereo at 16000, 22050, 44100 or 48000 Hz, up to 600 s and 32 MiB; explicit bitrateKbps 64/96/128/192, maxBytes and maxMeanPCMError; no resampling, mixing, normalising, trimming or padding; closed single-stream AAC-LC M4A with an empty metadata list whose sample-to-chunk and chunk-offset tables may describe several chunks (the muxer starts a new chunk before one reaches 1 MiB) and are accounted byte by byte against the mdat payload; verification decodes the published bytes again and does not re-encode, and requires the recorded ffprobe to be the sibling of the recorded ffmpeg (recorded paths are never executed).",
+        "inspection": "Inspect video, its retained native decode/probe evidence and the fresh decode made when it is verified. Verify dimensions, frame count, rate and duration, and every decoded frame. FFV1 must match RGB bytes; H.264 mean RGB error is bounded at 16/255 per frame, and the stream must declare BT.601 limited-range colour (smpte170m/tv). These are bounded fidelity checks, not perceptual certification. Deliverable acceptance is independently reconstructed from authored requirements and the fresh native observations. For muxReview, inspect review.mkv with its retained probe, decoded video/audio and extracted captions: three-stream membership, decoded frames equal to the captured source, PCM bytes equal to the WAV data, and caption cues equal to the source in text and milliseconds. Verification re-derives these from the captured sources and decodes the published bytes again with a trusted FFmpeg. Recognition accuracy and human review are not certified. For extractAudio, inspect audio.wav and audio-summary.json with the retained probe, frame listing and native decode: every PCM byte of a fresh native decode of the captured MP4/M4A equals the published WAV and the decoded frame count equals the ffprobe audio-frame total. The WAV is a lossy machine-draft decode; equality with the original recording, recognition accuracy and human review are not certified.",
+        "recovery": "INVALID_RESOURCE requires absolute PNG/metadata paths. Missing inputs need actual files, not placeholder paths. Correct dimensions or frame timing for native rejection; use FFV1 if H.264 exceeds the fidelity bound. Replan and rerun with retained failure logs. DELIVERABLE_NOT_MET retains a correct video with observed requirements and corrective next actions; revise sources, fps or codec before a fresh run. INVALID_FRAME_RANGE requires a nonempty zero-based inclusive-start/exclusive-end range within the complete source. UNSUPPORTED_VIDEO requires a supported silent progressive source with uniform presentation timestamps, or a file whose contents match its .mkv/.mp4 extension. For an existing video, INVALID_RESOURCE means the bytes are empty, too short for a container signature, or not Matroska/MP4 at all: supply an intact file. RESOURCE_LIMIT means the whole source exceeds 600 frames, 32 MiB or 192 MiB decoded: trim it before use. INVALID_RESOURCE with observed.diagnostics means FFmpeg reported errors on a recognised container (truncated or corrupt source): re-export it and run into a fresh directory. MEDIA_DURATION_MISMATCH: trim or pad the audio (SoX) or select the matching video range; nothing is trimmed or padded here. CAPTIONS_OUT_OF_RANGE: correct caption timing or use a longer video. UNSUPPORTED_AUDIO for muxReview audio: supply canonical PCM16 WAV (no LIST/fact chunks, float or 8-bit). UNSUPPORTED_AUDIO for extractAudio names the refused construct: supply an intact, non-fragmented, self-contained MP4/M4A with exactly one AAC-LC mono or stereo stream (not HE-AAC, another codec, extra audio, subtitle, data or cover-art streams, chapters, external data references or a start offset), re-muxed or transcoded first; a PCM WAV is not an extractAudio input. UNSUPPORTED_CAPTIONS: remove markup, control, bidirectional or invisible characters. INVALID_RESOURCE for audio or captions names the malformed construct and cue number. RESOURCE_NOT_FOUND names the missing input. Verifying encodeFrames, encodeSheet or encodeVideo needs a trusted FFmpeg with ffprobe beside it (INTERPRETER_NOT_FOUND otherwise; pass executable, configure FFmpeg or set FFMPEG_EXECUTABLE; running resolves the same choice and refuses with INTERPRETER_NOT_FOUND before creating its output directory when only PATH could supply FFmpeg). VERIFICATION_FAILED with observed.fresh true means the fresh decode of the retained publication contradicted the retained evidence; run into a fresh directory. extractAudio INVALID_ARGUMENT for streamIndex names the audio stream indices: use the global ffprobe index of the AAC stream (0 to 15). extractAudio RESOURCE_LIMIT means more than 64 MiB, 600 s or a 32 MiB WAV, ffprobe output over 4 MiB (remove or shorten large metadata tags) or a stream above the 17600-packet probe bound (shorten the source): a size or bounded-probe limit, not evidence that the source is invalid. extractAudio RUNNER_FAILED from a probe or decode stage (loader, allocation or unclassified output) means source validity was not established: inspect the retained stage logs and runtime, then retry in a fresh directory; INVALID_RESOURCE with observed.diagnostics means FFmpeg reported errors reading the recording. extractAudio resolves the trusted FFmpeg before it creates the output directory, for run and for verify (INTERPRETER_NOT_FOUND otherwise; pass executable, configure FFmpeg or set FFMPEG_EXECUTABLE); PATH is never used."
       },
       "examples": [
         {
@@ -90,20 +90,62 @@
           "reference": "examples/schemaxis/ffmpeg-video-range-invalid.json",
           "expect": "invalid",
           "fault": "INVALID_FRAME_RANGE"
+        },
+        {
+          "id": "review-movie",
+          "reference": "examples/schemaxis/ffmpeg-review.json"
+        },
+        {
+          "id": "review-movie-invalid",
+          "reference": "examples/schemaxis/ffmpeg-review-invalid.json",
+          "expect": "invalid",
+          "fault": "UNSUPPORTED_VIDEO"
+        },
+        {
+          "id": "extract-audio",
+          "reference": "examples/schemaxis/ffmpeg-extract-audio.json"
+        },
+        {
+          "id": "extract-audio-variant",
+          "reference": "examples/schemaxis/ffmpeg-extract-audio-variant.json"
+        },
+        {
+          "id": "extract-audio-invalid",
+          "reference": "examples/schemaxis/ffmpeg-extract-audio-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "audio-publish",
+          "reference": "examples/schemaxis/ffmpeg-audio-publish.json"
+        },
+        {
+          "id": "audio-publish-invalid",
+          "reference": "examples/schemaxis/ffmpeg-audio-publish-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
         }
       ],
       "conformance": [
         "tests/unit/test_media_geospatial.py",
-        "tests/unit/test_ffmpeg_video_input.py"
+        "tests/unit/test_ffmpeg_video_input.py",
+        "tests/unit/test_ffmpeg_allocation.py",
+        "tests/unit/test_ffmpeg_h264_readback.py",
+        "tests/unit/test_ffmpeg_review.py",
+        "tests/unit/test_ffmpeg_audio.py"
       ],
       "acceptance": [
         "tools/qualify_media_geospatial.py",
         "tools/qualify_ffmpeg_deliverable.py",
-        "tools/qualify_ffmpeg_video.py"
+        "tools/qualify_ffmpeg_video.py",
+        "tools/qualify_ffmpeg_review.py",
+        "tools/qualify_ffmpeg_audio.py"
       ],
       "profiles": {
         "workflow": {
-          "scope": "Consumes image, spriteSheet, spriteMetadata and bounded MP4/H264 or Matroska/FFV1 video artifacts; fixed output rate, silent publications, no automatic conversion.",
+          "scope": "Consumes image, spriteSheet, spriteMetadata and bounded MP4/H264 or Matroska/FFV1 video artifacts, plus file artifacts (SoX WAV, whisper.cpp SRT; one limited native chain on a single clip, not a corpus) for muxReview; fixed output rate, no automatic conversion. Existing operations publish silent video; muxReview publishes a three-stream review movie. extractAudio consumes one MP4/M4A file artifact and publishes a canonical PCM16 WAV file artifact (handed to SoX conform in ffmpeg-extract-audio-workflow.json; one bounded chain, not a corpus).",
           "references": [
             "docs/media-workflows.md#ffmpeg-publication",
             "tests/unit/test_media_geospatial.py",
@@ -127,7 +169,7 @@
           "timeout": "Native encoding and decoding use a shared elapsed-time budget.",
           "cancellation": "Owned native subprocess trees use shared cancellation and retain partial evidence.",
           "logs": "Retain stage stdout/stderr, commands, probe output, decoded RGB and submissions.",
-          "verification": "Recheck full decoded RGB against retained inputs, dimensions, count, duration, hashes and declared codec-dependent error limits. Authored deliverable acceptance is reconstructed from native duration, dimensions/count, actual compressed byte size and per-frame mean RGB errors; unmet results cannot be published as successes. New native decode/probe launchers bind the encoded input digest to each owned stage; launcher source, bindings and decoded/probe output digests are replayed offline. Historical direct commands remain explicitly unbound. Source capture and scheduler fingerprints reject non-regular inputs before opening and recheck descriptors, with bounded byte reads. Existing video sources retain every decoded frame plus captured compressed bytes; bound source probe/decode launchers and full-source cadence validation precede pure index slicing. Native source processes have POSIX memory/file caps; all stages share one timeout."
+          "verification": "Recheck full decoded RGB against retained inputs, dimensions, count, duration, hashes and declared codec-dependent error limits. Authored deliverable acceptance is reconstructed from native duration, dimensions/count, actual compressed byte size and per-frame mean RGB errors; unmet results cannot be published as successes. New native decode/probe launchers bind the encoded input digest to each owned stage; launcher source, bindings and decoded/probe output digests are replayed offline. Historical direct commands remain explicitly unbound. Verification of encodeFrames, encodeSheet and encodeVideo, standalone and at the end of a run, decodes and probes private copies of the held published bytes (and, for encodeVideo, the held captured source video) again with a trusted FFmpeg and sibling ffprobe (explicit executable, stored configuration or FFMPEG_EXECUTABLE; never receipt paths or PATH) under the shared deadline, cancellation and byte limits, then judges every frame, the frame order and count, dimensions, cadence, codec, declared colour tags and fidelity budget against the captured PNG pixels or the fresh source decode; retained readbacks, receipt and result are strict typed consistency checks only, and a contradiction is VERIFICATION_FAILED with observed.fresh true. muxReview verification additionally decodes the published review file and the captured video again with a trusted FFmpeg and sibling ffprobe (explicit executable, stored configuration or FFMPEG_EXECUTABLE; never receipt paths or PATH) in a private directory under the shared deadline and cancellation, derives expectations from the captured sources, parses retained JSON strictly with typed comparison and requires result.json to equal the verified outcome; a bare schemaxis verify needs the stored configuration or environment variable. Source capture and scheduler fingerprints reject non-regular inputs before opening and recheck descriptors, with bounded byte reads. Existing video sources retain every decoded frame plus captured compressed bytes; bound source probe/decode launchers and full-source cadence validation precede pure index slicing. Native source processes have POSIX memory/file caps; all stages share one timeout. muxReview: every output stage (mux, probe, video decode, audio decode, caption extraction) is bound by an adaptor-owned launcher to the digests of the exact files it opens; verification is host re-derivation plus a fresh native decode: the host re-derives the strict WAV/SRT parse, the exact rational duration policy and every comparison from captured sources and retained readbacks, and the published review file and captured video are also decoded again with a trusted FFmpeg (as described above), so changed captured sources, published bytes or readbacks are rejected even when ordinary publication hashes are refreshed. extractAudio: the captured MP4/M4A bytes are held once; a fresh private copy is probed (streams, format, chapters, programs) and its selected audio-frame timeline listed (contiguous timestamps from zero, bounded count) by a trusted FFmpeg and sibling ffprobe (explicit executable, stored configuration or FFMPEG_EXECUTABLE; never PATH or receipt paths) under the shared deadline and cancellation, with POSIX address-space, CPU, file-size and core caps, then decoded to PCM16 with fixed arguments; the host builds the 44-byte canonical WAV and requires every PCM byte of the fresh decode to equal the published WAV, the decoded frame count to equal the probed audio-frame total, and the summary, receipt and result (closed, typed) to equal the recomputed observation. The capture is an unauthenticated trust anchor and AAC is lossy; no equality to the original recording, recognition accuracy or human review is claimed. extractAudio native stages report faults by cause: a stage that reaches its output cap (probe output over 4 MiB, a decode larger than the counted frames) is RESOURCE_LIMIT before any source diagnostic is read; native source diagnostics are INVALID_RESOURCE; loader, allocation, unclassified or empty-output failures are RUNNER_FAILED (source validity not established); during verification each becomes VERIFICATION_FAILED with the cause retained and observed.fresh set."
         },
         "data": [
           {
@@ -203,6 +245,83 @@
               "No colour-management guarantee; non-square pixels, rotation/side data and interlacing rejected."
             ],
             "scope": "Exactly one video stream, <=600 frames,32 MiB compressed,192 MiB RGB; fixed local demuxers; default MP4 edit-list presentation is honoured."
+          },
+          {
+            "id": "source-audio",
+            "direction": "input",
+            "kind": "file",
+            "format": "PCM16 WAV (canonical fmt+data)",
+            "traits": {
+              "channels": "mono or stereo",
+              "sampleRate": "8000-96000 Hz",
+              "units": "PCM sample frames"
+            },
+            "losses": [
+              "Copied unchanged; never trimmed, padded or resampled."
+            ],
+            "scope": "muxReview audio, up to 32 MiB; duration within one video frame period of the video."
+          },
+          {
+            "id": "source-captions",
+            "direction": "input",
+            "kind": "file",
+            "format": "SubRip (UTF-8, plain text)",
+            "traits": {
+              "timeUnits": "milliseconds",
+              "order": "contiguous monotonic cues"
+            },
+            "losses": [
+              "Plain text only; markup and positioning are rejected, never converted."
+            ],
+            "scope": "muxReview captions, up to 1000 cues and 256 KiB; machine-draft status is declared, never verified."
+          },
+          {
+            "id": "review-movie",
+            "direction": "output",
+            "kind": "video",
+            "format": "Matroska FFV1 + PCM16 + SubRip",
+            "traits": {
+              "streams": "video, audio, subtitle",
+              "captions": "soft",
+              "burnIn": false
+            },
+            "losses": [
+              "No re-encoding; no metadata, chapters, attachments or fonts."
+            ],
+            "scope": "Exactly three streams; decoded content independently compared with the captured sources."
+          },
+          {
+            "id": "source-aac",
+            "direction": "input",
+            "kind": "file",
+            "format": "MP4/M4A with one AAC-LC audio stream (optionally one H.264 video stream)",
+            "traits": {
+              "channels": "mono or stereo",
+              "sampleRate": "standard AAC rates 8000-96000 Hz",
+              "streamIndex": "global index 0-15, authored",
+              "units": "PCM sample frames after decode"
+            },
+            "losses": [
+              "AAC is lossy; the decoded PCM is not the recording that was encoded.",
+              "Video, metadata, chapters, cover art and every other stream are dropped; extra audio, subtitle, data and cover-art streams are refused."
+            ],
+            "scope": "extractAudio: <=64 MiB compressed, <=600 s, canonical WAV <=32 MiB; intact, non-fragmented, self-contained MP4 under a forced mov demuxer and file protocol only."
+          },
+          {
+            "id": "extracted-audio",
+            "direction": "output",
+            "kind": "file",
+            "format": "PCM16 WAV (canonical 44-byte header)",
+            "traits": {
+              "channels": "source mono or stereo",
+              "sampleRate": "source rate, no resampling",
+              "units": "PCM sample frames",
+              "status": "machineDraft"
+            },
+            "losses": [
+              "Lossy AAC decode; no equality with the uncompressed original, no recognition accuracy and no human review is certified."
+            ],
+            "scope": "audio.wav plus audio-summary.json (codec, stream index, decoded geometry, duration, PCM digest); accepted by the SoX conform route and muxReview."
           }
         ],
         "inspection": [
@@ -260,7 +379,7 @@
           },
           "conversion": {
             "status": "supported",
-            "scope": "Explicit PNG/sprite-sheet or bounded existing-video frame-range conversion to silent H.264/FFV1; FFV1 preserves decoded source RGB, H.264 is lossy. No automatic conversion planning."
+            "scope": "Explicit PNG/sprite-sheet or bounded existing-video frame-range conversion to silent H.264/FFV1; FFV1 preserves decoded source RGB, H.264 is lossy. No automatic conversion planning. muxReview additionally muxes verified FFV1 video, PCM16 audio and SubRip captions without re-encoding. extractAudio decodes one AAC-LC audio stream of an MP4/M4A to a canonical PCM16 WAV and summary, verified by a fresh native decode."
           }
         },
         "cases": [
@@ -427,13 +546,182 @@
             "resources": {
               "/nodes/0/options/file": "examples/schemaxis/ffmpeg-video-source.mkv"
             }
+          },
+          {
+            "id": "review-movie-baseline",
+            "example": "review-movie",
+            "edits": [],
+            "scope": "Known six-frame 32x24 10 fps FFV1 video, 9600-sample 16 kHz PCM16 WAV and two-cue SRT; decoded frames, PCM and cue text/ms independently exact, duration aligned. Does not qualify AAC, H.264, WebVTT or burn-in.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/frames",
+                "expected": 6
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/alignment/accepted",
+                "expected": true
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/audio/samples",
+                "expected": 9600
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/captions/cues",
+                "expected": 2
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/captions/status",
+                "expected": "machineDraft"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/captions/humanReviewVerified",
+                "expected": false
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/video": "examples/schemaxis/ffmpeg-video-source.mkv",
+              "/nodes/0/options/audio": "examples/schemaxis/fixtures/ffmpeg/review-speech.wav",
+              "/nodes/0/options/captions": "examples/schemaxis/fixtures/ffmpeg/review-captions.srt"
+            }
+          },
+          {
+            "id": "review-movie-declared-status",
+            "example": "review-movie",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/captionStatus",
+                "value": "declaredHumanReviewed"
+              }
+            ],
+            "scope": "Same known inputs with the author-declared reviewed status: recorded, with humanReviewVerified still false. Does not verify any review.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/captions/status",
+                "expected": "declaredHumanReviewed"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/captions/humanReviewVerified",
+                "expected": false
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/captions/recognitionAccuracyCertified",
+                "expected": false
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/video": "examples/schemaxis/ffmpeg-video-source.mkv",
+              "/nodes/0/options/audio": "examples/schemaxis/fixtures/ffmpeg/review-speech.wav",
+              "/nodes/0/options/captions": "examples/schemaxis/fixtures/ffmpeg/review-captions.srt"
+            }
+          },
+          {
+            "id": "extract-audio-baseline",
+            "example": "extract-audio",
+            "edits": [],
+            "scope": "Generated deterministic 1.5 s mono 16 kHz tone encoded by the native AAC encoder (explicit mp4 muxer): 24000 decoded frames, canonical 44-byte WAV, summary marking the AAC source lossy. Does not qualify other rates, stereo or speech accuracy.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/audio/frames",
+                "expected": 24000
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/audio/sampleRate",
+                "expected": 16000
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/capturedAudio/codec",
+                "expected": "aac"
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/equalityToOriginalClaimed",
+                "expected": false
+              },
+              {
+                "file": "result.json",
+                "format": "json",
+                "pointer": "/humanReviewVerified",
+                "expected": false
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/fixtures/ffmpeg/extract-audio-mono.m4a"
+            }
+          },
+          {
+            "id": "extract-audio-video-variant",
+            "example": "extract-audio",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/streamIndex",
+                "value": 1
+              }
+            ],
+            "scope": "The same tone inside an H.264 + AAC MP4 (video first, audio at global index 1): the audio is extracted, the single video stream is dropped, and 24000 frames are decoded.",
+            "checks": [
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/capturedAudio/streamIndex",
+                "expected": 1
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/audio/frames",
+                "expected": 24000
+              },
+              {
+                "file": "audio-summary.json",
+                "format": "json",
+                "pointer": "/source/streams/0/type",
+                "expected": "video"
+              }
+            ],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/fixtures/ffmpeg/extract-audio-video.mp4"
+            }
           }
         ]
       },
       "completion": {
-        "scope": "Existing-video source/frame-range operation and its schema, capture/native verification, discovery, guidance and Studio integration. Legacy image and sheet regressions exercised.",
+        "scope": "Existing-video source/frame-range operation and its schema, capture/native verification, discovery, guidance and Studio integration. Legacy image and sheet regressions exercised. 2026-10-24 allocation: native-free source container-signature gate before native launch and over-length RESOURCE_LIMIT classification; host-only, no native requalification. 2026-10-25 allocation: explicit BT.601 limited-range H.264 colour declaration with native probe readback, damaged-source diagnostics gate, B-frame/own-output sources and 600/601-frame native cases; native evidence on FFmpeg 9.0.2 with libx264 recorded in the note; qualification record not re-registered. 2026-10-25 allocation 39: new muxReview operation (schema, strict WAV/SRT host parsing, exact rational duration policy, three-stream mux with independent readbacks, discovery, guidance, Studio starter, examples) with bounded native acceptance on FFmpeg 9.0.2 + libx264; absorbedVersion unchanged; qualification record not re-registered. 2026-10-25 allocation 46: encodeFrames, encodeSheet and encodeVideo verification, standalone and at the end of a run, decodes the held published bytes again with a trusted FFmpeg and sibling ffprobe and judges them against the captured PNG pixels or a fresh decode of the captured source video (new verify-time runtime dependency, strict typed retained evidence, observed.fresh faults); authored schemas, plans, encoding argv and output bytes unchanged; bounded native forgery acceptance on FFmpeg 9.0.2 + libx264; absorbedVersion unchanged; qualification record not re-registered; no signed-source authenticity or host-offline decode promise. 2026-10-25 allocation 49: encodeFrames frame preparation decodes and composites each distinct held PNG once per call (keyed by the held bytes, never shared across run, verification or fresh passes); host performance only, authored schemas, plans, encoding argv, native input and every check unchanged; bounded native acceptance on FFmpeg 9.0.2 + libx264; absorbedVersion unchanged; qualification record not re-registered. 2026-10-25 allocation 48: new extractAudio operation (schema, native-free MP4 structure gate, stream/frame-timeline validation before decode, fixed forced-demuxer decode, host canonical WAV, fresh-decode verification with every-PCM-byte comparison, closed typed claims); existing operations and their evidence are unchanged; native evidence on exact FFmpeg 9.0.2 with libx264 recorded in the note; qualification record not re-registered. 2026-10-25 allocation 48 repair (review 30): extractAudio native-stage fault classification (runtime failures stay RUNNER_FAILED, source diagnostics INVALID_RESOURCE), probe output cap aligned with the host reader (RESOURCE_LIMIT, never truncated) with a packet bound that covers 960-sample AAC-LC frames, route context and recovery text for all five operations, muxReview verification wording, and a literal audio-plus-video frame-count test; the other four operations, fresh.py, review.py and video.py are unchanged. 2026-10-25 encodeAudio (allocation 56): isolated publish_audio.py, new filter and schema variant, exact rational budgets, fresh native decode verification, guidance and capability entries, one Studio starter, four search cases, docs/ffmpeg.md section, focused host+native tests and bounded qualifier; legacy operations untouched. 2026-10-25 encodeAudio repair (allocation 56, review 46): the container check assumed one chunk although FFmpeg 9.0.2 splits mdat at 1 MiB, so any output over 1 MiB failed its own verification; the chunk tables are now expanded and accounted physically (gaps, overlaps, order, stray mdat, run/chunk counts, sample description and size bounds refused), the same sibling-ffprobe provenance predicate applies to the earlier extractAudio receipts, and an espeakng narrate to encodeAudio workflow example was added (96 kbit/s, 8 MiB, 2000 sample units: an illustrative budget, not a quality preset). Native acceptance now includes named 60 s 48 kHz stereo and 600 s 16 kHz mono fixtures (multi-chunk output); the earlier short-clip grid stays valid for its own points and is superseded by this extended acceptance, which is bounded named fixtures, not every length or quality, and no human listened to any output. Retained probe.stdout and frames.stdout are hash-bound diagnostic records of the original run: verification makes its own fresh probe, frame listing and decode and compares the retained decode, not those two files. Not run here: Help/reference regeneration, registry, search-acceptance node suite and the admission check (master integration).",
         "review": [
-          "verification/2026-10-17-ffmpeg-completion.md"
+          "verification/2026-10-17-ffmpeg-completion.md",
+          "verification/2026-10-24-ffmpeg-allocation.md",
+          "verification/2026-10-25-ffmpeg-34.md",
+          "verification/2026-10-25-ffmpeg-39.md",
+          "verification/2026-10-25-ffmpeg-46.md",
+          "verification/2026-10-25-ffmpeg-49.md",
+          "verification/2026-10-25-ffmpeg-48.md",
+          "verification/2026-10-25-ffmpeg-audio-publish-56.md"
         ],
         "notApplicable": {
           "native-inspection": "Inspect retained publications and receipts; no native node inspection hook is advertised.",

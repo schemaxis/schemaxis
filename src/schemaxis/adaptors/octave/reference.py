@@ -8,9 +8,9 @@ from schemaxis.errors import fail
 from schemaxis.tabular import numeric
 
 
-def increasing(x):
+def increasing(x, location='$'):
     if any(b <= a for a,b in zip(x,x[1:])):
-        fail('INVALID_SAMPLING', 'abscissae must be strictly increasing for this operation')
+        fail('INVALID_SAMPLING', 'abscissae must be strictly increasing for this operation', location)
 
 
 def fft(values):
@@ -52,7 +52,7 @@ def evaluate(prepared, sources):
             source=result[node['inputs']['input']]; x=list(source['x']); y=list(source['y'])
             if op=='scale': y=[o['factor']*v+o['offset'] for v in y]
             elif op=='resample':
-                increasing(x)
+                increasing(x,node['id'])
                 target=[x[0]+(x[-1]-x[0])*i/(o['count']-1) for i in range(o['count'])]
                 values=[]
                 for coordinate in target:
@@ -65,10 +65,10 @@ def evaluate(prepared, sources):
                 half=o['window']//2
                 y=[statistics.fmean(y[max(0,i-half):min(len(y),i+half+1)]) for i in range(len(y))]
             elif op=='derivative':
-                increasing(x)
+                increasing(x,node['id'])
                 y=[(y[min(i+1,len(y)-1)]-y[max(0,i-1)])/(x[min(i+1,len(x)-1)]-x[max(0,i-1)]) for i in range(len(y))]
             elif op=='integral':
-                increasing(x)
+                increasing(x,node['id'])
                 partial=[o['initial']]
                 for i in range(1,len(x)): partial.append(partial[-1]+(x[i]-x[i-1])*(y[i]+y[i-1])/2)
                 y=partial
@@ -83,7 +83,7 @@ def evaluate(prepared, sources):
                 metadata={'slope':slope,'intercept':intercept,'residualSumSquares':residual}
                 y=fitted
             elif op=='fft':
-                increasing(x);n=len(x);step=(x[-1]-x[0])/(n-1)
+                increasing(x,node['id']);n=len(x);step=(x[-1]-x[0])/(n-1)
                 if n<4 or n>8192 or n & (n-1): fail('INVALID_SAMPLING','FFT needs 4 to 8192 samples in a power of two',node['id'])
                 if any(not math.isclose(b-a,step,rel_tol=1e-8,abs_tol=1e-12) for a,b in zip(x,x[1:])):
                     fail('INVALID_SAMPLING','FFT needs uniform sampling',node['id'])
@@ -94,6 +94,6 @@ def evaluate(prepared, sources):
         if len(x)!=len(y) or len(x)<2: fail('INVALID_TABLE','x and y need equal lengths of at least two',node['id'])
         x=[numeric(v,node['id']) for v in x];y=[numeric(v,node['id']) for v in y]
         total+=len(x)
-        if total>100000: fail('RESOURCE_LIMIT','analysis exceeds 100000 intermediate samples')
+        if total>100000: fail('RESOURCE_LIMIT','analysis exceeds 100000 intermediate samples',node['id'])
         result[node['id']]={'x':x,'y':y,'metadata':metadata,'statistics':statistics_of(y)}
     return result

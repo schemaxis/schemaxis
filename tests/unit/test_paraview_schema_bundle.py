@@ -135,7 +135,7 @@ class ParaViewSchemaBundleTests(unittest.TestCase):
                     for name, document in resources.items()}
             standalone = Draft202012Validator(export_schema('paraview', authored=authored))
             paths = sorted((ROOT/'examples/schemaxis').glob('paraview-*.json'))
-            paths += [ROOT/'examples/schemaxis/showcase.json']
+            paths += [ROOT/'examples/schemaxis/primitives.json']
             checked = 0
             for path in paths:
                 document = json.loads(path.read_text())

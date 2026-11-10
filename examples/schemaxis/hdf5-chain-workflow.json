@@ -1,0 +1,284 @@
+{
+ "version": "schemaxis.workflow/1",
+ "operations": [
+  {
+   "id": "runA",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "run-a.h5"
+    },
+    "objects": [
+     {
+      "path": "/signal",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       4
+      ],
+      "data": {
+       "source": "range",
+       "start": 0.5,
+       "step": 1
+      },
+      "units": "V"
+     }
+    ]
+   }
+  },
+  {
+   "id": "runB",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "run-b.h5"
+    },
+    "objects": [
+     {
+      "path": "/signal",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       4
+      ],
+      "data": {
+       "source": "range",
+       "start": 4.5,
+       "step": 1
+      },
+      "units": "V"
+     }
+    ]
+   }
+  },
+  {
+   "id": "stitch",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "stitched.h5"
+    },
+    "dependencies": [
+     {
+      "id": "runA",
+      "path": {
+       "$artifact": "runA",
+       "index": 0
+      },
+      "role": "virtualSource",
+      "name": "run-a.h5"
+     },
+     {
+      "id": "runB",
+      "path": {
+       "$artifact": "runB",
+       "index": 0
+      },
+      "role": "virtualSource",
+      "name": "run-b.h5"
+     }
+    ],
+    "objects": [
+     {
+      "path": "/signal",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       8
+      ],
+      "units": "V",
+      "virtual": {
+       "sources": [
+        {
+         "file": "runA",
+         "dataset": "/signal",
+         "at": {
+          "kind": "slices",
+          "slices": [
+           {
+            "start": 0,
+            "stop": 4
+           }
+          ]
+         }
+        },
+        {
+         "file": "runB",
+         "dataset": "/signal",
+         "at": {
+          "kind": "slices",
+          "slices": [
+           {
+            "start": 4,
+            "stop": 8
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "edit",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "editFile",
+    "source": {
+     "$artifact": "stitch",
+     "index": 0
+    },
+    "file": {
+     "name": "stitched-final.h5"
+    },
+    "repack": true,
+    "edits": [
+     {
+      "action": "create",
+      "object": {
+       "path": "/summary/mean",
+       "type": {
+        "class": "float",
+        "bits": 64
+       },
+       "shape": [],
+       "data": {
+        "source": "values",
+        "values": [
+         4.0
+        ]
+       },
+       "units": "V"
+      }
+     },
+     {
+      "action": "setAttribute",
+      "path": "/",
+      "attribute": {
+       "name": "status",
+       "value": "reviewed"
+      }
+     }
+    ],
+    "dependencies": [
+     {
+      "id": "runA",
+      "path": {
+       "$artifact": "runA",
+       "index": 0
+      },
+      "role": "virtualSource",
+      "name": "run-a.h5"
+     },
+     {
+      "id": "runB",
+      "path": {
+       "$artifact": "runB",
+       "index": 0
+      },
+      "role": "virtualSource",
+      "name": "run-b.h5"
+     }
+    ]
+   }
+  },
+  {
+   "id": "inspect",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "inspectFile",
+    "source": {
+     "$artifact": "edit",
+     "index": 0
+    },
+    "expectations": [
+     {
+      "id": "signal",
+      "path": "/signal",
+      "shape": [
+       8
+      ],
+      "units": "V",
+      "minimum": 0.5,
+      "maximum": 7.5
+     },
+     {
+      "id": "status",
+      "path": "/",
+      "attribute": "status",
+      "value": "reviewed"
+     }
+    ],
+    "dependencies": [
+     {
+      "id": "runA",
+      "path": {
+       "$artifact": "runA",
+       "index": 0
+      },
+      "role": "virtualSource",
+      "name": "run-a.h5"
+     },
+     {
+      "id": "runB",
+      "path": {
+       "$artifact": "runB",
+       "index": 0
+      },
+      "role": "virtualSource",
+      "name": "run-b.h5"
+     }
+    ]
+   }
+  },
+  {
+   "id": "extract",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "extractData",
+    "source": {
+     "$artifact": "edit",
+     "index": 0
+    },
+    "extracts": [
+     {
+      "id": "signal",
+      "dataset": "/signal",
+      "format": "json"
+     }
+    ],
+    "dependencies": [
+     {
+      "id": "runA",
+      "path": {
+       "$artifact": "runA",
+       "index": 0
+      },
+      "role": "virtualSource",
+      "name": "run-a.h5"
+     },
+     {
+      "id": "runB",
+      "path": {
+       "$artifact": "runB",
+       "index": 0
+      },
+      "role": "virtualSource",
+      "name": "run-b.h5"
+     }
+    ]
+   }
+  }
+ ]
+}

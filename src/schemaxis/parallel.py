@@ -59,7 +59,9 @@ def requests(operation, budget):
     hook = registry.route_hook(pipeline, 'resources', legacy=True)
     from .adaptor_runtime import InputProgram
     from .workflow import dependencies
-    deferred = any(dependencies(pipeline))
+    from .captured_inputs import references
+    # Captured inputs resolve to verified paths at dispatch, like producer artifacts.
+    deferred = any(dependencies(pipeline)) or any(references(pipeline))
     defaults = {}
     if deferred:
         provisional_hook = registry.route_hook(pipeline, 'provisionalResources', legacy=True)
@@ -133,7 +135,8 @@ def verify_native(directory, expected):
     if json.loads((directory/'authored.json').read_text()) != expected:
         fail('VERIFICATION_FAILED', 'attempt input differs from requested input', str(directory))
     from .adaptor_runtime import is_common
-    hook = None if is_common(directory) else registry.route_hook(expected, 'verifyAttempt', legacy=True)
+    from .module_runtime import module_run
+    hook = None if is_common(directory) or module_run(directory) else registry.route_hook(expected, 'verifyAttempt', legacy=True)
     if hook: hook(directory, expected)
     else: registry.verify(directory, expected)
     from .publication_metadata import verify as verify_metadata
@@ -144,6 +147,9 @@ def verify_native(directory, expected):
 
 def reusable_inputs(document):
     """Conservative input provenance for retries: unknown external readers rerun."""
+    from .module_runtime import current
+    if current() is not None:
+        return current().input_hashes(document)
     hook = registry.route_hook(document, 'reusableInputs', legacy=True)
     if hook is None: return None
     from .adaptor_runtime import InputProgram
@@ -163,6 +169,9 @@ def retained_inputs(directory, document):
     A missing hook is deliberately conservative: old providers still need their
     original inputs when saved scheduler provenance is checked.
     """
+    from .module_runtime import module_run, retained_inputs as module_inputs
+    if module_run(directory):
+        return module_inputs(directory, document)
     from .adaptor_runtime import is_common
     if is_common(directory):
         receipt = json.loads((Path(directory)/'verification.json').read_text())
@@ -189,8 +198,52 @@ def retained_inputs(directory, document):
     return result
 
 
+def same_handoffs(recorded, resolved):
+    """Compare provenance records independently of object-key traversal, retaining duplicate counts.
+
+    Consumer ordering is bound by the effective document, including its ordered arrays. The handoff
+    list records the verified source identities; JSON object member order must not change that proof.
+    """
+    if not isinstance(recorded, list) or not isinstance(resolved, list):
+        return False
+    if any(not isinstance(item, dict) for item in (*recorded, *resolved)):
+        return False
+    try:
+        def canonical(items):
+            return sorted(json.dumps(item, sort_keys=True, ensure_ascii=False, allow_nan=False) for item in items)
+        return canonical(recorded) == canonical(resolved)
+    except (TypeError, ValueError, RecursionError):
+        return False
+
+
+def resume_inputs(document, captured):
+    """Allow retired originals only after a complete verified capture binding.
+
+    Existing originals still have to match. If all originals remain available,
+    preserve the provider's normal planning/provenance check. A provider without
+    retainedInputs never acquires permission to reuse missing inputs here.
+    """
+    if captured is None:
+        return reusable_inputs(document)
+    from .artifacts import file_digest
+    missing = False
+    for filename, digest in captured.items():
+        path = Path(filename)
+        try:
+            if file_digest(path) != digest:
+                return None
+        except FileNotFoundError:
+            # A dangling replacement link is a changed input, not retirement.
+            if path.is_symlink():
+                return None
+            missing = True
+    return captured if missing else reusable_inputs(document)
+
+
 def resolve(pipeline, completed, *, directory=None):
-    handoffs = []
+    from .captured_inputs import consume
+    # Every dispatch, resume comparison and verification rechecks pinned snapshots.
+    pipeline, handoffs = consume(pipeline, 'document')
     def target_for(outcome):
         return (owned_path(directory, outcome['directory'], kind='directory')
                 if directory is not None else Path(outcome['directory']))
@@ -334,6 +387,10 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
             captured = retained_inputs(target, effective)
             if captured is not None and captured != input_hashes:
                 fail('INPUT_CHANGED', 'captured source bytes differ from scheduled inputs', job['id'])
+            if handoffs:
+                from .captured_inputs import recheck
+                # A snapshot edited while this consumer ran does not yield success.
+                recheck(job['document'], 'document')
             verification_seconds = time.monotonic()-verify_started
         if reusable_inputs(effective) != input_hashes:
             fail('INPUT_CHANGED', 'input files changed during execution', job['id'])
@@ -365,9 +422,14 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
                         break
                     if not set(job['dependencies']) <= completed.keys():
                         continue
+                    # Resolving captured inputs rehashes their complete snapshots.
+                    # Wait for capacity first, then verify freshly at dispatch;
+                    # never cache a resolution across scheduler polls.
+                    if any(used[key]+job['resources'][key] > budget[key] for key in used):
+                        continue
                     with execution_deadline(timeout):
                         effective, handoffs = resolve(job['document'], completed)
-                    if job['dependencies']:
+                    if job['dependencies'] or handoffs:
                         actual = requests({'id': job['operation'], 'document': effective,
                                            'execution': {k:v for k,v in job['resources'].items() if k in ('threads','ranks','memoryMB','gpus','mpiexec')}}, budget)
                         if actual != job['resources']:
@@ -385,22 +447,22 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
                     attempts = sorted(parent.glob('attempt-*'))
                     reused = None
                     if resume:
-                        input_hashes = reusable_inputs(effective)
                         for attempt in reversed(attempts):
                             try:
                                 candidate = json.loads((attempt/'job.json').read_text())
                                 if not isinstance(candidate, dict) or candidate.get('status') != 'succeeded':
                                     continue
-                                if input_hashes is None or candidate.get('inputHashes') != input_hashes:
-                                    continue
                                 if any(candidate.get(key) != job[key] for key in job) or candidate.get('effective') != effective:
                                     continue
-                                if candidate.get('directory') != str(attempt) or candidate.get('handoffs') != handoffs:
+                                if candidate.get('directory') != str(attempt) or not same_handoffs(candidate.get('handoffs'), handoffs):
                                     continue
                                 with execution_deadline(timeout):
                                     receipt = verify_native(attempt, effective)
                                     captured = retained_inputs(attempt, effective)
-                                    if captured is not None and captured != input_hashes:
+                                    if captured is not None and captured != candidate.get('inputHashes'):
+                                        continue
+                                    input_hashes = resume_inputs(effective, captured)
+                                    if input_hashes is None or candidate.get('inputHashes') != input_hashes:
                                         continue
                                 if job['resources']['ranks'] > 1 and receipt.get('ranks') != job['resources']['ranks']:
                                     continue
@@ -420,8 +482,6 @@ def _execute(document, directory, operations, budget, jobs, roots, blender, time
                         outcomes[job['id']] = reused
                         pending.remove(job)
                         save()
-                        continue
-                    if any(used[key]+job['resources'][key] > budget[key] for key in used):
                         continue
                     number = max([int(p.name.split('-')[-1]) for p in attempts] or [0])+1
                     target = parent/('attempt-' + str(number).zfill(4))
@@ -499,7 +559,7 @@ def verify(directory):
         parent = directory/job['operation']/('batch-'+str(job['batch']))
         if target.parent != parent or not re.fullmatch('attempt-[0-9]+', target.name) or target.resolve().parent != parent.resolve():
             fail('VERIFICATION_FAILED', 'attempt escaped its job directory', job['id'])
-        if outcome.get('effective') != effective or outcome.get('handoffs') != handoffs:
+        if outcome.get('effective') != effective or not same_handoffs(outcome.get('handoffs'), handoffs):
             fail('VERIFICATION_FAILED', 'job handoff differs', job['id'])
         receipt = verify_native(target, effective)
         captured = retained_inputs(target, effective)

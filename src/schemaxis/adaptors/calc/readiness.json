@@ -4,11 +4,11 @@
     "schemaxis.calc/1": {
       "guide": "docs/calc.md",
       "context": {
-        "purpose": "Turn bounded numeric tables into editable, recalculated ODS and XLSX workbooks with checked summary formulas and a CSV round trip. Optional named cell bounds and weighted reconciliation enforce declared numeric performance in both native formats.",
-        "assumptions": "Exactly one table, 2 to 10000 finite numeric rows, 1 to 64 named columns. CSV paths are absolute. Native LibreOffice runs headlessly with an isolated user profile.",
-        "constraints": "No arbitrary spreadsheet formulas, strings, styles or general workbook editing. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit.",
-        "inspection": "Inspect data.csv through table/series views and reopen the native workbooks. Independent host checks validate numeric cells, formulas and recalculated caches in both formats.",
-        "recovery": "INVALID_TABLE requires rectangular finite data with valid column names. INTERPRETER_NOT_FOUND requires a configured soffice. Preserve conversion logs and retry a corrected input in a fresh run. REQUIREMENTS_UNMET retains numeric assessments and workbooks; REQUIREMENT_SELECTION_FAILED identifies missing/text cells. Inspect observed margins and retry corrected input in a fresh attempt."
+        "purpose": "Turn bounded numeric tables, or typed labelled tables of text IDs, notes and measurements that may be missing, into editable, recalculated ODS and XLSX workbooks with checked summary formulas and a CSV handoff. Optional named cell bounds and weighted reconciliation enforce declared numeric performance in both native formats.",
+        "assumptions": "Exactly one table. Numeric tables have 2 to 10000 finite numeric rows; typed tables declare every column as text or number with explicit nullability, 1 to 10000 records, at most 100000 cells and a reserved null token. CSV paths are absolute. Native LibreOffice runs headlessly with an isolated user profile. A producer may publish the CSV as a table or a generic file artifact; file does not imply the content is valid.",
+        "constraints": "No arbitrary spreadsheet formulas, hyperlinks, macros, styles or general workbook editing; text beginning with =, +, - or @ stays literal. Typed tables infer no types, dates, currency, time zones or units, reject empty text and booleans, and summarise only declared number columns. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit; published workbook numbers keep 15 significant digits.",
+        "inspection": "Inspect data.csv through table/series views (the typed CSV also quotes text and uses the null token) and reopen the native workbooks. Independent host checks validate every cell type, text value, blank, formula and recalculated cache in both formats; typed-summary.json records counts, missingness and exact-value digests.",
+        "recovery": "INVALID_TABLE requires rectangular finite data with valid column names; CSV cells must be plain ASCII decimals (no 1_000, currency, percent or blanks) and the fault locates the record and column. INTERPRETER_NOT_FOUND requires a configured soffice. Preserve conversion logs and retry a corrected input in a fresh run. REQUIREMENTS_UNMET retains numeric assessments and workbooks; REQUIREMENT_SELECTION_FAILED identifies missing/text cells. Inspect observed margins and retry corrected input in a fresh attempt. For typed tables, INVALID_TABLE locates rows[i][j] (or columns[j].name for a header difference) with the column, offending value and a recovery hint: use strings for text, numbers for number columns, null or the null token for missing values, and never empty text. RESOURCE_LIMIT reports a bound. A tampered or stale typed-summary.json, data.csv or captured CSV reports VERIFICATION_FAILED. Binding a file artifact whose bytes are not the declared CSV (binary, empty label, renamed header, padded number) is INVALID_TABLE before any native work; an unaccepted artifact kind is TYPE_MISMATCH and a missing index is INVALID_SELECTION."
       },
       "examples": [
         {
@@ -52,24 +52,50 @@
         {
           "id": "balance",
           "reference": "examples/schemaxis/calc-balance.json"
+        },
+        {
+          "id": "typed-baseline",
+          "reference": "examples/schemaxis/calc-typed-parts.json"
+        },
+        {
+          "id": "typed-variant",
+          "reference": "examples/schemaxis/calc-typed-parts-variant.json"
+        },
+        {
+          "id": "typed-invalid",
+          "reference": "examples/schemaxis/calc-typed-parts-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_TABLE",
+          "schemaValid": true
+        },
+        {
+          "id": "typed-csv",
+          "reference": "examples/schemaxis/calc-typed-csv.json"
         }
       ],
       "conformance": [
         "tests/unit/test_numeric_analysis.py",
         "tests/unit/test_adaptor_migration.py",
-        "tests/unit/test_calc_requirements.py"
+        "tests/unit/test_calc_requirements.py",
+        "tests/unit/test_calc_typed.py"
       ],
       "acceptance": [
         "tools/qualify_adaptor_migration.py",
         "tools/qualify_agent_service.py",
-        "tools/qualify_calc_requirements.py"
+        "tools/qualify_calc_requirements.py",
+        "tools/qualify_calc_typed.py"
       ],
       "profiles": {
         "workflow": {
-          "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses.",
+          "scope": "Declared artifact handoffs with independently verified producer receipts; inspect exact consumer formats and losses. The typed CSV reader accepts a table or a generic file artifact (for example SQLite summary.csv) and validates the bytes before native work.",
           "references": [
             "docs/numerical-analysis.md",
-            "tests/unit/test_numeric_analysis.py"
+            "tests/unit/test_numeric_analysis.py",
+            "docs/calc.md#verification-and-limits",
+            "examples/schemaxis/calc-sqlite-typed-workflow.json",
+            "examples/schemaxis/fixtures/calc/sqlite-regions.json",
+            "examples/schemaxis/fixtures/calc/sqlite-lines.json",
+            "docs/calc.md#binding-a-producers-csv-file"
           ]
         },
         "composition": {
@@ -80,15 +106,31 @@
           ]
         }
       },
+      "completion": {
+        "scope": "Typed labelled tables added to the existing schemaxis.calc/1 route as one capability: fromTypedRows and readTypedCSV (declared text/number columns, explicit nulls, reserved null token), typed Summary with MISSING, typed data.csv handoff and typed-summary.json evidence, plus the numeric route's Summary-width/blank selection handling. Numeric fromRows/readCSV semantics and retained receipts are unchanged; discovery, guidance, Studio starters and search cases for the whole route were completed. The readTypedCSV consumer also accepts generic file artifacts (real SQLite summary.csv to Calc workflow) with the CSV validated before native work; the Arrow CSV publication has not been run through this edge.",
+        "review": [
+          "verification/2026-10-24-calc-allocation.md",
+          "verification/2026-10-25-calc-typed.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "Batch workbook route; inspect the verified CSV and reopen the published workbooks.",
+          "mpi": "Serial headless LibreOffice only.",
+          "time-batches": "No time-list batches.",
+          "live-editing": "No persistent native state.",
+          "native-save": "Publications are the verified saves."
+        }
+      },
       "development": {
         "api": [
-          "https://help.libreoffice.org/latest/en-US/text/scalc/main0000.html"
+          "https://help.libreoffice.org/latest/en-US/text/scalc/main0000.html",
+          "https://api.libreoffice.org/docs/idl/ref/interfacecom_1_1sun_1_1star_1_1sheet_1_1XCellRangeData.html",
+          "https://api.libreoffice.org/docs/idl/ref/interfacecom_1_1sun_1_1star_1_1table_1_1XCell.html"
         ],
         "lifecycle": {
           "timeout": "Each native process is bounded by the runner timeout; conformance adds an independent wall-clock watchdog.",
           "cancellation": "Shared owned-process cancellation retains partial evidence. Pre-launch cancellation is tested separately from shared in-flight cleanup.",
           "logs": "Fresh run directory retains authored input, effective plan, native submissions/stdout/stderr, publications and verification evidence.",
-          "verification": "Independently parse ODS/XLSX data, formulas and cached summaries and compare the CSV round trip and publication hashes. Recompute each declared requirement from both native formats; reject altered, linked, malformed or oversized assessment evidence."
+          "verification": "Independently parse ODS/XLSX data, formulas and cached summaries and compare the CSV round trip and publication hashes. Recompute each declared requirement from both native formats; reject altered, linked, malformed or oversized assessment evidence. Typed tables are additionally read back cell by cell from native XLSX and reopened ODS (string/number/blank type, exact text, absence of formulas outside the fixed Summary set, links, rich text, styles, macros and external references), and typed-summary.json and data.csv are regenerated from the retained input and compared."
         },
         "data": [
           {
@@ -134,23 +176,93 @@
               "Formatting, arbitrary formulas and nonnumeric workbook semantics are outside the supported conversion."
             ],
             "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "input-1",
+            "direction": "input",
+            "kind": "table",
+            "format": "typed JSON rows",
+            "traits": {
+              "rows": "rectangular",
+              "columns": "declared text or number",
+              "missing": "null"
+            },
+            "losses": [
+              "Empty text is rejected because native ODS reopening turns it into a blank; null is the only missing value.",
+              "Workbook numbers keep 15 significant digits (native XLSX export); data.csv keeps the exact binary64 value and negative zero is stored as zero.",
+              "The null token is reserved and cannot be present text. No types, dates, currency, time zones or units are inferred; formatting, styles and formulas other than the fixed Summary set are outside the conversion."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "input-2",
+            "direction": "input",
+            "kind": "table",
+            "format": "typed CSV",
+            "traits": {
+              "header": "exact declared names",
+              "quoting": "bare or double-quoted cells",
+              "nullToken": "reserved, default \\N"
+            },
+            "losses": [
+              "Empty text is rejected because native ODS reopening turns it into a blank; null is the only missing value.",
+              "Workbook numbers keep 15 significant digits (native XLSX export); data.csv keeps the exact binary64 value and negative zero is stored as zero.",
+              "The null token is reserved and cannot be present text. No types, dates, currency, time zones or units are inferred; formatting, styles and formulas other than the fixed Summary set are outside the conversion."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "output-2",
+            "direction": "output",
+            "kind": "table",
+            "format": "typed CSV",
+            "traits": {
+              "text": "always quoted",
+              "numbers": "shortest exact decimal",
+              "missing": "null token"
+            },
+            "losses": [
+              "Empty text is rejected because native ODS reopening turns it into a blank; null is the only missing value.",
+              "Workbook numbers keep 15 significant digits (native XLSX export); data.csv keeps the exact binary64 value and negative zero is stored as zero.",
+              "The null token is reserved and cannot be present text. No types, dates, currency, time zones or units are inferred; formatting, styles and formulas other than the fixed Summary set are outside the conversion."
+            ],
+            "scope": "Bounded subset described in the route guide; validate native inputs and inspect retained evidence."
+          },
+          {
+            "id": "input-3",
+            "direction": "input",
+            "kind": "file",
+            "format": "typed CSV (producer file artifact)",
+            "traits": {
+              "content": "validated before native work; the file kind does not establish it",
+              "header": "exact declared names, in file order",
+              "encoding": "UTF-8, comma-delimited",
+              "nullToken": "reserved, default \\N",
+              "text": "printable producer text only where the producer restricts it"
+            },
+            "losses": [
+              "A producer that cannot distinguish a stored text value equal to the null token from NULL (SQLite summary.csv) delivers that value as missing.",
+              "Empty text is rejected because native ODS reopening turns it into a blank; null is the only missing value.",
+              "Content that is not the declared CSV (a binary database, an empty label, a padded number, a renamed header) is refused with INVALID_TABLE before native work; no types, dates, currency or units are inferred."
+            ],
+            "scope": "Regular CSV file artifacts such as SQLite summary.csv bound with $artifact; the Arrow CSV publication has not been run through this edge."
           }
         ],
         "inspection": [
           {
             "panel": "table",
-            "scope": "Inspect data.csv through table/series views and reopen the native workbooks. Independent host checks validate numeric cells, formulas and recalculated caches in both formats.",
-            "limits": "No arbitrary spreadsheet formulas, strings, styles or general workbook editing. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit."
+            "scope": "Inspect data.csv through table/series views (the typed CSV also quotes text and uses the null token) and reopen the native workbooks. Independent host checks validate every cell type, text value, blank, formula and recalculated cache in both formats; typed-summary.json records counts, missingness and exact-value digests.",
+            "limits": "No arbitrary spreadsheet formulas, hyperlinks, macros, styles or general workbook editing; text beginning with =, +, - or @ stays literal. Typed tables infer no types, dates, currency, time zones or units, reject empty text and booleans, and summarise only declared number columns. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit; published workbook numbers keep 15 significant digits."
           },
           {
             "panel": "series",
-            "scope": "Inspect data.csv through table/series views and reopen the native workbooks. Independent host checks validate numeric cells, formulas and recalculated caches in both formats.",
-            "limits": "No arbitrary spreadsheet formulas, strings, styles or general workbook editing. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit."
+            "scope": "Inspect data.csv through table/series views (the typed CSV also quotes text and uses the null token) and reopen the native workbooks. Independent host checks validate every cell type, text value, blank, formula and recalculated cache in both formats; typed-summary.json records counts, missingness and exact-value digests.",
+            "limits": "No arbitrary spreadsheet formulas, hyperlinks, macros, styles or general workbook editing; text beginning with =, +, - or @ stays literal. Typed tables infer no types, dates, currency, time zones or units, reject empty text and booleans, and summarise only declared number columns. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit; published workbook numbers keep 15 significant digits."
           },
           {
             "panel": "text",
-            "scope": "Inspect data.csv through table/series views and reopen the native workbooks. Independent host checks validate numeric cells, formulas and recalculated caches in both formats.",
-            "limits": "No arbitrary spreadsheet formulas, strings, styles or general workbook editing. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit."
+            "scope": "Inspect data.csv through table/series views (the typed CSV also quotes text and uses the null token) and reopen the native workbooks. Independent host checks validate every cell type, text value, blank, formula and recalculated cache in both formats; typed-summary.json records counts, missingness and exact-value digests.",
+            "limits": "No arbitrary spreadsheet formulas, hyperlinks, macros, styles or general workbook editing; text beginning with =, +, - or @ stays literal. Typed tables infer no types, dates, currency, time zones or units, reject empty text and booleans, and summarise only declared number columns. Column units are authored labels; no automatic unit conversion. Floating-point tolerances are explicit; published workbook numbers keep 15 significant digits."
           }
         ],
         "authoring": {
@@ -301,6 +413,165 @@
                 "format": "json",
                 "pointer": "/passed",
                 "expected": true
+              }
+            ]
+          },
+          {
+            "id": "typed-baseline",
+            "example": "typed-baseline",
+            "edits": [],
+            "scope": "Hand-stated literal part IDs, notes, blanks and statistics checked in the retained typed summary, the typed CSV text and independently recomputed requirements; only this fixture and its changed input are asserted.",
+            "checks": [
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/1/present",
+                "expected": 4,
+                "absolute": 0
+              },
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/1/missing",
+                "expected": 1,
+                "absolute": 0
+              },
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/1/sum",
+                "expected": 37.25,
+                "absolute": 1e-12
+              },
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/1/min",
+                "expected": 0,
+                "absolute": 0
+              },
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/0/distinct",
+                "expected": 5,
+                "absolute": 0
+              },
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/3/mean",
+                "expected": 99.9,
+                "absolute": 1e-12
+              },
+              {
+                "file": "data.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "\"Part ID\",\"Mass (g)\",\"Note\",\"Length (mm)\"\n\"00123\",12.5,\"=1+2\",100.25\n\"00124\",\\N,\"+SUM(A1:A2)\",99.5\n\"@part-7\",0.0,\"-02\",101.0\n\"café ☕\",13.75,\\N,98.75\n\"A-9  spaced\",11.0,\"ok\",100.0\n"
+              },
+              {
+                "file": "requirements.json",
+                "format": "json",
+                "pointer": "/formats/xlsx/checks/0/value",
+                "expected": 37.25,
+                "absolute": 1e-12
+              },
+              {
+                "file": "requirements.json",
+                "format": "json",
+                "pointer": "/formats/ods/checks/1/value",
+                "expected": 1,
+                "absolute": 0
+              },
+              {
+                "file": "requirements.json",
+                "format": "json",
+                "pointer": "/passed",
+                "expected": true
+              }
+            ]
+          },
+          {
+            "id": "typed-variant",
+            "example": "typed-baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/rows/1/0",
+                "value": "00125"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/rows/3/1",
+                "value": 14.25
+              }
+            ],
+            "scope": "Changed ID and measurement: the sum becomes 37.75, the blank stays blank and the typed CSV carries exactly the new text.",
+            "checks": [
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/1/sum",
+                "expected": 37.75,
+                "absolute": 1e-12
+              },
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/1/missing",
+                "expected": 1,
+                "absolute": 0
+              },
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/1/stdev",
+                "expected": 6.430315570275951,
+                "absolute": 1e-09
+              },
+              {
+                "file": "data.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "\"Part ID\",\"Mass (g)\",\"Note\",\"Length (mm)\"\n\"00123\",12.5,\"=1+2\",100.25\n\"00125\",\\N,\"+SUM(A1:A2)\",99.5\n\"@part-7\",0.0,\"-02\",101.0\n\"café ☕\",14.25,\\N,98.75\n\"A-9  spaced\",11.0,\"ok\",100.0\n"
+              }
+            ]
+          },
+          {
+            "id": "typed-csv",
+            "example": "typed-csv",
+            "edits": [],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/fixtures/calc/typed-parts.csv"
+            },
+            "scope": "Captured typed CSV with a quoted leading-zero ID, formula-looking notes and the null token: the same summaries as the declared-row baseline, and the captured file's hash is bound.",
+            "checks": [
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/1/present",
+                "expected": 4,
+                "absolute": 0
+              },
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/columns/1/sum",
+                "expected": 37.25,
+                "absolute": 1e-12
+              },
+              {
+                "file": "typed-summary.json",
+                "format": "json",
+                "pointer": "/nullToken",
+                "expected": "\\N"
+              },
+              {
+                "file": "data.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "\"Part ID\",\"Mass (g)\",\"Note\",\"Length (mm)\"\n\"00123\",12.5,\"=1+2\",100.25\n\"00124\",\\N,\"+SUM(A1:A2)\",99.5\n\"@part-7\",0.0,\"-02\",101.0\n\"café ☕\",13.75,\\N,98.75\n\"A-9  spaced\",11.0,\"ok\",100.0\n"
               }
             ]
           }

@@ -203,6 +203,16 @@ def _probe(probe, options, count=None):
         fail('INVALID_MEDIA' if count is None else 'VERIFICATION_FAILED', str(error))
 
 
+def _check_range(index, clip, frames):
+    # Source frame counts are native observations, so only execution can know
+    # whether an otherwise valid range lies inside the retained source.
+    end = clip['startFrame'] + clip['frameCount']
+    if end > frames:
+        fail('INVALID_RANGE', 'clip selects frames beyond the end of its source; shorten the range or choose a longer source',
+             '$.nodes[0].options.clips[' + str(index) + ']', asset=clip['asset'], startFrame=clip['startFrame'],
+             frameCount=clip['frameCount'], requestedEnd=end, sourceFrames=frames)
+
+
 def _expected(directory, prepared):
     options = prepared['nodes'][0]['options']
     chunk = options['width'] * options['height'] * 3
@@ -224,7 +234,7 @@ def _expected(directory, prepared):
     for index, clip in enumerate(options['clips']):
         start, end = clip['startFrame'] * chunk, (clip['startFrame'] + clip['frameCount']) * chunk
         source = frames[clip['asset']]
-        if end > len(source): fail('INVALID_RANGE', 'clip exceeds actual source frame count', '$.nodes[0].options.clips[' + str(index) + ']')
+        _check_range(index, clip, len(source) // chunk)
         expected.extend(source[start:end])
     return sources, bytes(expected)
 
@@ -398,6 +408,21 @@ def _launcher(directory, prepared, stage, command):
             + 'os.execvpe(command[0], command, os.environ)\n')
 
 
+def _result(directory):
+    return {'status': 'succeeded', 'verified': True, 'artifacts': 3, 'video': str(directory / 'video.mkv'),
+            'project': str(directory / 'project.mlt'), 'projectBundle': str(directory / 'project-bundle.zip')}
+
+
+def _check_result(directory, result):
+    # The result is the handoff other operations read; it must name exactly the
+    # three verified publications of this run directory, not merely say "succeeded".
+    expected = _result(directory)
+    if (not isinstance(result, dict) or any(key not in result or type(result[key]) is not type(value) or result[key] != value
+            for key, value in expected.items()) or 'fault' in result or 'verificationFault' in result):
+        fail('VERIFICATION_FAILED', 'result publication membership differs from the verified video, project and project bundle',
+             str(directory / 'result.json'))
+
+
 def run(document, directory, *, executable=None, timeout=300):
     prepared = plan(document)
     options = prepared['nodes'][0]['options']
@@ -426,6 +451,8 @@ def run(document, directory, *, executable=None, timeout=300):
             media.write_bytes(data)
             stage(f'asset-{index:02d}-probe')
             count = _probe(_read(directory, f'asset-{index:02d}-probe.stdout'), options)
+            for position, clip in enumerate(options['clips']):
+                if clip['asset'] == asset['name']: _check_range(position, clip, count)
             decoded_size += count * options['width'] * options['height'] * 3
             if decoded_size > MAX_BYTES: fail('RESOURCE_LIMIT', 'cumulative decoded assets exceed budget')
             stage(f'asset-{index:02d}-decode')
@@ -448,8 +475,7 @@ def run(document, directory, *, executable=None, timeout=300):
         verify(directory, require_result=False)
         if time.monotonic() >= deadline: fail('RUNNER_TIMED_OUT', 'timeline verification exhausted the total timeout')
         if cancellation_requested(): fail('RUNNER_CANCELLED', 'timeline publication cancelled')
-        result = {'status': 'succeeded', 'verified': True, 'artifacts': 3, 'video': str(directory / 'video.mkv'),
-                  'project': str(directory / 'project.mlt'), 'projectBundle': str(directory / 'project-bundle.zip')}
+        result = _result(directory)
         atomic_json(directory / 'result.json', result)
         return result
     except Exception as error:
@@ -520,6 +546,7 @@ def verify(directory, require_result=True):
         result = _read(directory, 'result.json')
         if require_result and (result.get('status') != 'succeeded' or result.get('verified') is not True):
             fail('INCOMPLETE_EXECUTION', 'timeline publication did not complete')
+        if require_result: _check_result(directory, result)
         if _read(directory, 'plan.json') != prepared: fail('VERIFICATION_FAILED', 'timeline plan differs')
         expected = _receipt(directory, prepared)
         if _read(directory, 'verification.json') != expected: fail('VERIFICATION_FAILED', 'timeline verification evidence differs')

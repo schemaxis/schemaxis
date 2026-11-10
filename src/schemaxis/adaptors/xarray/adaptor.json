@@ -1,0 +1,97 @@
+{
+  "id": "xarray",
+  "version": "schemaxis.xarray/1",
+  "adaptor": "schemaxis.adaptors.xarray.adaptor",
+  "declarations": "schemaxis.adaptors.xarray.adaptor:DECLARATIONS",
+  "runtimeFamily": "2026.9",
+  "execution": "Reduce named dimensions of one classic NetCDF measurement cube to a coordinate-labelled profile with explicit missingness and an independent bounded verifier",
+  "executables": [
+    "python3"
+  ],
+  "keywords": [
+    "xarray",
+    "NetCDF",
+    "named coordinates",
+    "NetCDF depth profile",
+    "measurement cube"
+  ],
+  "display": {
+    "name": "xarray",
+    "mark": "Xr",
+    "colour": "#2c7a9b"
+  },
+  "capabilities": "schemaxis.adaptors.xarray.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.xarray/1",
+    "operation": "reduceProfile",
+    "source": "/replace/with/cube.nc",
+    "variable": {
+      "name": "temperature",
+      "unit": "K"
+    },
+    "coordinates": [
+      {
+        "name": "time",
+        "unit": "h",
+        "range": {
+          "minimum": 0,
+          "maximum": 2
+        }
+      },
+      {
+        "name": "depth",
+        "unit": "m"
+      },
+      {
+        "name": "station",
+        "unit": "km"
+      }
+    ],
+    "retain": "depth",
+    "missing": {
+      "value": -999.0,
+      "policy": "skip",
+      "minimumValid": 1
+    }
+  },
+  "routes": {
+    "schemaxis.xarray/1": {
+      "module": "schemaxis.adaptors.xarray.adaptor",
+      "schema": "schemaxis.adaptors.xarray.adaptor:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "xarray",
+      "acceptedArtifacts": [
+        "file"
+      ],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.xarray.adaptor:query",
+        "retainedInputs": "schemaxis.adaptors.xarray.adaptor:retainedInputs",
+        "reusableInputs": "schemaxis.adaptors.xarray.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.xarray.adaptor:resources"
+      }
+    }
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--xarray",
+      "dest": "xarray",
+      "help": "Absolute isolated Python interpreter containing qualified xarray 2026.9.0, SciPy 1.18.1 and NumPy 2.5.4"
+    }
+  ]
+}

@@ -46,7 +46,7 @@ class MeshioTests(unittest.TestCase):
         source=Path(self.document['source']).read_bytes()
         with self.assertRaises((ValueError, UnicodeError)):
             reference.vtu(source.decode().encode('utf-16'))
-        for raw in (source.replace(b'format="ascii"',b'format="binary"'),source.replace(b'<VTKFile',b'<!DOCTYPE evil><VTKFile'),source.replace(b'5 10 5',b'5 12 5'),source.replace(b'3 7 10',b'3 8 10'),source.replace(b'101 203',b'9007199254740993 203'),source.replace(b'10 20 30',b'nan 20 30'),source.replace(b'</Piece>',b'<FieldData/></Piece>')):
+        for raw in (source.replace(b'format="ascii"',b'format="binary"'),source.replace(b'<VTKFile',b'<!DOCTYPE evil><VTKFile'),source.replace(b'5 10 5',b'5 13 5'),source.replace(b'3 7 10',b'3 8 10'),source.replace(b'101 203',b'9007199254740993 203'),source.replace(b'10 20 30',b'nan 20 30'),source.replace(b'</Piece>',b'<FieldData/></Piece>')):
             with self.assertRaises(ValueError):reference.vtu(raw)
         valid=reference.vtu(source);altered=copy.deepcopy(valid);altered['cells'].reverse()
         with self.assertRaisesRegex(ValueError,'topology'):reference.compare(valid,altered)

@@ -1,0 +1,320 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.sympy/1": {
+      "guide": "docs/sympy.md",
+      "context": {
+        "purpose": "Isolate every real root of a univariate polynomial with exact rational coefficients in disjoint rational intervals with multiplicities, certified independently of SymPy.",
+        "assumptions": "Literal exact rational coefficients in descending powers; closed rational isolating intervals; isolated SymPy 1.14.0 (sympy.intervals(strict=True)) on POSIX.",
+        "constraints": "Degree 1 to 12 (2 to 13 coefficients), numerator and denominator at most 40 digits, nonzero leading coefficient, maximum width within [1e-30, 1], at most 12 published intervals.",
+        "inspection": "Inspect real-roots.csv and roots-verification.json (Sturm counts, square-free factor degrees, per-interval widths, point-root flags); roots-summary.json is native evidence only.",
+        "recovery": "Correct located coefficient/width faults (expressions, decimals and zero leading coefficients are refused as data); a SYMPY_CERTIFICATION_FAILED fault means the native output was not accepted; configure exactly SymPy 1.14.0 for SYMPY_UNSUPPORTED_RUNTIME."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/sympy-sqrt2.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/sympy-repeated-roots.json"
+        },
+        {
+          "id": "no-real-roots",
+          "reference": "examples/schemaxis/sympy-no-real-roots.json"
+        },
+        {
+          "id": "rational-roots",
+          "reference": "examples/schemaxis/sympy-rational-roots.json"
+        },
+        {
+          "id": "expression-text",
+          "reference": "examples/schemaxis/sympy-expression-invalid.json",
+          "expect": "invalid",
+          "fault": "SYMPY_INVALID_COEFFICIENT",
+          "schemaValid": true
+        },
+        {
+          "id": "zero-leading",
+          "reference": "examples/schemaxis/sympy-zero-leading-invalid.json",
+          "expect": "invalid",
+          "fault": "SYMPY_ZERO_LEADING_COEFFICIENT",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_sympy.py"
+      ],
+      "acceptance": [
+        "tools/qualify_sympy.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Independent verified runs in a scheduled workflow with resume reuse; the route accepts no incoming artifacts.",
+          "references": [
+            "docs/sympy.md",
+            "examples/schemaxis/sympy-two-polynomials-workflow.json",
+            "tools/qualify_sympy.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://docs.sympy.org/latest/modules/polys/reference.html",
+          "https://docs.sympy.org/latest/modules/polys/reference.html#sympy.polys.polytools.intervals",
+          "https://docs.sympy.org/latest/modules/polys/reference.html#sympy.polys.polytools.Poly.count_roots",
+          "https://docs.sympy.org/latest/modules/core.html#rational",
+          "https://github.com/sympy/sympy/releases"
+        ],
+        "lifecycle": {
+          "timeout": "Single total deadline (default 60 s) over both native stages and host verification; native CPU 60 s, address space 4 GiB, 16 MiB per file.",
+          "cancellation": "Owned process-group cancellation through the shared runner and a pre-publication check.",
+          "logs": "Authored/plan/native configuration, worker and implementation fingerprints, consumed-input bindings, stage submissions, stdout/stderr, native fault records and readback record.",
+          "verification": "Independent standard-library oracle: strict table grammar, Yun square-free decomposition rebuilt exactly, Sturm sequences per factor, closed-interval counts, ordering/disjointness/width and multiplicity-by-factor; the distinct real root count is computed from the coefficients, not taken from SymPy."
+        },
+        "data": [
+          {
+            "id": "polynomial",
+            "direction": "input",
+            "kind": "text",
+            "format": "JSON array of exact rational literal strings",
+            "traits": {
+              "order": "descending powers",
+              "degree": "1 to 12"
+            },
+            "losses": [
+              "Only exact rational literals of at most 40 digits; no decimals, expressions, symbols or radicals."
+            ],
+            "scope": "Authored literal coefficients; nothing is parsed by SymPy from a string."
+          },
+          {
+            "id": "real-roots",
+            "direction": "output",
+            "kind": "table",
+            "format": "CSV index,lower,upper,multiplicity,pointRoot (rational text such as -58/41)",
+            "traits": {
+              "order": "ascending, strictly disjoint closed intervals",
+              "rational": "canonical reduced"
+            },
+            "losses": [
+              "Rational text, not a numeric column; consumers needing floating-point must convert and own that rounding.",
+              "Complex roots are counted in the verification record, never located."
+            ],
+            "scope": "One row per distinct real root; empty table when the polynomial has no real root."
+          },
+          {
+            "id": "summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "roots-summary.json",
+            "traits": {
+              "decisions": "none; native intervals, call identity and diagnostics only"
+            },
+            "losses": [],
+            "scope": "Native runtime identity and call record."
+          },
+          {
+            "id": "verification",
+            "direction": "output",
+            "kind": "text",
+            "format": "roots-verification.json",
+            "traits": {
+              "method": "Yun square-free decomposition and Sturm sequences in Fractions",
+              "bindings": "plan, publications, runtime, implementation"
+            },
+            "losses": [],
+            "scope": "Sole final completeness, width, disjointness and multiplicity certificate."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect the root table, summary and verification record.",
+            "limits": "No plot and no interactive native session."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Runs have no input files, so the reusable-input map is empty; resuming an unchanged workflow reuses verified runs and an edited workflow is refused."
+        },
+        "features": {
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native session; inspect the verified table and the host verification record."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "One serial native process; no MPI."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No time-list batches."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No persistent native state or reverse editing."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No format conversion; the route isolates the real roots of one polynomial."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "SymPy has no application document to save; publications are an inspectable CSV and JSON only (no pickle or srepr)."
+          },
+          "composition": {
+            "status": "unsupported",
+            "scope": "Not claimed: shared references, expressions and studies are not qualified for this route in this delivery."
+          },
+          "workflow": {
+            "status": "supported",
+            "scope": "Independent verified runs in a scheduled workflow with resume reuse; no incoming artifacts are accepted."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "No input files: the reusable-input map is empty; resuming an unchanged workflow reuses verified runs and an edited workflow is refused with RESUME_MISMATCH."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable coefficient and width declarations with undo through common authoring."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Coefficient list entries and width are editable forms."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "x^2 - 2: two irrational real roots (sqrt 2 is irrational, so no point interval can be certified); no complex roots. Counts only: interval endpoints are algorithm-dependent.",
+            "checks": [
+              {
+                "file": "roots-verification.json",
+                "format": "json",
+                "pointer": "/assessment/distinctRealRoots",
+                "expected": 2,
+                "relative": 0,
+                "absolute": 0
+              },
+              {
+                "file": "roots-verification.json",
+                "format": "json",
+                "pointer": "/assessment/realRootsWithMultiplicity",
+                "expected": 2,
+                "relative": 0,
+                "absolute": 0
+              },
+              {
+                "file": "roots-verification.json",
+                "format": "json",
+                "pointer": "/assessment/complexRootsWithMultiplicity",
+                "expected": 0,
+                "relative": 0,
+                "absolute": 0
+              },
+              {
+                "file": "roots-verification.json",
+                "format": "json",
+                "pointer": "/assessment/intervals/0/pointRoot",
+                "expected": false,
+                "relative": 0,
+                "absolute": 0
+              },
+              {
+                "file": "roots-verification.json",
+                "format": "json",
+                "pointer": "/assessment/intervals/1/pointRoot",
+                "expected": false,
+                "relative": 0,
+                "absolute": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "scope": "(x-1)^3 (x+2)^2 (x^2+1) expanded: exact roots -2 (multiplicity 2) and 1 (multiplicity 3) as point intervals, five real roots with multiplicity, two complex, square-free factors of degree 2, 1, 1.",
+            "checks": [
+              {
+                "file": "real-roots.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "index,lower,upper,multiplicity,pointRoot\n1,-2,-2,2,true\n2,1,1,3,true\n",
+                "relative": 0,
+                "absolute": 0
+              },
+              {
+                "file": "roots-verification.json",
+                "format": "json",
+                "pointer": "/assessment/distinctRealRoots",
+                "expected": 2,
+                "relative": 0,
+                "absolute": 0
+              },
+              {
+                "file": "roots-verification.json",
+                "format": "json",
+                "pointer": "/assessment/realRootsWithMultiplicity",
+                "expected": 5,
+                "relative": 0,
+                "absolute": 0
+              },
+              {
+                "file": "roots-verification.json",
+                "format": "json",
+                "pointer": "/assessment/complexRootsWithMultiplicity",
+                "expected": 2,
+                "relative": 0,
+                "absolute": 0
+              },
+              {
+                "file": "roots-verification.json",
+                "format": "json",
+                "pointer": "/assessment/squareFreeFactors",
+                "expected": [
+                  {
+                    "multiplicity": 1,
+                    "degree": 2,
+                    "distinctRealRoots": 0
+                  },
+                  {
+                    "multiplicity": 2,
+                    "degree": 1,
+                    "distinctRealRoots": 1
+                  },
+                  {
+                    "multiplicity": 3,
+                    "degree": 1,
+                    "distinctRealRoots": 1
+                  }
+                ],
+                "relative": 0,
+                "absolute": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial isolateRealRoots route: literal rational coefficient contract, width bounds, isolated SymPy 1.14.0 sympy.intervals(strict=True), independent Yun/Sturm certification, saved verification, workflow runs with resume reuse, discovery, guidance, Studio starters and upstream tracking.",
+        "review": [
+          "verification/2026-10-24-sympy-completion.md",
+          "verification/2026-10-24-sympy-allocation.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native session; inspect the verified table and the host verification record.",
+          "mpi": "One serial native process; no MPI.",
+          "time-batches": "No time-list batches.",
+          "live-editing": "No persistent native state or reverse editing.",
+          "conversion": "No format conversion; the route isolates the real roots of one polynomial.",
+          "native-save": "SymPy has no application document to save; publications are an inspectable CSV and JSON only (no pickle or srepr).",
+          "composition": "Not claimed: shared references, expressions and studies are not qualified for this route in this delivery."
+        }
+      }
+    }
+  }
+}

@@ -18,7 +18,7 @@ from schemaxis.artifacts import atomic_json
 from schemaxis.dispatch import SubprocessRunner, cancellation_requested
 from schemaxis.errors import keys
 from .errors import fault
-from . import gltf
+from . import gltf, sprites, tscn
 from .scripts import WORKER, ORBIT, PROJECT
 
 
@@ -84,6 +84,14 @@ for definition in DECLARATIONS.values():
         definition['inputs'] = {**definition['inputs'], **PARENT}
         definition['options'].update(rotation={'value': vector([0, 0, 0], -180, 180)},
                                      scale={'value': vector([1, 1, 1], 0.001, 1000)})
+
+
+DECLARATIONS['animatedSprite3D'] = declaration('AnimatedSprite3D', 'image', {'position': POSITION,
+    'file': {'type': 'string', 'required': True, 'minLength': 1, 'maxLength': 4096},
+    'metadata': {'type': 'string', 'required': True, 'minLength': 1, 'maxLength': 4096},
+    'animation': {'type': 'string', 'required': True, 'minLength': 1, 'maxLength': 64},
+    'loop': {'type': 'boolean', 'default': True},
+    'pixelSize': number(0.01, 0.00001, 10)}, PARENT)
 
 
 def transformed(point, options):
@@ -233,8 +241,18 @@ def plan(document):
             fault('UNSUPPORTED_RESOURCE', 'readGLTF requires an absolute .gltf path; GLB is not supported.', location)
         if operation == 'sprite3D' and not Path(options['file']).is_absolute():
             fault('UNSUPPORTED_RESOURCE', 'sprite3D requires an absolute PNG path.', location)
+        if operation == 'animatedSprite3D':
+            for field in ('file', 'metadata'):
+                if not Path(options[field]).is_absolute():
+                    fault('UNSUPPORTED_RESOURCE', 'animatedSprite3D requires an absolute '+('PNG' if field == 'file' else 'sheet metadata')+' path.',
+                          location+'.options.'+field, 'Use an absolute path or a workflow artifact reference.')
+            if not sprites.ANIMATION_NAME.fullmatch(options['animation']):
+                fault('INVALID_NAME', 'Animation names are ASCII identifiers of at most 64 characters naming one Aseprite tag.',
+                      location+'.options.animation', 'Rename the Aseprite tag to letters, digits and underscores, starting with a letter.')
         kinds[identity] = definition['kinds'][0]
         prepared.append({'id': identity, 'filter': operation, 'options': options, 'inputs': inputs})
+    if sum(n['filter'] == 'animatedSprite3D' for n in prepared) > 4:
+        fault('RESOURCE_LIMIT', 'At most four animated sprites per scene.', '$.nodes', 'Split the scene.')
     if list(kinds.values()).count('camera') != 1 or not any(k in ('geometry', 'image') for k in kinds.values()):
         fault('INVALID_SELECTION', 'Declare exactly one camera and at least one geometry node.')
     prepared = order_hierarchy(prepared)
@@ -256,14 +274,18 @@ def schema():
             'options': object_schema({k: argument_schema(v['value']) for k, v in definition['options'].items()},
                                      [k for k, v in definition['options'].items() if v['value'].get('required')]),
             'inputs': object_schema({k: {'type': 'string'} for k in definition['inputs']}, [k for k, spec in definition['inputs'].items() if spec.get('required')])},
-            ['id', 'filter'] + (['inputs'] if any(s.get('required') for s in definition['inputs'].values()) else []) + (['options'] if operation in ('readGLTF', 'sprite3D') else [])))
+            ['id', 'filter'] + (['inputs'] if any(s.get('required') for s in definition['inputs'].values()) else []) + (['options'] if operation in ('readGLTF', 'sprite3D', 'animatedSprite3D') else [])))
     return {'$schema': DRAFT, **object_schema({'version': {'const': 'schemaxis.godot/1'}, 'units': {'const': 'm'},
         'preview': {'type': 'boolean', 'default': False},
         'nodes': {'type': 'array', 'minItems': 1, 'maxItems': 128, 'items': {'oneOf': alternatives}}}, ['version', 'nodes'])}
 
 
 def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    value = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024*1024), b''):
+            value.update(block)
+    return value.hexdigest()
 
 
 def read_json(path):
@@ -326,10 +348,15 @@ def _verify(directory, require_result=True):
     if require_result:
         check(result.get('verified') is True and result.get('status') == 'succeeded', 'Execution did not complete.')
     sources = read_json(directory/'sources.json')
-    imports = [n for n in prepared['nodes'] if n['filter'] in ('readGLTF', 'sprite3D')]
+    imports = [n for n in prepared['nodes'] if n['filter'] in IMPORTS]
     check(set(sources) == {n['id'] for n in imports}, 'Imported source membership differs.')
+    animated = {n['id']: n for n in imports if n['filter'] == 'animatedSprite3D'}
+    expected_animations = {}
     for node in imports:
         source = sources[node['id']]
+        if node['id'] in animated:
+            expected_animations[node['id']] = verify_animated_source(directory, node, source, check)
+            continue
         retained = directory/('source_'+node['id']+('.png' if node['filter'] == 'sprite3D' else '.gltf'))
         check(not retained.is_symlink() and retained.is_file(), 'Retained glTF is absent or escaped.')
         check(source['sha256'] == digest(retained) and source['file'] == node['options']['file'], 'glTF provenance differs.')
@@ -352,7 +379,7 @@ def _verify(directory, require_result=True):
         node = nodes[identity]; options = node['options']; operation = node['filter']
         check(record.get('owned') is True and record.get('owner') == '.', 'Node ownership differs: '+identity)
         check(record.get('parent') == node['inputs'].get('parent'), 'Node parent differs: '+identity)
-        if operation == 'transformGroup' or DECLARATIONS[operation]['kinds'] == ['geometry']:
+        if operation in ('transformGroup', 'animatedSprite3D') or DECLARATIONS[operation]['kinds'] == ['geometry']:
             origin, basis = world_transform(node, nodes)
             check(close(record.get('worldPosition'), origin) and close(record.get('worldBasis'), basis),
                   'Global transform differs: '+identity)
@@ -389,6 +416,8 @@ def _verify(directory, require_result=True):
                   and close(record.get('pixelSize'), options['pixelSize'])
                   and record.get('image') == {k: sources[identity][k] for k in ('width', 'height', 'rgbaSHA256')},
                   'Sprite texture readback differs: '+identity)
+        elif operation == 'animatedSprite3D':
+            verify_animated_record(record, node, sources[identity], expected_animations[identity], check)
         elif operation == 'camera':
             delta = [b-a for a, b in zip(options['position'], options['target'])]
             direction = [x/math.hypot(*delta) for x in delta]
@@ -400,11 +429,15 @@ def _verify(directory, require_result=True):
         else:
             check(record.get('class') == DECLARATIONS[operation]['native'] and close(record.get('settings'), options), 'Light readback differs.')
     manifest = read_json(directory/'artifacts.json')
-    names = ['project.godot', 'scene.tscn', 'orbit.gd', 'worker.gd'] + ['source_'+n['id']+('.png' if n['filter'] == 'sprite3D' else '.gltf') for n in imports]
+    names = ['project.godot', 'scene.tscn', 'orbit.gd', 'worker.gd'] + [name for n in imports for name in retained_names(n)]
+    playback = None
+    if animated:
+        playback = read_json(directory/'playback.json')
+        verify_playback(playback, prepared, built, receipt, scene, animated, expected_animations, check)
     if prepared.get('preview'):
         names.append('preview.png')
         render = read_json(directory/'rendered.json')
-        check(render.get('stage') == 'render' and render.get('pid') not in (built['pid'], receipt['pid'])
+        check(render.get('stage') == 'render' and render.get('pid') not in (built['pid'], receipt['pid'], (playback or {}).get('pid'))
               and type(render.get('pid')) is int and render.get('definition') == prepared
               and render.get('runtime') == receipt['runtime'] and close(render.get('scene'), scene),
               'Rendered scene differs from verified scene.')
@@ -419,12 +452,197 @@ def _verify(directory, require_result=True):
     for filename in names:
         path = directory/filename
         check(path.is_file() and not path.is_symlink() and digest(path) == manifest[filename], 'Artifact changed: '+filename)
+    verify_saved_scene(directory, prepared, nodes)
+    verify_saved_animations(directory, animated, expected_animations, check)
     check((directory/'orbit.gd').read_text() == ORBIT and (directory/'worker.gd').read_text() == WORKER
           and (directory/'project.godot').read_text() == PROJECT, 'Trusted generated assets differ.')
     check(read_json(directory/'verification.json') == {'artifacts': artifact_manifest(directory, prepared)}, 'Workflow publication manifest differs.')
     return {'verified': True, 'artifacts': prepared['expectedPublications'], 'nodeCount': scene['nodeCount'], 'runtime': receipt['runtime'],
             **({'preview': str(directory/'preview.png')} if prepared.get('preview') else {}),
             'project': str(directory/'project.godot'), 'scene': str(directory/'scene.tscn')}
+
+
+IMPORTS = ('readGLTF', 'sprite3D', 'animatedSprite3D')
+
+
+def retained_names(node):
+    """Files copied or derived beside the scene for one imported source node."""
+    identity = node['id']
+    if node['filter'] == 'animatedSprite3D':
+        return ['source_'+identity+'.png', 'source_'+identity+'.json', 'animation_'+identity+'.json', 'animation_'+identity+'.rgba']
+    return ['source_'+identity+('.png' if node['filter'] == 'sprite3D' else '.gltf')]
+
+
+def relocated(error, prefix):
+    fault(error.fault.code, error.fault.message, prefix+(':'+error.fault.location if error.fault.location not in ('$', '') else ''),
+          error.fault.recovery or 'Correct the sprite source and retry.')
+
+
+def capture_animation(node, index, png, metadata):
+    """Validate captured sheet bytes before any native process; return source entry and animation."""
+    prefix = '$.nodes['+str(index)+'].options'
+    options = node['options']
+    try:
+        header = sprites.png_header(png, prefix+'.file')
+        from schemaxis.png import decode
+        width, height, pixels = decode(png)
+        if (width, height) != header:
+            fault('INVALID_SPRITE_SHEET', 'PNG header differs from decoded dimensions.', prefix+'.file')
+    except SchemaxisError as error:
+        relocated(error, prefix+'.file')
+    try:
+        parsed = sprites.parse_metadata(metadata, width, height)
+        animation = sprites.derive_animation(parsed, options['animation'], options['loop'], pixels, width)
+    except SchemaxisError as error:
+        relocated(error, prefix+'.metadata' if error.fault.location.startswith('metadata') else prefix)
+    entry = {'file': options['file'], 'sha256': hashlib.sha256(png).hexdigest(), 'width': width, 'height': height,
+             'rgbaSHA256': hashlib.sha256(pixels).hexdigest(),
+             'metadata': {'file': options['metadata'], 'sha256': hashlib.sha256(metadata).hexdigest()},
+             'animation': sprites.definition(animation)}
+    return entry, animation
+
+
+def verify_animated_source(directory, node, source, check):
+    """Re-derive the animation from the retained captured bytes; compare every binding."""
+    identity, options = node['id'], node['options']
+    png_path, meta_path = directory/('source_'+identity+'.png'), directory/('source_'+identity+'.json')
+    for path in (png_path, meta_path, directory/('animation_'+identity+'.json')):
+        check(path.is_file() and not path.is_symlink(), 'Retained sprite source is absent or escaped: '+path.name)
+    png, metadata = png_path.read_bytes(), meta_path.read_bytes()
+    check(source.get('file') == options['file'] and source.get('metadata', {}).get('file') == options['metadata'],
+          'Sprite source paths differ from the plan.')
+    check(source['sha256'] == hashlib.sha256(png).hexdigest() and source['metadata']['sha256'] == hashlib.sha256(metadata).hexdigest(),
+          'Sprite source provenance differs.')
+    entry, animation = capture_animation(node, 0, png, metadata)
+    check(close(entry, source), 'Sprite source measures or derived animation differ from the retained bytes.')
+    check(read_json(directory/('animation_'+identity+'.json')) == entry['animation'],
+          'Derived animation definition differs from the retained source.')
+    return animation
+
+
+def verify_animated_record(record, node, source, animation, check):
+    identity, options = node['id'], node['options']
+    check(record.get('class') == 'AnimatedSprite3D' and close(record.get('position'), options['position'])
+          and close(record.get('pixelSize'), options['pixelSize']), 'Animated sprite placement differs: '+identity)
+    native = record.get('animation', {})
+    check(native.get('names') == [animation['name']] and native.get('current') == animation['name']
+          and native.get('autoplay') == animation['name'], 'Animation name or autoplay differs: '+identity)
+    check(close(native.get('speedScale'), 1.0) and close(native.get('fps'), 1.0), 'Animation speed differs: '+identity)
+    check(native.get('loopMode') == (1 if animation['loop'] else 0), 'Animation loop state differs: '+identity)
+    check(native.get('atlas') == {k: source[k] for k in ('width', 'height', 'rgbaSHA256')}, 'Sprite atlas readback differs: '+identity)
+    frames = native.get('frames')
+    check(isinstance(frames, list) and len(frames) == len(animation['frames']), 'Animation frame count differs: '+identity)
+    for position, (observed, wanted) in enumerate(zip(frames, animation['frames'])):
+        where = identity+' frame '+str(position)
+        check(close(observed.get('rect'), wanted['rect']), 'Frame rectangle differs: '+where)
+        check(close(observed.get('duration'), wanted['duration']), 'Frame duration differs: '+where)
+        check(observed.get('rgbaSHA256') == hashlib.sha256(wanted['pixels']).hexdigest(), 'Frame pixels differ: '+where)
+
+
+def verify_playback(playback, prepared, built, receipt, scene, animated, expected, check):
+    """Compare native AnimatedSprite3D playback with the independent time model."""
+    check(playback.get('stage') == 'playback' and type(playback.get('pid')) is int
+          and playback['pid'] not in (built['pid'], receipt['pid']), 'Playback process evidence is incomplete.')
+    check(playback.get('runtime') == receipt['runtime'] and playback.get('definition') == prepared, 'Playback runtime or definition differs.')
+    check(close(playback.get('scene'), scene), 'Playback process saw a different saved scene.')
+    clock = playback.get('clock', {})
+    check(clock.get('warmupFrames') == sprites.WARMUP_FRAMES
+          and isinstance(clock.get('frames'), int) and clock['frames'] > 0
+          and close(clock.get('minDelta'), sprites.TICK) and close(clock.get('maxDelta'), sprites.TICK),
+          'Playback clock was not the fixed 1 ms process tick.')
+    check(set(playback.get('sprites', {})) == set(animated), 'Playback sprite membership differs.')
+    for identity, animation in expected.items():
+        durations = [f['duration'] for f in animation['frames']]
+        samples = playback['sprites'][identity].get('samples')
+        targets = sprites.sample_targets(durations, animation['loop'])
+        check(isinstance(samples, list) and close([s.get('target') for s in samples], targets),
+              'Playback sample times differ from the independent schedule: '+identity)
+        for sample in samples:
+            check(sample.get('animation') == animation['name'], 'Playback animation name differs: '+identity)
+            message = sprites.check_sample(durations, animation['loop'], sample)
+            check(message is None, 'Playback state at '+str(sample['target'])+' s differs ('+identity+'): '+str(message))
+            if sample['playing']:
+                check(close(sample.get('playingSpeed'), 1.0), 'Playback speed differs: '+identity)
+        if animation['loop']:
+            check(all(s['playing'] for s in samples), 'Looping animation stopped: '+identity)
+        check({s['frame'] for s in samples} == set(range(len(durations))), 'Playback did not visit every frame: '+identity)
+
+
+def verify_saved_animations(directory, animated, expected, check):
+    """Independent reading of scene.tscn and the raw pixels the fresh process read back."""
+    text = (directory/'scene.tscn').read_text(encoding='utf-8')
+    for identity, animation in expected.items():
+        raw = (directory/('animation_'+identity+'.rgba')).read_bytes()
+        check(raw == b''.join(f['pixels'] for f in animation['frames']), 'Native frame pixels differ from the captured sheet: '+identity)
+        saved = sprites.inspect_scene(text, identity)
+        check(saved is not None, 'Saved scene has no readable SpriteFrames: '+identity)
+        options = animated[identity]['options']
+        check(saved['animation'] == '&"'+animation['name']+'"' and saved['autoplay'] == '"'+animation['name']+'"',
+              'Saved animation name or autoplay differs: '+identity)
+        # Godot's saver omits pixel_size when it equals the documented 0.01 m SpriteBase3D default.
+        check(close(float(saved['pixelSize']) if saved['pixelSize'] is not None else 0.01, options['pixelSize']), 'Saved pixel size differs: '+identity)
+        check(len(saved['animations']) == 1 and saved['animations'][0]['name'] == animation['name'], 'Saved animation membership differs: '+identity)
+        entry = saved['animations'][0]
+        check(entry['loop'] == ('1' if animation['loop'] else '0'), 'Saved loop state differs (SpriteFrames loop mode): '+identity)
+        check(close(entry['speed'], 1.0), 'Saved animation speed differs: '+identity)
+        check(len(entry['frames']) == len(animation['frames']), 'Saved frame count differs: '+identity)
+        for position, (saved_frame, wanted) in enumerate(zip(entry['frames'], animation['frames'])):
+            check(close(saved_frame['rect'], wanted['rect']), 'Saved frame rectangle differs: '+identity+' frame '+str(position))
+            check(close(saved_frame['duration'], wanted['duration']), 'Saved frame duration differs: '+identity+' frame '+str(position))
+
+
+def saved_scene_class(node):
+    kind = DECLARATIONS[node['filter']]['kinds'][0]
+    return 'MeshInstance3D' if kind == 'geometry' else DECLARATIONS[node['filter']]['native']
+
+
+def verify_saved_scene(directory, prepared, nodes):
+    """Compare the retained scene.tscn topology and transforms with the plan.
+
+    The native receipts describe what Godot measured when it reopened the scene;
+    this independent check binds the published text scene itself to the authored
+    hierarchy, so an edited scene cannot pass by refreshing its hash manifests.
+    """
+    path = directory/'scene.tscn'
+    root, saved = tscn.inspect_file(path)
+    def differs(message, name):
+        line = saved.get(name, {}).get('line')
+        fault('VERIFICATION_FAILED', 'Saved scene differs from the verified plan: '+message+' ('+name+')',
+              str(path), 'Do not edit scene.tscn in a verified directory; rerun the adaptor in a fresh directory, '
+              'or keep the edited scene as an unverified human revision.' if line is None else
+              'Line '+str(line)+' of scene.tscn contradicts the plan; rerun the adaptor in a fresh directory, '
+              'or keep the edit as an unverified human revision.')
+    if root != 'SchemaxisScene' or saved[root]['type'] != 'Node3D' or saved[root]['foreign']:
+        differs('root node', root)
+    if not close(saved[root]['transform'], tscn.IDENTITY):
+        differs('root placement', root)
+    expected = {n['id']: n for n in prepared['nodes'] if n['filter'] != 'material'}
+    if set(saved) - {root} != set(expected):
+        differs('node membership', root)
+    for identity, node in expected.items():
+        record = saved[identity]
+        ancestors, parent = [], node['inputs'].get('parent')
+        while parent:
+            ancestors.insert(0, parent)
+            parent = nodes[parent]['inputs'].get('parent')
+        if record['parent'] != ('/'.join(ancestors) or '.'):
+            differs('parent path', identity)
+        if record['type'] != saved_scene_class(node):
+            differs('node type', identity)
+        if record['foreign']:
+            differs('ownership or membership attribute '+record['foreign'][0], identity)
+        values, options = record['transform'], node['options']
+        columns = [[values[column+3*row] for row in range(3)] for column in range(3)]
+        if node['filter'] == 'camera':
+            toward = [t-p for p, t in zip(options['position'], options['target'])]
+            distance, length = math.hypot(*toward), math.hypot(*columns[2])
+            if not length or not close([-x/length for x in columns[2]], [x/distance for x in toward]):
+                differs('camera direction', identity)
+        elif node['filter'] in ('transformGroup', 'animatedSprite3D') or DECLARATIONS[node['filter']]['kinds'] == ['geometry']:
+            if not close(columns, expected_basis(options)):
+                differs('local transform basis', identity)
+        if 'position' in options and not close(values[9:12], options['position']):
+            differs('local position', identity)
 
 
 def run(document, directory, executable=None, timeout=120):
@@ -437,8 +655,28 @@ def run(document, directory, executable=None, timeout=120):
     directory = Path(directory).absolute()
     if directory.exists() or directory.is_symlink():
         fault('OUTPUT_EXISTS', 'Output directory already exists.', str(directory), 'Choose a new output directory.')
-    sources, captured = {}, {}
-    for node in prepared['nodes']:
+    sources, captured, derived = {}, {}, {}
+    for index, node in enumerate(prepared['nodes']):
+        if node['filter'] == 'animatedSprite3D':
+            location = '$.nodes['+str(index)+'].options.'
+            blobs = {}
+            for field, limit in (('file', sprites.MAX_PNG_BYTES), ('metadata', sprites.MAX_METADATA_BYTES)):
+                path = Path(node['options'][field])
+                try:
+                    with path.open('rb') as stream:
+                        blobs[field] = stream.read(limit+1)
+                except OSError as error:
+                    fault('RESOURCE_NOT_FOUND', str(error), location+field, 'Provide the readable Aseprite sheet PNG and sheet.json.')
+                if len(blobs[field]) > limit:
+                    fault('RESOURCE_LIMIT', 'Sprite '+('sheet' if field == 'file' else 'metadata')+' exceeds its byte budget.',
+                          location+field, 'Provide a smaller sheet (at most 32 frames of at most 256x256).')
+            sources[node['id']], animation = capture_animation(node, index, blobs['file'], blobs['metadata'])
+            derived[node['id']] = animation
+            captured['source_'+node['id']+'.png'] = blobs['file']
+            captured['source_'+node['id']+'.json'] = blobs['metadata']
+            if sum(len(value) for value in captured.values()) > 32 * 1024 * 1024:
+                fault('RESOURCE_LIMIT', 'Combined glTF and PNG inputs exceed 32 MiB.', '$.nodes', 'Reduce imported geometry or sprite images.')
+            continue
         if node['filter'] in ('readGLTF', 'sprite3D'):
             path = Path(node['options']['file'])
             try:
@@ -462,11 +700,15 @@ def run(document, directory, executable=None, timeout=120):
         atomic_json(directory/'sources.json', sources)
         for filename, data in captured.items():
             (directory/filename).write_bytes(data)
+        for identity, animation in derived.items():
+            atomic_json(directory/('animation_'+identity+'.json'), sprites.definition(animation))
         for filename, content in [('project.godot', PROJECT), ('worker.gd', WORKER), ('orbit.gd', ORBIT)]:
             (directory/filename).write_text(content)
         deadline = time.monotonic() + timeout
-        for stage in ('build', 'reopen') + (('render',) if prepared.get('preview') else ()):
+        for stage in ('build', 'reopen') + (('playback',) if derived else ()) + (('render',) if prepared.get('preview') else ()):
             command = [str(executable), '--headless', '--path', str(directory), '--script', 'res://worker.gd', '--', stage]
+            if stage == 'playback':
+                command[2:2] = ['--fixed-fps', str(sprites.PLAYBACK_FPS)]
             environment = None
             if stage == 'render':
                 command, environment = render_command(executable, directory)
@@ -491,6 +733,8 @@ def run(document, directory, executable=None, timeout=120):
             if 'SCRIPT ERROR:' in log_text or 'ERROR:' in log_text:
                 fault('NATIVE_EXECUTION_FAILED', 'Godot failed; inspect '+stage+'.log.', stage, 'Correct native errors before retrying.')
         names = ['project.godot', 'scene.tscn', 'orbit.gd', 'worker.gd'] + list(captured)
+        for identity in derived:
+            names += ['animation_'+identity+'.json', 'animation_'+identity+'.rgba']
         if prepared.get('preview'):
             names.append('preview.png')
         atomic_json(directory/'artifacts.json', {n: digest(directory/n) for n in names})

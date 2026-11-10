@@ -1,0 +1,296 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "sprite",
+      "document": {
+        "version": "schemaxis.aseprite/1",
+        "nodes": [
+          {
+            "id": "canvas",
+            "filter": "sprite",
+            "options": {
+              "width": 8,
+              "height": 8,
+              "durationMS": 100
+            }
+          },
+          {
+            "id": "colours",
+            "filter": "palette",
+            "inputs": {
+              "sprite": "canvas"
+            },
+            "options": {
+              "colours": [
+                [
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  20,
+                  40,
+                  80,
+                  255
+                ],
+                [
+                  250,
+                  150,
+                  30,
+                  255
+                ],
+                [
+                  40,
+                  200,
+                  120,
+                  255
+                ],
+                [
+                  230,
+                  60,
+                  90,
+                  255
+                ]
+              ]
+            }
+          },
+          {
+            "id": "bg1",
+            "filter": "rect",
+            "inputs": {
+              "sprite": "colours"
+            },
+            "options": {
+              "layer": "base",
+              "frame": 1,
+              "x": 0,
+              "y": 0,
+              "width": 8,
+              "height": 8,
+              "colour": [
+                20,
+                40,
+                80,
+                255
+              ]
+            }
+          },
+          {
+            "id": "dot1",
+            "filter": "rect",
+            "inputs": {
+              "sprite": "bg1"
+            },
+            "options": {
+              "layer": "base",
+              "frame": 1,
+              "x": 1,
+              "y": 1,
+              "width": 2,
+              "height": 2,
+              "colour": [
+                250,
+                150,
+                30,
+                255
+              ]
+            }
+          },
+          {
+            "id": "f2",
+            "filter": "frame",
+            "inputs": {
+              "sprite": "dot1"
+            },
+            "options": {
+              "durationMS": 250
+            }
+          },
+          {
+            "id": "bg2",
+            "filter": "rect",
+            "inputs": {
+              "sprite": "f2"
+            },
+            "options": {
+              "layer": "base",
+              "frame": 2,
+              "x": 0,
+              "y": 0,
+              "width": 8,
+              "height": 8,
+              "colour": [
+                20,
+                40,
+                80,
+                255
+              ]
+            }
+          },
+          {
+            "id": "dot2",
+            "filter": "rect",
+            "inputs": {
+              "sprite": "bg2"
+            },
+            "options": {
+              "layer": "base",
+              "frame": 2,
+              "x": 3,
+              "y": 3,
+              "width": 3,
+              "height": 2,
+              "colour": [
+                40,
+                200,
+                120,
+                255
+              ]
+            }
+          },
+          {
+            "id": "f3",
+            "filter": "frame",
+            "inputs": {
+              "sprite": "dot2"
+            },
+            "options": {
+              "durationMS": 400
+            }
+          },
+          {
+            "id": "bg3",
+            "filter": "rect",
+            "inputs": {
+              "sprite": "f3"
+            },
+            "options": {
+              "layer": "base",
+              "frame": 3,
+              "x": 0,
+              "y": 0,
+              "width": 8,
+              "height": 8,
+              "colour": [
+                20,
+                40,
+                80,
+                255
+              ]
+            }
+          },
+          {
+            "id": "dot3",
+            "filter": "rect",
+            "inputs": {
+              "sprite": "bg3"
+            },
+            "options": {
+              "layer": "base",
+              "frame": 3,
+              "x": 5,
+              "y": 5,
+              "width": 2,
+              "height": 3,
+              "colour": [
+                230,
+                60,
+                90,
+                255
+              ]
+            }
+          },
+          {
+            "id": "run",
+            "filter": "tag",
+            "inputs": {
+              "sprite": "dot3"
+            },
+            "options": {
+              "name": "pulse",
+              "fromFrame": 1,
+              "toFrame": 3,
+              "direction": "forward"
+            }
+          },
+          {
+            "id": "bounce",
+            "filter": "tag",
+            "inputs": {
+              "sprite": "run"
+            },
+            "options": {
+              "name": "bounce",
+              "fromFrame": 1,
+              "toFrame": 2,
+              "direction": "pingPong"
+            }
+          }
+        ],
+        "output": "bounce"
+      }
+    },
+    {
+      "id": "scene",
+      "document": {
+        "version": "schemaxis.godot/1",
+        "nodes": [
+          {
+            "id": "rig",
+            "filter": "transformGroup",
+            "options": {
+              "position": [
+                1,
+                0,
+                0
+              ]
+            }
+          },
+          {
+            "id": "hero",
+            "filter": "animatedSprite3D",
+            "inputs": {
+              "parent": "rig"
+            },
+            "options": {
+              "file": {
+                "$artifact": "sprite",
+                "index": 2
+              },
+              "metadata": {
+                "$artifact": "sprite",
+                "index": 3
+              },
+              "animation": "pulse",
+              "loop": true,
+              "pixelSize": 0.05,
+              "position": [
+                0,
+                0.5,
+                0
+              ]
+            }
+          },
+          {
+            "id": "camera",
+            "filter": "camera",
+            "options": {
+              "position": [
+                0,
+                0,
+                3
+              ],
+              "target": [
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

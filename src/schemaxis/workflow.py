@@ -46,6 +46,9 @@ def validate(document, *, allow_unfilled=False):
             fail('DUPLICATE_OPERATION', 'operation identity is duplicated', identity)
         if not isinstance(operation.get('document'), dict):
             fail('INVALID_DOCUMENT', 'operation needs a pipeline document', identity)
+        from .captured_inputs import references, check_reference
+        for pointer, reference in references(operation['document']):
+            check_reference(reference, identity + '.document' + pointer)
         for reference in dependencies(operation['document']):
             from .adaptor_runtime import output_reference
             is_value = output_reference(reference)
@@ -78,10 +81,11 @@ def scheduled(document, operations):
 
 def execute(document, directory, *, roots=None, blender=None, freecad=None, timeout=300, resume=False, locations=None):
     from .configuration import location_context
+    from .artifact_names import run_scope
     roots, locations = copy.deepcopy(roots), copy.deepcopy(locations)
     overrides = {'roots': roots, 'blender': blender, 'freecad': freecad,
                  **{key: value for key, value in (locations or {}).items() if value is not None}}
-    with location_context(overrides):
+    with location_context(overrides), run_scope(directory):
         return _execute(document, directory, roots=roots, blender=blender, freecad=freecad,
                         timeout=timeout, resume=resume, locations=locations)
 
@@ -126,14 +130,24 @@ def _execute(document, directory, *, roots, blender, freecad, timeout, resume, l
                     if index >= len(receipt['artifacts']):
                         fail('INVALID_SELECTION', 'artifact index exceeds output count', source, index=index)
                     artifact = receipt['artifacts'][index]
-                    if artifact.get('kind', artifact.get('identity', {}).get('kind')) not in registry.resolve(operation['document'], legacy=True)[1].get('acceptedArtifacts', []):
-                        fail('TYPE_MISMATCH', 'data reader handoff requires a geometry or glTF artifact', source)
+                    kind = artifact.get('kind', artifact.get('identity', {}).get('kind'))
+                    accepted = registry.resolve(operation['document'], legacy=True)[1].get('acceptedArtifacts', [])
+                    if kind not in accepted:
+                        fail('TYPE_MISMATCH', 'artifact handoff kind is not accepted by the consumer route', source,
+                             actualKind=kind, acceptedKinds=accepted, consumer=operation['id'])
                     handoffs.append({'from': source, 'to': operation['id'], 'index': index,
                                      'file': artifact['file'], 'verification': 'source receipt rechecked'})
                     return artifact['file']
                 return {k: resolve(v) for k, v in value.items()}
-            effective = resolve(operation['document'])
+            from .captured_inputs import consume
+            consumed, inputs = consume(operation['document'], operation['id'] + '.document', operation['id'])
+            handoffs.extend(inputs)
+            effective = resolve(consumed)
             result = run(effective, directory / operation['id'], locations=locations, roots=roots, blender=blender, freecad=freecad, timeout=timeout)
+            if inputs:
+                from .captured_inputs import recheck
+                # A snapshot edited while its consumer ran does not yield success.
+                recheck(operation['document'], operation['id'] + '.document')
             results.append({'id': operation['id'], **result})
             atomic_json(directory / 'result.json', status)
         from .publication_metadata import publish_artifacts
@@ -193,7 +207,13 @@ def provisional_plan(document):
         return {'status': 'deferred', 'reason': 'verified producer artifacts or values required',
                 'references': copy.deepcopy(references),
                 'validation': 'adaptor input and resource validation deferred until producer receipts are verified'}
-    return registry.plan(document, legacy=True)
+    # Captured inputs are host-verified against their pinned digests before planning.
+    from .captured_inputs import consume
+    consumed, inputs = consume(document, 'document')
+    plan = registry.plan(consumed, legacy=True)
+    if inputs and isinstance(plan, dict):
+        plan = {**plan, 'capturedInputs': inputs}
+    return plan
 
 
 def verify(directory):
@@ -228,18 +248,25 @@ def verify(directory):
                     if index >= len(receipts[source]['artifacts']):
                         fail('VERIFICATION_FAILED', 'handoff artifact is absent', identity)
                     artifact = receipts[source]['artifacts'][index]
-                    if artifact.get('kind', artifact.get('identity', {}).get('kind')) not in registry.resolve(operation['document'], legacy=True)[1].get('acceptedArtifacts', []):
-                        fail('VERIFICATION_FAILED', 'handoff is not geometry or glTF', identity)
+                    kind = artifact.get('kind', artifact.get('identity', {}).get('kind'))
+                    accepted = registry.resolve(operation['document'], legacy=True)[1].get('acceptedArtifacts', [])
+                    if kind not in accepted:
+                        fail('VERIFICATION_FAILED', 'artifact handoff kind is not accepted by the consumer route', identity,
+                             actualKind=kind, acceptedKinds=accepted, consumer=identity)
                     handoffs.append({'from': source, 'to': identity, 'index': index,
                                      'file': artifact['file'], 'verification': 'source receipt rechecked'})
                     return artifact['file']
                 return {k: resolve(v) for k, v in value.items()}
             return value
-        effective = resolve(operation['document'])
+        from .captured_inputs import consume
+        consumed, inputs = consume(operation['document'], identity + '.document', identity)
+        handoffs.extend(inputs)
+        effective = resolve(consumed)
         retained = json.loads((target / 'authored.json').read_text())
         if retained != effective:
             fail('VERIFICATION_FAILED', 'operation input differs from workflow request', identity)
-        hook = registry.route_hook(effective, 'verifyLegacy', legacy=True)
+        from .module_runtime import module_run
+        hook = None if module_run(target) else registry.route_hook(effective, 'verifyLegacy', legacy=True)
         if hook:
             receipt = hook(target, effective, outcome, identity)
         else:

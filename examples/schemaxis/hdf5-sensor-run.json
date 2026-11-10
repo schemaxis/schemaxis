@@ -1,0 +1,64 @@
+{
+  "version": "schemaxis.hdf5/1",
+  "operation": "createFile",
+  "file": {
+    "name": "sensor-run.h5",
+    "libver": "v110",
+    "userblock": 512,
+    "attributes": [
+      {"name": "title", "value": "Calibrated pressure-rig run 17"},
+      {"name": "run_number", "type": {"class": "int", "bits": 32}, "value": 17}
+    ]
+  },
+  "objects": [
+    {"path": "/run/raw", "kind": "group", "attributes": [{"name": "instrument", "value": "PX-4 transducer array"}]},
+    {"path": "/run/raw/time", "type": {"class": "float", "bits": 64}, "shape": [6],
+     "data": {"source": "linspace", "start": 0, "stop": 2.5}, "units": "s", "scale": "time"},
+    {"path": "/run/raw/channel", "type": {"class": "int", "bits": 8}, "shape": [2],
+     "data": {"source": "range", "start": 1, "step": 1}, "scale": "channel"},
+    {"path": "/run/raw/counts", "type": {"class": "int", "bits": 16, "order": "big"}, "shape": [6, 2], "maxshape": ["unlimited", 2],
+     "data": {"source": "range", "start": -5, "step": 3},
+     "storage": {"chunks": [3, 2], "compression": "gzip", "level": 6, "shuffle": true, "fletcher32": true, "fillValue": -1},
+     "units": "count",
+     "dimensions": [{"axis": 0, "label": "time", "scales": ["/run/raw/time"]}, {"axis": 1, "label": "channel", "scales": ["/run/raw/channel"]}],
+     "attributes": [{"name": "gain", "type": {"class": "float", "bits": 32}, "value": [0.125, 0.25]}]},
+    {"path": "/run/calibrated/pressure", "type": {"class": "float", "bits": 32}, "shape": [6],
+     "data": {"source": "values", "values": [101.325, 101.3, 101.27, 101.31, "nan", 101.4]},
+     "storage": {"layout": "chunked", "chunks": [3], "compression": "lzf"},
+     "units": "kPa", "dimensions": [{"axis": 0, "label": "time", "scales": ["/run/raw/time"]}]},
+    {"path": "/run/events", "type": {"class": "compound", "fields": [
+        {"name": "sample", "type": {"class": "uint", "bits": 32}},
+        {"name": "level", "type": {"class": "float", "bits": 64}, "units": "kPa"},
+        {"name": "code", "type": {"class": "string", "length": 4, "encoding": "ascii"}},
+        {"name": "position", "type": {"class": "float", "bits": 32, "dims": [3]}}]},
+     "shape": [2], "data": {"source": "values", "values": [[1, 101.3, "OVR", [0, 0.5, 1]], [4, 99.5, "LOW", [1, 1, 1]]]}},
+    {"path": "/run/state", "type": {"class": "enum", "bits": 8, "members": [{"name": "IDLE", "value": 0}, {"name": "ACQUIRE", "value": 1}, {"name": "FAULT", "value": 7}]},
+     "shape": [6], "data": {"source": "values", "values": ["IDLE", "ACQUIRE", "ACQUIRE", "ACQUIRE", "FAULT", "IDLE"]}},
+    {"path": "/run/notes", "type": {"class": "string"}, "shape": [2], "data": {"source": "values", "values": ["Druckprüfung gestartet", "valve 3 \"sticky\""]}},
+    {"path": "/run/ragged", "type": {"class": "vlen", "base": {"class": "int", "bits": 32}}, "shape": [3],
+     "data": {"source": "values", "values": [[1, 2, 3], [], [42]]}},
+    {"path": "/run/flags", "type": {"class": "bool"}, "shape": [3], "data": {"source": "values", "values": [true, false, true]}},
+    {"path": "/run/impedance", "type": {"class": "complex", "bits": 128}, "shape": [2], "data": {"source": "values", "values": [[50, -2.5], [49.5, 0.125]]}, "units": "ohm"},
+    {"path": "/run/index", "type": {"class": "reference"}, "shape": [2],
+     "data": {"source": "references", "targets": [{"path": "/run/raw/counts"}, {"path": "/run/calibrated/pressure"}]}},
+    {"path": "/run/peak", "type": {"class": "reference", "reference": "region"}, "shape": [1],
+     "data": {"source": "references", "targets": [{"path": "/run/raw/counts", "selection": {"kind": "hyperslab", "start": [2, 0], "count": [2, 2]}}]}},
+    {"path": "/run/blob", "type": {"class": "opaque", "size": 4}, "shape": [], "data": {"source": "values", "values": ["deadbeef"]}},
+    {"path": "/types/reading", "kind": "datatype", "type": {"class": "compound", "fields": [{"name": "t", "type": {"class": "float", "bits": 64}}, {"name": "p", "type": {"class": "float", "bits": 32}}]}},
+    {"path": "/run/readings", "type": {"class": "named", "path": "/types/reading"}, "shape": [2], "data": {"source": "values", "values": [[0, 1.5], [0.5, 1.75]]}},
+    {"path": "/run/compact", "type": {"class": "uint", "bits": 16}, "shape": [4], "storage": {"layout": "compact"}, "data": {"source": "values", "values": [1, 2, 3, 65535]}},
+    {"path": "/run/flag", "type": {"class": "float", "bits": 64}, "shape": [], "data": {"source": "values", "values": [1.5]},
+     "attributes": [{"name": "pending", "empty": true, "type": {"class": "float", "bits": 64}}]}
+  ],
+  "links": [
+    {"path": "/latest", "kind": "soft", "target": "/run/raw/counts"},
+    {"path": "/run/time_alias", "kind": "hard", "target": "/run/raw/time"},
+    {"path": "/catalogue", "kind": "external", "file": "catalogue.h5", "target": "/index"}
+  ],
+  "extracts": [
+    {"id": "counts_window", "dataset": "/run/raw/counts", "selection": {"kind": "hyperslab", "start": [1, 0], "count": [3, 2]}, "columns": ["ch1", "ch2"]},
+    {"id": "pressure", "dataset": "/run/calibrated/pressure"},
+    {"id": "event_levels", "dataset": "/run/events", "fields": ["sample", "level"], "format": "csv"},
+    {"id": "counts_points", "dataset": "/run/raw/counts", "selection": {"kind": "points", "points": [[5, 1], [0, 0], [3, 1]]}, "format": "npy"}
+  ]
+}

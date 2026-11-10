@@ -17,17 +17,17 @@ RECONCILE = {'name':NAME,'type':{'type':'enum','values':['reconcile'],'required'
              'target':{**NUMBER,'default':0},'absoluteTolerance':{'type':'number','minimum':0,'maximum':1e100,'required':True}}
 
 
-def address(value):
+def address(value,summary_width=7):
     match = re.fullmatch(r'([A-Z]{1,2})([1-9][0-9]{0,4})', value['cell'])
     if not match: fail('INVALID_SELECTOR','use canonical uppercase A1 notation without ranges or absolute markers', value['cell'])
     column=0
     for char in match[1]:column=column*26+ord(char)-64
-    row=int(match[2]);width,height=(64,10001) if value['sheet']=='Data' else (7,65)
+    row=int(match[2]);width,height=(64,10001) if value['sheet']=='Data' else (summary_width,65)
     if column>width or row>height:fail('INVALID_SELECTOR','cell exceeds the fixed sheet bounds',value['cell'])
     return row-1,column-1
 
 
-def prepare(value):
+def prepare(value,summary_width=7):
     if not isinstance(value,list) or len(value)>64:fail('INVALID_REQUIREMENTS','requirements must be an array of at most 64 named checks')
     result=[];names=set()
     for index,item in enumerate(value):
@@ -38,13 +38,13 @@ def prepare(value):
             fail('INVALID_REQUIREMENTS','requirement names must be unique bounded identifiers',item['name'])
         names.add(item['name'])
         if item['type']=='cellBounds':
-            address(item['cell'])
+            address(item['cell'],summary_width)
             if not any(k in item for k in ('minimum','maximum')) or item.get('minimum',-math.inf)>item.get('maximum',math.inf):
                 fail('INVALID_REQUIREMENTS','declare at least one bound, with minimum <= maximum',item['name'])
         else:
             identities=[]
             for term in item['terms']:
-                address(term);identities.append((term['sheet'],term['cell']))
+                address(term,summary_width);identities.append((term['sheet'],term['cell']))
                 if term['coefficient']==0:fail('INVALID_REQUIREMENTS','omit zero-coefficient terms',item['name'])
             if len(set(identities))!=len(identities):fail('INVALID_REQUIREMENTS','reconciliation cells must be distinct',item['name'])
         result.append(item)
@@ -65,20 +65,21 @@ def schema():
     return {'type':'array','maxItems':64,'items':{'oneOf':variants}}
 
 
-def _cell(values,selector):
-    row,column=address(selector)
+def _cell(values,selector,summary_width=7):
+    row,column=address(selector,summary_width)
     rows=values.get(selector['sheet'],[])
     if row>=len(rows) or column>=len(rows[row]):return None,'missing'
     value=rows[row][column]
+    if value is None:return None,'missing'  # a blank cell is absent, not text or zero
     if type(value) not in (int,float) or not math.isfinite(value):return None,'non-numeric'
     return value,None
 
 
-def evaluate(requirements,values):
+def evaluate(requirements,values,summary_width=7):
     checks=[]
     for item in requirements:
         selectors=[item['cell']] if item['type']=='cellBounds' else item['terms']
-        selected=[_cell(values,s) for s in selectors]
+        selected=[_cell(values,s,summary_width) for s in selectors]
         faults=[{'sheet':s['sheet'],'cell':s['cell'],'condition':error} for s,(_,error) in zip(selectors,selected) if error]
         record={'name':item['name'],'type':item['type'], **{key:item[key] for key in ('minimum','maximum','target','absoluteTolerance') if key in item}}
         if faults:checks.append({**record,'status':'invalid-selection','conditions':faults});continue
@@ -96,8 +97,8 @@ def evaluate(requirements,values):
     return {'passed':all(item['status']=='passed' for item in checks),'checks':checks}
 
 
-def report(requirements,observations):
-    formats={name:evaluate(requirements,values) for name,values in observations.items()}
+def report(requirements,observations,summary_width=7):
+    formats={name:evaluate(requirements,values,summary_width) for name,values in observations.items()}
     # Compare only observations of the SAME authored requirement. Different
     # checks may have different units and cannot share a meaningful ranking.
     worst=[]

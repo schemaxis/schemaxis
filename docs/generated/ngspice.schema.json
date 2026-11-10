@@ -256,6 +256,17 @@
               },
               "maxItems": 64,
               "default": []
+            },
+            "branchProbes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "maxItems": 8,
+              "uniqueItems": true,
+              "default": []
             }
           },
           "additionalProperties": false,
@@ -409,7 +420,13 @@
               "quantity": {
                 "enum": [
                   "magnitude_V",
-                  "gainMagnitude"
+                  "gainMagnitude",
+                  "gain_dB",
+                  "phase_deg",
+                  "currentMagnitude_A",
+                  "activePower_W",
+                  "reactivePower_var",
+                  "impedanceMagnitude_Ohm"
                 ]
               },
               "axis": {
@@ -427,12 +444,12 @@
               },
               "minimum": {
                 "type": "number",
-                "minimum": 0,
+                "minimum": -1000000000000.0,
                 "maximum": 1000000000000.0
               },
               "maximum": {
                 "type": "number",
-                "minimum": 0,
+                "minimum": -1000000000000.0,
                 "maximum": 1000000000000.0
               }
             },
@@ -443,6 +460,53 @@
               "quantity",
               "axis",
               "window"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "quantity": {
+                      "enum": [
+                        "currentMagnitude_A",
+                        "gainMagnitude",
+                        "impedanceMagnitude_Ohm",
+                        "magnitude_V"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "minimum": {
+                      "minimum": 0
+                    },
+                    "maximum": {
+                      "minimum": 0
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "quantity": {
+                      "const": "phase_deg"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "minimum": {
+                      "minimum": -180,
+                      "maximum": 180
+                    },
+                    "maximum": {
+                      "minimum": -180,
+                      "maximum": 180
+                    }
+                  }
+                }
+              }
             ],
             "anyOf": [
               {
@@ -536,6 +600,25 @@
       "minimum": -1000,
       "maximum": 1000,
       "default": 1
+    },
+    "spacing": {
+      "enum": [
+        "linear",
+        "decade",
+        "octave"
+      ],
+      "default": "linear"
+    },
+    "portMetrics": {
+      "type": "boolean",
+      "default": false
+    },
+    "amplitudeConvention": {
+      "enum": [
+        "peak",
+        "rms"
+      ],
+      "default": "peak"
     }
   },
   "additionalProperties": false,
@@ -894,6 +977,17 @@
               },
               "maxItems": 64,
               "default": []
+            },
+            "branchProbes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "maxItems": 8,
+              "uniqueItems": true,
+              "default": []
             }
           },
           "additionalProperties": false,
@@ -925,6 +1019,25 @@
           "maximum": 1000,
           "default": 1
         },
+        "spacing": {
+          "enum": [
+            "linear",
+            "decade",
+            "octave"
+          ],
+          "default": "linear"
+        },
+        "portMetrics": {
+          "type": "boolean",
+          "default": false
+        },
+        "amplitudeConvention": {
+          "enum": [
+            "peak",
+            "rms"
+          ],
+          "default": "peak"
+        },
         "requirements": {
           "type": "array",
           "items": {
@@ -944,7 +1057,13 @@
               "quantity": {
                 "enum": [
                   "magnitude_V",
-                  "gainMagnitude"
+                  "gainMagnitude",
+                  "gain_dB",
+                  "phase_deg",
+                  "currentMagnitude_A",
+                  "activePower_W",
+                  "reactivePower_var",
+                  "impedanceMagnitude_Ohm"
                 ]
               },
               "axis": {
@@ -962,12 +1081,12 @@
               },
               "minimum": {
                 "type": "number",
-                "minimum": 0,
+                "minimum": -1000000000000.0,
                 "maximum": 1000000000000.0
               },
               "maximum": {
                 "type": "number",
-                "minimum": 0,
+                "minimum": -1000000000000.0,
                 "maximum": 1000000000000.0
               }
             },
@@ -978,6 +1097,53 @@
               "quantity",
               "axis",
               "window"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "quantity": {
+                      "enum": [
+                        "currentMagnitude_A",
+                        "gainMagnitude",
+                        "impedanceMagnitude_Ohm",
+                        "magnitude_V"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "minimum": {
+                      "minimum": 0
+                    },
+                    "maximum": {
+                      "minimum": 0
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "quantity": {
+                      "const": "phase_deg"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "minimum": {
+                      "minimum": -180,
+                      "maximum": 180
+                    },
+                    "maximum": {
+                      "minimum": -180,
+                      "maximum": 180
+                    }
+                  }
+                }
+              }
             ],
             "anyOf": [
               {

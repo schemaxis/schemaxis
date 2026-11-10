@@ -32,13 +32,14 @@ OPTIONS = {
         'youngsModulus_Pa':{**NUMBER,'minimum':1e6,'maximum':1e12},
         'poissonRatio':{**NUMBER,'minimum':0,'maximum':.35}}},
     'load':{'type':'object','required':True,'properties':{
-        'tipForceZ_N':{**NUMBER,'minimum':-1e8,'maximum':1e8}}},
+        **{name:{'type':'number','default':0,'minimum':-1e8,'maximum':1e8} for name in beam.LOAD_KEYS}}},
+    'support':{'type':'enum','values':['clamped','axialSlide'],'default':'clamped'},
     'mesh':{'type':'object','default':{'lengthCells':12,'sectionCells':2},'properties':{
         'lengthCells':{'type':'integer','minimum':12,'maximum':24,'default':12},
         'sectionCells':{'type':'integer','minimum':2,'maximum':3,'default':2}}},
     'requirements':{'type':'array','maxItems':16,'default':[],'items':{'type':'object','properties':{
         'name':{'type':'string','minLength':1,'maxLength':64,'required':True},
-        'quantity':{'type':'enum','values':['absTipAreaMeanUz_m','maxInteriorSampleNormalStress_Pa'],'required':True},
+        'quantity':{'type':'enum','values':['absTipAreaMeanUx_m','absTipAreaMeanUy_m','absTipAreaMeanUz_m','tipAreaMeanTranslation_m','absTipTwist_rad','maxInteriorSampleNormalStress_Pa','maxInteriorSampleVonMises_Pa'],'required':True},
         'maximum':{**NUMBER,'minimum':0,'maximum':1e12}}}}
 }
 DECLARATIONS = {'cantileverBeam':{'native':'CalculiX C3D20R linear static','inputs':{},'kinds':['table','text'],
@@ -47,7 +48,7 @@ FILES = [('beam.inp','text'),('interior-stress.csv','table'),('beam-assessment.j
 STAGES = ('coarse','axial','fine','reopened')
 MAX_BYTES = 16*1024*1024
 HEADER = ['element','integrationPoint','x_m','y_m','z_m','sxx_Pa','syy_Pa','szz_Pa','sxy_Pa','sxz_Pa','syz_Pa']
-LOSSES = ['Linear isotropic static rectangular cantilever only; no plasticity, buckling, dynamics, contact, thermal or general FEA claim.',
+LOSSES = ['Linear isotropic static rectangular member with six tip resultants and clamped or pure-axial sliding support only; no plasticity, buckling, dynamics, contact, thermal or general FEA claim.',
           'Interior stress samples cover x/L in [0.3, 0.7] at native Gauss points; no root/surface peak stress, yield or fatigue certification.',
           'Euler-Bernoulli comparison has fixed tolerances for the declared slender/small-deformation domain; tested corners do not prove its whole continuous domain.',
           'The generated editable deck is retained and reopened; arbitrary imported CalculiX decks are unsupported.']
@@ -64,14 +65,25 @@ def plan(document):
     if document.get('operation') != 'cantileverBeam': fail('UNKNOWN_FILTER','select cantileverBeam')
     options = validate_arguments(OPTIONS,{k:v for k,v in document.items() if k not in ('version','operation')})
     L,b,h = (options['beam'][k] for k in ('length_m','width_m','height_m'))
-    E = options['material']['youngsModulus_Pa']; F = options['load']['tipForceZ_N']
+    E = options['material']['youngsModulus_Pa']; load = options['load']
+    Fx,Fy,Fz,Mx,My,Mz = (load[k] for k in beam.LOAD_KEYS)
     slenderness = L/max(b,h); aspect = b/h
     if not 20 <= slenderness <= 40 or not .5 <= aspect <= 2:
         fault('INVALID_BEAM','require length/max(section) in [20, 40] and width/height in [0.5, 2]','$.beam',slenderness=slenderness,sectionAspect=aspect)
-    if abs(F) < .01: fault('INVALID_BEAM','absolute tip force must be at least 0.01 N','$.load.tipForceZ_N')
-    inertia = b*h**3/12; tip = F*L**3/(3*E*inertia); root_stress = abs(F)*L*(h/2)/inertia
-    if abs(tip)/L > .01 or root_stress/E > .001:
-        fault('INVALID_BEAM','linear slice requires |theory tip|/length<=0.01 and engineering root stress/E<=0.001','$.load',tipFraction=abs(tip)/L,strainScale=root_stress/E)
+    if max(abs(v) for v in (Fx,Fy,Fz,Mx/L,My/L,Mz/L)) < .01:
+        fault('INVALID_BEAM','at least one force or moment/length must reach 0.01 N','$.load')
+    if options['support'] == 'axialSlide' and (Fx == 0 or any((Fy,Fz,Mx,My,Mz))):
+        fault('INVALID_BEAM','axialSlide requires a nonzero axial force and zero other resultants','$.support')
+    inertia = b*h**3/12; iz = h*b**3/12; area = b*h
+    torsion = beam.torsion_constant(b,h); G = E/(2*(1+options['material']['poissonRatio']))
+    displacement = [Fx*L/(E*area), Fy*L**3/(3*E*iz)+Mz*L**2/(2*E*iz), Fz*L**3/(3*E*inertia)-My*L**2/(2*E*inertia)]
+    scales = [abs(displacement[0]),abs(Fy)*L**3/(3*E*iz)+abs(Mz)*L**2/(2*E*iz),abs(Fz)*L**3/(3*E*inertia)+abs(My)*L**2/(2*E*inertia)]
+    twist = Mx*L/(G*torsion)
+    # Add absolute contributions: cancellation cannot conceal a large load/strain.
+    root_stress = abs(Fx)/area+(abs(Fz)*L+abs(My))*h/(2*inertia)+(abs(Fy)*L+abs(Mz))*b/(2*iz)
+    torsion_stress = abs(Mx)*max(b,h)/torsion
+    if math.hypot(*scales)/L > .01 or root_stress/E > .001 or torsion_stress/G > .001 or abs(twist) > .02:
+        fault('INVALID_BEAM','require theory translation/length<=0.01, normal/shear strain scales<=0.001 and |twist|<=0.02 rad','$.load',tipFraction=math.hypot(*scales)/L,strainScale=root_stress/E,shearStrainScale=torsion_stress/G,twist_rad=twist)
     mesh = options['mesh']; cell_aspect = (L/mesh['lengthCells'])/min(b/mesh['sectionCells'],h/mesh['sectionCells'])
     if cell_aspect > 10: fault('INVALID_BEAM','axial cell length must not exceed 10 times the smallest transverse cell','$.mesh',cellAspect=cell_aspect)
     names = set()
@@ -80,7 +92,9 @@ def plan(document):
             fault('INVALID_REQUIREMENT','use unique lowercase requirement names',f'$.requirements[{i}].name')
         names.add(entry['name'])
     return {'version':'schemaxis.calculix.plan/1','operation':'cantileverBeam',**options,
-            'theory':{'secondMoment_m4':inertia,'tipDeflection_m':tip,'engineeringRootStress_Pa':root_stress},
+            'theory':{'secondMoment_m4':inertia,'secondMomentZ_m4':iz,'area_m2':area,'torsionConstant_m4':torsion,
+                      'tipDeflection_m':displacement[2],'tipTranslation_m':displacement,'translationScales_m':scales,
+                      'tipTwist_rad':twist,'engineeringRootStress_Pa':root_stress},
             'slenderness':slenderness,'sectionAspect':aspect,'tolerances':beam.TOLERANCES,'losses':LOSSES}
 
 
@@ -125,7 +139,12 @@ def read_json(path):
 
 def assessment(prepared,native):
     fine = native['fine']; requirements = []
-    quantities = {'absTipAreaMeanUz_m':abs(fine['tipAreaMeanDisplacement_m'][2]),
+    quantities = {'absTipAreaMeanUx_m':abs(fine['tipAreaMeanDisplacement_m'][0]),
+                  'absTipAreaMeanUy_m':abs(fine['tipAreaMeanDisplacement_m'][1]),
+                  'tipAreaMeanTranslation_m':math.hypot(*fine['tipAreaMeanDisplacement_m']),
+                  'absTipTwist_rad':abs(fine['tipTwist_rad']),
+                  'maxInteriorSampleVonMises_Pa':fine['maxInteriorSampleVonMises_Pa'],
+                  'absTipAreaMeanUz_m':abs(fine['tipAreaMeanDisplacement_m'][2]),
                   'maxInteriorSampleNormalStress_Pa':fine['maxInteriorSampleNormalStress_Pa']}
     for entry in prepared['requirements']:
         measured = quantities[entry['quantity']]; margin = entry['maximum']-measured
@@ -155,11 +174,15 @@ def checked(directory,prepared):
         if not re.search(rb'^    1UVERSION\s+Version 2\.23\s*$',frd,re.M): fault('UNSUPPORTED_RUNTIME','native result version differs',stage)
         native[stage],samples = beam.assess(prepared,stage,bounded(target/'beam.dat').decode('ascii'))
         if stage == 'fine': rows = samples
-    coarse = native['coarse']['tipAreaMeanDisplacement_m'][2]; axial = native['axial']['tipAreaMeanDisplacement_m'][2]; fine = native['fine']['tipAreaMeanDisplacement_m'][2]
-    scale = abs(prepared['theory']['tipDeflection_m'])
-    convergence = {'axialRelativeChange':abs(axial-coarse)/scale,'transverseRelativeChange':abs(fine-axial)/scale}
-    if convergence['axialRelativeChange'] > .01 or convergence['transverseRelativeChange'] > .01:
-        fault('NUMERICAL_ACCEPTANCE_FAILED','separate axial and transverse mesh refinement must each change tip deflection by<=1% of beam theory',observed=convergence)
+    convergence = {}
+    for first,second,label in [('coarse','axial','axialRelativeChange'),('axial','fine','transverseRelativeChange')]:
+        changes = [abs(native[first]['tipAreaMeanDisplacement_m'][a]-native[second]['tipAreaMeanDisplacement_m'][a])/scale
+                   for a,scale in enumerate(prepared['theory']['translationScales_m']) if scale]
+        if prepared['theory']['tipTwist_rad']:
+            changes.append(abs(native[first]['tipTwist_rad']-native[second]['tipTwist_rad'])/abs(prepared['theory']['tipTwist_rad']))
+        convergence[label] = max(changes)
+    if max(convergence.values()) > .01:
+        fault('NUMERICAL_ACCEPTANCE_FAILED','each active translation and twist must change by <=1% of its absolute-contribution theory scale on each refinement',observed=convergence)
     if native['fine'] != native['reopened'] or bounded(directory/'fine/beam.dat') != bounded(directory/'reopened/beam.dat'):
         fault('VERIFICATION_FAILED','fresh readback of the exact editable fine deck differs')
     native['convergence'] = convergence

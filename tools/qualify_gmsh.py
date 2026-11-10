@@ -135,7 +135,7 @@ def main():
         document['nodes'][0]['options']['file'] = str(directory/'two.step')
         try: registry.run(document,directory/'rejected-two-solids',locations=locations(),timeout=60)
         except SchemaxisError as error:
-            assert error.fault.code == 'NATIVE_EXECUTION_FAILED' and 'exactly one solid' in error.fault.message,error
+            assert error.fault.code == 'UNSUPPORTED_RESOURCE' and 'exactly one solid' in error.fault.message and error.fault.recovery,error
             report['negative'].append(error.fault.to_dict())
         else: raise AssertionError('multi-solid STEP was accepted')
         baseline = json.loads((ROOT/'examples/schemaxis/gmsh-face-groups.json').read_text())
@@ -146,7 +146,7 @@ def main():
             bad = copy.deepcopy(baseline); bad['nodes'][1]['options']['faceGroups'] = groups
             try: registry.run(bad,directory/('rejected-'+label),locations=locations(),timeout=60)
             except SchemaxisError as error:
-                assert error.fault.code == 'NATIVE_EXECUTION_FAILED',error
+                assert error.fault.code == 'INVALID_SELECTION' and error.fault.recovery,error
                 assert ('empty' if label == 'empty' else 'remainder') in error.fault.message,error
                 report['negative'].append(error.fault.to_dict())
             else: raise AssertionError(label+' selection was accepted')

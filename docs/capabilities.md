@@ -403,7 +403,7 @@ Each run retains its authored/effective input, plan, an exact runtime zip, submi
 script, receipt and artifacts. Direct replay uses recorded paths; rerun the CLI
 with a fresh destination to preserve existing results.
 
-## The showcase and application handoffs
+## The primitives and application handoffs
 
 The shared input context now reads typed primitive values or full live objects.
 `ObjectRegistry` distinguishes unknown, not-yet-produced, wrong-kind and retired
@@ -473,11 +473,11 @@ No Blender imports occur during discovery or planning.
 ```bash
 python3 -m schemaxis discover
 python3 -m schemaxis describe --provider blender
-python3 -m schemaxis plan examples/schemaxis/blender-showcase.json
-python3 -m schemaxis run examples/schemaxis/blender-showcase.json \
+python3 -m schemaxis plan examples/schemaxis/blender-primitives.json
+python3 -m schemaxis run examples/schemaxis/blender-primitives.json \
   --blender /path/to/blender --output-directory blender-run
 python3 -m schemaxis verify blender-run
-python3 -m schemaxis inspect examples/schemaxis/blender-showcase.json --node rounded \
+python3 -m schemaxis inspect examples/schemaxis/blender-primitives.json --node rounded \
   --visit 1 --blender /path/to/blender --output-directory inspected
 python3 -m schemaxis run examples/schemaxis/paraview-to-blender.json \
   --paraview-root /path/to/ParaView/install --blender /path/to/blender \
@@ -514,15 +514,15 @@ observations for an explicit node and zero-based selected visit, without renderi
 or exporting geometry. Its result is an observation record, not a publication
 verification receipt.
 
-## Showcase acceptance
+## Primitives acceptance
 
-`examples/schemaxis/showcase-acceptance.json` combines input composition, an inline
+`examples/schemaxis/primitives-acceptance.json` combines input composition, an inline
 object, three synchronized members, an independent slice sequence, runtime
 function-derived positioning, two appearances and twelve orbit views. The native
 run produced exactly 24 geometry exports and 576 images. Independent checks:
 
 ```bash
-python3 examples/schemaxis/check_showcase.py path/to/showcase-run
+python3 examples/schemaxis/check_primitives.py path/to/primitives-run
 python3 examples/schemaxis/check_blender.py path/to/blender-run
 python3 examples/schemaxis/check_blender.py path/to/bridge/presentation --bridge
 ```

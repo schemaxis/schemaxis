@@ -89,17 +89,22 @@
     "reactorHistory": {
       "status": "reviewed",
       "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
-      "explanation": "Integrates one closed, adiabatic, homogeneous ideal-gas reactor in time from the gas node state at the chosen initial temperature, using Cantera's IdealGasConstPressureReactor (pressure held) or IdealGasReactor (volume held) in a ReactorNet with the 29-reaction h2o2 mechanism. It publishes results.csv with one row per requested sample time (time, temperature, pressure, density, energies, heat capacities, mole and mass fractions) and chemistry-summary.json with the reactor model, solver settings read back from Cantera, the ignition delay by the declared temperature-rise criterion, conservation residuals and the verification tolerances. Choose it to see how fast a hydrogen mixture reacts, for example an ignition delay or the approach to adiabatic equilibrium; choose equilibrate when only the final equilibrium state matters.",
+      "explanation": "Integrates one closed homogeneous ideal-gas reactor in time from the gas node state at the chosen initial temperature, using Cantera's IdealGasConstPressureReactor (pressure held) or IdealGasReactor (volume held) in a ReactorNet with the 29-reaction h2o2 mechanism. It publishes results.csv with one row per requested sample time (time, temperature, pressure, density, energies, heat capacities, mole and mass fractions) and chemistry-summary.json with the reactor model, solver settings read back from Cantera, the ignition delay by the declared temperature-rise criterion, conservation residuals and the verification tolerances. Choose it to see how fast a hydrogen mixture reacts, for example an ignition delay or cooling under a fixed-temperature bath; choose equilibrate when only the final equilibrium state matters. Optional thermalConductance and bathTemperature connect a fixed bath through a linear heat-transfer wall; zero conductance preserves the adiabatic model. The bath exchanges heat only and never gas. At constant pressure, volume changes to maintain pressure while mass stays fixed.",
       "pitfalls": [
-        "The reactor is adiabatic and closed: no heat loss, walls, inflow, mixing or transport. Real shock tubes and engines differ, so the ignition delay is a property of this model, not a measurement.",
+        "The reactor is closed. Optional fixed-bath exchange uses total conductance W/K, independent of instantaneous volume; no moving/radiating wall, wall heat capacity, inflow, mixing or transport is modelled. Results describe this model, not a measurement.",
         "The ignition delay is defined only by ignitionTemperatureRise (first time T reaches initial T plus the rise, interpolated linearly between native integrator steps); other definitions, such as the peak of OH or of dT/dt, can give different values.",
         "Samples are not interpolated between rows: put enough sample times around the expected ignition to see the temperature rise, and note that the CSV alone does not show the shape between samples.",
-        "Verification integrates the same mechanism independently in host Python; this checks the native result against the stated model, not the model against experiments."
+        "Verification integrates the same mechanism independently in host Python; this checks the native result against the stated model, not the model against experiments.",
+        "With a hot bath, external heating can cross the temperature-rise ignition criterion even without chemistry. Interpret delay together with composition and heat balance; it does not prove autoignition."
       ],
       "examples": [
         {
           "reference": "examples/schemaxis/cantera-reactor.json",
           "purpose": "Stoichiometric hydrogen/air at 1000 K and 101325 Pa ignites after about 0.31 ms at constant pressure and approaches adiabatic equilibrium near 2693 K by 20 ms."
+        },
+        {
+          "reference": "examples/schemaxis/cantera-thermal-reactor.json",
+          "purpose": "Hydrogen/air loses heat to a 500 K bath through a 1000 W/K conductance; compare with the adiabatic starter."
         }
       ],
       "sources": [
@@ -113,7 +118,10 @@
         "https://cantera.org/stable/python/zerodim.html#cantera.ReactorNet",
         "https://cantera.org/stable/reference/reactors/ideal-gas-constant-pressure-reactor.html",
         "https://cantera.org/stable/reference/reactors/ideal-gas-reactor.html",
-        "src/schemaxis/adaptors/cantera/capabilities.py"
+        "src/schemaxis/adaptors/cantera/capabilities.py",
+        "https://cantera.org/stable/python/zerodim.html#cantera.Wall",
+        "https://cantera.org/stable/reference/reactors/interactions.html#walls",
+        "docs/cantera.md#thermal-exchange"
       ]
     }
   },
@@ -122,10 +130,10 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A Cantera chemistry document: one gas node defining pressure and composition, followed by one thermoSweep or equilibrate node that evaluates it at a list of temperatures, or one reactorHistory node that integrates it in time in a closed adiabatic reactor. It runs in an isolated Cantera 3.2.x Python process with the qualified h2o2.yaml mechanism. A successful run publishes results.csv (30 numeric columns in SI units: K or s, Pa, kg/m3, J/kg, J/(kg K), kg/kmol and mole and mass fractions) and chemistry-summary.json, after the host has recomputed every row from public NASA7 data (and, for reactor histories, from independent kinetics) and a second Cantera process has reloaded the saved states.",
+          "explanation": "A Cantera chemistry document: one gas node defining pressure and composition, followed by one thermoSweep or equilibrate node that evaluates it at a list of temperatures, or one reactorHistory node that integrates it in time in a closed reactor (adiabatic by default). It runs in an isolated Cantera 3.2.x Python process with the qualified h2o2.yaml mechanism. A successful run publishes results.csv (30 numeric columns in SI units: K or s, Pa, kg/m3, J/kg, J/(kg K), kg/kmol and mole and mass fractions) and chemistry-summary.json, after the host has recomputed every row from public NASA7 data (and, for reactor histories, from independent kinetics) and a second Cantera process has reloaded the saved states.",
           "pitfalls": [
-            "Only the ten-species, 29-reaction hydrogen/oxygen mechanism is available; no external mechanism files, carbon chemistry or transport properties can be requested, and kinetics are available only through the closed adiabatic reactorHistory node.",
-            "Configure an absolute Python interpreter that has Cantera 3.2.x (--cantera or CANTERA_PYTHON), otherwise the run fails with INTERPRETER_NOT_FOUND."
+            "Only the ten-species, 29-reaction hydrogen/oxygen mechanism is available; no external mechanism files, carbon chemistry or transport properties can be requested, and kinetics are available only through the closed reactorHistory node.",
+            "Configure an absolute Python interpreter that has Cantera 3.2.x (--cantera or CANTERA_PYTHON), otherwise the run fails with INTERPRETER_NOT_FOUND (not an executable Python), NATIVE_UNAVAILABLE (Python cannot import Cantera) or UNSUPPORTED_RUNTIME (Cantera is not 3.2.x)."
           ],
           "examples": [
             {
@@ -294,7 +302,7 @@
         },
         "/properties/nodes/items/oneOf/0/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -486,7 +494,7 @@
         },
         "/properties/nodes/items/oneOf/1/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -599,7 +607,7 @@
         },
         "/properties/nodes/items/oneOf/2/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -710,7 +718,7 @@
         },
         "/properties/nodes/items/oneOf/3": {
           "status": "reviewed",
-          "explanation": "Choose the reactorHistory node to follow the gas in time as it reacts in a closed adiabatic reactor, instead of tabulating independent temperatures. It reads the pressure and composition of the gas node and adds its own initial temperature, reactor model, sample times and solver tolerances.",
+          "explanation": "Choose the reactorHistory node to follow the gas in time as it reacts in a closed reactor (adiabatic by default), instead of tabulating independent temperatures. It reads the pressure and composition of the gas node and adds its own initial temperature, reactor model, sample times and solver tolerances.",
           "examples": [
             {
               "id": "ignition",
@@ -756,7 +764,7 @@
         },
         "/properties/nodes/items/oneOf/3/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node’s result.",
+          "explanation": "Select the declared operation that creates this node\u2019s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -795,7 +803,7 @@
         "/properties/nodes/items/oneOf/3/properties/options/properties/model": {
           "status": "reviewed",
           "label": "Reactor held at",
-          "explanation": "constantPressure uses Cantera's IdealGasConstPressureReactor: pressure stays at the gas node value, the volume expands as the gas heats, and specific enthalpy is conserved. constantVolume uses IdealGasReactor: the 1 m3 volume and the density stay fixed, pressure rises with heat release, and specific internal energy is conserved. Both are closed and adiabatic.",
+          "explanation": "constantPressure uses Cantera's IdealGasConstPressureReactor: pressure stays at the gas node value, the volume expands as the gas heats, and specific enthalpy is conserved when adiabatic. constantVolume uses IdealGasReactor: the 1 m3 volume and the density stay fixed, pressure rises with heat release, and specific internal energy is conserved when adiabatic. Both are closed, with optional bath exchange. With thermal exchange, mass remains fixed in both models, but enthalpy (constantPressure) or internal energy (constantVolume) changes by the bath heat input per kilogram. Constant-pressure volume changes; constant-volume pressure changes.",
           "defaultMeaning": "Schemaxis default: constantPressure.",
           "examples": [
             "constantPressure",
@@ -938,7 +946,8 @@
             400
           ],
           "pitfalls": [
-            "A small rise reports the onset of heat release and a large rise the end of the steep temperature increase; for diluted or weakly reacting mixtures the threshold may never be reached."
+            "A small rise reports the onset of heat release and a large rise the end of the steep temperature increase; for diluted or weakly reacting mixtures the threshold may never be reached.",
+            "A hotter bath can cross this threshold by heating alone; a delay is not proof of chemical autoignition."
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:40",
@@ -963,6 +972,47 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/cantera/adaptor.py:76-78"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/thermalConductance": {
+          "status": "reviewed",
+          "label": "Bath thermal conductance",
+          "units": "W/K",
+          "explanation": "Total linear thermal conductance G between the closed reactor and a fixed-temperature bath: heat input is G times (bath temperature minus reactor temperature). It applies to the entire vessel, including a constant-pressure vessel whose volume changes; it is not a heat-transfer coefficient per area or per volume. Values are 0\u20131000000 W/K. Cantera uses a fixed 1 m\u00b2 Wall with heat_transfer_coeff equal to G, zero expansion and zero radiation; settings and instantaneous heat flow are read back.",
+          "defaultMeaning": "Omitted or zero means adiabatic; no wall or bath is created.",
+          "examples": [
+            0,
+            1000
+          ],
+          "pitfalls": [
+            "Do not enter a coefficient in W/(m\u00b2 K) without multiplying by the intended physical area yourself.",
+            "Large conductance can suppress ignition, demand small integration steps or make the supported temperature bounds fail. The numerical step/time budgets still apply."
+          ],
+          "sources": [
+            "docs/cantera.md#thermal-exchange",
+            "src/schemaxis/adaptors/cantera/native.py:reactor",
+            "https://cantera.org/stable/python/zerodim.html#cantera.Wall"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/bathTemperature": {
+          "status": "reviewed",
+          "label": "Fixed bath temperature",
+          "units": "K",
+          "explanation": "Temperature of the infinite, well-mixed thermal bath (300\u20133500 K), held fixed by a Cantera Reservoir. A colder bath removes energy; a hotter bath adds energy. There is no mass flow, bath chemistry coupling, finite bath heat capacity or changing bath schedule. Used only when thermalConductance is positive; validated even when conductance is zero.",
+          "defaultMeaning": "Omitted means 300 K. With default zero conductance this value has no effect.",
+          "examples": [
+            300,
+            500,
+            1500
+          ],
+          "pitfalls": [
+            "Use absolute kelvin, not Celsius.",
+            "External heating can satisfy the reported temperature-rise ignition criterion without chemical ignition; inspect species as well."
+          ],
+          "sources": [
+            "docs/cantera.md#thermal-exchange",
+            "src/schemaxis/adaptors/cantera/native.py:reactor",
+            "https://cantera.org/stable/python/zerodim.html#cantera.Reservoir"
           ]
         }
       }

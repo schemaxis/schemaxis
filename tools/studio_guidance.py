@@ -3,6 +3,7 @@
 """Seed, audit or export conceptual-help review work for every installed adaptor."""
 import argparse
 import json
+import re
 from pathlib import Path
 from schemaxis.adaptors import registry
 from schemaxis.studio_guidance import (VERSION, SHARED, fields, load, audit, audit_shared, shared_fields,
@@ -100,6 +101,27 @@ def report(provider):
     return audit(provider) if provider in registry.ADAPTORS else audit_shared(provider)
 
 
+def workflow_choices(guide, versions):
+    """Keep reviewed choice prose attached to its route when registry order changes.
+
+    New routes remain pending until reviewed. An ordinal alone carries no stable
+    meaning and must never transfer another application's explanation.
+    """
+    records=guide['routes']['schemaxis.workflow/1']['fields']
+    prefix='/properties/operations/items/properties/document/oneOf/'
+    choices={}
+    for address,record in list(records.items()):
+        if address.startswith(prefix) and address[len(prefix):].isdigit():
+            match=re.search(r'\(route ([^() ]+)\)',record.get('explanation',''))
+            if match:
+                if match[1] in choices:raise ValueError('duplicate workflow choice route: '+match[1])
+                choices[match[1]]=record
+            del records[address]
+    for index,version in enumerate(versions):
+        records[prefix+str(index)]=choices.get(version,{'status':'pending',
+            'question':'Explain when to choose workflow operation route '+version+'.'})
+
+
 def derive(provider):
     """Fill structural records from the record they share; never replace prose.
 
@@ -110,6 +132,9 @@ def derive(provider):
     operation record's status, explanation and pitfalls.
     """
     guide = load(provider)
+    if provider=='workflow':
+        from schemaxis.schema_authoring import WORKFLOW_VERSIONS
+        workflow_choices(guide,WORKFLOW_VERSIONS)
     changed = 0
     for version, schema, owned in routes(provider):
         records = guide['routes'].setdefault(version, {'fields': {}})['fields']

@@ -8,7 +8,8 @@
         "There must be more training rows than coefficients, and the predictors must not be (nearly) linearly dependent; otherwise INSUFFICIENT_DATA, RANK_DEFICIENT_DATA or ILL_CONDITIONED_DATA.",
         "Only additive numeric terms: no categorical variables, interactions, polynomials or custom formulas.",
         "Optional inference assumes independent, constant-variance, normal errors; an exact fit has no residual variance (NO_RESIDUAL_VARIANCE). No causal claims; held-out errors describe only the rows you supplied.",
-        "A correct fit that misses a declared requirement fails with FIT_REQUIREMENT_NOT_MET and is not passed to later workflow steps."
+        "A correct fit that misses a declared requirement fails with FIT_REQUIREMENT_NOT_MET and is not passed to later workflow steps.",
+        "Optional prediction intervals are for new predictor-only rows and are separate from coefficient inference; choose confidence for the mean response and individual for a future observation. Zero residual variance fails with NO_RESIDUAL_VARIANCE, and extrapolation is reported, not validated."
       ],
       "examples": [
         {
@@ -22,6 +23,14 @@
         {
           "reference": "examples/schemaxis/r-inference.json",
           "purpose": "Closed-form 95% slope interval with two residual degrees of freedom, required inside [1.5, 2.5] V/degC."
+        },
+        {
+          "reference": "examples/schemaxis/r-prediction.json",
+          "purpose": "Closed-form 95% individual prediction intervals at new temperatures 0, 1 and 3 (two residual degrees of freedom) from the same four training rows."
+        },
+        {
+          "reference": "examples/schemaxis/r-prediction-variant.json",
+          "purpose": "Change the interval type to the mean confidence interval, the level to 0.9 and the new rows."
         }
       ],
       "sources": [
@@ -164,7 +173,7 @@
         },
         "/properties/training/items/items": {
           "status": "reference",
-          "explanation": "Finite numeric cell within ±1e9, in the corresponding authored predictor or response units. No missing values or strings.",
+          "explanation": "Finite numeric cell within ±1e9, in the corresponding authored predictor or response units. A null, NaN or NA cell is MISSING_VALUE and a text or boolean cell is UNSUPPORTED_VALUE_TYPE; neither is dropped, imputed or coerced.",
           "sources": [
             "docs/r.md"
           ]
@@ -185,7 +194,7 @@
         },
         "/properties/heldout/items/items": {
           "status": "reference",
-          "explanation": "Finite numeric cell within ±1e9, in the corresponding authored predictor or response units. No missing values or strings.",
+          "explanation": "Finite numeric cell within ±1e9, in the corresponding authored predictor or response units. A null, NaN or NA cell is MISSING_VALUE and a text or boolean cell is UNSUPPORTED_VALUE_TYPE; neither is dropped, imputed or coerced.",
           "sources": [
             "docs/r.md"
           ]
@@ -460,6 +469,126 @@
           "sources": [
             "docs/r.md",
             "src/schemaxis/adaptors/r/reference.py"
+          ]
+        },
+        "/properties/prediction": {
+          "status": "reviewed",
+          "explanation": "Optional request for intervals at new, declared predictor-only rows. Schemaxis fits the training rows, reopens the saved model in a fresh R process and calls stats::predict.lm for both a mean confidence interval and an individual prediction interval at your level, verifies both against an independent QR leverage calculation and publishes the one you name in 'interval' as prediction.csv (appended after any inference.csv) with row identity, units, leverage and degrees of freedom in regression-summary.json. It is a different quantity from the coefficient confidence intervals of 'inference'.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py",
+            "https://stat.ethz.ch/R-manual/R-patched/library/stats/html/predict.lm.html"
+          ],
+          "defaultMeaning": "Omitted: nothing is predicted for new rows and the published artifacts are unchanged.",
+          "pitfalls": [
+            "The new rows have no known response: do not add observed values, and these rows are not held-out validation (use heldout for observed rows).",
+            "A confidence interval bounds the fitted mean; a future single observation needs interval individual, which is always wider.",
+            "The level is a nominal statement under the stated assumptions, not a coverage guarantee or calibration certificate.",
+            "Rows outside the training predictor range are listed in outsideTrainingRange, not excluded or validated."
+          ],
+          "examples": [
+            {
+              "interval": "individual",
+              "level": 0.95,
+              "newdata": [
+                [
+                  0
+                ],
+                [
+                  1
+                ],
+                [
+                  3
+                ]
+              ]
+            }
+          ]
+        },
+        "/properties/prediction/properties/interval": {
+          "status": "reviewed",
+          "explanation": "Which interval the published prediction.csv and summary carry. 'confidence' is the uncertainty of the fitted mean response at the row (fit +/- t*sigma*sqrt(h)); 'individual' is the prediction interval for one future observation (fit +/- t*sigma*sqrt(1+h)). Both are computed natively and checked independently whatever you choose, so the choice only selects what is published.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py",
+            "https://stat.ethz.ch/R-manual/R-patched/library/stats/html/predict.lm.html"
+          ],
+          "defaultMeaning": "Required; there is no default, so a mean interval is never mistaken for a future-observation interval.",
+          "pitfalls": [
+            "Use 'individual' to bound a single new reading; 'confidence' is much narrower and does not contain the observation scatter.",
+            "Neither is a coefficient interval."
+          ],
+          "examples": [
+            "individual",
+            "confidence"
+          ]
+        },
+        "/properties/prediction/properties/level": {
+          "status": "reviewed",
+          "explanation": "Two-sided nominal confidence level, a fraction between 0.5 and 0.999, for the Student-t critical value with the residual degrees of freedom. It is independent of inference.level.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py",
+            "https://stat.ethz.ch/R-manual/R-patched/library/stats/html/predict.lm.html"
+          ],
+          "units": "Unitless probability (fraction, not percent).",
+          "defaultMeaning": "0.95 when prediction is given without a level.",
+          "pitfalls": [
+            "Enter 0.95, not 95.",
+            "A higher level widens the interval; it does not make the model more accurate or guarantee coverage."
+          ],
+          "examples": [
+            0.95,
+            0.9,
+            0.99
+          ]
+        },
+        "/properties/prediction/properties/newdata": {
+          "status": "reviewed",
+          "explanation": "One to 64 new observation rows, each holding only the predictor values in the declared predictor order and units. No response column: the responses are unknown and are never required or invented.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py",
+            "https://stat.ethz.ch/R-manual/R-patched/library/stats/html/predict.lm.html"
+          ],
+          "pitfalls": [
+            "Do not append a response value; a row with the wrong width is INVALID_TABLE.",
+            "Row order is retained as sample index 0, 1, 2 ...; keep predictors in the declared order.",
+            "Gnuplot consumers accept at most 12 columns; prediction.csv has predictor count plus five."
+          ],
+          "examples": [
+            [
+              [
+                0
+              ],
+              [
+                1
+              ],
+              [
+                3
+              ]
+            ]
+          ]
+        },
+        "/properties/prediction/properties/newdata/items": {
+          "status": "reviewed",
+          "explanation": "One new row: predictor values only, in descriptor order. Width must equal the predictor count.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py",
+            "https://stat.ethz.ch/R-manual/R-patched/library/stats/html/predict.lm.html"
+          ]
+        },
+        "/properties/prediction/properties/newdata/items/items": {
+          "status": "reviewed",
+          "explanation": "Finite numeric predictor value within ±1e9 in the corresponding declared predictor unit. A null, NaN, NA, text or boolean cell is MISSING_VALUE or UNSUPPORTED_VALUE_TYPE; nothing is imputed or coerced.",
+          "sources": [
+            "docs/r.md",
+            "src/schemaxis/adaptors/r/reference.py",
+            "https://stat.ethz.ch/R-manual/R-patched/library/stats/html/predict.lm.html"
+          ],
+          "pitfalls": [
+            "A value outside the training range is allowed and flagged as extrapolation, but the linear mean is not validated there.",
+            "A row is refused (UNSUPPORTED_PREDICTION) when leverage exceeds 1e4 or, more commonly, when the confidence and individual half widths differ by less than four times the verification allowance for that row: the interval type of such a row could not be verified, so no interval is published. This is a verification-resolution limit, not a test of model validity."
           ]
         }
       }

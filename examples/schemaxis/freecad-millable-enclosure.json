@@ -1,0 +1,59 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "blank",
+      "filter": "box",
+      "options": {
+        "length": 40,
+        "width": 30,
+        "height": 20
+      }
+    },
+    {
+      "id": "cavityBlank",
+      "filter": "box",
+      "options": {
+        "length": 34,
+        "width": 24,
+        "height": 17,
+        "origin": [
+          3,
+          3,
+          3
+        ]
+      }
+    },
+    {
+      "id": "millableCavity",
+      "filter": "fillet",
+      "inputs": {
+        "base": "cavityBlank"
+      },
+      "options": {
+        "radius": 2,
+        "edges": {
+          "where": {
+            "curve": "line",
+            "parallelTo": [
+              0,
+              0,
+              1
+            ]
+          },
+          "expect": 4
+        }
+      }
+    },
+    {
+      "id": "enclosure",
+      "filter": "cut",
+      "inputs": {
+        "base": "blank",
+        "tool": "millableCavity"
+      }
+    }
+  ],
+  "output": "enclosure"
+}

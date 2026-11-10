@@ -15,14 +15,12 @@ import json
 import math
 import os
 from pathlib import Path
-import subprocess
-import time
 
 from schemaxis.core.declarations import validate_arguments
 from schemaxis.core.faults import SchemaxisError, Fault
 from schemaxis.core.runners import Interpreter
 from schemaxis.artifacts import atomic_json, runtime_archive
-from schemaxis.dispatch import SubprocessRunner
+from .process import SubprocessRunner
 from schemaxis.documents import resolve_document
 from schemaxis.errors import fail, keys
 from schemaxis.pipeline import name
@@ -45,7 +43,7 @@ def _array(value, minimum, maximum, location):
     return value
 
 
-def plan(document):
+def plan(document,*,source_facts=None):
     document, _ = resolve_document(copy.deepcopy(document))
     keys(document, ('version', 'units', 'parts', 'components', 'grounded', 'joints',
                     'dimensions', 'definitions', 'settings'), '$')
@@ -55,7 +53,8 @@ def plan(document):
         fail('UNSUPPORTED_UNITS', 'Assembly dimensions are millimetres')
     from . import assembly_sources
     if assembly_sources.is_sourced(document):
-        return assembly_sources.plan(document)
+        return assembly_sources.plan(document,source_facts=source_facts)
+    if source_facts is not None:fail('UNSUPPORTED_SOURCE','Retained source facts require a sourced assembly')
     parts, components, joints = [], [], []
     part_ids, component_ids, joint_ids = set(), set(), set()
     for item in _array(document.get('parts'), 1, MAX_COMPONENTS, '$.parts'):
@@ -209,43 +208,11 @@ def schema():
 
 
 def gui_stage(executable, directory, timeout, *, stage='gui_finish'):
-    """Optional native GUI decoration/capture, with owned process cancellation."""
-    from schemaxis.dispatch import cancellation_requested, terminate_tree
-    executable = Path(executable)
-    if not executable.is_absolute() or not executable.is_file() or not os.access(executable, os.X_OK):
-        fail('INTERPRETER_NOT_FOUND', 'Provide an absolute executable FreeCAD GUI launcher')
-    if stage not in ('gui_finish', 'gui_reopen'):
-        fail('UNSUPPORTED_STAGE', 'Unsupported native GUI stage')
-    receipt_name = 'gui' if stage == 'gui_finish' else 'gui-reopened'
-    macro = directory/(receipt_name+'.FCMacro')
-    macro.write_text('import sys\nsys.path.insert(0,'+repr(str(directory/'runtime.zip'))+')\n'
-        'import FreeCAD as App, FreeCADGui as Gui\n'
-        'from schemaxis.adaptors.freecad.assembly_native import '+stage+'\n'
-        'from schemaxis.native_boundary import execute_guarded\n'
-        'try:\n execute_guarded('+stage+','+repr(str(directory))+')\n'
-        'except Exception:\n'
-        ' for name in list(App.listDocuments()): App.closeDocument(name)\n'
-        ' Gui.getMainWindow().close()\n')
-    environment = os.environ.copy()
-    for key in ('PYTHONHOME', 'PYTHONPATH', 'QT_PLUGIN_PATH', 'QT_QPA_PLATFORM_PLUGIN_PATH', 'LD_PRELOAD'):
-        environment.pop(key, None)
-    with (directory/(receipt_name+'.log')).open('wb') as log:
-        process = subprocess.Popen([str(executable), str(macro)], stdout=log, stderr=subprocess.STDOUT,
-                                   stdin=subprocess.DEVNULL, start_new_session=True, env=environment)
-        started = time.monotonic()
-        try:
-            while process.poll() is None:
-                if (directory/'native-fault.json').exists():
-                    raise SchemaxisError(Fault(**json.loads((directory/'native-fault.json').read_text())))
-                if cancellation_requested():
-                    fail('RUNNER_CANCELLED', 'Assembly GUI stage cancelled')
-                if time.monotonic()-started > timeout:
-                    fail('RUNNER_TIMED_OUT', 'Assembly GUI stage exceeded timeout')
-                time.sleep(0.05)
-        finally:
-            terminate_tree(process, {})
-    if process.returncode != 0 or not (directory/(receipt_name+'.json')).is_file():
-        fail('GUI_PUBLICATION_FAILED', 'Native assembly GUI stage failed; inspect gui.log')
+    """Installed constructor GUI hooks always run on a private display/profile."""
+    from .gui_process import run as private_gui
+    if stage not in ('gui_finish','gui_reopen'):
+        fail('UNSUPPORTED_STAGE','Unsupported native GUI stage')
+    return private_gui(directory,executable,stage,timeout=timeout,family='assembly')
 
 
 def run(document, directory, *, executable=None, timeout=120, gui_executable=None):
@@ -295,7 +262,9 @@ def run(document, directory, *, executable=None, timeout=120, gui_executable=Non
 
 def _verify(directory, require_result=True):
     directory = Path(directory).absolute()
-    prepared = plan(json.loads((directory/'authored.json').read_text()))
+    from .source_bridge import replay_plan
+    authored=json.loads((directory/'authored.json').read_text())
+    prepared = replay_plan(directory,authored,json.loads((directory/'plan.json').read_text()))
     if prepared.get('sourced'):
         from . import assembly_sources
         return assembly_sources.verify(directory, require_result=require_result)
@@ -378,6 +347,25 @@ def reusableInputs(document):
         from .assembly_sources import reusable_inputs
         return reusable_inputs(prepared)
     return {}
+
+
+def retainedInputs(directory,document):
+    """Provenance of seeded source captures after retiring their producer runs."""
+    from .saved_checks import read_json
+    saved=read_json(directory,'plan.json')
+    from .source_bridge import capability
+    if not saved.get('sourced') or not any(capability(p.get('source')) for p in saved.get('parts',[])):
+        return None
+    from .source_bridge import replay_plan
+    from .assembly_sources import digest
+    prepared=replay_plan(directory,document,saved);result={}
+    for index,part in enumerate(prepared['parts']):
+        facts=part['source'];path=Path(directory)/'sources'/('source'+str(index)+'.FCStd')
+        actual=digest(path)
+        if actual!=facts['sha256']:fail('INPUT_CHANGED','Retained assembly source differs from its captured digest',part['id'])
+        if result.get(facts['file'],actual)!=actual:fail('INPUT_CHANGED','Two captures disagree about their common source',part['id'])
+        result[facts['file']]=actual
+    return result
 
 
 # Shared authored-input, analytic-visit and verification boundary.

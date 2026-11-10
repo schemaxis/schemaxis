@@ -30,17 +30,53 @@ def prepare(raw, kinds):
     return result
 
 
-def native_observations(doc, prepared, objects=None):
-    from .native import snapshot
-    requested=prepared.get('measurements',[])
+def native_shapes(doc, prepared, objects=None):
+    """Requested solid occurrences in the native world frame, including history."""
     if objects is None:
         from .operations import output_names
-        objects={identity:doc.getObject(name) for identity,name in output_names(prepared).items()}
+        from .body_seed import output_name
+        # The final seeded tip is published by its Body in world space. Select
+        # that SAME native carrier, as exports do, instead of cloning its local
+        # feature into a separately placed topology. Other history members keep
+        # their own carrier and receive their containing frame below.
+        objects={identity:doc.getObject(output_name(prepared,identity))
+                 for identity in output_names(prepared)}
+    result={}
+    for item in prepared.get('measurements',[]):
+        identity=item['node']
+        if identity in result:continue
+        obj=objects[identity]
+        shape=obj.Shape
+        # Feature.Shape already contains its own Placement. Apply just the
+        # containing frame, once; this also handles intermediate Body members.
+        global_placement=obj.getGlobalPlacement()
+        if list(global_placement.toMatrix().A)!=list(obj.Placement.toMatrix().A):
+            # Property-owned shapes are immutable. Clone only when a containing
+            # frame must be applied; otherwise retain the exact occurrence so
+            # the output's already-qualified measurement can be reused.
+            shape=shape.copy()
+            shape.Placement=global_placement.multiply(
+                obj.Placement.inverse()).multiply(shape.Placement)
+        result[identity]=shape
+    return result
+
+
+def native_observations(doc, prepared, objects=None, *, precision=None):
+    from .native import snapshot
+    requested=prepared.get('measurements',[])
+    shapes=native_shapes(doc,prepared,objects)
+    from .helix import active as helical
+    if requested and helical(prepared):
+        if precision is None:
+            from .helix_precision_native import named
+            precision=named(shapes)
+        if set(precision)!=set(shapes):
+            fail('VERIFICATION_FAILED','Helix named precision membership differs')
     result={};edge_count=0
     for item in requested:
         identity=item['node']
         if identity not in result:
-            shape=objects[identity].Shape
+            shape=shapes[identity]
             # Finishing can return a Compound containing solids. Compounds do
             # not expose CenterOfMass; combine the constituent solid centres
             # with volume weights (uniform density, no material inference).
@@ -48,9 +84,14 @@ def native_observations(doc, prepared, objects=None):
             volume=math.fsum(weight for weight,_ in solids)
             if not solids or volume<=0:fail('INVALID_GEOMETRY','measurement source needs positive solid volume',identity)
             centre=[math.fsum(weight*point[i] for weight,point in solids)/volume for i in range(3)]
-            result[identity]={'shape':snapshot(shape),'centreMM':centre}
+            facts=snapshot(shape)
+            if requested and helical(prepared):
+                fine=precision[identity]['fine']
+                facts.update(volume=fine['signedVolume'],area=fine['area'])
+                centre=list(fine['centre'])
+            result[identity]={'shape':facts,'centreMM':centre}
         if 'edges' in item and 'edges' not in result[identity]:
-            edges=selections.native_edges(objects[identity].Shape);edge_count+=len(edges)
+            edges=selections.native_edges(shapes[identity]);edge_count+=len(edges)
             if edge_count>20000:fail('RESOURCE_BUDGET_EXCEEDED','measurement inventories exceed 20000 combined edges')
             result[identity]['edges']=edges
     return result
@@ -101,9 +142,14 @@ def evaluate(prepared, observations):
             entry['selectedEdges']=indices
             value=len(indices) if quantity=='edgeCount' else math.fsum(record['edges'][i-1]['lengthMM'] for i in indices)
         entry['value']=value;result[item['id']]=entry
+    from .helix import active as helical
     return {'version':'schemaxis.freecad.measurements/1','coordinateUnits':'mm',
+            'coordinateFrame':'native-world',
             'boundsOrder':['xmin','xmax','ymin','ymax','zmin','zmax'],
-            'measurements':result,'scope':'native geometric measurements; centreOfMass assumes uniform density; no material, mass, clearance or manufacturing inference'}
+            'measurements':result,
+            **({'solidMeasureMethod':'schemaxis.freecad.gauss-green/2',
+                'certifiedErrorBound':False} if helical(prepared) else {}),
+            'scope':'native world geometric measurements; centreOfMass assumes uniform density; no material, mass, clearance or manufacturing inference'}
 
 
 def verify(prepared, built, reopened, publication):

@@ -1,0 +1,1253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Schemaxis cam literal settings",
+  "$defs": {
+    "json": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.freecad.cam/1"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "object": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "units": {
+          "enum": [
+            "mm",
+            "cm",
+            "m",
+            "inch"
+          ]
+        },
+        "expect": {
+          "type": "object",
+          "properties": {
+            "volume": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "bounds": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 6,
+              "maxItems": 6
+            },
+            "centreOfMass": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "volume",
+            "bounds",
+            "centreOfMass"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "units",
+        "expect"
+      ]
+    },
+    "stock": {
+      "type": "object",
+      "properties": {
+        "top": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 2
+        },
+        "sides": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 0
+        },
+        "bottom": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "diameter": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100
+        },
+        "cuttingLength": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "length": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 2000
+        },
+        "shankDiameter": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100
+        },
+        "rpm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        },
+        "feed": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        },
+        "plunge": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        },
+        "flutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "default": 2
+        },
+        "holder": {
+          "type": "object",
+          "properties": {
+            "stickOut": {
+              "type": "number",
+              "minimum": 0.1,
+              "maximum": 2000
+            },
+            "steps": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 8,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "diameter": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 500
+                  },
+                  "length": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 2000
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "diameter",
+                  "length"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "stickOut",
+            "steps"
+          ],
+          "title": "Stepped holder envelope"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "diameter",
+        "cuttingLength",
+        "length",
+        "shankDiameter",
+        "rpm",
+        "feed",
+        "plunge"
+      ]
+    },
+    "setup": {
+      "type": "object",
+      "properties": {
+        "clearance": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1000,
+          "default": 5
+        },
+        "safe": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1000,
+          "default": 3
+        },
+        "toolClearance": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "aboveBlank"
+                },
+                "axialClearance": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 1000
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "axialClearance"
+              ],
+              "title": "Above original blank"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "evolvingStock"
+                },
+                "minimumSeparation": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 1000
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "minimumSeparation"
+              ],
+              "title": "Ordered remaining stock"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "quality": {
+      "type": "object",
+      "properties": {
+        "residualVolume": {
+          "type": "number",
+          "minimum": 1e-05,
+          "maximum": 1,
+          "default": 0.1
+        },
+        "gougeVolume": {
+          "type": "number",
+          "minimum": 1e-05,
+          "maximum": 1,
+          "default": 0.01
+        }
+      },
+      "additionalProperties": false
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "operation": {
+                "enum": [
+                  "faceStock",
+                  "pocket"
+                ]
+              },
+              "floor": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "stepDown": {
+                "type": "number",
+                "minimum": 0.01
+              },
+              "stepOver": {
+                "type": "number",
+                "minimum": 0.05,
+                "maximum": 0.8,
+                "default": 0.5
+              },
+              "tool": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "operation"
+            ],
+            "title": "Facing or pocket"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "operation": {
+                "const": "drill"
+              },
+              "tool": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "locations": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "explicit"
+                      },
+                      "centres": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 256,
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "number",
+                            "minimum": -100000,
+                            "maximum": 100000
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "centres"
+                    ],
+                    "title": "Explicit centres"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "grid"
+                      },
+                      "columns": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 64,
+                        "default": 2
+                      },
+                      "rows": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 64,
+                        "default": 2
+                      },
+                      "xPitch": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 100000
+                      },
+                      "yPitch": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 100000
+                      },
+                      "centre": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "default": [
+                          0,
+                          0
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "xPitch",
+                      "yPitch"
+                    ],
+                    "title": "Rectangular grid"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "pitchCircle"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 64,
+                        "default": 4
+                      },
+                      "radius": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 100000
+                      },
+                      "phase": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180,
+                        "default": 0
+                      },
+                      "centre": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "default": [
+                          0,
+                          0
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "radius"
+                    ],
+                    "title": "Pitch circle"
+                  }
+                ]
+              },
+              "bottom": {
+                "type": "number",
+                "minimum": -100000,
+                "maximum": 100000
+              },
+              "cycle": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "drill",
+                        "default": "drill"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "title": "Drill"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "dwell"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      },
+                      "dwell": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 3600
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "dwell"
+                    ],
+                    "title": "Dwell"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "peck"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      },
+                      "peck": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 1000
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "peck"
+                    ],
+                    "title": "Peck"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "chipBreak"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      },
+                      "peck": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 1000
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "peck"
+                    ],
+                    "title": "Chip break"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "feedRetract"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind"
+                    ],
+                    "title": "Feed retract"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "operation",
+              "locations",
+              "bottom"
+            ],
+            "title": "Flat-bottom drilling"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "operation": {
+                "const": "drill"
+              },
+              "tool": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "locations": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "explicit"
+                      },
+                      "centres": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 256,
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "number",
+                            "minimum": -100000,
+                            "maximum": 100000
+                          },
+                          "minItems": 2,
+                          "maxItems": 2
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "centres"
+                    ],
+                    "title": "Explicit centres"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "grid"
+                      },
+                      "columns": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 64,
+                        "default": 2
+                      },
+                      "rows": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 64,
+                        "default": 2
+                      },
+                      "xPitch": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 100000
+                      },
+                      "yPitch": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 100000
+                      },
+                      "centre": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "default": [
+                          0,
+                          0
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "xPitch",
+                      "yPitch"
+                    ],
+                    "title": "Rectangular grid"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "pitchCircle"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 64,
+                        "default": 4
+                      },
+                      "radius": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 100000
+                      },
+                      "phase": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180,
+                        "default": 0
+                      },
+                      "centre": {
+                        "type": "array",
+                        "items": {
+                          "type": "number",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "default": [
+                          0,
+                          0
+                        ]
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "radius"
+                    ],
+                    "title": "Pitch circle"
+                  }
+                ]
+              },
+              "bottom": {
+                "type": "number",
+                "minimum": -100000,
+                "maximum": 100000
+              },
+              "cycle": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "drill",
+                        "default": "drill"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "title": "Drill"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "dwell"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      },
+                      "dwell": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 3600
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "dwell"
+                    ],
+                    "title": "Dwell"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "peck"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      },
+                      "peck": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 1000
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "peck"
+                    ],
+                    "title": "Peck"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "chipBreak"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      },
+                      "peck": {
+                        "type": "number",
+                        "minimum": 0.001,
+                        "maximum": 1000
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "peck"
+                    ],
+                    "title": "Chip break"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "feedRetract"
+                      },
+                      "return": {
+                        "enum": [
+                          "initial",
+                          "retract"
+                        ],
+                        "default": "initial"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "kind"
+                    ],
+                    "title": "Feed retract"
+                  }
+                ]
+              },
+              "depthReference": {
+                "enum": [
+                  "tip",
+                  "fullDiameter"
+                ]
+              },
+              "throughClearance": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "operation",
+              "locations",
+              "bottom",
+              "depthReference"
+            ],
+            "title": "Pointed drilling"
+          }
+        ]
+      }
+    },
+    "definitions": {
+      "$ref": "#/$defs/json"
+    },
+    "settings": {
+      "$ref": "#/$defs/json"
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "diameter": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 100
+              },
+              "cuttingLength": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "length": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 2000
+              },
+              "shankDiameter": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 100
+              },
+              "rpm": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 100000
+              },
+              "feed": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 100000
+              },
+              "plunge": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 100000
+              },
+              "flutes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12,
+                "default": 2
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "kind": {
+                "const": "flatEndmill"
+              },
+              "holder": {
+                "type": "object",
+                "properties": {
+                  "stickOut": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 2000
+                  },
+                  "steps": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 8,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "diameter": {
+                          "type": "number",
+                          "minimum": 0.1,
+                          "maximum": 500
+                        },
+                        "length": {
+                          "type": "number",
+                          "minimum": 0.1,
+                          "maximum": 2000
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "diameter",
+                        "length"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "stickOut",
+                  "steps"
+                ],
+                "title": "Stepped holder envelope"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "diameter",
+              "cuttingLength",
+              "length",
+              "shankDiameter",
+              "rpm",
+              "feed",
+              "plunge",
+              "id",
+              "kind"
+            ],
+            "title": "Flat endmill"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "kind": {
+                "const": "drill"
+              },
+              "diameter": {
+                "type": "number",
+                "minimum": 0.1,
+                "maximum": 100
+              },
+              "tipAngle": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 179
+              },
+              "cuttingReach": {
+                "type": "number",
+                "minimum": 0.1,
+                "maximum": 1000
+              },
+              "length": {
+                "type": "number",
+                "minimum": 0.1,
+                "maximum": 2000
+              },
+              "flutes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12,
+                "default": 2
+              },
+              "rpm": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 100000
+              },
+              "feed": {
+                "type": "number",
+                "minimum": 0.01,
+                "maximum": 100000
+              },
+              "plunge": {
+                "type": "number",
+                "minimum": 0.01,
+                "maximum": 100000
+              },
+              "holder": {
+                "type": "object",
+                "properties": {
+                  "stickOut": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 2000
+                  },
+                  "steps": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 8,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "diameter": {
+                          "type": "number",
+                          "minimum": 0.1,
+                          "maximum": 500
+                        },
+                        "length": {
+                          "type": "number",
+                          "minimum": 0.1,
+                          "maximum": 2000
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "diameter",
+                        "length"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "stickOut",
+                  "steps"
+                ],
+                "title": "Stepped holder envelope"
+              },
+              "shankDiameter": {
+                "type": "number",
+                "minimum": 0.1,
+                "maximum": 100
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "diameter",
+              "tipAngle",
+              "cuttingReach",
+              "length",
+              "rpm",
+              "feed",
+              "plunge"
+            ],
+            "title": "Pointed drill"
+          }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "source",
+    "operations"
+  ],
+  "oneOf": [
+    {
+      "title": "Single tool",
+      "required": [
+        "tool"
+      ],
+      "not": {
+        "required": [
+          "tools"
+        ]
+      }
+    },
+    {
+      "title": "Named tool table",
+      "required": [
+        "tools"
+      ],
+      "not": {
+        "required": [
+          "tool"
+        ]
+      }
+    }
+  ],
+  "allOf": [
+    {
+      "if": {
+        "anyOf": [
+          {
+            "required": [
+              "tool"
+            ],
+            "properties": {
+              "tool": {
+                "required": [
+                  "holder"
+                ]
+              }
+            }
+          },
+          {
+            "required": [
+              "tools"
+            ],
+            "properties": {
+              "tools": {
+                "contains": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "kind"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "const": "drill"
+                        }
+                      }
+                    },
+                    {
+                      "required": [
+                        "holder"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "required": [
+              "operations"
+            ],
+            "properties": {
+              "operations": {
+                "contains": {
+                  "required": [
+                    "depthReference"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "required": [
+          "setup"
+        ],
+        "properties": {
+          "setup": {
+            "required": [
+              "toolClearance"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

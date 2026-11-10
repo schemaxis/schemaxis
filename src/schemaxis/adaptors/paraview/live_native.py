@@ -65,7 +65,12 @@ class Worker(GraphWorker):
                                 visit(child, depth + 1, path)
                     visit(root)
                 assemblies[name] = blocks
-            return {'node': args['node'], 'port': args['port'],
+            geometry = None
+            if args.get('geometry'):
+                self.active, self.prepared = active, (master, active.selection, None, [args['node']])
+                try: geometry = {'objects': self.geometry(), 'units': 'native', 'observations': dict(active.observations)}
+                finally: self.active = self.prepared = None
+            return {'geometry': geometry, 'node': args['node'], 'port': args['port'],
                     'observation': {'bounds': list(info.GetBounds()), 'points': info.GetNumberOfPoints(), 'cells': info.GetNumberOfCells()},
                     'assemblies': assemblies, 'scope': 'Current draft input and its upstream dependencies; no publications'}
         finally:

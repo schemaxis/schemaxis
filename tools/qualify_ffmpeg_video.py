@@ -4,6 +4,7 @@
 import argparse
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 import threading
@@ -56,12 +57,33 @@ def fault(callback, expected):
     raise AssertionError('expected ' + expected)
 
 
+def source_decode_refusal(observed):
+    """Only the fresh verification's refusal of inconsistent source decodes: no other code, message, field or digest name."""
+    details = observed.get('observed')
+    return (observed.get('code') == 'VERIFICATION_FAILED'
+            and observed.get('message') == 'fresh native facts differ from the retained readbacks: sourceDecodedSHA256'
+            and observed.get('location') == '$' and observed.get('phase') == 'pipeline' and observed.get('retryable') is False
+            and type(details) is dict and set(details) == {'stage', 'differing', 'fresh'}
+            and details['stage'] == 'facts' and details['fresh'] is True
+            and type(details['differing']) is list and details['differing'] == ['sourceDecodedSHA256'])
+
+def source_decode_refusal_result(retained, run, observed):
+    """The retained result.json of that refusal: the adaptor's own final verification recorded the fault, or the framework's
+    later verification rewrote the adaptor's succeeded result. Nothing else is accepted."""
+    own = {'status': 'failed', 'verified': False, 'fault': observed}
+    framework = {'artifacts': 1, 'status': 'failed', 'verified': False, 'video': str(run / 'video.mkv'),
+                 'verificationFault': observed['message']}
+    return type(retained) is dict and retained.get('verified') is False and retained in (own, framework)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--executable', required=True)
     parser.add_argument('--output-directory', required=True, type=Path)
     args = parser.parse_args()
     executable = str(Path(args.executable).absolute())
+    # Verification decodes the published bytes again and takes its trusted runtime from the environment (never PATH or receipts).
+    os.environ['FFMPEG_EXECUTABLE'] = executable
     root = args.output_directory.absolute(); root.mkdir(parents=True, exist_ok=False)
     generated = {}
     for codec, variant in (('ffv1', 0), ('ffv1', 1), ('h264', 0)):
@@ -190,16 +212,118 @@ def main():
                                    'INVALID_FRAME_RANGE')['code']
     probes['timeout'] = fault(lambda: adaptor.run(baseline_document, root / 'timeout', executable=executable,
                                                  timeout=.000001), 'RUNNER_TIMED_OUT')['code']
+    # Real-world H.264 inputs (default B-frames, the adaptor's own output), the
+    # whole-source frame limit and damaged containers, each against native FFmpeg.
+    def fixture(label, width, height, count, rate, encoder, extension):
+        raw = root / (label + '.rgb')
+        raw.write_bytes(b''.join(pixels(index, width=width, height=height) for index in range(count)))
+        path = root / (label + extension)
+        native([executable, '-v', 'error', '-y', '-filter_threads', '1', '-f', 'rawvideo', '-pixel_format', 'rgb24',
+                '-video_size', f'{width}x{height}', '-framerate', str(rate), '-i', str(raw), '-an', '-threads', '1',
+                *encoder, str(path)])
+        raw.unlink(); return path
+
+    def clip(source, start, end, codec='ffv1', fps=12):
+        return {'version': 'schemaxis.ffmpeg/1', 'nodes': [{'id': 'clip', 'filter': 'encodeVideo',
+            'options': {'file': str(source), 'startFrame': start, 'endFrame': end, 'fps': fps, 'codec': codec}}]}
+
+    x264 = ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18']
+    ffv1 = ['-c:v', 'ffv1', '-level', '1', '-pix_fmt', 'bgr0']
+
+    def selected(label, source, start, end, document=None):
+        output = root / label
+        adaptor.run(document or clip(source, start, end), output, executable=executable, timeout=60)
+        verified = adaptor.verify(output)
+        independent = decode(executable, source, root / (label + '-source.rgb'))
+        stride = 64 * 48 * 3
+        actual = decode(executable, output / 'video.mkv', root / (label + '-independent.rgb'))
+        checks[label] = {'verification': verified, 'sourceFrameCount': len(independent) // stride,
+            'selectedFrames': per_frame(actual, [independent[i * stride:(i + 1) * stride] for i in range(start, end)])}
+    bframes = fixture('bframes', 64, 48, 30, 10, x264, '.mp4')
+    selected('h264-bframe-source', bframes, 3, 20)
+    from qualify_ffmpeg_deliverable import image
+    pngs = []
+    for index in range(5):
+        path = root / f'own-{index}.png'; path.write_bytes(image(64, 48, (40 + index * 40, 200 - index * 30, 90 + index * 10, 255)))
+        pngs.append(str(path))
+    own = root / 'own-h264'
+    adaptor.run({'version': 'schemaxis.ffmpeg/1', 'nodes': [{'id': 'movie', 'filter': 'encodeFrames',
+        'options': {'files': pngs, 'codec': 'h264', 'fps': 25}}]}, own, executable=executable, timeout=60)
+    own_source = root / 'own-published.mp4'; own_source.write_bytes((own / 'video.mp4').read_bytes())
+    selected('h264-own-output-as-source', own_source, 1, 4)
+    for codec, encoder, extension in (('h264', x264, '.mp4'), ('ffv1', ffv1, '.mkv')):
+        at_limit = fixture('frames600-' + codec, 16, 16, 600, 30, encoder, extension)
+        adaptor.run(clip(at_limit, 0, 600), root / ('limit-ok-' + codec), executable=executable, timeout=120)
+        checks['limit-ok-' + codec] = adaptor.verify(root / ('limit-ok-' + codec))
+        assert checks['limit-ok-' + codec]['frames'] == 600
+        over = fixture('frames601-' + codec, 16, 16, 601, 30, encoder, extension)
+        probes['frames601-' + codec] = fault(lambda: adaptor.run(clip(over, 0, 5), root / ('limit-over-' + codec),
+            executable=executable, timeout=120), 'RESOURCE_LIMIT')['code']
+        at_limit.unlink(); over.unlink()
+    complete_mp4 = fixture('fast', 64, 48, 40, 10, x264 + ['-movflags', '+faststart'], '.mp4')
+    complete_mkv = fixture('whole', 64, 48, 40, 10, ffv1, '.mkv')
+    slow_mp4 = fixture('slow', 64, 48, 20, 10, x264, '.mp4')
+    mp4_bytes, mkv_bytes = complete_mp4.read_bytes(), complete_mkv.read_bytes()
+
+    def flipped(data):
+        damaged = bytearray(data); middle = len(damaged) * 3 // 4
+        for index in range(middle, middle + 400): damaged[index] ^= 0xA5
+        return bytes(damaged)
+    malformed = {'junk-mp4': ('.mp4', b'not a video at all', 'INVALID_RESOURCE'),
+                 'empty-mkv': ('.mkv', b'', 'INVALID_RESOURCE'),
+                 'mp4-named-mkv': ('.mkv', mp4_bytes, 'UNSUPPORTED_VIDEO'),
+                 # Intact signature and no moov atom: FFprobe itself fails.
+                 'truncated-no-moov-mp4': ('.mp4', slow_mp4.read_bytes()[:3000], 'RUNNER_FAILED'),
+                 # FFmpeg decodes what it can and exits 0: damage is reported on stderr only.
+                 'truncated-tail-mp4': ('.mp4', mp4_bytes[:int(len(mp4_bytes) * .6)], 'INVALID_RESOURCE'),
+                 'truncated-mkv': ('.mkv', mkv_bytes[:int(len(mkv_bytes) * .6)], 'INVALID_RESOURCE'),
+                 'flipped-mp4': ('.mp4', flipped(mp4_bytes), 'INVALID_RESOURCE')                 }
+    for label, (extension, data, code) in malformed.items():
+        path = root / (label + extension); path.write_bytes(data)
+        observed = fault(lambda: adaptor.run(clip(path, 0, 5), root / (label + '-rejected'),
+            executable=executable, timeout=60), code)
+        probes[label] = code
+        if label.startswith(('truncated-tail', 'truncated-mkv', 'flipped')):
+            assert observed['observed']['diagnostics'] and observed['recovery']
+            probes[label + '-stage'] = observed['observed']['stage']
+    # FFV1 level 1 stores no checksums: a corrupted payload that FFmpeg decodes
+    # without any diagnostic cannot be told from different intended pixels. This
+    # is a native limit, so it is recorded, not claimed as rejected. FFmpeg may also
+    # decode the same corrupted bytes differently from one process to the next, again
+    # without diagnostics; fresh verification then refuses the run because the retained
+    # and fresh whole-source decodes disagree. That is a refusal of inconsistent native
+    # observations, not detection of the corruption: a consistent decode is accepted.
+    path = root / 'flipped-ffv1.mkv'; path.write_bytes(flipped(mkv_bytes))
+    run = root / 'flipped-ffv1-run'
+
+    def diagnostics():
+        return [(run / (stage + '.stderr')).read_text() for stage in ('source-probe', 'source-decode')]
+    try:
+        adaptor.run(clip(path, 0, 5), run, executable=executable, timeout=60)
+        assert diagnostics() == ['', ''], diagnostics()
+        limits = {'flipped-ffv1-level1-payload': 'accepted: FFmpeg reports no error, so decoder diagnostics cannot detect it'}
+    except SchemaxisError as error:
+        observed = error.fault.to_dict()
+        if source_decode_refusal(observed):
+            assert diagnostics() == ['', ''], diagnostics()
+            retained = json.loads((run / 'result.json').read_text())
+            assert source_decode_refusal_result(retained, run, observed), retained
+            limits = {'flipped-ffv1-level1-payload': 'refused as VERIFICATION_FAILED: the fresh decode of the corrupted source '
+                      'differed from the retained decode (sourceDecodedSHA256) with no decoder diagnostics; '
+                      'this is not corruption detection, and a consistent decode is accepted'}
+        else:
+            assert error.fault.code == 'INVALID_RESOURCE', observed
+            limits = {'flipped-ffv1-level1-payload': 'rejected as INVALID_RESOURCE'}
     for source in [*generated.values(), edited]:
         source.unlink()
     for label, *_ in cases:
-        assert adaptor.verify(root / label)['verified'], 'offline captured-source verification'
+        assert adaptor.verify(root / label)['verified'], 'fresh trusted verification of captured sources'
     receipt = {'version': 'schemaxis.ffmpeg.video-qualification/1', 'verified': True,
                'runtime': native([executable, '-version']).decode().splitlines()[0],
-               'checks': checks, 'probes': probes,
+               'checks': checks, 'probes': probes, 'limits': limits,
                'scope': 'Every RGB channel in two72-frame128x72 clip workflows plus six known six/four-frame source workflows and all selected output frames; '
                         'FFV1 baseline, range/rate/source variants, H264 input and MP4 presentation edit list; '
-                        'retention/reuse/binding/dishonest receipt/selection/multi-stream/offset/timeout/cancellation probes. No audio, scaling, general codecs or timeline editor.'}
+                        'default B-frame H.264 and adaptor-published H.264 as sources; 600-frame acceptance and 601-frame rejection for H.264 and FFV1; malformed, mislabelled and damaged (truncated or byte-corrupted) containers; retention/reuse/binding/dishonest receipt/selection/multi-stream/offset/timeout/cancellation probes. No audio, scaling, general codecs or timeline editor.'}
     atomic_json(root / 'qualification.json', receipt)
     print(json.dumps(receipt, indent=2))
 

@@ -1,0 +1,79 @@
+{
+  "id": "tesseract",
+  "version": "schemaxis.tesseract/1",
+  "adaptor": "schemaxis.adaptors.tesseract.adaptor",
+  "declarations": "schemaxis.adaptors.tesseract.adaptor:DECLARATIONS",
+  "runtimeFamily": "5.5.3",
+  "execution": "Bounded offline OCR of one opaque RGB8 PNG page with Tesseract 5.5.3 and one pinned English LSTM model: explicit page segmentation, machine-draft text, word boxes with uncalibrated native confidence, strict independent TSV verification and an inspectable summary",
+  "executables": [
+    "tesseract"
+  ],
+  "keywords": [
+    "OCR",
+    "optical character recognition",
+    "scanned page",
+    "scanned page OCR",
+    "Tesseract",
+    "recognize text in image",
+    "word boxes",
+    "machine draft"
+  ],
+  "display": {
+    "name": "Tesseract",
+    "mark": "Te",
+    "colour": "#5b6c8f"
+  },
+  "capabilities": "schemaxis.adaptors.tesseract.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.tesseract/1",
+    "operation": "recognizePage",
+    "image": {
+      "path": "/replace/with/page.png"
+    },
+    "model": {
+      "path": "/replace/with/eng.traineddata",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "pageSegmentation": "uniform-block"
+  },
+  "routes": {
+    "schemaxis.tesseract/1": {
+      "module": "schemaxis.adaptors.tesseract.adaptor",
+      "schema": "schemaxis.adaptors.tesseract.adaptor:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "tesseract",
+      "acceptedArtifacts": [
+        "image",
+        "text"
+      ],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.tesseract.adaptor:query",
+        "reusableInputs": "schemaxis.adaptors.tesseract.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.tesseract.adaptor:resources"
+      }
+    }
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--tesseract",
+      "dest": "tesseract",
+      "help": "Absolute Tesseract 5.5.3 executable"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "version": "schemaxis.oracle/1",
+  "operation": "report",
+  "connection": {"profile": "free_local"},
+  "axes": [{"name": "page_size", "values": [1, 2]}],
+  "tables": [
+    {
+      "name": "customers",
+      "columns": [
+        {"name": "id", "type": "number", "precision": 10, "scale": 0},
+        {"name": "name", "type": "varchar2", "length": 40},
+        {"name": "region", "type": "varchar2", "length": 12, "nullable": true},
+        {"name": "credit", "type": "number", "precision": 12, "scale": 2}
+      ],
+      "primaryKey": ["id"],
+      "source": {"path": "/replace/with/customers.json"}
+    }
+  ],
+  "report": {
+    "selects": [
+      {
+        "from": {"table": "customers", "alias": "c"},
+        "columns": [
+          {"name": "id", "operand": {"column": "c.id"}},
+          {"name": "credit", "operand": {"column": "c.credit"}}
+        ]
+      }
+    ],
+    "orderBy": [{"column": "id"}],
+    "limit": {"$axis": "page_size"}
+  }
+}

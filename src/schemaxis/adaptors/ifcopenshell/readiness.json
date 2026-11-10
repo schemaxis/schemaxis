@@ -1,0 +1,329 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.ifcopenshell/1": {
+      "guide": "docs/ifcopenshell.md",
+      "context": {
+        "purpose": "Schedule the plain IfcWall occurrences of one small ASCII IFC4 file into a GUID-linked typed table of the property-set values and quantities you name, with explicit occurrence/type/missing origin per cell and project SI units converted to m, m2 and m3. It reads stated values only: it does not compute or validate geometry, certify the model, check compliance, safety or cost, or validate the whole IFC file.",
+        "assumptions": "One ASCII IFC4 STEP file with FILE_SCHEMA exactly IFC4; 2 to 64 plain IfcWall entities; selected IfcPropertySingleValue and occurrence IfcQuantityLength/Area/Volume with plain SI project units; explicit missing and inheritance policies; a private IfcOpenShell 0.9.0.post1 interpreter on POSIX; a BIM coordinator reviews the schedule. A product hypothesis without demonstrated customer demand.",
+        "constraints": "File <=2MiB, <=4096 entities, strings <=256 characters (<=8192 strings), list nesting <=8, lists <=256 members, numeric tokens <=40 mantissa digits with exponent <=400 in magnitude (<=4 digits) and #ids <=10 digits anywhere in the file, REAL values need a decimal point and upper-case E (host capacity at the numeric extremes, such as IfcInteger up to 2^53 and ids up to 10 digits, is not native-qualified), walls 2-64, columns 2-6; ASCII only, no comments, escapes or complex entities; no IFC2X3/IFC4X3, IfcWallStandardCase, lists/enumerations/bounded/complex properties, property Unit, per-quantity Unit, conversion-based/derived/ambiguous/missing units, negative or empty values, geometry or selector expressions. Serial CPU, one thread, no authored native code.",
+        "inspection": "Inspect ifc-schedule.csv (typed CSV; \\N is the null token) and ifc-schedule.json (source hash and schema, policies, units, columns, every cell with origin, unassessed entity-class counts, runtime identity, review statement). Offline verify re-walks the retained source with the independent STEP reader and compares both retained native tables without launching IfcOpenShell.",
+        "recovery": "INVALID_SOURCE: select an absolute local .ifc regular file under 2MiB. UNSUPPORTED_SCHEMA: re-export as IFC4. UNSUPPORTED_STEP_ESCAPE/UNSUPPORTED_STEP_COMMENT: use plain ASCII STEP. STEP_RESOURCE_LIMIT: shorten the numeric token or #id named by the offset (values are never truncated). STEP_SYNTAX: write numbers as Part 21 INTEGER or REAL (2500. rather than 2500 or 25E2). HOST_EXECUTION_FAILED: an unexpected host failure before any native launch. NUMBER_RANGE: the value is outside binary64. UNSUPPORTED_ENTITY_CLASS: remove wall subtypes or other variants. DUPLICATE_GLOBAL_ID/DUPLICATE_ENTITY_ID/DUPLICATE_SET_NAME/DUPLICATE_PROPERTY_NAME/AMBIGUOUS_TYPE: repair the model, these are never resolved by last-wins. DANGLING_REFERENCE: the selected graph is incomplete. MISSING_VALUE: choose missing=null or supply the value (the fault names the wall GlobalId and column). UNIT_MISSING/UNSUPPORTED_UNIT/UNIT_AMBIGUOUS: declare a plain IfcSIUnit. TYPE_MISMATCH/UNSUPPORTED_PROPERTY: select a supported property type. QUANTITY_NEGATIVE/QUANTITY_ZERO/UNREPRESENTABLE_EMPTY_TEXT: fix the stored value or policy. NATIVE_DISAGREES: native and independent reading differ; the fault location names the cell. NATIVE_REOPEN_DIFFERS: a fresh native reopen differed. UNSUPPORTED_NATIVE_VERSION needs IfcOpenShell 0.9.0.post1; INTERPRETER_NOT_FOUND needs an absolute interpreter."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/ifcopenshell-baseline.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/ifcopenshell-variant.json"
+        },
+        {
+          "id": "areas",
+          "reference": "examples/schemaxis/ifcopenshell-areas.json"
+        },
+        {
+          "id": "metre",
+          "reference": "examples/schemaxis/ifcopenshell-metre.json"
+        },
+        {
+          "id": "duplicate-column-invalid",
+          "reference": "examples/schemaxis/ifcopenshell-duplicate-column-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_COLUMN",
+          "schemaValid": true
+        },
+        {
+          "id": "source-relative-invalid",
+          "reference": "examples/schemaxis/ifcopenshell-source-relative-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_SOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "class-invalid",
+          "reference": "examples/schemaxis/ifcopenshell-class-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "missing-invalid",
+          "reference": "examples/schemaxis/ifcopenshell-missing-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_ifcopenshell.py"
+      ],
+      "acceptance": [
+        "tools/qualify_ifcopenshell.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "The typed CSV publication is bound by Calc readTypedCSV in a real producer-to-consumer workflow; source, property, quantity and unit-prefix changes at the same path invalidate both jobs.",
+          "references": [
+            "docs/ifcopenshell.md",
+            "tools/qualify_ifcopenshell.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared expressions and finite visits resolve before planning.",
+          "references": [
+            "docs/ifcopenshell.md"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://docs.ifcopenshell.org/ifcopenshell-python/code_examples.html",
+          "https://docs.ifcopenshell.org/autoapi/ifcopenshell/util/element/index.html",
+          "https://docs.ifcopenshell.org/autoapi/ifcopenshell/util/unit/index.html",
+          "https://pypi.org/project/ifcopenshell/0.9.0.post1/"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers capture, host parse, version, extract, reopen and verification; CPU 600 s, address space 8GiB, file 16MiB per native process.",
+          "cancellation": "Cancellation and deadline are checked before capture and after every native stage; the shared owned process-tree runner terminates the owned native interpreter. A live native interpreter held after starting the extract worker was cancelled and timed out in the qualifier; incomplete and failed evidence stays inspectable.",
+          "logs": "Authored and effective plans, captured source, intent, worker, host expectation, trusted launchers, input bindings, submissions, stdout/stderr, runtime identity, both native tables and both publications are retained; failed attempts keep their result.json fault.",
+          "verification": "Offline: independent STEP re-walk of the retained source, byte-identical extract and reopen tables, exact semantic comparison of every GUID, name, origin and value, publication rebuild, worker/intent/launcher/input/runtime bindings and exact membership. Never launches IfcOpenShell."
+        },
+        "data": [
+          {
+            "id": "source-ifc",
+            "direction": "input",
+            "kind": "file",
+            "format": "IFC4 ASCII STEP",
+            "traits": {
+              "schema": "IFC4",
+              "encoding": "ASCII"
+            },
+            "losses": [
+              "ASCII STEP only; IFC2X3, IFC4X3, escapes, comments and complex entities are refused; unselected entities, geometry and relationships are unassessed."
+            ],
+            "scope": "One captured local file <=2MiB."
+          },
+          {
+            "id": "schedule-csv",
+            "direction": "output",
+            "kind": "table",
+            "format": "schemaxis typed CSV",
+            "traits": {
+              "nullToken": "\\N",
+              "order": "GlobalId ascending"
+            },
+            "losses": [
+              "Text is exact; numbers are binary64 SI values; a missing value is the null token, never zero; Name is nullable literal text, not an identity; geometry is never assessed."
+            ],
+            "scope": "GUID, Name and the selected columns for 2-64 walls."
+          },
+          {
+            "id": "schedule-json",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "status": "host-checked-schedule"
+            },
+            "losses": [
+              "Bindings, cells with origin, units and counts only; no model certification, quantity accuracy or geometry claim."
+            ],
+            "scope": "Source hash and schema, policies, units, columns, cells, unassessed counts, runtime identity and review statement."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Read the typed CSV and the JSON schedule.",
+            "limits": "Draft review only; no model viewer, no geometry, no accuracy claim."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the source path and pin, columns, missing, inheritance or zeroQuantity; plan fresh and verify. Same-path byte changes of the IFC file invalidate workflow reuse and the dependent Calc job."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "The typed CSV is a table artifact consumed by Calc readTypedCSV; the route accepts no upstream artifacts."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared expressions and finite visits resolve before planning."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The captured IFC source bytes participate in reuse identity."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing, undo and validation support the closed document."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared forms expose source, class, columns, missing, inheritance and zeroQuantity."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native-inspection hook; the summary is a publication."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial local subprocess only."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "One IFC file, not a temporal dataset."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No live application connection."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The captured image is retained; no edited image is saved."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Only a wall schedule; no IFC format or schema conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "three-walls",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Original synthetic IFC4 text (tools/author_ifcopenshell_fixtures.py): type default, occurrence override, explicit boolean, missing height, leading-zero and formula-like text and mm quantities, with literal CSV from hand derivation. Scope is IfcOpenShell 0.9.0.post1 and this fixture; not quantity accuracy or a certified model.",
+            "checks": [
+              {
+                "file": "ifc-schedule.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "\"GUID\",\"Name\",\"Fire rating\",\"External\",\"Note\",\"Length (m)\",\"Height (m)\"\n\"0SYN000000000000000011\",\"North wall\",\"2HR\",\"true\",\\N,2.5,3.0\n\"0SYN000000000000000014\",\"Core wall\",\"1HR\",\"true\",\"+reviewed =later\",4.0,\\N\n\"0SYN000000000000000021\",\\N,\"0123\",\\N,\"007\",1.8,2.7\n"
+              },
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/selection/walls",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/rows/0/cells/0/origin",
+                "expected": "type",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/rows/1/cells/0/origin",
+                "expected": "occurrence",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/rows/1/cells/4/origin",
+                "expected": "missing",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/review/geometryAssessed",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/unassessed/geometry",
+                "expected": "unassessed",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "changed-length",
+            "example": "variant",
+            "edits": [],
+            "scope": "One occurrence length changed from 2500 mm to 2600 mm in the synthetic file; the schedule must change to 2.6 m.",
+            "checks": [
+              {
+                "file": "ifc-schedule.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "\"GUID\",\"Name\",\"Fire rating\",\"External\",\"Note\",\"Length (m)\",\"Height (m)\"\n\"0SYN000000000000000011\",\"North wall\",\"2HR\",\"true\",\\N,2.6,3.0\n\"0SYN000000000000000014\",\"Core wall\",\"1HR\",\"true\",\"+reviewed =later\",4.0,\\N\n\"0SYN000000000000000021\",\\N,\"0123\",\\N,\"007\",1.8,2.7\n"
+              }
+            ]
+          },
+          {
+            "id": "prefixed-area-volume",
+            "example": "areas",
+            "edits": [],
+            "scope": "Synthetic walls with MILLI square-metre and cubic-metre project units: 7500000 mm2 is 7.5 m2 and 1.5E9 mm3 is 1.5 m3; zero and false stay present.",
+            "checks": [
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/rows/0/cells/3/value",
+                "expected": 7.5,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/rows/0/cells/4/value",
+                "expected": 1.5,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/rows/1/cells/4/value",
+                "expected": 0.25,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ifc-schedule.json",
+                "format": "json",
+                "pointer": "/rows/1/cells/2/value",
+                "expected": 0.0,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "New bounded IFC4 wall schedule route schemaxis.ifcopenshell/1: scheduleWalls with explicit property and quantity columns, occurrence/type precedence, missingness, plain SI unit conversion, independent STEP oracle, fresh native reopen, typed CSV and JSON publications and a Calc typed workbook handoff.",
+        "review": [
+          "verification/2026-10-26-ifcopenshell-wall-schedule.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native-inspection hook; the schedule is a publication.",
+          "mpi": "Serial local subprocess only.",
+          "time-batches": "One IFC file, not a temporal dataset.",
+          "live-editing": "No live application connection.",
+          "native-save": "No IFC file is written or saved.",
+          "conversion": "Only a wall schedule; no IFC format or schema conversion."
+        }
+      }
+    }
+  }
+}

@@ -19,6 +19,8 @@ def validate_mpi(document):
     if isinstance(provisional.get('times'), dict):
         provisional['times'] = [0.0]  # Source-time metadata is inspected by the native reader at execution.
     master, scenes, _ = plan(provisional)
+    if any(scene.get('stateBundle') for scene in scenes):
+        fail('UNSUPPORTED_MPI_PUBLICATION', 'editable state bundles are saved and reloaded only by serial pvbatch')
     active = {node for scene in scenes for node in scene['selection']['order']}
     unsupported = {master.nodes[node]['filter'] for node in active} - MPI_OPERATIONS
     if unsupported:

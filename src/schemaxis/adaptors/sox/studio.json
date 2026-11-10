@@ -25,7 +25,7 @@
   "categories": [
     {
       "id": "audio",
-      "title": "PCM audio assembly",
+      "title": "PCM audio assembly, conform, headroom and mix",
       "icon": "layers"
     }
   ],
@@ -83,6 +83,69 @@
             "fadeOutFrames": 349
           }
         ]
+      }
+    },
+    {
+      "id": "speech-conform",
+      "title": "Conform for transcription",
+      "description": "Resample a recording to PCM16 mono 16 kHz with an explicit channel choice; replace the WAV path.",
+      "document": {
+        "version": "schemaxis.sox/1",
+        "operation": "conform",
+        "source": "/replace/with/stereo44k.wav",
+        "channelPolicy": "average"
+      }
+    },
+    {
+      "id": "peak-headroom",
+      "title": "Scale to a peak level",
+      "description": "Scale one recording by a measured gain to an explicit sample peak with a boost ceiling; replace the WAV path.",
+      "document": {
+        "version": "schemaxis.sox/1",
+        "operation": "normalise",
+        "source": "/replace/with/quiet-stereo16k.wav",
+        "targetPeak": 20000,
+        "maxGain": 8
+      }
+    },
+    {
+      "id": "narration-mix",
+      "title": "Mix narration over a background",
+      "description": "Overlay a quarter-level background recording under a narration placed 200 frames in; both mono at the same rate. Replace the WAV paths.",
+      "document": {
+        "version": "schemaxis.sox/1",
+        "operation": "mix",
+        "narration": {
+          "source": "/replace/with/narration-mono8k.wav",
+          "gain": 1,
+          "offsetFrames": 200
+        },
+        "background": {
+          "source": "/replace/with/background-mono8k.wav",
+          "gain": 0.25,
+          "offsetFrames": 0
+        },
+        "durationPolicy": "longest"
+      }
+    },
+    {
+      "id": "narration-mix-trimmed",
+      "title": "Stereo mix ending with the narration",
+      "description": "Fractional gains on two stereo tracks; the background is cut where the narration ends. Replace the WAV paths.",
+      "document": {
+        "version": "schemaxis.sox/1",
+        "operation": "mix",
+        "narration": {
+          "source": "/replace/with/narration-stereo16k.wav",
+          "gain": 0.8,
+          "offsetFrames": 50
+        },
+        "background": {
+          "source": "/replace/with/background-stereo16k.wav",
+          "gain": 0.3333,
+          "offsetFrames": 0
+        },
+        "durationPolicy": "narration"
       }
     }
   ],

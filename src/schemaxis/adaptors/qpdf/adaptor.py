@@ -27,6 +27,8 @@ from .inspection import Document, DPI, MAX_SIDE_PIXELS, MAX_TOTAL_PIXELS
 from .native_source import source as observer_source
 
 VERSION = 'schemaxis.qpdf/1'
+SUMMARY = 'schemaxis.qpdf.summary/2'
+LEGACY_SUMMARY = 'schemaxis.qpdf.summary/1'        # earlier runs: no source byte identity; still verified as published
 QPDF_IDENTITY = 'qpdf version 12.4.2'
 MUPDF_IDENTITY = 'mutool version 1.28.5'
 MAX_SOURCE_BYTES = 16 * 1024 * 1024
@@ -332,10 +334,12 @@ def observe(paths, work, tag, jobs):
     return records
 
 
-def observe_all(paths, work, prepared, admitted=None):
+def observe_all(paths, work, prepared, admitted=None, identities=None):
     """The single fresh-observation pipeline used by run and verify; returns the published summary.
 
-    work holds source-<name>.pdf and final.pdf as private copies of the captured bytes.
+    work holds source-<name>.pdf and final.pdf as private copies of the captured bytes. identities maps each source name to
+    its captured (byte count, SHA-256) and yields the current summary; without it the earlier summary shape is regenerated,
+    which verification needs for genuine earlier runs.
     """
     work = Path(work)
     admitted = admitted or admit_sources(paths, work, prepared)
@@ -367,8 +371,9 @@ def observe_all(paths, work, prepared, admitted=None):
         pages.append({'output': index, 'source': name, 'sourcePage': page, 'rotate': rotate, 'rotation': got['rotation'] % 360,
                       'mediaBox': source['mediaBox'], 'effectiveBox': source['effective'], 'userUnit': source['userUnit'],
                       'pixels': got['pixmap'], 'rasterSha256': got['rasterSha256'], 'textCharacters': len(got['text'])})
-    return {'version': 'schemaxis.qpdf.summary/1', 'dpi': DPI, 'pageCount': len(positions),
-            'sources': [{'name': name, 'pages': entry['pages'], 'discarded': entry['discarded']} for name, entry in sorted(admitted.items())],
+    return {'version': LEGACY_SUMMARY if identities is None else SUMMARY, 'dpi': DPI, 'pageCount': len(positions),
+            'sources': [{'name': name, **({} if identities is None else {'bytes': identities[name][0], 'sha256': identities[name][1]}),
+                         'pages': entry['pages'], 'discarded': entry['discarded']} for name, entry in sorted(admitted.items())],
             'pages': pages, 'losses': LOSSES}
 
 
@@ -445,7 +450,8 @@ def run(document, directory, *, executable=None, oracle=None, timeout=300):
                 for entry in records:
                     Path(scratch, 'source-%s.pdf' % entry['name']).write_bytes(bounded(directory / ('source-%s.pdf' % entry['name'])))
                 Path(scratch, 'final.pdf').write_bytes(final)
-                summary = encode(observe_all(paths, scratch, prepared, admitted))
+                summary = encode(observe_all(paths, scratch, prepared, admitted,
+                                              {entry['name']: (entry['bytes'], entry['sha256']) for entry in records}))
             (directory / 'assembly-summary.json').write_bytes(summary)
             evidence = {name: sha(bounded(directory / name, limit=MAX_FINAL_BYTES)) for name in sorted(evidence_names(prepared))}
             atomic_json(directory / 'verification.json', {'artifacts': publications(directory, final, summary), 'evidence': evidence,
@@ -470,7 +476,8 @@ def verify_semantic(directory, paths, require_result=True):
     Checked from current bytes: (1) fresh QPDF/MuPDF observation of every output page against its captured source
     page (the decision); (2) retained diagnostics - plan.json equals the recomputed plan, capture.json matches the captured
     bytes, verification.json lists exactly the two publications with their current digests, assembly-summary.json equals the
-    freshly recomputed summary, and the digests of the retained evidence files are unchanged. Native stage logs,
+    freshly recomputed summary (at its own version: current summaries also bind each source's captured byte count and SHA-256;
+    genuine earlier summaries without them are recomputed in their earlier shape), and the digests of the retained evidence files are unchanged. Native stage logs,
     launchers and submissions are provenance; they are hash-bound but never reinterpreted. Receipt executables are inert.
     """
     directory = Path(directory).absolute()
@@ -498,13 +505,18 @@ def verify_semantic(directory, paths, require_result=True):
             receipt = read_json(directory, 'verification.json', MAX_OBSERVATION_BYTES)
             if receipt.get('artifacts') != publications(directory, final, summary):
                 fail('VERIFICATION_FAILED', 'publication membership or digests differ from the receipt')
+            retained = json.loads(summary)
+            if not isinstance(retained, dict) or retained.get('version') not in (SUMMARY, LEGACY_SUMMARY):
+                fail('VERIFICATION_FAILED', 'retained assembly summary has an unsupported version; rerun the assembly with this release')
             with tempfile.TemporaryDirectory(prefix='schemaxis-qpdf-') as scratch:
                 for name, data in captured.items():
                     Path(scratch, 'source-%s.pdf' % name).write_bytes(data)
                 Path(scratch, 'final.pdf').write_bytes(final)
                 runtime_identity = identity(paths, scratch)
-                fresh = observe_all(paths, scratch, prepared)
-            if fresh != json.loads(summary):
+                version = retained.get('version')
+                identities = None if version == LEGACY_SUMMARY else {n: (len(d), sha(d)) for n, d in captured.items()}
+                fresh = observe_all(paths, scratch, prepared, identities=identities)
+            if fresh != retained:
                 fail('VERIFICATION_FAILED', 'retained assembly summary differs from fresh native observation')
             evidence = receipt.get('evidence')
             if not isinstance(evidence, dict) or set(evidence) != evidence_names(prepared):

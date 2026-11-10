@@ -4,11 +4,11 @@
     "schemaxis.imagej/1": {
       "guide": "docs/imagej.md",
       "context": {
-        "purpose": "Threshold one calibrated 8/16-bit grayscale image with headless ImageJ 1.54 and publish verified per-particle measurements (pixel count, area, centroid, bounding box and raw intensity mean/min/max) in declared physical units, ready for Calc or a later R analysis.",
+        "purpose": "Threshold one calibrated 8/16-bit grayscale image with headless ImageJ 1.54 and publish verified per-particle measurements (pixel count, area, centroid, bounding box and raw intensity mean/min/max) in declared physical units, ready for Calc or a later R analysis. A second operation, measureRegions, applies one named rectangle list to 2-8 captured planes with declared frame IDs and times and publishes a labelled per-frame, per-region table.",
         "assumptions": "ImageJ 1.54 ij.jar (latest release 1.54t qualified) run by a Java 11+ runtime with the jdk.compiler module; a fixed Java source program uses public ImageJ classes headlessly with isolated preferences. Declared pixel width/height and unit replace any calibration stored in the file. Thresholds are inclusive raw stored intensities.",
-        "constraints": "One .pgm (P5, maxval 255 or 65535) or uncompressed single-IFD BlackIsZero 8/16-bit unsigned .tif/.tiff, at most 2048 px per side, 1048576 px and 16 MiB; no colour, stacks, ROI, density calibration or inverted LUT. Manual inclusive threshold only; full-range thresholds are rejected. Eight or four connectivity; four requires includeHoles. Size filter is converted to inclusive whole-pixel counts. At least one and at most 4096 particles. Units nm, um, mm, cm or m; pixel size 1e-6..1e6 per side. No arbitrary macros, scripts, plugins or Fiji launcher.",
+        "constraints": "One .pgm (P5, maxval 255 or 65535) or uncompressed single-IFD BlackIsZero 8/16-bit unsigned .tif/.tiff, at most 2048 px per side, 1048576 px and 16 MiB; no colour, stacks, ROI, density calibration or inverted LUT. Manual inclusive threshold only; full-range thresholds are rejected. Eight or four connectivity; four requires includeHoles. Size filter is converted to inclusive whole-pixel counts. At least one and at most 4096 particles. Units nm, um, mm, cm or m; pixel size 1e-6..1e6 per side. No arbitrary macros, scripts, plugins or Fiji launcher. measureRegions: 2-8 same-size, same-depth planes (4194304 px and 32 MiB total), 1-16 zero-based top-left integer rectangles (right/bottom exclusive, fully inside every frame, overlap allowed), safe unique frame/region IDs, strictly increasing finite seconds; no thresholds, motion, registration or overlay.",
         "inspection": "particles.csv has one row per particle in ImageJ raster order with unit-bearing column names. particle-summary.json retains image digest/format/bit depth, calibration and coordinate convention, threshold, connectivity, filters, rejected counts, totals and area fraction. count-mask.pgm, native tables and readbacks remain as evidence.",
-        "recovery": "INVALID_THRESHOLD: order the bounds and stay within the image bit depth; do not select every pixel. UNSUPPORTED_OPTION: four connectivity needs includeHoles true. INVALID_SIZE_FILTER: widen the area window to contain a whole pixel count. NO_PARTICLES: inspect thresholdPixels and rejected counts, then adjust threshold or filters. INVALID_IMAGE/UNSUPPORTED_IMAGE: convert to a supported plain grayscale PGM/TIFF. INTERPRETER_NOT_FOUND: configure Java (imagej) and ij.jar (imagejJar). UNSUPPORTED_RUNTIME: use ImageJ 1.54 and Java 11+. VERIFICATION_FAILED: keep the run directory and start a fresh attempt."
+        "recovery": "INVALID_THRESHOLD: order the bounds and stay within the image bit depth; do not select every pixel. UNSUPPORTED_OPTION: four connectivity needs includeHoles true. INVALID_SIZE_FILTER: widen the area window to contain a whole pixel count. NO_PARTICLES: inspect thresholdPixels and rejected counts, then adjust threshold or filters. INVALID_IMAGE/UNSUPPORTED_IMAGE: convert to a supported plain grayscale PGM/TIFF. INTERPRETER_NOT_FOUND: configure Java (imagej) and ij.jar (imagejJar). UNSUPPORTED_RUNTIME: use ImageJ 1.54 and Java 11+. VERIFICATION_FAILED: keep the run directory and start a fresh attempt. DUPLICATE_FRAME_ID/DUPLICATE_REGION_ID/INVALID_IDENTIFIER: use unique safe IDs. NON_INCREASING_TIME: list frames in strictly increasing seconds. REGION_OUT_OF_BOUNDS: keep each rectangle inside every frame. SERIES_MISMATCH: supply equal width, height and bit depth. RESOURCE_LIMIT: reduce the series or rectangles."
       },
       "examples": [
         {
@@ -168,6 +168,263 @@
           "expect": "invalid",
           "fault": "UNKNOWN_ARGUMENT",
           "schemaValid": false
+        },
+        {
+          "id": "regions-baseline",
+          "reference": "examples/schemaxis/imagej-regions.json"
+        },
+        {
+          "id": "regions-16bit",
+          "reference": "examples/schemaxis/imagej-regions-16bit.json"
+        },
+        {
+          "id": "regions-fractional",
+          "reference": "examples/schemaxis/imagej-regions-fractional.json"
+        },
+        {
+          "id": "regions-fractional-16bit",
+          "reference": "examples/schemaxis/imagej-regions-fractional-16bit.json"
+        },
+        {
+          "id": "regions-duplicate-region",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "measureRegions",
+            "frames": [
+              {
+                "id": "T0",
+                "image": "/replace-with-your-input/series/ramp8-t0.pgm",
+                "timeSeconds": 0.0
+              },
+              {
+                "id": "T1",
+                "image": "/replace-with-your-input/series/ramp8-t1.pgm",
+                "timeSeconds": 30.0
+              },
+              {
+                "id": "T2",
+                "image": "/replace-with-your-input/series/ramp8-t2.pgm",
+                "timeSeconds": 60.0
+              },
+              {
+                "id": "T3",
+                "image": "/replace-with-your-input/series/ramp8-t3.pgm",
+                "timeSeconds": 90.0
+              }
+            ],
+            "regions": [
+              {
+                "id": "core",
+                "x": 2,
+                "y": 1,
+                "width": 4,
+                "height": 3
+              },
+              {
+                "id": "core",
+                "x": 8,
+                "y": 5,
+                "width": 4,
+                "height": 3
+              },
+              {
+                "id": "nested",
+                "x": 3,
+                "y": 2,
+                "width": 2,
+                "height": 1
+              }
+            ],
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 2,
+              "unit": "um"
+            }
+          },
+          "expect": "invalid",
+          "fault": "DUPLICATE_REGION_ID",
+          "schemaValid": true
+        },
+        {
+          "id": "regions-time-order",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "measureRegions",
+            "frames": [
+              {
+                "id": "T0",
+                "image": "/replace-with-your-input/series/ramp8-t0.pgm",
+                "timeSeconds": 0.0
+              },
+              {
+                "id": "T1",
+                "image": "/replace-with-your-input/series/ramp8-t1.pgm",
+                "timeSeconds": 30.0
+              },
+              {
+                "id": "T2",
+                "image": "/replace-with-your-input/series/ramp8-t2.pgm",
+                "timeSeconds": 30.0
+              },
+              {
+                "id": "T3",
+                "image": "/replace-with-your-input/series/ramp8-t3.pgm",
+                "timeSeconds": 90.0
+              }
+            ],
+            "regions": [
+              {
+                "id": "core",
+                "x": 2,
+                "y": 1,
+                "width": 4,
+                "height": 3
+              },
+              {
+                "id": "edge",
+                "x": 8,
+                "y": 5,
+                "width": 4,
+                "height": 3
+              },
+              {
+                "id": "nested",
+                "x": 3,
+                "y": 2,
+                "width": 2,
+                "height": 1
+              }
+            ],
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 2,
+              "unit": "um"
+            }
+          },
+          "expect": "invalid",
+          "fault": "NON_INCREASING_TIME",
+          "schemaValid": true
+        },
+        {
+          "id": "regions-bad-identifier",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "measureRegions",
+            "frames": [
+              {
+                "id": "1st frame",
+                "image": "/replace-with-your-input/series/ramp8-t0.pgm",
+                "timeSeconds": 0.0
+              },
+              {
+                "id": "T1",
+                "image": "/replace-with-your-input/series/ramp8-t1.pgm",
+                "timeSeconds": 30.0
+              },
+              {
+                "id": "T2",
+                "image": "/replace-with-your-input/series/ramp8-t2.pgm",
+                "timeSeconds": 60.0
+              },
+              {
+                "id": "T3",
+                "image": "/replace-with-your-input/series/ramp8-t3.pgm",
+                "timeSeconds": 90.0
+              }
+            ],
+            "regions": [
+              {
+                "id": "core",
+                "x": 2,
+                "y": 1,
+                "width": 4,
+                "height": 3
+              },
+              {
+                "id": "edge",
+                "x": 8,
+                "y": 5,
+                "width": 4,
+                "height": 3
+              },
+              {
+                "id": "nested",
+                "x": 3,
+                "y": 2,
+                "width": 2,
+                "height": 1
+              }
+            ],
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 2,
+              "unit": "um"
+            }
+          },
+          "expect": "invalid",
+          "fault": "INVALID_IDENTIFIER",
+          "schemaValid": true
+        },
+        {
+          "id": "regions-authored-macro",
+          "document": {
+            "version": "schemaxis.imagej/1",
+            "operation": "measureRegions",
+            "frames": [
+              {
+                "id": "T0",
+                "image": "/replace-with-your-input/series/ramp8-t0.pgm",
+                "timeSeconds": 0.0
+              },
+              {
+                "id": "T1",
+                "image": "/replace-with-your-input/series/ramp8-t1.pgm",
+                "timeSeconds": 30.0
+              },
+              {
+                "id": "T2",
+                "image": "/replace-with-your-input/series/ramp8-t2.pgm",
+                "timeSeconds": 60.0
+              },
+              {
+                "id": "T3",
+                "image": "/replace-with-your-input/series/ramp8-t3.pgm",
+                "timeSeconds": 90.0
+              }
+            ],
+            "regions": [
+              {
+                "id": "core",
+                "x": 2,
+                "y": 1,
+                "width": 4,
+                "height": 3
+              },
+              {
+                "id": "edge",
+                "x": 8,
+                "y": 5,
+                "width": 4,
+                "height": 3
+              },
+              {
+                "id": "nested",
+                "x": 3,
+                "y": 2,
+                "width": 2,
+                "height": 1
+              }
+            ],
+            "calibration": {
+              "pixelWidth": 0.5,
+              "pixelHeight": 2,
+              "unit": "um"
+            },
+            "macro": "run(\"Measure\");"
+          },
+          "expect": "invalid",
+          "fault": "UNKNOWN_ARGUMENT",
+          "schemaValid": false
         }
       ],
       "conformance": [
@@ -175,7 +432,9 @@
       ],
       "acceptance": [
         "tools/qualify_imagej.py",
-        "tools/qualify_imagej_fixtures.py"
+        "tools/qualify_imagej_fixtures.py",
+        "tools/qualify_imagej_regions.py",
+        "tools/qualify_imagej_series_fixtures.py"
       ],
       "profiles": {
         "workflow": {
@@ -203,13 +462,16 @@
           "https://imagej.net/ij/developer/api/ij/ij/io/Opener.html",
           "https://imagej.net/ij/docs/menus/analyze.html",
           "https://imagej.net/ij/download.html",
-          "https://openjdk.org/jeps/330"
+          "https://openjdk.org/jeps/330",
+          "https://imagej.net/ij/developer/api/ij/ij/ImageStack.html",
+          "https://imagej.net/ij/developer/api/ij/ij/ImagePlus.html",
+          "https://imagej.net/ij/developer/api/ij/ij/gui/Roi.html"
         ],
         "lifecycle": {
           "timeout": "One deadline covers Java identification, the analyse stage and the fresh reopen stage; the shared kit watchdog bounds the whole attempt and a final deadline check bounds host verification.",
           "cancellation": "Shared owned-process cancellation with checks before each native stage and before publication; no resident ImageJ process.",
           "logs": "Retain authored/effective plans, the copied input image, fixed Java program, runtime record, java -version output, both stage submissions/stdout/stderr, native readbacks, native and reopened tables, count mask, publications and failure results.",
-          "verification": "An independent dependency-free PGM/TIFF decoder and connected-component model (raster order, inclusive threshold, 8/4 connectivity, enclosed-hole fill, bounding-box edge exclusion, whole-pixel size window) predicts every particle. Native ParticleAnalyzer rows, every count-mask label and a fresh-process ImageStatistics re-measurement of each label must match within 1e-12 relative. Native readback confirms ImageJ version, decoded dimensions/depth/plane count, consumed input digest, declared calibration and unit, threshold and analyser options. Publications and evidence are digest-bound and the summary is recomputed."
+          "verification": "An independent dependency-free PGM/TIFF decoder and connected-component model (raster order, inclusive threshold, 8/4 connectivity, enclosed-hole fill, bounding-box edge exclusion, whole-pixel size window) predicts every particle. Native ParticleAnalyzer rows, every count-mask label and a fresh-process ImageStatistics re-measurement of each label must match within 1e-12 relative. Native readback confirms ImageJ version, decoded dimensions/depth/plane count, consumed input digest, declared calibration and unit, threshold and analyser options. Publications and evidence are digest-bound and the summary is recomputed. measureRegions: an independent exact enumeration of every pixel of every rectangle in every captured frame (integer count, minimum, maximum, Fraction mean; area and geometry within 1e-12 relative) checks ImageStatistics rows and a fresh-process ImagePlus/Roi readback, which also reads back frame labels and rectangle names, calibration and source digests."
         },
         "data": [
           {
@@ -255,6 +517,53 @@
               "Totals and fractions describe this image and threshold only; no statistical inference or segmentation-quality claim."
             ],
             "scope": "Calibration and coordinate convention, threshold, connectivity, filters, rejected counts, totals and area fraction."
+          },
+          {
+            "id": "frames",
+            "direction": "input",
+            "kind": "image",
+            "format": "2-8 PGM (P5) or uncompressed baseline TIFF planes",
+            "traits": {
+              "channels": 1,
+              "bitDepth": "8 or 16 unsigned, identical across frames",
+              "dimensions": "identical width and height across frames",
+              "time": "declared seconds, strictly increasing",
+              "calibration": "declared, not read from file"
+            },
+            "losses": [
+              "File calibration, display range, LUT and metadata are not used; only raw stored intensities.",
+              "Frames are not registered, resampled or aligned; the same pixel coordinates are measured in every frame."
+            ],
+            "scope": "Series of at most 8 planes; at most 4194304 pixels and 32 MiB in total, each plane within the single-image limits."
+          },
+          {
+            "id": "region-measurements",
+            "direction": "output",
+            "kind": "file",
+            "format": "labelled CSV (text frame and region identifiers)",
+            "traits": {
+              "units": "area in declared unit^2; intensities raw; time in seconds",
+              "rows": "frames x regions, frame-major in declared order"
+            },
+            "losses": [
+              "Per-record scalar measurements only; no sums, centroids, outlines, overlay or editable ROI set.",
+              "CSV alone omits source hashes, calibration and conventions; keep the JSON record."
+            ],
+            "scope": "Frame, region, time, pixel count, calibrated area and raw mean/minimum/maximum for at most 128 records."
+          },
+          {
+            "id": "region-summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "provenance": "every frame SHA-256, ImageJ and Java versions",
+              "units": "declared"
+            },
+            "losses": [
+              "Describes these frames and rectangles only; no tracking, registration or biological or materials inference."
+            ],
+            "scope": "Series geometry, frame identity and time, region geometry, calibration and conventions, overlap statement, every record."
           }
         ],
         "inspection": [
@@ -267,6 +576,11 @@
             "panel": "text",
             "scope": "Review calibration, threshold, connectivity, filters, rejected counts and totals in the summary.",
             "limits": "Bounded JSON; the count mask is retained evidence, not an interactive viewer."
+          },
+          {
+            "panel": "table",
+            "scope": "Inspect labelled per-frame, per-region records.",
+            "limits": "At most 128 records; text identifiers need a typed consumer such as Calc readTypedCSV; no overlay."
           }
         ],
         "authoring": {
@@ -301,7 +615,7 @@
           },
           "workflow": {
             "status": "supported",
-            "scope": "Verified particle table into Calc (readCSV) with preserved unit-bearing column names; keep the summary for calibration and threshold provenance."
+            "scope": "Verified particle table into Calc (readCSV) with preserved unit-bearing column names; keep the summary for calibration and threshold provenance. measureRegions: the labelled CSV is a generic file artifact for Calc readTypedCSV with explicit text and numeric columns."
           },
           "composition": {
             "status": "supported",
@@ -309,7 +623,7 @@
           },
           "reusable-inputs": {
             "status": "supported",
-            "scope": "The input image digest and authored settings identify an attempt; a changed image file prevents reuse."
+            "scope": "The input image digest and authored settings identify an attempt; a changed image file prevents reuse. For measureRegions every frame path is bound to its digest, so changing one frame invalidates the attempt."
           },
           "source-authoring": {
             "status": "supported",
@@ -797,13 +1111,2477 @@
                 "relative": 1e-12
               }
             ]
+          },
+          {
+            "id": "regions-baseline-8bit",
+            "example": "regions-baseline",
+            "edits": [],
+            "resources": {
+              "/frames/0/image": "examples/schemaxis/fixtures/imagej/series/ramp8-t0.pgm",
+              "/frames/1/image": "examples/schemaxis/fixtures/imagej/series/ramp8-t1.pgm",
+              "/frames/2/image": "examples/schemaxis/fixtures/imagej/series/ramp8-t2.pgm",
+              "/frames/3/image": "examples/schemaxis/fixtures/imagej/series/ramp8-t3.pgm"
+            },
+            "scope": "Analytic 12x8 8-bit ramps v=10+8x+12y+20f, four frames at 0, 30, 60 and 90 s, 0.5 x 2 um rectangular pixels. Rectangles core(2,1,4x3), edge(8,5,4x3; right and bottom flush with the frame) and nested(3,2,2x1; inside core, so the measurements overlap). Closed form per rectangle: mean = ramp at the rectangle centre, minimum and maximum at its corners: core 62/38/86, edge 158/134/182, nested 62/58/66, each plus 20 per frame; counts 12, 12, 2; areas 12, 12, 2 um^2 (count x 0.5 x 2).",
+            "checks": [
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/region",
+                "expected": "edge"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/pixelCount",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/meanIntensity",
+                "expected": 62
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/minimumIntensity",
+                "expected": 38
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/maximumIntensity",
+                "expected": 86
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/pixelCount",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/meanIntensity",
+                "expected": 158
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/minimumIntensity",
+                "expected": 134
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/maximumIntensity",
+                "expected": 182
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/pixelCount",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/area",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/meanIntensity",
+                "expected": 62
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/minimumIntensity",
+                "expected": 58
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/maximumIntensity",
+                "expected": 66
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/pixelCount",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/meanIntensity",
+                "expected": 82
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/minimumIntensity",
+                "expected": 58
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/maximumIntensity",
+                "expected": 106
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/timeSeconds",
+                "expected": 30.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/pixelCount",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/meanIntensity",
+                "expected": 178
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/minimumIntensity",
+                "expected": 154
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/maximumIntensity",
+                "expected": 202
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/timeSeconds",
+                "expected": 30.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/pixelCount",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/area",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/meanIntensity",
+                "expected": 82
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/minimumIntensity",
+                "expected": 78
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/maximumIntensity",
+                "expected": 86
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/timeSeconds",
+                "expected": 30.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/pixelCount",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/meanIntensity",
+                "expected": 102
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/minimumIntensity",
+                "expected": 78
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/maximumIntensity",
+                "expected": 126
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/timeSeconds",
+                "expected": 60.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/pixelCount",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/meanIntensity",
+                "expected": 198
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/minimumIntensity",
+                "expected": 174
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/maximumIntensity",
+                "expected": 222
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/timeSeconds",
+                "expected": 60.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/pixelCount",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/area",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/meanIntensity",
+                "expected": 102
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/minimumIntensity",
+                "expected": 98
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/maximumIntensity",
+                "expected": 106
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/timeSeconds",
+                "expected": 60.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/pixelCount",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/meanIntensity",
+                "expected": 122
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/minimumIntensity",
+                "expected": 98
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/maximumIntensity",
+                "expected": 146
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/timeSeconds",
+                "expected": 90.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/pixelCount",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/meanIntensity",
+                "expected": 218
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/minimumIntensity",
+                "expected": 194
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/maximumIntensity",
+                "expected": 242
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/timeSeconds",
+                "expected": 90.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/pixelCount",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/area",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/meanIntensity",
+                "expected": 122
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/minimumIntensity",
+                "expected": 118
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/maximumIntensity",
+                "expected": 126
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/timeSeconds",
+                "expected": 90.0
+              }
+            ]
+          },
+          {
+            "id": "regions-16bit-tiff",
+            "example": "regions-16bit",
+            "edits": [],
+            "resources": {
+              "/frames/0/image": "examples/schemaxis/fixtures/imagej/series/ramp16-t0.tif",
+              "/frames/1/image": "examples/schemaxis/fixtures/imagej/series/ramp16-t1.tif",
+              "/frames/2/image": "examples/schemaxis/fixtures/imagej/series/ramp16-t2.tif"
+            },
+            "scope": "Analytic 12x8 16-bit little-endian TIFF ramps v=1000+900x+1700y+3000f, three frames at 0, 12.5 and 100 s, 0.25 x 0.5 mm pixels (0.125 mm^2). whole(0,0,12x8: 96 px = 12 mm^2) contains centre(4,2,4x4: 16 px = 2 mm^2); whole mean 11900, min 1000, max 22800; centre mean 11900, min 8000, max 15800, each plus 3000 per frame.",
+            "checks": [
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/pixelCount",
+                "expected": 96
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/meanIntensity",
+                "expected": 11900
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/minimumIntensity",
+                "expected": 1000
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/maximumIntensity",
+                "expected": 22800
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/timeSeconds",
+                "expected": 0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/pixelCount",
+                "expected": 16
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/area",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/meanIntensity",
+                "expected": 11900
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/minimumIntensity",
+                "expected": 8000
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/maximumIntensity",
+                "expected": 15800
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/timeSeconds",
+                "expected": 0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/pixelCount",
+                "expected": 96
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/meanIntensity",
+                "expected": 14900
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/minimumIntensity",
+                "expected": 4000
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/maximumIntensity",
+                "expected": 25800
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/timeSeconds",
+                "expected": 12.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/pixelCount",
+                "expected": 16
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/area",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/meanIntensity",
+                "expected": 14900
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/minimumIntensity",
+                "expected": 11000
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/maximumIntensity",
+                "expected": 18800
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/timeSeconds",
+                "expected": 12.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/pixelCount",
+                "expected": 96
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/area",
+                "expected": 12
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/meanIntensity",
+                "expected": 17900
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/minimumIntensity",
+                "expected": 7000
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/maximumIntensity",
+                "expected": 28800
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/timeSeconds",
+                "expected": 100
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/pixelCount",
+                "expected": 16
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/area",
+                "expected": 2
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/meanIntensity",
+                "expected": 17900
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/minimumIntensity",
+                "expected": 14000
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/maximumIntensity",
+                "expected": 21800
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/timeSeconds",
+                "expected": 100
+              }
+            ]
+          },
+          {
+            "id": "regions-fractional-8bit",
+            "example": "regions-fractional",
+            "edits": [],
+            "resources": {
+              "/frames/0/image": "examples/schemaxis/fixtures/imagej/series/frac8-t0.pgm",
+              "/frames/1/image": "examples/schemaxis/fixtures/imagej/series/frac8-t1.pgm",
+              "/frames/2/image": "examples/schemaxis/fixtures/imagej/series/frac8-t2.pgm"
+            },
+            "scope": "Fractional-mean 9x6 8-bit planes v=(29x+53y+17f+11xy) mod 256, three frames at 0, 12.5 and 40 s, 0.5 x 1.5 um pixels (0.75 um^2, so area is 0.75 x count, not the count). Rectangles third(1,2,3x1: sums 368, 419, 470, means 368/3, 419/3, 470/3), sevenths(0,2,7x1), corner(6,3,3x3), pixel(8,5,1x1) and whole(0,0,9x6; contains the others, so rectangles overlap). 12 of the 15 means are non-integral (non-terminating decimals such as 122.666...); expectations are independent Fractions from the closed formula, never from Schemaxis or ImageJ output.",
+            "checks": [
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/frame",
+                "expected": "F0"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/region",
+                "expected": "third"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/pixelCount",
+                "expected": 3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/area",
+                "expected": 2.25
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/meanIntensity",
+                "expected": 122.66666666666667
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/minimumIntensity",
+                "expected": 3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/maximumIntensity",
+                "expected": 208
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/frame",
+                "expected": "F0"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/region",
+                "expected": "sevenths"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/pixelCount",
+                "expected": 7
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/area",
+                "expected": 5.25
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/meanIntensity",
+                "expected": 112.71428571428571
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/minimumIntensity",
+                "expected": 3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/maximumIntensity",
+                "expected": 208
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/frame",
+                "expected": "F0"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/region",
+                "expected": "corner"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/pixelCount",
+                "expected": 9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/area",
+                "expected": 6.75
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/meanIntensity",
+                "expected": 97.22222222222223
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/minimumIntensity",
+                "expected": 1
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/maximumIntensity",
+                "expected": 211
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/frame",
+                "expected": "F0"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/region",
+                "expected": "pixel"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/pixelCount",
+                "expected": 1
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/area",
+                "expected": 0.75
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/meanIntensity",
+                "expected": 169.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/minimumIntensity",
+                "expected": 169
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/maximumIntensity",
+                "expected": 169
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/frame",
+                "expected": "F0"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/region",
+                "expected": "whole"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/pixelCount",
+                "expected": 54
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/area",
+                "expected": 40.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/meanIntensity",
+                "expected": 116.72222222222223
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/minimumIntensity",
+                "expected": 0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/maximumIntensity",
+                "expected": 253
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/frame",
+                "expected": "F1"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/region",
+                "expected": "third"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/timeSeconds",
+                "expected": 12.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/pixelCount",
+                "expected": 3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/area",
+                "expected": 2.25
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/meanIntensity",
+                "expected": 139.66666666666666
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/minimumIntensity",
+                "expected": 20
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/maximumIntensity",
+                "expected": 225
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/frame",
+                "expected": "F1"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/region",
+                "expected": "sevenths"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/timeSeconds",
+                "expected": 12.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/pixelCount",
+                "expected": 7
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/area",
+                "expected": 5.25
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/meanIntensity",
+                "expected": 129.71428571428572
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/minimumIntensity",
+                "expected": 20
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/maximumIntensity",
+                "expected": 225
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/frame",
+                "expected": "F1"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/region",
+                "expected": "corner"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/timeSeconds",
+                "expected": 12.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/pixelCount",
+                "expected": 9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/area",
+                "expected": 6.75
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/meanIntensity",
+                "expected": 114.22222222222223
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/minimumIntensity",
+                "expected": 18
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/maximumIntensity",
+                "expected": 228
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/frame",
+                "expected": "F1"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/region",
+                "expected": "pixel"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/timeSeconds",
+                "expected": 12.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/pixelCount",
+                "expected": 1
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/area",
+                "expected": 0.75
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/meanIntensity",
+                "expected": 186.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/minimumIntensity",
+                "expected": 186
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/maximumIntensity",
+                "expected": 186
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/frame",
+                "expected": "F1"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/region",
+                "expected": "whole"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/timeSeconds",
+                "expected": 12.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/pixelCount",
+                "expected": 54
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/area",
+                "expected": 40.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/meanIntensity",
+                "expected": 124.24074074074075
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/minimumIntensity",
+                "expected": 9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/9/maximumIntensity",
+                "expected": 249
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/frame",
+                "expected": "F2"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/region",
+                "expected": "third"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/timeSeconds",
+                "expected": 40.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/pixelCount",
+                "expected": 3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/area",
+                "expected": 2.25
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/meanIntensity",
+                "expected": 156.66666666666666
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/minimumIntensity",
+                "expected": 37
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/10/maximumIntensity",
+                "expected": 242
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/frame",
+                "expected": "F2"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/region",
+                "expected": "sevenths"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/timeSeconds",
+                "expected": 40.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/pixelCount",
+                "expected": 7
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/area",
+                "expected": 5.25
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/meanIntensity",
+                "expected": 146.71428571428572
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/minimumIntensity",
+                "expected": 37
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/11/maximumIntensity",
+                "expected": 242
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/12/frame",
+                "expected": "F2"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/12/region",
+                "expected": "corner"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/12/timeSeconds",
+                "expected": 40.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/12/pixelCount",
+                "expected": 9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/12/area",
+                "expected": 6.75
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/12/meanIntensity",
+                "expected": 131.22222222222223
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/12/minimumIntensity",
+                "expected": 35
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/12/maximumIntensity",
+                "expected": 245
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/13/frame",
+                "expected": "F2"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/13/region",
+                "expected": "pixel"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/13/timeSeconds",
+                "expected": 40.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/13/pixelCount",
+                "expected": 1
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/13/area",
+                "expected": 0.75
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/13/meanIntensity",
+                "expected": 203.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/13/minimumIntensity",
+                "expected": 203
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/13/maximumIntensity",
+                "expected": 203
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/14/frame",
+                "expected": "F2"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/14/region",
+                "expected": "whole"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/14/timeSeconds",
+                "expected": 40.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/14/pixelCount",
+                "expected": 54
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/14/area",
+                "expected": 40.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/14/meanIntensity",
+                "expected": 136.5
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/14/minimumIntensity",
+                "expected": 10
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/14/maximumIntensity",
+                "expected": 255
+              }
+            ]
+          },
+          {
+            "id": "regions-fractional-16bit",
+            "example": "regions-fractional-16bit",
+            "edits": [],
+            "resources": {
+              "/frames/0/image": "examples/schemaxis/fixtures/imagej/series/frac16-t0.tif",
+              "/frames/1/image": "examples/schemaxis/fixtures/imagej/series/frac16-t1.tif",
+              "/frames/2/image": "examples/schemaxis/fixtures/imagej/series/frac16-t2.tif"
+            },
+            "scope": "Fractional-mean 9x6 16-bit little-endian TIFF planes v=(4099x+7919y+1013f+977xy) mod 65536, three frames at 0, 7.25 and 20 s, 0.25 x 0.4 mm pixels (0.1 mm^2 each). Rectangles third(4,3,3x1: sums 111185, 114224, 117263; means 111185/3 etc.), block(2,2,3x3) and whole(0,0,9x6). 7 of the 9 means are non-integral; expectations are independent Fractions from the closed formula.",
+            "checks": [
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/frame",
+                "expected": "G0"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/region",
+                "expected": "third"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/pixelCount",
+                "expected": 3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/area",
+                "expected": 0.3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/meanIntensity",
+                "expected": 37061.666666666664
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/minimumIntensity",
+                "expected": 401
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/0/maximumIntensity",
+                "expected": 58907
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/frame",
+                "expected": "G0"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/region",
+                "expected": "block"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/pixelCount",
+                "expected": 9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/area",
+                "expected": 0.9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/meanIntensity",
+                "expected": 44847.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/minimumIntensity",
+                "expected": 27944
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/1/maximumIntensity",
+                "expected": 63704
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/frame",
+                "expected": "G0"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/region",
+                "expected": "whole"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/timeSeconds",
+                "expected": 0.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/pixelCount",
+                "expected": 54
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/area",
+                "expected": 5.4
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/meanIntensity",
+                "expected": 30186.314814814814
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/minimumIntensity",
+                "expected": 0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/2/maximumIntensity",
+                "expected": 64262
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/frame",
+                "expected": "G1"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/region",
+                "expected": "third"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/timeSeconds",
+                "expected": 7.25
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/pixelCount",
+                "expected": 3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/area",
+                "expected": 0.3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/meanIntensity",
+                "expected": 38074.666666666664
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/minimumIntensity",
+                "expected": 1414
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/3/maximumIntensity",
+                "expected": 59920
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/frame",
+                "expected": "G1"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/region",
+                "expected": "block"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/timeSeconds",
+                "expected": 7.25
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/pixelCount",
+                "expected": 9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/area",
+                "expected": 0.9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/meanIntensity",
+                "expected": 45860.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/minimumIntensity",
+                "expected": 28957
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/4/maximumIntensity",
+                "expected": 64717
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/frame",
+                "expected": "G1"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/region",
+                "expected": "whole"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/timeSeconds",
+                "expected": 7.25
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/pixelCount",
+                "expected": 54
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/area",
+                "expected": 5.4
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/meanIntensity",
+                "expected": 31199.314814814814
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/minimumIntensity",
+                "expected": 1013
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/5/maximumIntensity",
+                "expected": 65275
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/frame",
+                "expected": "G2"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/region",
+                "expected": "third"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/timeSeconds",
+                "expected": 20.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/pixelCount",
+                "expected": 3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/area",
+                "expected": 0.3
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/meanIntensity",
+                "expected": 39087.666666666664
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/minimumIntensity",
+                "expected": 2427
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/6/maximumIntensity",
+                "expected": 60933
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/frame",
+                "expected": "G2"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/region",
+                "expected": "block"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/timeSeconds",
+                "expected": 20.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/pixelCount",
+                "expected": 9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/area",
+                "expected": 0.9
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/meanIntensity",
+                "expected": 39591.22222222222
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/minimumIntensity",
+                "expected": 194
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/7/maximumIntensity",
+                "expected": 57723
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/frame",
+                "expected": "G2"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/region",
+                "expected": "whole"
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/timeSeconds",
+                "expected": 20.0
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/pixelCount",
+                "expected": 54
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/area",
+                "expected": 5.4
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/meanIntensity",
+                "expected": 29785.055555555555
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/minimumIntensity",
+                "expected": 194
+              },
+              {
+                "format": "json",
+                "absolute": 1e-12,
+                "relative": 1e-12,
+                "file": "region-measurements.json",
+                "pointer": "/records/8/maximumIntensity",
+                "expected": 60933
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "New schemaxis.imagej/1 route: analyzeParticles operation and every field (image, calibration, threshold, connectivity, includeHoles, excludeEdges, minimumArea, maximumArea); guidance, discovery cases, Studio starters, Help, maintenance metadata and native acceptance on synthetic calibration targets.",
+        "scope": "New schemaxis.imagej/1 route: analyzeParticles operation and every field (image, calibration, threshold, connectivity, includeHoles, excludeEdges, minimumArea, maximumArea); guidance, discovery cases, Studio starters, Help, maintenance metadata and native acceptance on synthetic calibration targets. 2026-10-24 addition: host-side TIFF ImageDescription boundary on the image field only (ImageJ stack and density-calibration metadata rejected before ImageJ is launched (when the run reads the image)); no native mapping change and no new native acceptance. 2026-10-26 addition (native runs on OpenJDK 25.0.4.1; the analyzeParticles records remain historical): measureRegions operation (frames, regions and their fields) with ImagePlus/ImageStack, Roi and ImageStatistics mapping, series fixtures, labelled CSV and summary, Calc readTypedCSV handoff with non-unit pixel area and fractional means (typed Calc only; no R handoff); analyzeParticles is unchanged.",
         "review": [
-          "verification/2026-10-16-imagej-completion.md"
+          "verification/2026-10-16-imagej-completion.md",
+          "verification/2026-10-24-imagej-allocation.md",
+          "verification/2026-10-25-imagej-regions.md",
+          "verification/2026-10-26-imagej-regions.md"
         ],
         "notApplicable": {}
       }

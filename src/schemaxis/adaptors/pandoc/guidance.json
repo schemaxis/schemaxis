@@ -3,12 +3,17 @@
   "operations": {
     "report": {
       "status": "reviewed",
-      "explanation": "Publish an ordered report with a visible title, sections, plain paragraphs, rectangular text tables and captured PNG figures as standalone HTML and editable Word DOCX. Use it for small measured-result reports. Trusted JSON AST, sandboxed writers, independent HTML/OOXML inspection and fresh DOCX native readback retain actual declared content. Default typography and pagination are not an exact layout or accessibility contract.",
+      "explanation": "Publish an ordered report with a visible title, sections, plain paragraphs, rectangular text tables, captured PNG figures and retained whisper.cpp transcripts as standalone HTML and editable Word DOCX. Use it for small measured-result reports and verified transcripts. Trusted JSON AST, sandboxed writers, independent HTML/OOXML inspection and fresh DOCX native readback retain actual declared content. Default typography and pagination are not an exact layout or accessibility contract. An optional epub declaration (language only) adds an EPUB 3 publication from the same model, checked by independent package and content inspection and a fresh Pandoc EPUB readback. An optional metadata object (authors and description, plain text only) is carried by the HTML, Word and optional EPUB publications and read back from each; these are your declarations, never verified identity.",
       "pitfalls": [
         "Replace each image placeholder with an absolute regular plain RGB/RGBA PNG path.",
         "Begin headings at level 1 and avoid increasing by more than 1.",
         "Every table row must have one text cell per column; numeric values must be written as strings.",
-        "No authored markup, templates, filters, scripts, rich text or arbitrary input-document conversion."
+        "No authored markup, templates, filters, scripts, rich text or arbitrary input-document conversion.",
+        "For a transcript or captions, write each time as literal digits and label the column with its unit, for example Start (ms); the report never parses, converts or reorders times. Put one utterance in one cell: line breaks, control characters and unsupported formatting characters (bidirectional overrides, embeddings and isolates, word joiner, byte order mark, stray tag characters, and a zero-width space outside Thai, Lao, Myanmar or Khmer text) are refused, while ZWNJ, ZWJ, left/right-to-left marks and emoji flag sequences are kept, so split a multi-line utterance into separate rows.",
+        "To publish a transcript, name a retained machine-draft segments.json or a declared reviewed/1, reviewed/2 or reviewed/3 publication, directly or through a text artifact. The file is captured at run time. Provenance distinguishes machine draft from an author-declared review; status never certifies who reviewed or heard the recording. Nonempty transcripts show exact cue text and millisecond-exact times in the selected format. An all-cues-deleted reviewed/2 or reviewed/3 publication shows explicit provenance without a table, with bound transcriptObservations describing that shape. Oversize or changed evidence is refused, never truncated or repaired.",
+        "Declare epub with a plain language tag to also publish report.epub; the EPUB claim is a bounded package and content proof, not EPUBCheck, device rendering or accessibility conformance, and without epub no EPUB is produced.",
+        "In a workflow an image block source may be an image artifact reference such as {\"$artifact\":\"decode\",\"index\":0} (index 0 of the WebP decodeToPng route is its PNG). The workflow checks the artifact kind, not the field, and the PNG still has to satisfy every image limit: a plain 8-bit RGB/RGBA PNG of at most 4 MiB (8 MiB for all images), dimensions up to 2048 pixels per axis and 1,048,576 pixels total, non-interlaced, no auxiliary chunks. Other artifact kinds (tables, audio, files, video, geometry) are refused before the report starts; a text artifact is accepted by the workflow but refused at the image block because it is not a .png path. Producers whose PNG exceeds a limit are refused, never rescaled or truncated. Place an image reference only at an image source: at an ordinary string field it becomes path text, while path fields retain their own checks (a PNG at transcript segments.path is refused as INVALID_TRANSCRIPT_SOURCE). The embedded bytes are those captured from the verified artifact; this is semantic consistency with the producing step, not signed authenticity of the picture.",
+        "Declare metadata with authors and a description to credit the report consistently in HTML, DOCX and EPUB. It is plain text only (no keywords, dates, rights, links or markup), authors may not contain a semicolon or repeat, and it is an author declaration: no verified identity, accessibility or review is implied."
       ],
       "examples": [
         {
@@ -18,6 +23,26 @@
         {
           "reference": "examples/schemaxis/pandoc-report-variant.json",
           "purpose": "Change a cell, image width and heading level and verify both formats."
+        },
+        {
+          "reference": "examples/schemaxis/pandoc-transcript.json",
+          "purpose": "Publish a timed transcript as a table of literal millisecond start and end times and dialogue text."
+        },
+        {
+          "reference": "examples/schemaxis/pandoc-transcript-artifact.json",
+          "purpose": "Publish a retained whisper.cpp segments.json as a provenance paragraph and a millisecond cue table."
+        },
+        {
+          "reference": "examples/schemaxis/pandoc-whisper-workflow.json",
+          "purpose": "Transcribe a speech recording and publish the verified segments.json as HTML and DOCX in one workflow."
+        },
+        {
+          "reference": "examples/schemaxis/pandoc-image-artifact.json",
+          "purpose": "Decode a WebP file to PNG and publish that verified PNG as a report image in HTML and DOCX in one workflow."
+        },
+        {
+          "reference": "examples/schemaxis/pandoc-image-artifact-epub.json",
+          "purpose": "The same decoded picture, also published in an EPUB 3 e-book."
         }
       ],
       "sources": [
@@ -97,7 +122,7 @@
         },
         "/properties/sections/items/properties/content": {
           "status": "reviewed",
-          "explanation": "Ordered 1–32 content blocks in this section: paragraph, table or image. The whole report permits 128 blocks, 65536 text characters and 8 images. Every kind has its own closed fields.",
+          "explanation": "Ordered 1–32 content blocks in this section: paragraph, table, image or transcript. The whole report permits 128 blocks, 65536 text characters (a transcript counts its provenance paragraph and every cell), 8 images and 2 transcripts. Every kind has its own closed fields.",
           "sources": [
             "docs/pandoc.md",
             "https://pandoc.org/MANUAL.html"
@@ -105,7 +130,7 @@
         },
         "/properties/sections/items/properties/content/items": {
           "status": "reviewed",
-          "explanation": "One content block selected from the closed paragraph, text-table or captured-PNG alternatives. Keep content order explicit; arbitrary document AST nodes are not accepted.",
+          "explanation": "One content block selected from the closed paragraph, text-table, captured-PNG or transcript alternatives. Keep content order explicit; arbitrary document AST nodes are not accepted.",
           "sources": [
             "docs/pandoc.md",
             "https://pandoc.org/MANUAL.html"
@@ -185,7 +210,7 @@
         },
         "/properties/sections/items/properties/content/items/anyOf/1/properties/rows/items/items": {
           "status": "reviewed",
-          "explanation": "One nonempty text cell, up to 256 characters, at the declared row/column position. It retains exact text, including numeric spelling; use single spaces and no line breaks.",
+          "explanation": "One nonempty text cell, up to 256 characters, at the declared row/column position. It retains exact text, including numeric spelling such as a millisecond timestamp 1250 or 007; use single spaces and no line breaks. Literal < & > and non-Latin script are kept; control, bidirectional-override, zero-width and noncharacter code points are refused.",
           "sources": [
             "docs/pandoc.md",
             "https://pandoc.org/MANUAL.html"
@@ -209,7 +234,7 @@
         },
         "/properties/sections/items/properties/content/items/anyOf/2/properties/source": {
           "status": "reviewed",
-          "explanation": "Required absolute path of a regular local .png, not a URL or symlink. Captured once with a digest before rendering; at most 4 MiB per image and 8 MiB combined, 8-bit RGB/RGBA, non-interlaced,1–2048 pixels per axis and 1048576 pixels total. Only IHDR/IDAT/IEND chunks are accepted.",
+          "explanation": "Required absolute path of a regular local .png, not a URL or symlink. Captured once with a digest before rendering; at most 4 MiB per image and 8 MiB combined, 8-bit RGB/RGBA, non-interlaced,1–2048 pixels per axis and 1048576 pixels total. Only IHDR/IDAT/IEND chunks are accepted. In a workflow a typed image artifact reference such as {\"$artifact\":\"decode\",\"index\":0} supplies the path (index 0 of the WebP decodeToPng route is its PNG); it is held to every limit here, and other artifact kinds are refused before the report starts.",
           "sources": [
             "docs/pandoc.md",
             "https://pandoc.org/MANUAL.html"
@@ -225,13 +250,191 @@
         },
         "/properties/sections/items/properties/content/items/anyOf/2/properties/widthMm": {
           "status": "reviewed",
-          "explanation": "Displayed image width in millimetres, inclusive 10–150, default 80 when omitted. Aspect ratio follows the captured pixel dimensions. OOXML rounds physical geometry within two EMU (1/18000 mm); native JSON readback width tolerance is 0.001 mm.",
+          "explanation": "Displayed image width in millimetres, inclusive 10–148 with at most five decimal places, default 80 when omitted. Pandoc 3.12.1 clamps DOCX pictures to its 148.17 mm page text width and writes HTML widths to five decimals, so wider or more precise values are refused at planning. Aspect ratio follows the captured pixel dimensions. OOXML rounds physical geometry within two EMU (1/18000 mm); native JSON readback width tolerance is 0.001 mm.",
           "sources": [
             "docs/pandoc.md",
             "https://pandoc.org/MANUAL.html"
           ],
           "units": "millimetres",
           "defaultMeaning": "Omission displays the image 80 mm wide with its captured pixel aspect ratio."
+        },
+        "/properties/sections/items/properties/content/items/anyOf/3": {
+          "status": "reviewed",
+          "explanation": "Transcript content alternative: select kind transcript and name retained machine-draft or author-declared reviewed timed text. The run captures its bytes, validates its closed versioned contract and publishes a provenance paragraph with a Start / End / Text table for retained cues (integer milliseconds, or HH:MM:SS.mmm when timeFormat is timecode). An all-cues-deleted reviewed/2 source has no table; the summary records the actual shape. A declared review status is carried as provenance and never certifies human identity, hearing the audio or word accuracy.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ],
+          "pitfalls": [
+            "Name the unedited segments.json from the whisper.cpp route; an edited, hand-written or other-version file is refused with a TIMED_TEXT fault, never loosened or repaired.",
+            "Cue text must also satisfy the report's plain-text rule (single spaces, no unsupported formatting characters); an offending cue is refused with its location rather than altered.",
+            "The file is read at run time, not when planning, so a valid plan does not prove the file exists or is acceptable."
+          ],
+          "examples": [
+            {
+              "reference": "examples/schemaxis/pandoc-transcript-artifact.json",
+              "purpose": "Publish a retained segments.json as a provenance paragraph and a millisecond cue table."
+            },
+            {
+              "reference": "examples/schemaxis/pandoc-whisper-workflow.json",
+              "purpose": "Transcribe a speech recording and publish the verified segments.json as HTML and DOCX in one workflow."
+            }
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/3/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Select transcript to publish one retained timed-text document. This is the only content kind that reads a transcript file; paragraphs and tables stay literal authored text.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/3/properties/segments": {
+          "status": "reviewed",
+          "explanation": "Required reference to the retained segments.json: an absolute path and an optional SHA-256 pin. The route captures the file once with a digest, validates it and retains the exact bytes, so later verification does not depend on the original path.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/3/properties/segments/properties/path": {
+          "status": "reviewed",
+          "explanation": "Required absolute path of a regular local segments.json, without parent references, links or special files, at most 4 MiB. In a workflow a text artifact reference such as {\"$artifact\":\"transcribe\",\"index\":0} supplies it; index 0 of the whisper.cpp route is segments.json (its transcript.txt is not accepted: it is not the timed document). Read at run time: a missing file is TRANSCRIPT_SOURCE_MISSING and an unusable one TRANSCRIPT_SOURCE_INVALID.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ],
+          "pitfalls": [
+            "A transcript.txt path produces INVALID_TRANSCRIPT_SOURCE because a .json path is required. A different JSON text artifact is refused with a TIMED_TEXT_* fault if it does not match the timed-transcript contract."
+          ]
+        },
+        "/properties/sections/items/properties/content/items/anyOf/3/properties/segments/properties/sha256": {
+          "status": "reviewed",
+          "explanation": "Optional lowercase SHA-256 (64 hex digits) of the exact segments.json bytes. When given, a different file is refused with TIMED_TEXT_DIGEST_MISMATCH and the pin is rechecked against the retained bytes at verification. When omitted, the captured digest is still recorded and shown in the provenance paragraph.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ],
+          "defaultMeaning": "Omission pins nothing in advance; the digest of the captured bytes is retained and verified later."
+        },
+        "/properties/sections/items/properties/content/items/anyOf/3/properties/timeFormat": {
+          "status": "reviewed",
+          "explanation": "Optional reading format for the cue times of this transcript block. milliseconds shows the recorded integer milliseconds in Start (ms) and End (ms) columns, as earlier reports did. timecode shows every start and end as elapsed HH:MM:SS.mmm (hours:minutes:seconds.milliseconds from the start of the recording) in Start (HH:MM:SS.mmm) and End (HH:MM:SS.mmm) columns, converted exactly from the same integers with no rounding or truncation. The cue order, text, provenance paragraph, status and limits do not change, and the choice is retained and verified with the report; it is a reading format, not a caption file and not a statement about recognition accuracy, timing accuracy or readability. Each transcript block chooses independently, so two blocks of one report may differ.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html"
+          ],
+          "defaultMeaning": "Omission keeps the existing millisecond columns and leaves the field out of the plan, summary and receipt; an explicit milliseconds publishes the same columns and records the choice.",
+          "pitfalls": [
+            "timecode hours are not limited to two digits: a recording over 99 hours shows three or more hour digits, and the dot before the milliseconds is literal, not a comma.",
+            "The clock is elapsed time since the start of the recording, never a wall-clock time of day; a recording that was cut or trimmed upstream reports times relative to the trimmed audio.",
+            "Choose timecode for readers of the published transcript and milliseconds when another tool or audit consumes the numbers; the report publishes the same cue times either way."
+          ]
+        },
+        "/properties/epub": {
+          "status": "reviewed",
+          "explanation": "Optional object that adds an EPUB 3 publication (report.epub) to the report, written by the official Pandoc EPUB 3 writer from the same trusted report model as the HTML and DOCX files: the title, headings, paragraphs, tables and embedded PNG images in authored order, one chapter file per level 1 section, with Pandoc's default stylesheet and navigation. Declare only the book language. The package is then read back by independent host code (exact ZIP framing and members, OPF manifest and spine, navigation, XHTML chapters, image bytes) and by a fresh Pandoc EPUB reader, and the report fails rather than publishing an EPUB that differs. This is a bounded structural proof, not EPUBCheck, reading-system or device rendering, or accessibility conformance.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/epub.html",
+            "https://pandoc.org/MANUAL.html"
+          ],
+          "defaultMeaning": "Omission publishes no EPUB: the plan, capture records, summary, result and the HTML, DOCX and summary files are exactly those of a report without the field. Declaring epub appends report.epub as the fourth artifact (index 3) after HTML, DOCX and the summary.",
+          "pitfalls": [
+            "Only language is accepted: covers, metadata fields, fonts, styles, templates, links, scripts and file paths are refused, not ignored. Authors and a description are declared in the report-level metadata object, never inside epub.",
+            "Pandoc writes its own fixed 1970-01-01 dates and its own default accessibility metadata; neither is an author declaration or a certification by this route.",
+            "Reading systems differ in how they display the default stylesheet and tables; the route does not render or test any device.",
+            "The report's existing budgets apply unchanged to an EPUB report: at most 32 sections, 128 content blocks, 65536 text characters and 8 PNG images of at most 4 MiB each and 8 MiB combined; over-budget input is refused, never truncated. The EPUB package limits (96 members, 32 MiB uncompressed, 8 MiB per text part) only guard against tampered or unexpected writer output; a report within its budgets does not reach them."
+          ]
+        },
+        "/properties/epub/properties/language": {
+          "status": "reviewed",
+          "explanation": "Required when epub is present: the language of the book as a plain ASCII language tag, such as en, fr, fr-CA, zh-Hans-CN or ar. Use a 2 or 3 letter primary language subtag followed by up to three hyphen-separated subtags of 2 to 8 letters or digits (script, region, variant), at most 35 characters in total. It becomes the EPUB package language (dc:language), the xml:lang of every chapter and the navigation language that reading systems use for hyphenation, text-to-speech and font choice. It is your declaration: the route does not detect the language of the text, does not check that the text is written in it, and does not certify translation, accuracy or accessibility.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/epub.html",
+            "https://pandoc.org/MANUAL.html"
+          ],
+          "defaultMeaning": "There is no default: language is required whenever epub is declared, and a report without epub publishes no EPUB.",
+          "pitfalls": [
+            "Write a hyphen, not an underscore (fr-CA, not fr_CA); spaces, newlines, non-ASCII letters, numbers, booleans and full language names such as english are refused.",
+            "The language applies to the whole book; a report in several languages declares its main language and the route does not mark individual passages.",
+            "Two-letter tags are not validated against the IANA registry, so a well-formed but unassigned tag is accepted and reading systems may ignore it."
+          ]
+        },
+        "/properties/metadata": {
+          "status": "reviewed",
+          "label": "Publishing metadata",
+          "explanation": "Optional object that declares who the report is credited to and a short summary, carried consistently by every publication: standalone HTML (author and description meta elements, and one visible author line each in the title block), Word DOCX (creator and description document properties, and one Author-style line each under the title) and, when epub is declared, EPUB 3 (one creator each and a description, and the authors on the title page). It holds only authors, description or both, as plain text. After the run each format is read back by independent code and by a fresh Pandoc reader, and the report fails instead of publishing a format whose authors or description differ, are missing or are extra. The authors and description are your declarations: nothing verifies who the authors are, that they wrote or approved the report, or that the description is accurate; the description does not imply accessibility, review or peer review.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html#metadata-variables",
+            "https://pandoc.org/MANUAL.html#epub-metadata"
+          ],
+          "defaultMeaning": "Omission publishes no authors or description: the plan, capture records, summary, result and every publication are exactly those of a report without the field. An empty object is refused; omit metadata instead.",
+          "pitfalls": [
+            "Only authors and description are accepted: other metadata keys (keywords, date, rights, identifiers, subjects), markup, links and scripts are refused, not ignored.",
+            "The authors and description count toward the report text budget of 65536 characters.",
+            "Pandoc writes its own fixed 1970-01-01 dates, generator name and default EPUB accessibility metadata; those are not declarations by this route.",
+            "The description is metadata and is not shown in the text of the HTML, DOCX or EPUB; the Word reader does not return it, so it is checked in the DOCX document properties only."
+          ]
+        },
+        "/properties/metadata/properties/authors": {
+          "status": "reviewed",
+          "label": "Authors",
+          "explanation": "Ordered list of 1 to 8 distinct author names, each plain Unicode text of 1 to 100 characters in one line with single spaces. They are published in the order written: as author meta elements and title-block lines in HTML, as the document creator list and Author-style lines in DOCX, and as ordered creators (marked with the marc:relators role aut by Pandoc) and title-page lines in EPUB. They are credits you declare for the report, never verified identities, affiliations or proof of authorship.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html#metadata-variables",
+            "https://pandoc.org/MANUAL.html#epub-metadata"
+          ],
+          "defaultMeaning": "Omit authors to publish no author credit; the list is never empty.",
+          "examples": [
+            [
+              "A. Example",
+              "B. Auteur"
+            ]
+          ],
+          "pitfalls": [
+            "A semicolon is refused inside a name: Word stores the creators as one list joined with semicolons, so a name containing one could not be told from two authors.",
+            "Names are compared exactly, case, accents and spacing included: listing the same name twice is refused (add a distinguishing detail to tell two people apart), while differently written names are treated as different.",
+            "Put one person per entry; do not combine several people in one string or add roles, emails, links or affiliations.",
+            "Leading or trailing spaces, double spaces, line breaks, tabs and unsupported formatting characters are refused rather than cleaned.",
+            "Whether the HTML, Word or e-reader application shows, sorts or abbreviates names is outside this route; Pandoc 3.12.1's own EPUB reader returns them in the reverse order, which the verification expects and accounts for."
+          ]
+        },
+        "/properties/metadata/properties/authors/items": {
+          "status": "reviewed",
+          "label": "Author name",
+          "explanation": "One author name as plain text, 1 to 100 characters, in a single line with single spaces and no semicolon. Written exactly as it should appear; nothing is translated, abbreviated, reordered, linked or verified.",
+          "sources": [
+            "docs/pandoc.md"
+          ],
+          "examples": [
+            "Zoë Müller"
+          ],
+          "pitfalls": [
+            "No semicolon, line break, tab, markup or role annotation; each entry is a different person."
+          ]
+        },
+        "/properties/metadata/properties/description": {
+          "status": "reviewed",
+          "label": "Description",
+          "explanation": "Short plain-text summary of the report, 1 to 1000 characters in one line with single spaces, stored as metadata only: the HTML description meta element, the Word document description property and the EPUB dc:description. It is not displayed in the body text of any publication and is the author's own declaration; it does not say the report is accurate, reviewed, peer reviewed or accessible.",
+          "sources": [
+            "docs/pandoc.md",
+            "https://pandoc.org/MANUAL.html#metadata-variables",
+            "https://pandoc.org/MANUAL.html#epub-metadata"
+          ],
+          "defaultMeaning": "Omit description to publish none; an empty string is refused.",
+          "examples": [
+            "Measured calibration readings for three temperatures."
+          ],
+          "pitfalls": [
+            "Markup, links and Markdown are not interpreted; characters such as < & > and quotation marks are kept as literal text.",
+            "Line breaks, tabs, double spaces and unsupported formatting characters are refused; a semicolon is allowed here.",
+            "Search engines, file managers and e-reader libraries decide whether and how they show the description; none was tested."
+          ]
         }
       }
     }

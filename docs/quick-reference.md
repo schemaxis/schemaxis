@@ -58,7 +58,7 @@ Native applications run in separate processes; discovery and planning do not
 require them to be installed.
 
 Start with `examples/schemaxis/source-coverage.json`, `blender-gallery.json`,
-`blender-showcase.json`, or `paraview-to-blender.json`.
+`blender-primitives.json`, or `paraview-to-blender.json`.
 The gallery requests OPTIX; use `"render":{"device":"CPU"}` on a machine without it.
 
 Expressions: `$axis` selects an iteration value; `$observe` and `$sample` read

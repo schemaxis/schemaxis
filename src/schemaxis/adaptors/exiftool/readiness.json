@@ -1,0 +1,833 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.exiftool/1": {
+      "guide": "docs/exiftool.md",
+      "context": {
+        "purpose": "Read, audit and compare the metadata photographs declare about themselves. inventoryPhotos inventories fixed selected fields of 1 to 16 baseline JPEGs; the workbench family (inspectMetadata, auditMetadata, compareMetadata) reads up to 512 photos (JPEG, TIFF, DNG, PNG, WebP, HEIF) and XMP sidecars from an explicit list or a declared folder into 40 catalogued typed fields (capture times and offsets, device, exposure, description, rights, GPS location, orientation and frame size), with typed CSVs for Calc, per-source states, literal concordance, rule-based findings and baseline comparison. reconcileTime and locate analyse capture clocks and recorded positions; correctTime, setLocation and geotagFromTrack write new JPEG copies with corrected capture times, declared positions or positions interpolated on GPX tracks, from declared domain intent and an optional plan.",
+        "assumptions": "Local regular JPEG (any coding process), TIFF, DNG, PNG, WebP and HEIF files (detected by signature, selected by suffix) and XMP sidecar files with stable IDs; synthetic or consented photographs only; ExifTool 13.55 (production) run by /usr/bin/perl with a clean environment and no configuration; metadata is observed and may be wrong; sources that disagree are reported, never resolved. Time and location workflows: references, assumed offsets, assumed-correct groups, positions, vertical references and track datums are the author's declarations and are never verified; no time zone or daylight-saving rule is known; GPX is untrusted XML.",
+        "constraints": "1-512 items, <=64 MiB each (256 MiB for a TIFF or DNG) and <=1 GiB total; folder depth <=2 with <=4096 scanned entries and no symbolic link followed; the 40 catalogued fields only (everything else unassessed); no pixel decode; originals are never modified; new copies: every writing operation (editMetadata, removeMetadata, correctTime, setLocation, geotagFromTrack, copyMetadata, applySidecar) writes JPEG, TIFF, DNG, PNG and WebP files and edits the existing Exif and XMP items of HEIF files (HEIF item creation and HEIF removal and minimise are refused; minimise is offered for JPEG, PNG and WebP, thumbnails for JPEG only); the container-by-container field matrix is in docs/exiftool.md; no renaming, reverse geocoding, vertical datum conversion, ExifVersion promotion, raw tag, option or expression authoring or native geotagging; GPX tracks are 1 to 8 files of at most 32 MiB each (64 MiB in total) and are captured byte for byte; no MWG-compliance, datum conversion, WGS-84 inference or privacy certification; a Calc handoff needs the typed-table minimums (>=1 row, >=2 present values per number column).",
+        "inspection": "Inspect metadata.json (per-item states, sources and reconciliation), manifest.json (every scanned entry with its inclusion reason), profile-<name>.csv, audit.json/findings.csv, comparison.json/differences.csv and, when requested, native-observations.json; retained captured files, native stdout and launchers stay in the run directory.",
+        "recovery": "INVALID_PHOTO_SOURCE/PHOTO_HASH_MISMATCH/UNSUPPORTED_MEDIA: select a regular local image or XMP file and a matching pin. Container refusals (TIFF_UNKNOWN_OFFSET_SUSPECT, TIFF_LAYOUT_OVERLAP, PNG_METADATA_AFTER_IDAT, WEBP_LAYOUT_UNSUPPORTED, HEIF_IMPLIED_EXTENT, HEIF_METADATA_ITEM_CREATION_UNSUPPORTED, HEIF_REMOVAL_UNSUPPORTED, HEIF_EMPTY_METADATA_ITEM, IPTC_RESOURCE_TAIL_UNSUPPORTED, MINIMISE_UNSUPPORTED_CONTAINER and the other codes of containerprofiles.json) name the unsupported structure: that item is refused and keeps its outcome document. MEDIA_FOLDER_CHANGED: rerun when the folder is stable. NO_USABLE_ITEMS: open manifest.json for each item's fault. NATIVE_ANCHOR_MISMATCH: ExifTool and the independent reader disagree about that file; keep the evidence and do not publish its values. NATIVE_REPLAY_UNAVAILABLE: configure the pinned ExifTool 13.55 to verify native-observed values. Field-level unreadable, unsupported and ambiguous states carry a code and message on the source record. Legacy inventoryPhotos faults are unchanged: UNSUPPORTED_JPEG, DUPLICATE_EXIF_TAG, AMBIGUOUS_EXIF, INVALID_EXIF_STRUCTURE, INVALID_EXIF_VALUE, UNSUPPORTED_NATIVE_VERSION. Time and location: REFERENCE_INVALID, GROUP_MEMBERSHIP_INVALID, UNKNOWN_ITEM: fix the declaration named by the location. GROUP_CONFLICTING, ASSUMPTION_CONTRADICTED, REFERENCE_CONTRADICTED, DRIFT_IMPLAUSIBLE: the declared references disagree; reconcileTime lists every residual. TIME_SOURCES_CONFLICT, TIME_SOURCE_UNREADABLE, TIME_OUT_OF_RANGE, ALTITUDE_REFERENCE_NOT_EXPRESSIBLE, EXIF_CREATION_UNVERIFIED, ALTITUDE_MEANING_CHANGED: that item is refused or unchanged and keeps its artifact slot as an outcome document; read it. TRACK_DTD_REFUSED, TRACK_MALFORMED, TRACK_POINT_INVALID, TRACK_RESOURCE_LIMIT, TRACK_HASH_MISMATCH: repair or replace the GPX file. TRACK_NOT_COVERED, TRACK_OVERLAP_CONFLICT: the photo cannot be placed; widen maxGapSeconds or fix the clock only if that is true. PLAN_STALE, PLAN_INCONSISTENT, PLAN_CATALOGUE_UNKNOWN, CLOCK_PLAN_HASH_MISMATCH: regenerate the plan. CLOCK_CORRECTION_UNAVAILABLE: the clock-correction plan has no correction for that item; fix the plan."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/exiftool-baseline.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/exiftool-variant.json"
+        },
+        {
+          "id": "id-invalid",
+          "reference": "examples/schemaxis/exiftool-id-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_PHOTO_ID",
+          "schemaValid": true
+        },
+        {
+          "id": "duplicate-id-invalid",
+          "reference": "examples/schemaxis/exiftool-duplicate-id-invalid.json",
+          "expect": "invalid",
+          "fault": "DUPLICATE_PHOTO_ID",
+          "schemaValid": true
+        },
+        {
+          "id": "path-relative-invalid",
+          "reference": "examples/schemaxis/exiftool-path-relative-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_PHOTO_SOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "hash-invalid",
+          "reference": "examples/schemaxis/exiftool-hash-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_SHA256",
+          "schemaValid": true
+        },
+        {
+          "id": "inspect-baseline",
+          "reference": "examples/schemaxis/exiftool-inspect-baseline.json"
+        },
+        {
+          "id": "inspect-variant",
+          "reference": "examples/schemaxis/exiftool-inspect-variant.json"
+        },
+        {
+          "id": "audit-baseline",
+          "reference": "examples/schemaxis/exiftool-audit-baseline.json"
+        },
+        {
+          "id": "compare-baseline",
+          "reference": "examples/schemaxis/exiftool-compare-baseline.json"
+        },
+        {
+          "id": "media-both-invalid",
+          "reference": "examples/schemaxis/exiftool-media-both-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "profile-invalid",
+          "reference": "examples/schemaxis/exiftool-profile-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "require-without-rule-invalid",
+          "reference": "examples/schemaxis/exiftool-require-without-rule-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_AUDIT",
+          "schemaValid": true
+        },
+        {
+          "id": "baseline-missing-invalid",
+          "reference": "examples/schemaxis/exiftool-baseline-missing-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_BASELINE",
+          "schemaValid": true
+        },
+        {
+          "id": "edit-baseline",
+          "reference": "examples/schemaxis/exiftool-edit-baseline.json"
+        },
+        {
+          "id": "edit-variant",
+          "reference": "examples/schemaxis/exiftool-edit-variant.json"
+        },
+        {
+          "id": "edit-keywords",
+          "reference": "examples/schemaxis/exiftool-edit-keywords.json"
+        },
+        {
+          "id": "remove-baseline",
+          "reference": "examples/schemaxis/exiftool-remove-baseline.json"
+        },
+        {
+          "id": "remove-variant",
+          "reference": "examples/schemaxis/exiftool-remove-variant.json"
+        },
+        {
+          "id": "minimise-baseline",
+          "reference": "examples/schemaxis/exiftool-minimise-baseline.json"
+        },
+        {
+          "id": "edit-empty-invalid",
+          "reference": "examples/schemaxis/exiftool-edit-empty-invalid.json",
+          "expect": "invalid",
+          "fault": "EDIT_EMPTY_VALUE",
+          "schemaValid": true
+        },
+        {
+          "id": "edit-raw-tag-invalid",
+          "reference": "examples/schemaxis/exiftool-edit-raw-tag-invalid.json",
+          "expect": "invalid",
+          "fault": "UNKNOWN_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "edit-sidecar-invalid",
+          "reference": "examples/schemaxis/exiftool-edit-sidecar-invalid.json",
+          "expect": "invalid",
+          "fault": "WRITE_SIDECAR_UNSUPPORTED",
+          "schemaValid": true
+        },
+        {
+          "id": "remove-category-invalid",
+          "reference": "examples/schemaxis/exiftool-remove-category-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "minimise-combined-invalid",
+          "reference": "examples/schemaxis/exiftool-minimise-combined-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": true
+        },
+        {
+          "id": "reconcile-time",
+          "reference": "examples/schemaxis/exiftool-reconcile-time.json"
+        },
+        {
+          "id": "locate-baseline",
+          "reference": "examples/schemaxis/exiftool-locate-baseline.json"
+        },
+        {
+          "id": "correct-time",
+          "reference": "examples/schemaxis/exiftool-correct-time.json"
+        },
+        {
+          "id": "set-location",
+          "reference": "examples/schemaxis/exiftool-set-location.json"
+        },
+        {
+          "id": "geotag-track",
+          "reference": "examples/schemaxis/exiftool-geotag-track.json"
+        },
+        {
+          "id": "correct-time-raw-argument-invalid",
+          "reference": "examples/schemaxis/exiftool-correct-time-raw-argument-invalid.json",
+          "expect": "invalid",
+          "fault": "UNKNOWN_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "set-location-range-invalid",
+          "reference": "examples/schemaxis/exiftool-set-location-range-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": true
+        },
+        {
+          "id": "geotag-native-invalid",
+          "reference": "examples/schemaxis/exiftool-geotag-native-invalid.json",
+          "expect": "invalid",
+          "fault": "UNKNOWN_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "copy-metadata",
+          "reference": "examples/schemaxis/exiftool-copy-metadata.json"
+        },
+        {
+          "id": "apply-sidecar",
+          "reference": "examples/schemaxis/exiftool-apply-sidecar.json"
+        },
+        {
+          "id": "export-sidecar",
+          "reference": "examples/schemaxis/exiftool-export-sidecar.json"
+        },
+        {
+          "id": "plan-names",
+          "reference": "examples/schemaxis/exiftool-plan-names.json"
+        },
+        {
+          "id": "organise-copies",
+          "reference": "examples/schemaxis/exiftool-organise-copies.json"
+        },
+        {
+          "id": "copy-metadata-raw-tag-invalid",
+          "reference": "examples/schemaxis/exiftool-copy-metadata-raw-tag-invalid.json",
+          "expect": "invalid",
+          "fault": "UNKNOWN_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "plan-names-template-invalid",
+          "reference": "examples/schemaxis/exiftool-plan-names-template-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "inspect-containers",
+          "reference": "examples/schemaxis/exiftool-inspect-containers.json"
+        },
+        {
+          "id": "edit-containers",
+          "reference": "examples/schemaxis/exiftool-edit-containers.json"
+        },
+        {
+          "id": "remove-containers",
+          "reference": "examples/schemaxis/exiftool-remove-containers.json"
+        },
+        {
+          "id": "correct-time-containers",
+          "reference": "examples/schemaxis/exiftool-correct-time-containers.json"
+        },
+        {
+          "id": "set-location-containers",
+          "reference": "examples/schemaxis/exiftool-set-location-containers.json"
+        },
+        {
+          "id": "copy-metadata-containers",
+          "reference": "examples/schemaxis/exiftool-copy-metadata-containers.json"
+        },
+        {
+          "id": "minimise-containers",
+          "reference": "examples/schemaxis/exiftool-minimise-containers.json"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_exiftool.py",
+        "tests/unit/test_exiftool_workbench.py",
+        "tests/unit/test_exiftool_write.py",
+        "tests/unit/test_exiftool_e3_clocks.py",
+        "tests/unit/test_exiftool_e3_geodesy.py",
+        "tests/unit/test_exiftool_e3_gpx.py",
+        "tests/unit/test_exiftool_e3_locations.py",
+        "tests/unit/test_exiftool_e3_time.py",
+        "tests/unit/test_exiftool_e3_read.py",
+        "tests/unit/test_exiftool_e3_correct.py",
+        "tests/unit/test_exiftool_e3_place.py",
+        "tests/unit/test_exiftool_e3_geotag.py",
+        "tests/unit/test_exiftool_e3_lifecycle.py",
+        "tests/unit/test_exiftool_e3_workflow.py",
+        "tests/unit/test_exiftool_e3_surface.py",
+        "tests/unit/test_exiftool_e4_naming.py",
+        "tests/unit/test_exiftool_e4_sidecar.py",
+        "tests/unit/test_exiftool_e4_transfer.py",
+        "tests/unit/test_exiftool_e4_organise.py",
+        "tests/unit/test_exiftool_e4_surface.py",
+        "tests/unit/test_exiftool_e4_workflow.py",
+        "tests/unit/test_exiftool_e4_lifecycle.py",
+        "tests/unit/test_exiftool_e4_qualifier_rows.py",
+        "tests/unit/test_exiftool_e5_positive.py",
+        "tests/unit/test_exiftool_e5_write.py",
+        "tests/unit/test_exiftool_e5_native.py",
+        "tests/unit/test_exiftool_e5_metadata_first.py",
+        "tests/unit/test_exiftool_e5_lifecycle.py",
+        "tests/unit/test_exiftool_e5_tiff.py",
+        "tests/unit/test_exiftool_e5_png.py",
+        "tests/unit/test_exiftool_e5_riff.py",
+        "tests/unit/test_exiftool_e5_heif.py",
+        "tests/unit/test_exiftool_e5_profiles.py",
+        "tests/unit/test_exiftool_e5_proof.py",
+        "tests/unit/test_exiftool_e5_surface.py",
+        "tests/unit/test_exiftool_e5_qualifier_rows.py",
+        "tests/unit/test_exiftool_e5_ops.py",
+        "tests/unit/test_exiftool_e5_minimise.py",
+        "tests/unit/test_exiftool_e5_residual.py",
+        "tests/unit/test_exiftool_e5_matrix.py",
+        "tests/unit/test_exiftool_e5_ops_mutants.py",
+        "tests/unit/test_exiftool_e5_lifecycle_ops.py",
+        "tests/unit/test_exiftool_e5_workflow.py",
+        "tests/unit/test_exiftool_e5_controls.py"
+      ],
+      "acceptance": [
+        "tools/qualify_exiftool.py",
+        "tools/qualify_exiftool_write.py",
+        "tools/qualify_exiftool_time_location.py",
+        "tools/qualify_exiftool_time_location_loop.py",
+        "tools/qualify_exiftool_transfer_sidecar_naming.py",
+        "tools/qualify_exiftool_transfer_sidecar_naming_loop.py",
+        "tools/qualify_exiftool_containers.py",
+        "tools/qualify_exiftool_containers_loop.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "The typed inventory.csv table artifact is consumed by Calc readTypedCSV in a verified workflow; photo bytes at the same path invalidate producer and consumer, unchanged photos reuse both. The workbench exposure profile CSV is consumed by Calc readTypedCSV when two photos record exposure.",
+          "references": [
+            "docs/exiftool.md",
+            "tools/qualify_exiftool.py",
+            "examples/schemaxis/exiftool-calc-workflow.json",
+            "examples/schemaxis/exiftool-exposure-calc-workflow.json"
+          ]
+        },
+        "composition": {
+          "scope": "Shared expressions and finite visits resolve before inventory planning.",
+          "references": [
+            "docs/exiftool.md"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://exiftool.org/exiftool_pod.html",
+          "https://exiftool.org/TagNames/EXIF.html",
+          "https://exiftool.org/history.html",
+          "https://github.com/exiftool/exiftool"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers capture, version, loader and module traces, both extraction processes and verification; CPU 300 s, address space 4GiB, file 16MiB and no core dumps per process, with the shared owned process-tree runner.",
+          "cancellation": "Cancellation and deadline are checked before capture, between native stages and before publication; a live timeout and cancel were each observed against a genuine ExifTool 13.55 Perl process (its /proc exe is the system Perl and its argv names the ExifTool script and the captured inputs) after the launcher had written the input bindings; the qualifier-owned SIGSTOP is a race hold, and the qualifier requires the dispatch leader exit code -15 or -9, the PID and process group gone, a failed result, retained logs, no success publication or sidecar and that its own safety-net kill was not needed. The time and location writes (correctTime, setLocation, geotagFromTrack) have their own live lifecycle test: a genuine ExifTool Perl write process (argv recorded from /proc, including the empty -config argument) is held, its process group is ended with SIGKILL before cleanup, the process and group are gone, the run fails with no success publication and the test's own safety-net kill was not needed.",
+          "logs": "Authored and effective plans, captured photos with identities, trusted launchers, input bindings, submissions, stdout/stderr, runtime file hashes and the receipt are retained.",
+          "verification": "Offline: independent reader re-parses every retained photo, ExifTool JSON must equal the reader per selected tag with exact JSON types, the repeated fresh process must match byte for byte, every publication is rebuilt, and the receipt is rechecked."
+        },
+        "data": [
+          {
+            "id": "photos",
+            "direction": "input",
+            "kind": "image",
+            "format": "JPEG",
+            "traits": {
+              "coding": "baseline sequential",
+              "precision": "8-bit",
+              "components": 3
+            },
+            "losses": [
+              "Baseline single-image JPEG/JFIF only; progressive, multi-image, trailing-data and other formats are refused; entropy data is not decoded."
+            ],
+            "scope": "1 to 16 captured local regular files."
+          },
+          {
+            "id": "inventory",
+            "direction": "output",
+            "kind": "table",
+            "format": "typed CSV",
+            "traits": {
+              "format": "schemaxis.calc.typed-csv/1",
+              "nullToken": "\\N"
+            },
+            "losses": [
+              "Selected fields only; missing values are nulls; no filesystem times; capturedLocal has no zone."
+            ],
+            "scope": "One row per photo in authored order."
+          },
+          {
+            "id": "metadata",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "schema": "schemaxis.exiftool.metadata/1"
+            },
+            "losses": [
+              "Scoped selected observations only; every other tag is unassessed."
+            ],
+            "scope": "IDs, digests, observed values, scoped native observations, review and losses."
+          },
+          {
+            "id": "tracks",
+            "direction": "input",
+            "kind": "text",
+            "format": "GPX",
+            "traits": {
+              "versions": "GPX 1.0 and 1.1",
+              "maxFilesPerRun": 8,
+              "maxBytesPerFile": 33554432,
+              "maxBytesTotal": 67108864
+            },
+            "losses": [
+              "Timed track fixes only: waypoints, routes, extensions and every element but trkpt latitude, longitude, time and elevation are not used; the path between fixes is unknown, no accuracy is claimed and the vertical reference of an elevation is declared by the author."
+            ],
+            "scope": "geotagFromTrack captures 1 to 8 local regular GPX files byte for byte (DTD, entities and external references refused); a text artifact of an earlier operation (for example a published plan file) can be bound to a plan option."
+          },
+          {
+            "id": "time-location-reports",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON and typed CSV",
+            "traits": {
+              "time": "schemaxis.exiftool.time-report/1",
+              "location": "schemaxis.exiftool.location-report/1"
+            },
+            "losses": [
+              "Analysis and plans of declared inputs: references, assumed offsets and positions are published as declared and are never verified; no time zone, daylight-saving rule, datum or vertical conversion."
+            ],
+            "scope": "time-report.json and time-report.csv (reconcileTime), location-report.json and location.csv (locate), time-correction-plan.json, location-plan.json, geotag-plan.json, track-report.json, write-report.json and residual.json (the write operations)."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Read the typed records, manifests, findings and comparisons.",
+            "limits": "Observed metadata only; no image display, no editing, no capture-truth or privacy-certification claim."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit item IDs, paths, pins, sidecars or the folder, profiles, rules and baseline; plan fresh and verify. Same-path byte changes and folder membership changes invalidate workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "The typed inventory table is consumed by Calc through normal workflow jobs."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared expressions and finite visits resolve before planning."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Captured item and sidecar bytes participate in reuse identity; a folder also contributes a manifest digest so an added or removed file invalidates reuse; captured GPX track bytes and plan-file bytes of the time and location operations are reusable inputs, so a changed track or plan invalidates reuse and a changed modification time alone does not."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing, undo and validation support the closed document."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared forms expose the media set (items or folder), profiles, rules and baseline."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native-inspection hook; the metadata summary is a publication."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial local subprocess only."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "Items are explicit files or a declared folder, not a temporal dataset."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No live application connection."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Originals are never written, removed or stripped: every writing operation (editMetadata, removeMetadata, correctTime, setLocation, geotagFromTrack, copyMetadata, applySidecar) publishes new copies of the same container into the run."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Metadata reading and writing only; no format conversion and no re-encoding of image data."
+          }
+        },
+        "cases": [
+          {
+            "id": "four-photos",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Original synthetic baseline JPEG fixtures (tools/author_exiftool_fixtures.py): literal specification values, never ExifTool output, checked by an independent byte-level reader and a second fresh ExifTool process.",
+            "checks": [
+              {
+                "file": "inventory.csv",
+                "format": "text",
+                "expected": "\"id\",\"width\",\"height\",\"orientation\",\"cameraMake\",\"cameraModel\",\"capturedLocal\",\"utcOffset\",\"capturedUtc\"\n\"north_gate\",16,8,1,\"Northfield\",\"NF-100\",\"2024-05-06T07:08:09\",\"+02:00\",\"2024-05-06T05:08:09Z\"\n\"river_bend\",8,16,6,\"Riverside Optics\",\"RB 7\",\"2023-12-31T23:59:58\",\"-05:30\",\"2024-01-01T05:29:58Z\"\n\"quarry\",24,8,3,\"Q\",\"=SUM(1+1)\",\"2024-02-29T00:00:00\",\\N,\\N\n\"unmarked\",8,8,\\N,\\N,\\N,\\N,\\N,\\N\n",
+                "pointer": ""
+              },
+              {
+                "file": "metadata.json",
+                "format": "json",
+                "pointer": "/photoCount",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "metadata.json",
+                "format": "json",
+                "pointer": "/review/captureTimeCertified",
+                "expected": false
+              }
+            ]
+          },
+          {
+            "id": "two-photos-one-without-exif",
+            "example": "variant",
+            "edits": [],
+            "scope": "Original synthetic baseline JPEG fixtures (tools/author_exiftool_fixtures.py): literal specification values, never ExifTool output, checked by an independent byte-level reader and a second fresh ExifTool process.",
+            "checks": [
+              {
+                "file": "inventory.csv",
+                "format": "text",
+                "expected": "\"id\",\"width\",\"height\",\"orientation\",\"cameraMake\",\"cameraModel\",\"capturedLocal\",\"utcOffset\",\"capturedUtc\"\n\"north_gate\",16,8,1,\"Northfield\",\"NF-100\",\"2024-05-06T07:08:09\",\"+02:00\",\"2024-05-06T05:08:09Z\"\n\"unmarked\",8,8,\\N,\\N,\\N,\\N,\\N,\\N\n",
+                "pointer": ""
+              },
+              {
+                "file": "metadata.json",
+                "format": "json",
+                "pointer": "/photoCount",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "metadata.json",
+                "format": "json",
+                "pointer": "/review/captureTimeCertified",
+                "expected": false
+              }
+            ]
+          },
+          {
+            "id": "items-capture-and-device-profiles",
+            "example": "inspect-variant",
+            "edits": [
+              {
+                "op": "remove",
+                "path": "/media/items/0/sha256"
+              },
+              {
+                "op": "replace",
+                "path": "/profiles",
+                "value": [
+                  "capture",
+                  "device"
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nativeListing",
+                "value": false
+              }
+            ],
+            "resources": {
+              "/media/items/0/path": "examples/schemaxis/fixtures/exiftool/ridge-line.jpg",
+              "/media/items/1/path": "examples/schemaxis/fixtures/exiftool/quay-side.jpg",
+              "/media/items/1/sidecar": "examples/schemaxis/fixtures/exiftool/quay-side.xmp",
+              "/media/items/2/path": "examples/schemaxis/fixtures/exiftool/sidecar-only.xmp"
+            },
+            "scope": "Synthetic JPEG/XMP fixtures from tools/author_exiftool_fixtures.py (committed under examples/schemaxis/fixtures/exiftool): expectations are hand-written from the fixture specification, never ExifTool output; folder sets are covered by the dedicated qualifier and agent loop because the shared kit binds single files only.",
+            "checks": [
+              {
+                "file": "profile-capture.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "\"id\",\"capturedLocal\",\"capturedLocalState\",\"capturedSubSecond\",\"capturedSubSecondState\",\"capturedOffset\",\"capturedOffsetState\",\"capturedUtc\",\"capturedUtcState\",\"digitizedLocal\",\"digitizedLocalState\",\"modifiedLocal\",\"modifiedLocalState\"\n\"ridge_line\",\"2024-05-06T07:08:09\",\"present\",\"12\",\"present\",\"+02:00\",\"present\",\"2024-05-06T05:08:09Z\",\"present\",\"2024-05-06T07:08:10\",\"present\",\\N,\"absent\"\n\"quay_side\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\"\n\"sidecar_only\",\"2022-08-09T10:11:12\",\"present\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\"\n"
+              },
+              {
+                "file": "profile-device.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "\"id\",\"cameraMake\",\"cameraMakeState\",\"cameraModel\",\"cameraModelState\",\"software\",\"softwareState\",\"lensMake\",\"lensMakeState\",\"lensModel\",\"lensModelState\",\"bodySerialNumber\",\"bodySerialNumberState\",\"lensSerialNumber\",\"lensSerialNumberState\"\n\"ridge_line\",\"Northfield\",\"present\",\"NF-200\",\"present\",\"Synthetic fixture generator\",\"present\",\\N,\"absent\",\"NF 35mm f/1.8\",\"present\",\"SN-0001\",\"present\",\\N,\"absent\"\n\"quay_side\",\"Northfield\",\"present\",\"NF-100\",\"present\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\",\\N,\"absent\"\n\"sidecar_only\",\\N,\"absent\",\\N,\"absent\",\\N,\"unsupported\",\\N,\"unsupported\",\\N,\"unsupported\",\\N,\"unsupported\",\\N,\"unsupported\"\n"
+              },
+              {
+                "file": "metadata.json",
+                "format": "json",
+                "pointer": "/setStatus",
+                "expected": "complete"
+              },
+              {
+                "file": "metadata.json",
+                "format": "json",
+                "pointer": "/counts/succeeded",
+                "expected": 3
+              },
+              {
+                "file": "metadata.json",
+                "format": "json",
+                "pointer": "/review/privacyCertified",
+                "expected": false
+              }
+            ]
+          },
+          {
+            "id": "items-native-listing-and-sidecar-description",
+            "example": "inspect-variant",
+            "edits": [
+              {
+                "op": "remove",
+                "path": "/media/items/0/sha256"
+              }
+            ],
+            "resources": {
+              "/media/items/0/path": "examples/schemaxis/fixtures/exiftool/ridge-line.jpg",
+              "/media/items/1/path": "examples/schemaxis/fixtures/exiftool/quay-side.jpg",
+              "/media/items/1/sidecar": "examples/schemaxis/fixtures/exiftool/quay-side.xmp",
+              "/media/items/2/path": "examples/schemaxis/fixtures/exiftool/sidecar-only.xmp"
+            },
+            "scope": "Synthetic JPEG/XMP fixtures from tools/author_exiftool_fixtures.py (committed under examples/schemaxis/fixtures/exiftool): expectations are hand-written from the fixture specification, never ExifTool output; folder sets are covered by the dedicated qualifier and agent loop because the shared kit binds single files only.",
+            "checks": [
+              {
+                "file": "native-observations.json",
+                "format": "json",
+                "pointer": "/proofLevel",
+                "expected": "native-observed"
+              },
+              {
+                "file": "manifest.json",
+                "format": "json",
+                "pointer": "/status",
+                "expected": "complete"
+              },
+              {
+                "file": "manifest.json",
+                "format": "json",
+                "pointer": "/counts/items",
+                "expected": 3
+              },
+              {
+                "file": "manifest.json",
+                "format": "json",
+                "pointer": "/counts/excluded",
+                "expected": 0
+              }
+            ]
+          },
+          {
+            "id": "audit-required-fields-and-privacy",
+            "example": "audit-baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/media",
+                "value": {
+                  "items": [
+                    {
+                      "id": "quay_side",
+                      "path": "/replace/quay-side.jpg",
+                      "sidecar": "/replace/quay-side.xmp"
+                    },
+                    {
+                      "id": "ridge_line",
+                      "path": "/replace/ridge-line.jpg"
+                    },
+                    {
+                      "id": "sidecar_only",
+                      "path": "/replace/sidecar-only.xmp"
+                    }
+                  ]
+                }
+              }
+            ],
+            "resources": {
+              "/media/items/0/path": "examples/schemaxis/fixtures/exiftool/quay-side.jpg",
+              "/media/items/0/sidecar": "examples/schemaxis/fixtures/exiftool/quay-side.xmp",
+              "/media/items/1/path": "examples/schemaxis/fixtures/exiftool/ridge-line.jpg",
+              "/media/items/2/path": "examples/schemaxis/fixtures/exiftool/sidecar-only.xmp"
+            },
+            "scope": "Synthetic JPEG/XMP fixtures from tools/author_exiftool_fixtures.py (committed under examples/schemaxis/fixtures/exiftool): expectations are hand-written from the fixture specification, never ExifTool output; folder sets are covered by the dedicated qualifier and agent loop because the shared kit binds single files only.",
+            "checks": [
+              {
+                "file": "findings.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "\"item\",\"rule\",\"severity\",\"field\",\"status\",\"message\"\n\"quay_side\",\"requiredFields\",\"warning\",\"capturedLocal\",\"absent\",\"Capture time (local wall time) is required but is absent\"\n\"quay_side\",\"privacyInventory\",\"info\",\\N,\"present\",\"the file records device-identity metadata\"\n\"ridge_line\",\"privacyInventory\",\"info\",\\N,\"present\",\"the file records location metadata\"\n\"ridge_line\",\"privacyInventory\",\"info\",\\N,\"present\",\"the file records device-identity metadata\"\n\"ridge_line\",\"privacyInventory\",\"info\",\\N,\"present\",\"the file records personal-identity metadata\"\n\"sidecar_only\",\"requiredFields\",\"warning\",\"cameraModel\",\"absent\",\"Camera model is required but is absent\"\n\"sidecar_only\",\"privacyInventory\",\"info\",\\N,\"present\",\"the file records personal-identity metadata\"\n"
+              },
+              {
+                "file": "audit.json",
+                "format": "json",
+                "pointer": "/summary/findings",
+                "expected": 7
+              },
+              {
+                "file": "audit.json",
+                "format": "json",
+                "pointer": "/summary/itemsAudited",
+                "expected": 3
+              },
+              {
+                "file": "audit.json",
+                "format": "json",
+                "pointer": "/summary/itemsFaulted",
+                "expected": 0
+              }
+            ]
+          },
+          {
+            "id": "compare-against-ridge-line-baseline",
+            "example": "compare-baseline",
+            "edits": [],
+            "resources": {
+              "/media/items/0/path": "examples/schemaxis/fixtures/exiftool/ridge-line.jpg",
+              "/media/items/1/path": "examples/schemaxis/fixtures/exiftool/conflict-desk.jpg",
+              "/media/items/2/path": "examples/schemaxis/fixtures/exiftool/duplicate-tags.jpg"
+            },
+            "scope": "Synthetic JPEG/XMP fixtures from tools/author_exiftool_fixtures.py (committed under examples/schemaxis/fixtures/exiftool): expectations are hand-written from the fixture specification, never ExifTool output; folder sets are covered by the dedicated qualifier and agent loop because the shared kit binds single files only.",
+            "checks": [
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/different",
+                "expected": 3
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/missing-in-item",
+                "expected": 13
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/missing-in-baseline",
+                "expected": 0
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/both-absent",
+                "expected": 4
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/not-comparable",
+                "expected": 2
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/same",
+                "expected": 0
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/baseline",
+                "expected": "ridge_line"
+              }
+            ]
+          },
+          {
+            "id": "compare-against-duplicate-tags-baseline",
+            "example": "compare-baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/baseline",
+                "value": "duplicate_tags"
+              }
+            ],
+            "resources": {
+              "/media/items/0/path": "examples/schemaxis/fixtures/exiftool/ridge-line.jpg",
+              "/media/items/1/path": "examples/schemaxis/fixtures/exiftool/conflict-desk.jpg",
+              "/media/items/2/path": "examples/schemaxis/fixtures/exiftool/duplicate-tags.jpg"
+            },
+            "scope": "Synthetic JPEG/XMP fixtures from tools/author_exiftool_fixtures.py (committed under examples/schemaxis/fixtures/exiftool): expectations are hand-written from the fixture specification, never ExifTool output; folder sets are covered by the dedicated qualifier and agent loop because the shared kit binds single files only.",
+            "checks": [
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/different",
+                "expected": 2
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/missing-in-item",
+                "expected": 0
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/missing-in-baseline",
+                "expected": 7
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/both-absent",
+                "expected": 10
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/not-comparable",
+                "expected": 3
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/byOutcome/same",
+                "expected": 0
+              },
+              {
+                "file": "comparison.json",
+                "format": "json",
+                "pointer": "/summary/baseline",
+                "expected": "duplicate_tags"
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Route schemaxis.exiftool/1: inventoryPhotos (unchanged), the E1 metadata workbench read family inspectMetadata, auditMetadata and compareMetadata, and the E2 write family editMetadata and removeMetadata (new copies of captured originals in the same container; independent readback, encoded-image or container-fingerprint preservation and native before/after diff proofs; stable per-item artifact slots; minimise for JPEG, PNG and WebP), and the E3 time and location family reconcileTime, locate (read-only analysis of capture clocks and positions), correctTime, setLocation and geotagFromTrack (new copies of the same container from declared intent through a plan, with exact arithmetic, a typed height-preservation proof, stable slots and independent proofs): bounded media sets with a complete manifest, JPEG EXIF/GPS/IPTC/XMP and XMP sidecar readers, 40 catalogued fields, per-source states, anchored independent proof, native listing and replay verification, typed CSVs, tests, guidance, discovery, Help and a host-only evidence note. Native qualification of the time and location operations is a bounded focused run of private synthetic fixtures against ExifTool 13.55, not a global or exhaustive acceptance (see the verification notes). The E4 copy, sidecar and naming family: copyMetadata and applySidecar (new copies of the destination's container carrying selected typed values from a source item or a sidecar through the shared copy writer, with proof T), exportSidecar (a host-serialized closed 29-property XMP sidecar per item with proof S), planNames (a deterministic name plan) and organiseCopies (exact byte copies under organised/ with proof C); the capture time and location groups are carried by copyMetadata and applySidecar through the E3 time and location writers, alone or in any union with the other groups. The E5 container family (TIFF, DNG, PNG, WebP and HEIF with existing items) takes every one of these operations through the same shared planners, writer and proofs, with per-cell native qualification (tools/qualify_exiftool_containers.py), a public agent loop (tools/qualify_exiftool_containers_loop.py) and named limits (TIFF and DNG minimise, HEIF removal and minimise, HEIF item creation).",
+        "review": [
+          "verification/2026-10-26-exiftool-71.md",
+          "verification/2026-10-26-exiftool-workbench-74.md",
+          "verification/2026-10-26-exiftool-time-location-74.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native-inspection hook; the metadata summary is a publication.",
+          "mpi": "Serial local subprocess only.",
+          "time-batches": "Items are explicit files or a declared folder, not a temporal dataset.",
+          "live-editing": "No live application connection.",
+          "native-save": "Originals are never written, removed or stripped: every writing operation publishes new copies of the same container into the run.",
+          "conversion": "Metadata reading and writing only; no format conversion and no re-encoding of image data."
+        }
+      }
+    }
+  }
+}

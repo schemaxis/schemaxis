@@ -1,0 +1,857 @@
+{
+ "version": "schemaxis.exiftool.fields/2",
+ "profiles": {
+  "capture": "When the photograph says it was taken, digitized and modified, with the recorded offset and a derived UTC instant.",
+  "device": "Which camera body, lens and software the file records.",
+  "exposure": "Exposure settings: time, aperture, ISO, focal length and exposure compensation.",
+  "description": "Title, description, keywords and rating.",
+  "rights": "Creator, copyright notice and rights web statement.",
+  "location": "GPS position, altitude, direction, datum and UTC stamps, plus named city and country.",
+  "rendering": "Stored orientation and frame size."
+ },
+ "fields": {
+  "capturedLocal": {
+   "label": "Capture time (local wall time)",
+   "description": "When the file says the photograph was taken, as camera-recorded wall time without a zone (YYYY-MM-DDTHH:MM:SS), from EXIF DateTimeOriginal, XMP photoshop:DateCreated and IPTC 2:55 with 2:60. Absent means no source records it; a wrong camera clock is still a well-formed value. Cross-source disagreement makes it ambiguous. Independent proof: decoded from the bytes and anchored to ExifTool.",
+   "profile": "capture",
+   "type": "localDateTime",
+   "unit": null,
+   "privacy": "capture-time",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0x9003",
+     "codec": "exifDateTime",
+     "native": "EXIF:ExifIFD:DateTimeOriginal"
+    },
+    {
+     "family": "xmp",
+     "property": "photoshop:DateCreated",
+     "codec": "xmpDateLocal",
+     "native": "XMP:XMP-photoshop:DateCreated"
+    },
+    {
+     "family": "iptc",
+     "record": 2,
+     "dataset": 55,
+     "codec": "iptcDateLocal",
+     "native": "IPTC:DateCreated",
+     "companion": {
+      "time": [
+       2,
+       60
+      ]
+     },
+     "companionNative": {
+      "time": "IPTC:TimeCreated"
+     }
+    }
+   ]
+  },
+  "capturedSubSecond": {
+   "label": "Capture time fraction of a second",
+   "description": "The decimal digits after the second of the capture time (EXIF SubSecTimeOriginal or the XMP fraction), kept as text so leading zeros survive. Absent when no source records a fraction. It is not added to capturedLocal.",
+   "profile": "capture",
+   "type": "digits",
+   "unit": "decimal fraction of a second",
+   "privacy": "capture-time",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0x9291",
+     "codec": "exifSubSecond",
+     "native": "EXIF:ExifIFD:SubSecTimeOriginal"
+    },
+    {
+     "family": "xmp",
+     "property": "photoshop:DateCreated",
+     "codec": "xmpDateFraction",
+     "native": "XMP:XMP-photoshop:DateCreated"
+    }
+   ]
+  },
+  "capturedOffset": {
+   "label": "Recorded UTC offset of the capture time",
+   "description": "The UTC offset the file records for the capture time, as +HH:MM within -12:00 to +14:00 (EXIF OffsetTimeOriginal, XMP date suffix, IPTC 2:60). -00:00 means unknown and is unreadable rather than UTC. Absent means no offset is recorded and no zone is inferred.",
+   "profile": "capture",
+   "type": "offset",
+   "unit": "hours:minutes from UTC",
+   "privacy": "capture-time",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0x9011",
+     "codec": "exifOffset",
+     "native": "EXIF:ExifIFD:OffsetTimeOriginal"
+    },
+    {
+     "family": "xmp",
+     "property": "photoshop:DateCreated",
+     "codec": "xmpDateOffset",
+     "native": "XMP:XMP-photoshop:DateCreated"
+    },
+    {
+     "family": "iptc",
+     "record": 2,
+     "dataset": 60,
+     "codec": "iptcTimeOffset",
+     "native": "IPTC:TimeCreated"
+    }
+   ]
+  },
+  "capturedUtc": {
+   "label": "Capture instant in UTC (derived)",
+   "description": "The capture instant in UTC, derived by exact arithmetic only when capturedLocal and capturedOffset are both present and agree across sources. Absent when either is missing; ambiguous or unreadable inputs make it the same. It inherits the doubts of a camera clock.",
+   "profile": "capture",
+   "type": "utcInstant",
+   "unit": null,
+   "privacy": "capture-time",
+   "sources": [],
+   "derive": {
+    "rule": "utcFromLocalOffset",
+    "from": [
+     "capturedLocal",
+     "capturedOffset"
+    ]
+   }
+  },
+  "digitizedLocal": {
+   "label": "Digitization time (local wall time)",
+   "description": "When the file says it was digitized or created as a digital file (EXIF DateTimeDigitized, XMP xmp:CreateDate), local wall time without a zone. It can differ from the capture time for scans. Independent proof.",
+   "profile": "capture",
+   "type": "localDateTime",
+   "unit": null,
+   "privacy": "capture-time",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0x9004",
+     "codec": "exifDateTime",
+     "native": "EXIF:ExifIFD:CreateDate"
+    },
+    {
+     "family": "xmp",
+     "property": "xmp:CreateDate",
+     "codec": "xmpDateLocal",
+     "native": "XMP:XMP-xmp:CreateDate"
+    }
+   ]
+  },
+  "modifiedLocal": {
+   "label": "Metadata modification time (local wall time)",
+   "description": "When the metadata says it was last modified (EXIF DateTime in IFD0, XMP xmp:ModifyDate), local wall time without a zone. It is a recorded value, never a filesystem time.",
+   "profile": "capture",
+   "type": "localDateTime",
+   "unit": null,
+   "privacy": "capture-time",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "IFD0",
+     "tag": "0x0132",
+     "codec": "exifDateTime",
+     "native": "EXIF:IFD0:ModifyDate"
+    },
+    {
+     "family": "xmp",
+     "property": "xmp:ModifyDate",
+     "codec": "xmpDateLocal",
+     "native": "XMP:XMP-xmp:ModifyDate"
+    }
+   ]
+  },
+  "cameraMake": {
+   "label": "Camera make",
+   "description": "The camera manufacturer text recorded in the file (EXIF Make, XMP tiff:Make), exactly as written. Device identity class: it can narrow who took a photo. Absent when not recorded; XMP and EXIF disagreeing makes it ambiguous.",
+   "profile": "device",
+   "type": "text",
+   "unit": null,
+   "privacy": "device-identity",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "IFD0",
+     "tag": "0x010F",
+     "codec": "exifText",
+     "native": "EXIF:IFD0:Make"
+    },
+    {
+     "family": "xmp",
+     "property": "tiff:Make",
+     "codec": "xmpText",
+     "native": "XMP:XMP-tiff:Make"
+    }
+   ]
+  },
+  "cameraModel": {
+   "label": "Camera model",
+   "description": "The camera model text recorded in the file (EXIF Model, XMP tiff:Model), exactly as written. Device identity class. Absent when not recorded.",
+   "profile": "device",
+   "type": "text",
+   "unit": null,
+   "privacy": "device-identity",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "IFD0",
+     "tag": "0x0110",
+     "codec": "exifText",
+     "native": "EXIF:IFD0:Model"
+    },
+    {
+     "family": "xmp",
+     "property": "tiff:Model",
+     "codec": "xmpText",
+     "native": "XMP:XMP-tiff:Model"
+    }
+   ]
+  },
+  "software": {
+   "label": "Software recorded in the file",
+   "description": "The software text in EXIF Software (often an editor or firmware string). It shows what last wrote the tag, not who edited the image. Device identity class.",
+   "profile": "device",
+   "type": "text",
+   "unit": null,
+   "privacy": "device-identity",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "IFD0",
+     "tag": "0x0131",
+     "codec": "exifText",
+     "native": "EXIF:IFD0:Software"
+    }
+   ]
+  },
+  "lensMake": {
+   "label": "Lens make",
+   "description": "The lens manufacturer text in EXIF LensMake. Device identity class. Absent when the camera does not record it.",
+   "profile": "device",
+   "type": "text",
+   "unit": null,
+   "privacy": "device-identity",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0xA433",
+     "codec": "exifText",
+     "native": "EXIF:ExifIFD:LensMake"
+    }
+   ]
+  },
+  "lensModel": {
+   "label": "Lens model",
+   "description": "The lens model text in EXIF LensModel. Device identity class. Absent when the camera does not record it.",
+   "profile": "device",
+   "type": "text",
+   "unit": null,
+   "privacy": "device-identity",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0xA434",
+     "codec": "exifText",
+     "native": "EXIF:ExifIFD:LensModel"
+    }
+   ]
+  },
+  "bodySerialNumber": {
+   "label": "Camera body serial number",
+   "description": "The camera body serial number in EXIF BodySerialNumber. Device identity class: it can link photos to one body and owner; consider it before sharing. Absent when not recorded.",
+   "profile": "device",
+   "type": "text",
+   "unit": null,
+   "privacy": "device-identity",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0xA431",
+     "codec": "exifText",
+     "native": "EXIF:ExifIFD:SerialNumber"
+    }
+   ]
+  },
+  "lensSerialNumber": {
+   "label": "Lens serial number",
+   "description": "The lens serial number in EXIF LensSerialNumber. Device identity class; it can link photos to one lens. Absent when not recorded.",
+   "profile": "device",
+   "type": "text",
+   "unit": null,
+   "privacy": "device-identity",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0xA435",
+     "codec": "exifText",
+     "native": "EXIF:ExifIFD:LensSerialNumber"
+    }
+   ]
+  },
+  "exposureTime": {
+   "label": "Exposure time",
+   "description": "Exposure time in seconds (EXIF ExposureTime), a positive rational published as a number with an exact n/d text. Unitless-looking values are seconds. A zero denominator is unreadable.",
+   "profile": "exposure",
+   "type": "rational",
+   "unit": "seconds",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0x829A",
+     "codec": "exifRational",
+     "native": "EXIF:ExifIFD:ExposureTime"
+    }
+   ]
+  },
+  "fNumber": {
+   "label": "Aperture f-number",
+   "description": "The aperture f-number (EXIF FNumber), a rational such as 2.8. It has no unit. Absent for lenses that do not report it.",
+   "profile": "exposure",
+   "type": "rational",
+   "unit": "f-number",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0x829D",
+     "codec": "exifRational",
+     "native": "EXIF:ExifIFD:FNumber"
+    }
+   ]
+  },
+  "isoSpeed": {
+   "label": "ISO speed",
+   "description": "The ISO speed rating (EXIF ISOSpeedRatings / PhotographicSensitivity), one integer. One integer; several values are unreadable rather than guessed.",
+   "profile": "exposure",
+   "type": "integer",
+   "unit": "ISO speed rating",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0x8827",
+     "codec": "exifInteger",
+     "native": "EXIF:ExifIFD:ISO"
+    }
+   ]
+  },
+  "focalLength": {
+   "label": "Focal length",
+   "description": "The actual focal length in millimetres (EXIF FocalLength), a rational. It is not the 35 mm equivalent.",
+   "profile": "exposure",
+   "type": "rational",
+   "unit": "millimetres",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0x920A",
+     "codec": "exifRational",
+     "native": "EXIF:ExifIFD:FocalLength"
+    }
+   ]
+  },
+  "focalLength35mm": {
+   "label": "Focal length, 35 mm equivalent",
+   "description": "The 35 mm-equivalent focal length in millimetres (EXIF FocalLengthIn35mmFormat), one integer, as recorded.",
+   "profile": "exposure",
+   "type": "integer",
+   "unit": "millimetres (35 mm equivalent)",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0xA405",
+     "codec": "exifInteger",
+     "native": "EXIF:ExifIFD:FocalLengthIn35mmFormat"
+    }
+   ]
+  },
+  "exposureBias": {
+   "label": "Exposure compensation",
+   "description": "Exposure compensation in EV steps (EXIF ExposureBiasValue), a signed rational; negative is darker.",
+   "profile": "exposure",
+   "type": "rational",
+   "unit": "EV",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "tag": "0x9204",
+     "codec": "exifSignedRational",
+     "native": "EXIF:ExifIFD:ExposureCompensation"
+    }
+   ]
+  },
+  "title": {
+   "label": "Title",
+   "description": "A short title (IPTC 2:5 ObjectName, XMP dc:title x-default). Descriptive text: it can name people or places. Only the x-default language is read; other languages alone are unsupported.",
+   "profile": "description",
+   "type": "text",
+   "unit": null,
+   "privacy": "descriptive-text",
+   "sources": [
+    {
+     "family": "iptc",
+     "record": 2,
+     "dataset": 5,
+     "codec": "iptcText",
+     "native": "IPTC:ObjectName"
+    },
+    {
+     "family": "xmp",
+     "property": "dc:title",
+     "codec": "xmpLangDefault",
+     "native": "XMP:XMP-dc:Title"
+    }
+   ]
+  },
+  "description": {
+   "label": "Description or caption",
+   "description": "The caption or description (EXIF ImageDescription, IPTC 2:120, XMP dc:description x-default). Descriptive text that can name people or places. Disagreeing sources make it ambiguous; none is preferred.",
+   "profile": "description",
+   "type": "text",
+   "unit": null,
+   "privacy": "descriptive-text",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "IFD0",
+     "tag": "0x010E",
+     "codec": "exifText",
+     "native": "EXIF:IFD0:ImageDescription"
+    },
+    {
+     "family": "iptc",
+     "record": 2,
+     "dataset": 120,
+     "codec": "iptcText",
+     "native": "IPTC:Caption-Abstract"
+    },
+    {
+     "family": "xmp",
+     "property": "dc:description",
+     "codec": "xmpLangDefault",
+     "native": "XMP:XMP-dc:Description"
+    }
+   ]
+  },
+  "keywords": {
+   "label": "Keywords",
+   "description": "Keywords as a list (IPTC 2:25 repeated, XMP dc:subject), order preserved and not de-duplicated. They can name people or places. Equal lists in the same order are consistent; any difference is a conflict.",
+   "profile": "description",
+   "type": "textList",
+   "unit": null,
+   "privacy": "descriptive-text",
+   "sources": [
+    {
+     "family": "iptc",
+     "record": 2,
+     "dataset": 25,
+     "codec": "iptcTextList",
+     "native": "IPTC:Keywords"
+    },
+    {
+     "family": "xmp",
+     "property": "dc:subject",
+     "codec": "xmpList",
+     "native": "XMP:XMP-dc:Subject"
+    }
+   ]
+  },
+  "rating": {
+   "label": "Rating",
+   "description": "The XMP xmp:Rating integer, as recorded (the value is not range-checked). Not an authenticity or quality claim.",
+   "profile": "description",
+   "type": "integer",
+   "unit": "XMP rating value",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "xmp",
+     "property": "xmp:Rating",
+     "codec": "xmpInteger",
+     "native": "XMP:XMP-xmp:Rating"
+    }
+   ]
+  },
+  "creator": {
+   "label": "Creator",
+   "description": "The creator names as a list (EXIF Artist as one entry, IPTC 2:80 repeated, XMP dc:creator). Personal identity class: it names a person. A recorded creator is a claim by the file, not proof of authorship.",
+   "profile": "rights",
+   "type": "textList",
+   "unit": null,
+   "privacy": "personal-identity",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "IFD0",
+     "tag": "0x013B",
+     "codec": "exifArtistList",
+     "native": "EXIF:IFD0:Artist"
+    },
+    {
+     "family": "iptc",
+     "record": 2,
+     "dataset": 80,
+     "codec": "iptcTextList",
+     "native": "IPTC:By-line"
+    },
+    {
+     "family": "xmp",
+     "property": "dc:creator",
+     "codec": "xmpList",
+     "native": "XMP:XMP-dc:Creator"
+    }
+   ]
+  },
+  "copyright": {
+   "label": "Copyright notice",
+   "description": "The copyright notice (EXIF Copyright with its strings joined by a line feed, IPTC 2:116, XMP dc:rights x-default). Personal identity class. A notice is not a licence or proof of ownership.",
+   "profile": "rights",
+   "type": "text",
+   "unit": null,
+   "privacy": "personal-identity",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "IFD0",
+     "tag": "0x8298",
+     "codec": "exifTextMulti",
+     "native": "EXIF:IFD0:Copyright"
+    },
+    {
+     "family": "iptc",
+     "record": 2,
+     "dataset": 116,
+     "codec": "iptcText",
+     "native": "IPTC:CopyrightNotice"
+    },
+    {
+     "family": "xmp",
+     "property": "dc:rights",
+     "codec": "xmpLangDefault",
+     "native": "XMP:XMP-dc:Rights"
+    }
+   ]
+  },
+  "rightsUrl": {
+   "label": "Rights web statement",
+   "description": "The rights web statement URL (XMP xmpRights:WebStatement), text as recorded; it is not fetched or checked.",
+   "profile": "rights",
+   "type": "text",
+   "unit": null,
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "xmp",
+     "property": "xmpRights:WebStatement",
+     "codec": "xmpText",
+     "native": "XMP:XMP-xmpRights:WebStatement"
+    }
+   ]
+  },
+  "gpsLatitude": {
+   "label": "GPS latitude",
+   "description": "Latitude in signed decimal degrees, north positive, from three unsigned degree/minute/second rationals and the N/S reference (EXIF GPS IFD, CIPA DC-008). A missing or invalid reference is unreadable. Location class. The datum is the separate gpsDatum field; nothing is converted.",
+   "profile": "location",
+   "type": "degrees",
+   "unit": "signed decimal degrees (north positive)",
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "GPS",
+     "tag": "0x0002",
+     "codec": "gpsLatitude",
+     "native": "EXIF:GPS:GPSLatitude",
+     "companion": {
+      "ref": "0x0001"
+     },
+     "companionNative": {
+      "ref": "EXIF:GPS:GPSLatitudeRef"
+     },
+     "anchorAbsolute": true
+    }
+   ]
+  },
+  "gpsLongitude": {
+   "label": "GPS longitude",
+   "description": "Longitude in signed decimal degrees, east positive, from three unsigned degree/minute/second rationals and the E/W reference (EXIF GPS IFD). Location class. The datum is gpsDatum; nothing is converted.",
+   "profile": "location",
+   "type": "degrees",
+   "unit": "signed decimal degrees (east positive)",
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "GPS",
+     "tag": "0x0004",
+     "codec": "gpsLongitude",
+     "native": "EXIF:GPS:GPSLongitude",
+     "companion": {
+      "ref": "0x0003"
+     },
+     "companionNative": {
+      "ref": "EXIF:GPS:GPSLongitudeRef"
+     },
+     "anchorAbsolute": true
+    }
+   ]
+  },
+  "gpsAltitude": {
+   "label": "GPS altitude",
+   "description": "Altitude in metres: negative when GPSAltitudeRef is 1 (below sea level), positive when 0 or when the reference is absent (the Exif default). The file does not say which sea level. Location class.",
+   "profile": "location",
+   "type": "meters",
+   "unit": "metres relative to the recorded reference (negative below sea level)",
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "GPS",
+     "tag": "0x0006",
+     "codec": "gpsAltitude",
+     "native": "EXIF:GPS:GPSAltitude",
+     "companion": {
+      "ref": "0x0005"
+     },
+     "companionNative": {
+      "ref": "EXIF:GPS:GPSAltitudeRef"
+     },
+     "anchorAbsolute": true
+    }
+   ]
+  },
+  "gpsDirection": {
+   "label": "Image direction",
+   "description": "The direction the camera faced, degrees clockwise from 0 up to but not including 360 (EXIF GPSImgDirection). Read it with gpsDirectionReference. Location class.",
+   "profile": "location",
+   "type": "degrees",
+   "unit": "degrees clockwise from the reference north",
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "GPS",
+     "tag": "0x0011",
+     "codec": "gpsBearing",
+     "native": "EXIF:GPS:GPSImgDirection"
+    }
+   ]
+  },
+  "gpsDirectionReference": {
+   "label": "Image direction reference",
+   "description": "Whether gpsDirection is relative to true north (T) or magnetic north (M), published as true or magnetic. Absent means the file did not say, not that it is true north.",
+   "profile": "location",
+   "type": "enum",
+   "unit": null,
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "GPS",
+     "tag": "0x0010",
+     "codec": "exifEnum",
+     "native": "EXIF:GPS:GPSImgDirectionRef",
+     "values": {
+      "T": "true",
+      "M": "magnetic"
+     }
+    }
+   ]
+  },
+  "gpsDatum": {
+   "label": "Recorded geodetic datum",
+   "description": "The geodetic datum text the GPS receiver recorded (EXIF GPSMapDatum, for example WGS-84), exactly as written. Absent means unspecified: Schemaxis never infers WGS-84 and never converts datums.",
+   "profile": "location",
+   "type": "text",
+   "unit": null,
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "GPS",
+     "tag": "0x0012",
+     "codec": "exifText",
+     "native": "EXIF:GPS:GPSMapDatum"
+    }
+   ]
+  },
+  "gpsUtcDate": {
+   "label": "GPS UTC date",
+   "description": "The GPS date stamp (EXIF GPSDateStamp, UTC) as YYYY-MM-DD, calendar-validated. Location class because it ties the file to a GPS fix.",
+   "profile": "location",
+   "type": "date",
+   "unit": null,
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "GPS",
+     "tag": "0x001D",
+     "codec": "gpsDate",
+     "native": "EXIF:GPS:GPSDateStamp"
+    }
+   ]
+  },
+  "gpsUtcTime": {
+   "label": "GPS UTC time of day",
+   "description": "The GPS time stamp (EXIF GPSTimeStamp, UTC) as HH:MM:SS. Fractional-second components are unsupported rather than rounded. Location class.",
+   "profile": "location",
+   "type": "time",
+   "unit": null,
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "GPS",
+     "tag": "0x0007",
+     "codec": "gpsTime",
+     "native": "EXIF:GPS:GPSTimeStamp"
+    }
+   ]
+  },
+  "gpsUtc": {
+   "label": "GPS UTC instant (derived)",
+   "description": "The GPS UTC instant, derived only when gpsUtcDate and gpsUtcTime are both present. It is the receiver's clock, which can differ from the camera clock; the audit compares them.",
+   "profile": "location",
+   "type": "utcInstant",
+   "unit": null,
+   "privacy": "location",
+   "sources": [],
+   "derive": {
+    "rule": "utcFromDateTime",
+    "from": [
+     "gpsUtcDate",
+     "gpsUtcTime"
+    ]
+   }
+  },
+  "locationCity": {
+   "label": "Named city",
+   "description": "The named city text (IPTC 2:90, XMP photoshop:City). Location class and descriptive: it is text a person or software wrote, not a verified place.",
+   "profile": "location",
+   "type": "text",
+   "unit": null,
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "iptc",
+     "record": 2,
+     "dataset": 90,
+     "codec": "iptcText",
+     "native": "IPTC:City"
+    },
+    {
+     "family": "xmp",
+     "property": "photoshop:City",
+     "codec": "xmpText",
+     "native": "XMP:XMP-photoshop:City"
+    }
+   ]
+  },
+  "locationCountry": {
+   "label": "Named country or primary location",
+   "description": "The named country or primary location text (IPTC 2:101, XMP photoshop:Country). Location class; it is not verified against the GPS position.",
+   "profile": "location",
+   "type": "text",
+   "unit": null,
+   "privacy": "location",
+   "sources": [
+    {
+     "family": "iptc",
+     "record": 2,
+     "dataset": 101,
+     "codec": "iptcText",
+     "native": "IPTC:Country-PrimaryLocationName"
+    },
+    {
+     "family": "xmp",
+     "property": "photoshop:Country",
+     "codec": "xmpText",
+     "native": "XMP:XMP-photoshop:Country"
+    }
+   ]
+  },
+  "orientation": {
+   "label": "Stored orientation",
+   "description": "The stored EXIF orientation code 1 to 8 (IFD0 Orientation, XMP tiff:Orientation) with its label. Pixels are not rotated by reading it; a viewer that ignores it shows the image sideways.",
+   "profile": "rendering",
+   "type": "code",
+   "unit": "EXIF orientation code 1-8",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "exif",
+     "ifd": "IFD0",
+     "tag": "0x0112",
+     "codec": "exifOrientation",
+     "native": "EXIF:IFD0:Orientation"
+    },
+    {
+     "family": "xmp",
+     "property": "tiff:Orientation",
+     "codec": "xmpInteger",
+     "native": "XMP:XMP-tiff:Orientation"
+    }
+   ],
+   "labels": {
+    "1": "top-left",
+    "2": "top-right",
+    "3": "bottom-right",
+    "4": "bottom-left",
+    "5": "left-top",
+    "6": "right-top",
+    "7": "right-bottom",
+    "8": "left-bottom"
+   }
+  },
+  "imageWidth": {
+   "label": "Frame width",
+   "description": "The frame width in pixels from the JPEG frame header (not EXIF PixelXDimension). Unsupported for an XMP sidecar, which has no frame.",
+   "profile": "rendering",
+   "type": "integer",
+   "unit": "pixels",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "container",
+     "property": "width",
+     "codec": "frameWidth",
+     "native": "File:ImageWidth"
+    }
+   ]
+  },
+  "imageHeight": {
+   "label": "Frame height",
+   "description": "The frame height in pixels from the JPEG frame header. Unsupported for an XMP sidecar, which has no frame.",
+   "profile": "rendering",
+   "type": "integer",
+   "unit": "pixels",
+   "privacy": "none",
+   "sources": [
+    {
+     "family": "container",
+     "property": "height",
+     "codec": "frameHeight",
+     "native": "File:ImageHeight"
+    }
+   ]
+  }
+ }
+}

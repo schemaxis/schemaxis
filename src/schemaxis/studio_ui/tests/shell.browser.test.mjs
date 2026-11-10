@@ -28,7 +28,10 @@ for (const theme of ['light', 'dark']) {
       }
 
       // New adaptor instance from the dialog opens a Workbench tab.
-      await session.clickSelector('.start-action:nth-child(2)');
+      assert.deepEqual(await session.evaluate(`[...document.querySelectorAll('.start-app')].map((card) => card.dataset.app)`),
+        ['designer', 'workbench', 'schema-editor']);
+      assert.equal(await session.evaluate(`document.querySelectorAll('.start-app [data-action="open-file"]').length`), 3);
+      await session.clickSelector('.start-app[data-app="workbench"] [data-action="new"]');
       await session.wait(`document.querySelector('.dialog input[placeholder^="Search"]')`, 'instance dialog');
       await session.type('freecad');
       await session.wait(`document.querySelectorAll('.dialog .list-item').length === 1`, 'filtered list');
@@ -62,7 +65,7 @@ for (const theme of ['light', 'dark']) {
       await session.evaluate(`window.studio.api.post('/api/settings', {action: 'write', values: {role: 'user'},
         role: 'dev'}).then((settings) => window.studio.store.set({settings}))`);
       await session.evaluate(`window.studio.windows.open('start')`);
-      await session.wait(`document.querySelectorAll('.start-action').length === 1`, 'user actions');
+      await session.wait(`document.querySelector('.start-apps').hidden`, 'user actions');
       assert.equal(await session.evaluate(`document.querySelectorAll('.adaptor-card:not(:disabled)').length`), 0);
       assert.equal(await session.evaluate(`document.querySelector('.start-action .title').textContent`),
         'Run a template');

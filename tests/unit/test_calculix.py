@@ -25,13 +25,18 @@ def fixture():
 def dat(prepared,stage='fine'):
     """Analytic contract double, never a native qualification witness."""
     mesh = beam.model(prepared,stage); L,b,h = (prepared['beam'][k] for k in ('length_m','width_m','height_m'))
-    F = prepared['load']['tipForceZ_N']; nx,ny,nz = mesh['cells']; points = []
+    Fx,Fy,Fz,Mx,My,Mz = (prepared['load'][k] for k in beam.LOAD_KEYS); nx,ny,nz = mesh['cells']; points = []
     lines = ['S T E P       1','INCREMENT     1','displacements (vx,vy,vz) for set TIP and time 1']
-    lines += [f"{i} 0 0 {prepared['theory']['tipDeflection_m']:.17g}" for i in mesh['tipWeights']]
+    ux,uy,uz=prepared['theory']['tipTranslation_m'];theta=prepared['theory']['tipTwist_rad']
+    lines += [f"{i} {ux:.17g} {uy-theta*mesh['nodes'][i][2]:.17g} {uz+theta*mesh['nodes'][i][1]:.17g}" for i in mesh['tipWeights']]
     lines += ['forces (fx,fy,fz) for set ROOT and time 1']
     sum_z2 = sum(mesh['nodes'][i][2]**2 for i in mesh['root'])
+    sum_y2 = sum(mesh['nodes'][i][1]**2 for i in mesh['root'])
     for i in mesh['root']:
-        lines.append(f"{i} {F*L*mesh['nodes'][i][2]/sum_z2:.17g} 0 {-F/len(mesh['root']):.17g}")
+        _,y,z=mesh['nodes'][i];n=len(mesh['root'])
+        rx=-Fx/n+(L*Fz-My)*z/sum_z2-(-L*Fy-Mz)*y/sum_y2
+        ry=-Fy/n+Mx*z/(sum_y2+sum_z2);rz=-Fz/n-Mx*y/(sum_y2+sum_z2)
+        lines.append(f"{i} {rx:.17g} {ry:.17g} {rz:.17g}")
     lines += ['global coordinates (elem, integ.pnt.,x,y,z) for set ALL and time 1']
     for i,element in enumerate(mesh['elements'],1):
         ix,iy,iz = element['cell']
@@ -45,7 +50,10 @@ def dat(prepared,stage='fine'):
                     z = (iz+.5+z_sign/(2*math.sqrt(3)))*h/nz-h/2
                     points.append((i,j,x,y,z));lines.append(f'{i} {j} {x:.17g} {y:.17g} {z:.17g}')
     lines += ['stresses (elem, integ.pnt.,sxx,syy,szz,sxy,sxz,syz) for set ALL and time 1']
-    lines += [f"{i} {j} {-F*(L-x)*z/prepared['theory']['secondMoment_m4']:.17g} 0 0 0 0 0" for i,j,x,y,z in points]
+    for i,j,x,y,z in points:
+        xx=Fx/(b*h)+(My-Fz*(L-x))*z/prepared['theory']['secondMoment_m4']-(Mz+Fy*(L-x))*y/prepared['theory']['secondMomentZ_m4']
+        xy,xz=beam.torsion_shear(b,h,y,z,Mx) if Mx else (0,0)
+        lines.append(f"{i} {j} {xx:.17g} 0 0 {xy:.17g} {xz:.17g} 0")
     return '\n'.join(lines)+'\n'
 
 
@@ -65,6 +73,18 @@ class CalculiXTests(unittest.TestCase):
         self.assertAlmostEqual(planned['theory']['tipDeflection_m'],-.0007619047619047619)
         self.assertAlmostEqual(planned['theory']['engineeringRootStress_Pa'],30e6)
         document = fixture();del document['mesh'];self.assertEqual(app.plan(document)['mesh'],{'lengthCells':12,'sectionCells':2})
+
+    def test_new_standalone_and_studio_documents_plan_offline(self):
+        import jsonschema
+        from schemaxis.studio_library import load_library,instantiate_item
+        from schemaxis.adaptors import registry
+        for name in ('axial','bending-y','moment-y','moment-z','torsion','combined','axial-slide','torsion-wide','torsion-tall','cancellation'):
+            document=json.loads((ROOT/f'examples/schemaxis/calculix-{name}.json').read_text())
+            jsonschema.validate(document,app.schema());app.plan(document)
+        library=load_library('calculix')
+        for item in library['snippets']:
+            document=instantiate_item(library,item,provider='calculix');app.plan(document)
+        app.plan(registry.metadata('calculix')['consoleTemplate'])
 
     def test_invalid_physics_precedes_native_launch(self):
         for key,value in [('beam',{'length_m':.1,'width_m':.02,'height_m':.02}),('load',{'tipForceZ_N':0}),('load',{'tipForceZ_N':1e8})]:
@@ -113,6 +133,53 @@ class CalculiXTests(unittest.TestCase):
             self.assertLess(native['interiorStressScaledError'],1e-12)
             self.assertEqual(len(rows),1280)
 
+    def test_six_resultant_theory_and_exact_face_work(self):
+        document=fixture();document['load']={'tipForceX_N':1000,'tipForceY_N':20,'tipForceZ_N':-30,'tipMomentX_Nm':1,'tipMomentY_Nm':2,'tipMomentZ_Nm':-1}
+        prepared=app.plan(document)
+        for actual,expected in zip(prepared['theory']['tipTranslation_m'],[4.761904761904762e-6,.00012380952380952381,-.00028571428571428574]):
+            self.assertAlmostEqual(actual,expected)
+        self.assertAlmostEqual(beam.torsion_constant(1,1),.140577014955153,places=9)
+        self.assertAlmostEqual(prepared['theory']['tipTwist_rad'],.000220180954986,places=10)
+        native,_=beam.assess(prepared,'fine',dat(prepared))
+        for actual,expected in zip(native['rootReaction_N'],[-1000,-20,30]):self.assertAlmostEqual(actual,expected)
+        for actual,expected in zip(native['rootMomentAboutClampCentre_Nm'],[-1,-14,-7]):self.assertAlmostEqual(actual,expected)
+        self.assertLess(native['interiorTorsionScaledError'],1e-12)
+        self.assertLess(native['twistTheoryRelativeError'],1e-12)
+        mesh=beam.model(prepared,'fine')
+        area=.0004;iy=1.3333333333333334e-8
+        self.assertAlmostEqual(sum(mesh['nodes'][i][1]*w[0] for i,w in mesh['tipFirstMoments'].items())*area,iy)
+        self.assertAlmostEqual(sum(mesh['nodes'][i][2]*w[1] for i,w in mesh['tipFirstMoments'].items())*area,iy)
+        self.assertAlmostEqual(sum(w[0] for w in mesh['tipFirstMoments'].values()),0)
+        self.assertAlmostEqual(sum(w[1] for w in mesh['tipFirstMoments'].values()),0)
+        self.assertEqual(beam.deck(prepared,'fine'),beam.deck(prepared,'reopened'))
+
+    def test_axial_slide_and_load_cancellation_domain(self):
+        document=fixture();document['support']='axialSlide';document['load']={'tipForceX_N':-1000};document['requirements']=[]
+        prepared=app.plan(document);self.assertAlmostEqual(prepared['theory']['tipTranslation_m'][0],-4.761904761904762e-6)
+        deck=beam.deck(prepared,'coarse');self.assertIn(b'ROOT,1,1',deck);self.assertNotIn(b'ROOT,1,3',deck)
+        document['load']['tipMomentX_Nm']=1;self.error(lambda:app.plan(document),'INVALID_BEAM')
+        # Equal/opposite end moment cancels tip displacement; acceptance scales
+        # retain both contributions instead of dividing by the cancelled value.
+        document=fixture();document['load']={'tipForceY_N':30,'tipMomentZ_Nm':-8};document['requirements']=[]
+        prepared=app.plan(document);self.assertAlmostEqual(prepared['theory']['tipTranslation_m'][1],0)
+        self.assertGreater(prepared['theory']['translationScales_m'][1],0)
+        native,_=beam.assess(prepared,'fine',dat(prepared));self.assertLess(native['tipTheoryRelativeError'],1e-12)
+        for key in beam.LOAD_KEYS:
+            document=fixture();document['load']={key:float('nan')};self.error(lambda:app.plan(document),'INVALID_ARGUMENT')
+        document=fixture();document['load']={};self.error(lambda:app.plan(document),'INVALID_BEAM')
+        document=fixture();document['load']={'tipMomentX_Nm':100000};self.error(lambda:app.plan(document),'INVALID_BEAM')
+
+    def test_torsion_swap_sign_and_native_shear_tamper(self):
+        first=beam.torsion_shear(.04,.02,.007,.003,1)
+        other=beam.torsion_shear(.02,.04,.003,.007,-1)
+        for a,b in zip(first,reversed(other)):self.assertAlmostEqual(a,b)
+        document=fixture();document['load']={'tipMomentX_Nm':1};document['requirements']=[]
+        prepared=app.plan(document);text=dat(prepared)
+        lines=text.splitlines();index=next(i for i,line in enumerate(lines) if line.startswith('stresses'))+1
+        for i in range(index,len(lines)):
+            row=lines[i].split();row[5]=str(2*float(row[5]));row[6]=str(2*float(row[6]));lines[i]=' '.join(row)
+        self.error(lambda:beam.assess(prepared,'fine','\n'.join(lines)),'NUMERICAL_ACCEPTANCE_FAILED')
+
     def test_parser_rejects_duplicate_missing_malformed_point_and_time(self):
         prepared = app.plan(fixture());mesh = beam.model(prepared,'fine');text = dat(prepared)
         lines = text.splitlines();point_header = next(i for i,v in enumerate(lines) if v.startswith('global coordinates'))
@@ -136,6 +203,13 @@ class CalculiXTests(unittest.TestCase):
                 row = changed[index].split();row[column]=str(float(row[column])+1);changed[index]=' '.join(row)
             code = 'NUMERICAL_ACCEPTANCE_FAILED' if header=='stresses' else 'VERIFICATION_FAILED'
             self.error(lambda:beam.assess(prepared,'fine','\n'.join(changed)),code)
+
+    def test_finite_extreme_shear_gives_structured_fault(self):
+        prepared=app.plan(fixture());lines=dat(prepared).splitlines()
+        index=next(i for i,line in enumerate(lines) if line.startswith('stresses'))+1
+        for i in range(index,len(lines)):
+            row=lines[i].split();row[5]='1e308';lines[i]=' '.join(row)
+        self.error(lambda:beam.assess(prepared,'fine','\n'.join(lines)),'VERIFICATION_FAILED')
 
     def test_native_measurement_drives_requirement_margin(self):
         prepared = app.plan(fixture());native,_ = beam.assess(prepared,'fine',dat(prepared))

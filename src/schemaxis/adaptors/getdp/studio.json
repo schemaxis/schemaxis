@@ -1,0 +1,207 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "categories": [
+    {
+      "id": "conduction",
+      "title": "Layered conduction"
+    }
+  ],
+  "templates": [
+    {
+      "id": "baseline",
+      "title": "Steady thermal slab",
+      "description": "Stable GetDP 3.5.0, serial linear nodal finite elements, metres and constant cross-sectional area. Thermal field is kelvin, conductivity W/(m K), source W/m3, flux W/m2; electrical field V, conductivity S/m, source A/m3 and current density A/m2. Flux is outward at either boundary and positive along +x in element tables.",
+      "requires": "Stable GetDP 3.5.0 executable. All fields are editable JSON; no Gmsh dependency.",
+      "document": {
+        "version": "schemaxis.getdp/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "slab",
+            "thickness_m": 0.1,
+            "conductivity": 10,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 400
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        },
+        "area_m2": 0.5
+      }
+    },
+    {
+      "id": "composite",
+      "title": "Composite wall",
+      "description": "Stable GetDP 3.5.0, serial linear nodal finite elements, metres and constant cross-sectional area. Thermal field is kelvin, conductivity W/(m K), source W/m3, flux W/m2; electrical field V, conductivity S/m, source A/m3 and current density A/m2. Flux is outward at either boundary and positive along +x in element tables.",
+      "requires": "Stable GetDP 3.5.0 executable. All fields are editable JSON; no Gmsh dependency.",
+      "document": {
+        "version": "schemaxis.getdp/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "inner",
+            "thickness_m": 0.1,
+            "conductivity": 10,
+            "cells": 10
+          },
+          {
+            "name": "insulation",
+            "thickness_m": 0.1,
+            "conductivity": 1,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 400
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        },
+        "area_m2": 0.5
+      }
+    },
+    {
+      "id": "source",
+      "title": "Volumetric heater",
+      "description": "Stable GetDP 3.5.0, serial linear nodal finite elements, metres and constant cross-sectional area. Thermal field is kelvin, conductivity W/(m K), source W/m3, flux W/m2; electrical field V, conductivity S/m, source A/m3 and current density A/m2. Flux is outward at either boundary and positive along +x in element tables.",
+      "requires": "Stable GetDP 3.5.0 executable. All fields are editable JSON; no Gmsh dependency.",
+      "document": {
+        "version": "schemaxis.getdp/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "heater",
+            "thickness_m": 1,
+            "conductivity": 1,
+            "source": 100,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 300
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        },
+        "area_m2": 0.5
+      }
+    },
+    {
+      "id": "convection",
+      "title": "Flux and convection",
+      "description": "Stable GetDP 3.5.0, serial linear nodal finite elements, metres and constant cross-sectional area. Thermal field is kelvin, conductivity W/(m K), source W/m3, flux W/m2; electrical field V, conductivity S/m, source A/m3 and current density A/m2. Flux is outward at either boundary and positive along +x in element tables.",
+      "requires": "Stable GetDP 3.5.0 executable. All fields are editable JSON; no Gmsh dependency.",
+      "document": {
+        "version": "schemaxis.getdp/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "slab",
+            "thickness_m": 0.1,
+            "conductivity": 10,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "flux",
+          "value": -1000
+        },
+        "right": {
+          "kind": "convection",
+          "coefficient": 100,
+          "ambient": 300
+        },
+        "area_m2": 0.5
+      }
+    },
+    {
+      "id": "current",
+      "title": "Layered DC resistor",
+      "description": "Stable GetDP 3.5.0, serial linear nodal finite elements, metres and constant cross-sectional area. Thermal field is kelvin, conductivity W/(m K), source W/m3, flux W/m2; electrical field V, conductivity S/m, source A/m3 and current density A/m2. Flux is outward at either boundary and positive along +x in element tables.",
+      "requires": "Stable GetDP 3.5.0 executable. All fields are editable JSON; no Gmsh dependency.",
+      "document": {
+        "version": "schemaxis.getdp/1",
+        "operation": "steadyCurrent",
+        "layers": [
+          {
+            "name": "slab",
+            "thickness_m": 0.1,
+            "conductivity": 100,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 10
+        },
+        "right": {
+          "kind": "value",
+          "value": 0
+        },
+        "area_m2": 0.5
+      }
+    }
+  ],
+  "snippets": [
+    {
+      "id": "conductivity",
+      "title": "Change layer conductivity",
+      "description": "Set the first material conductivity in W/(m K) for heat or S/m for current.",
+      "category": "conduction",
+      "baseDocument": {
+        "version": "schemaxis.getdp/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "slab",
+            "thickness_m": 0.1,
+            "conductivity": 10,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 400
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        },
+        "area_m2": 0.5
+      },
+      "fields": {
+        "conductivity": {
+          "label": "Conductivity",
+          "type": "number",
+          "required": true,
+          "minimum": 1e-05,
+          "maximum": 100000000.0,
+          "default": 5
+        }
+      },
+      "inserts": [
+        {
+          "at": "/layers/0/conductivity",
+          "values": [
+            {
+              "$fill": "conductivity"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "viewers": [
+    "table",
+    "text"
+  ]
+}

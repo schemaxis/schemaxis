@@ -10,7 +10,7 @@ import time
 
 from schemaxis.artifacts import atomic_json, file_digest
 from schemaxis.core.declarations import validate_arguments
-from schemaxis.core.faults import SchemaxisError
+from schemaxis.core.faults import Fault, SchemaxisError
 from schemaxis.dispatch import cancellation_requested
 from schemaxis.errors import fail, keys
 from schemaxis.native_command import execute
@@ -38,6 +38,8 @@ OPTIONS = {
         'relativeTolerance':{'type':'number','minimum':1e-12,'maximum':1e-8,'default':1e-9},
         'absoluteTolerance':{'type':'number','minimum':1e-20,'maximum':1e-12,'default':1e-15},
         'maxSteps':{'type':'integer','minimum':100,'maximum':100000,'default':20000},
+        'thermalConductance':{'type':'number','minimum':0,'maximum':1000000,'default':0},
+        'bathTemperature':{'type':'number','minimum':300,'maximum':3500,'default':300},
         'ignitionTemperatureRise':{'type':'number','minimum':10,'maximum':1000,'default':400}},
 }
 DECLARATIONS = {name:{'native':{'gas':'cantera.Solution','thermoSweep':'cantera.ThermoPhase',
@@ -47,13 +49,18 @@ DECLARATIONS = {name:{'native':{'gas':'cantera.Solution','thermoSweep':'cantera.
     'inputs':{} if name == 'gas' else {'input':{'kind':'gas','required':True}}}
     for name,options in OPTIONS.items()}
 FILES = [('results.csv','table'),('chemistry-summary.json','text')]
+NATIVE_RECOVERY = {
+    'NATIVE_UNAVAILABLE':'Configure an absolute Python with Cantera 3.2.x installed (--cantera or CANTERA_PYTHON); the host never imports Cantera. Use a fresh output directory.',
+    'UNSUPPORTED_RUNTIME':'Select a Python with Cantera 3.2.x (inspect observed.version); other releases need explicit requalification of the mechanism and kinetics before use. Use a fresh output directory.',
+    'UNSUPPORTED_STATE':'A reactor state left 300-3500 K, the NASA7 data range; dilute the mixture or start colder, then use a fresh output directory.',
+    'NATIVE_EXECUTION_FAILED':'Read native-fault.json, build.stderr and build.stdout in the output directory, correct the input or runtime, and rerun in a fresh directory.'}
 EVIDENCE = ['built.json','reopened.json','mechanism.yaml','worker.py']
 LOSSES = ['Only the ten-species h2o2.yaml ideal-gas ohmech phase; N2 and Ar are inert, no NOx or carbon chemistry',
           'No liquid/solid phases, nonideal equation of state, transport, kinetics or ignition-delay claim',
           'CSV is a numeric state table; retain summary for units, species, basis, mechanism and verification scope']
 REACTOR_COLUMNS = ['time_s']+thermo.COLUMNS[1:]
 REACTOR_LOSSES = ['Only the ten-species h2o2.yaml ideal-gas ohmech phase and its 29 reactions; N2 and Ar are inert colliders, no NOx or carbon chemistry',
-                  'One closed, adiabatic, homogeneous reactor: no walls, heat loss, inlets, surfaces, mixing, transport or spatial structure',
+                  'One closed homogeneous reactor with optional fixed-bath linear thermal exchange; no moving/radiating walls, inlets, surfaces, mixing, transport or spatial structure',
                   'Sampled states only; the ignition delay is the declared temperature-rise criterion, not a measured or universal ignition definition',
                   'CSV is a numeric time-history table; retain summary for model, tolerances, ignition criterion and verification scope']
 
@@ -94,8 +101,11 @@ def plan(document):
         model = prepared[1]['options']['model']
         result.update(columns=REACTOR_COLUMNS,losses=REACTOR_LOSSES,
                       reactor={'native':'cantera.'+kinetics.MODELS[model],'network':'cantera.ReactorNet',
-                               'closed':True,'adiabatic':True,'volume_m3':1.0,
+                               'closed':True,'adiabatic':prepared[1]['options']['thermalConductance'] == 0,'volume_m3':1.0,
                                'held':'pressure' if model == 'constantPressure' else 'volume'})
+        if not result['reactor']['adiabatic']:
+            result['reactor']['thermal'] = {'native':'cantera.Wall','conductance_W_K':prepared[1]['options']['thermalConductance'],
+                'bathTemperature_K':prepared[1]['options']['bathTemperature'],'area_m2':1.0,'radiation':False,'moving':False}
         result['limits'].update(time_s=[0,1],ignitionPassSteps=200000)
     return result
 
@@ -168,6 +178,19 @@ def same_summary(saved,expected):
     return True
 
 
+def native_fault(path):
+    """The worker's fault record as a stable fault; a malformed record never chooses its own code."""
+    try:
+        record = json.loads(path.read_text())
+        code,message,observed = record['code'],record['message'],record.get('observed',{})
+        if code not in NATIVE_RECOVERY or not isinstance(message,str) or not message.strip() or not isinstance(observed,dict):
+            raise ValueError('unsupported fault record')
+        if len(message) > 2000 or len(json.dumps(observed)) > 2000: raise ValueError('fault record too large')
+    except (OSError,ValueError,KeyError,TypeError):
+        code,message,observed = 'NATIVE_EXECUTION_FAILED','native worker fault record is malformed or unsupported; see build.stderr',{}
+    return SchemaxisError(Fault(code,message,'$','pipeline',observed=observed,recovery=NATIVE_RECOVERY[code]))
+
+
 def run(document,directory,*,executable=None,timeout=300):
     prepared = plan(document)
     executable = executable or os.environ.get('CANTERA_PYTHON')
@@ -188,8 +211,7 @@ def run(document,directory,*,executable=None,timeout=300):
                 execute([executable,str(directory/'worker.py'),str(directory),stage],directory,stage,deadline-time.monotonic(),
                         {'OMP_NUM_THREADS':'1','OPENBLAS_NUM_THREADS':'1'})
             except SchemaxisError:
-                if (directory/'native-fault.json').is_file():
-                    fault = json.loads((directory/'native-fault.json').read_text()); fail(fault['code'],fault['message'])
+                if (directory/'native-fault.json').is_file(): raise native_fault(directory/'native-fault.json')
                 raise
             if stage == 'build':
                 built = json.loads((directory/'built.json').read_text()); rows = built['rows']
@@ -204,8 +226,8 @@ def run(document,directory,*,executable=None,timeout=300):
         return result
     except Exception as error:
         if not isinstance(error,SchemaxisError):
-            try: fail('NATIVE_EXECUTION_FAILED',str(error))
-            except SchemaxisError as wrapped: error = wrapped
+            error = SchemaxisError(Fault('NATIVE_EXECUTION_FAILED',str(error) or type(error).__name__,'$','pipeline',
+                                         recovery=NATIVE_RECOVERY['NATIVE_EXECUTION_FAILED']))
         atomic_json(directory/'result.json',{'status':'failed','verified':False,'fault':error.fault.to_dict()})
         raise error
 

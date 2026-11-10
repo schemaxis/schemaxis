@@ -15,10 +15,25 @@ class UnsupportedState(ValueError):
     """A reactor state left the qualified NASA7 temperature range."""
 
 
+class NativeUnavailable(Exception):
+    """The configured interpreter cannot import Cantera."""
+
+
+class UnsupportedRuntime(Exception):
+    """Cantera imported, but it is not the qualified 3.2.x release."""
+
+    def __init__(self,version):
+        super().__init__('this adaptor requires qualified Cantera 3.2.x; the interpreter has '+version)
+        self.version = version
+
+
 def main(directory,stage):
-    import cantera as ct
-    if ct.__version__.split('.')[:2] != ['3','2']:
-        raise ValueError('this adaptor requires qualified Cantera 3.2.x')
+    try:
+        import cantera as ct
+    except ImportError as error:
+        raise NativeUnavailable('the configured Python cannot import Cantera: '+str(error)) from error
+    if str(ct.__version__).split('.')[:2] != ['3','2']:
+        raise UnsupportedRuntime(str(ct.__version__))
     prepared = json.loads((directory/'plan.json').read_text())
     source, operation = prepared['nodes']
     options, settings = source['options'], operation['options']
@@ -68,11 +83,17 @@ def main(directory,stage):
 
 
 def reactor(ct,gas,initial,settings,row):
-    """Sample an adiabatic closed reactor, then repeat it step by step for ignition."""
+    """Sample a closed reactor with optional fixed-bath exchange, then repeat it step by step for ignition."""
     times = settings['times']
     def network():
         initial(settings['temperature'])
         vessel = getattr(ct,REACTORS[settings['model']])(gas,clone=True,energy='on')
+        wall = bath = None
+        if settings['thermalConductance'] > 0:
+            gas.TP = settings['bathTemperature'],gas.P
+            bath = ct.Reservoir(gas,clone=True)
+            wall = ct.Wall(vessel,bath,A=1.0,U=settings['thermalConductance'],K=0.0)
+            wall.emissivity = 0.0
         net = ct.ReactorNet([vessel])
         net.rtol = settings['relativeTolerance']; net.atol = settings['absoluteTolerance']
         net.max_steps = settings['maxSteps']
@@ -82,12 +103,15 @@ def reactor(ct,gas,initial,settings,row):
                     'atol':settings['absoluteTolerance'],'maxSteps':settings['maxSteps'],'energy':True,'chemistry':True}
         if solver != expected:
             raise ValueError('native reactor settings readback differs: '+json.dumps(solver))
-        return vessel,net,solver
+        return vessel,net,solver,wall,bath
     def bounded(t,temperature):
         if not 300 <= temperature <= 3500:
             raise UnsupportedState(f'reactor temperature {temperature:.6g} K at {t:.6g} s left the qualified 300-3500 K NASA7 range')
-    vessel,net,solver = network(); rows = []; reactor_rows = []
+    vessel,net,solver,wall,bath = network(); rows = []; reactor_rows = []
     start = {'mass':vessel.mass,'volume':vessel.volume}
+    thermal = None if wall is None else {'conductance_W_K':wall.heat_transfer_coeff*wall.area,
+        'area_m2':wall.area,'bathTemperature_K':bath.phase.T,'emissivity':wall.emissivity,
+        'expansionRateCoeff':wall.expansion_rate_coeff}
     for t in times:
         if t > net.time: net.advance(t)
         if abs(net.time-t) > 1e-12*max(t,1e-300):
@@ -95,15 +119,18 @@ def reactor(ct,gas,initial,settings,row):
         phase = vessel.phase; bounded(t,phase.T)
         rows.append(row(t,phase))
         reactor_rows.append({'time':net.time,'mass':vessel.mass,'volume':vessel.volume,
-                             'rates':phase.net_production_rates.tolist()})
+                             'rates':phase.net_production_rates.tolist(),**({} if wall is None else {
+                                 'heatRateOut_W':wall.heat_rate,'bathTemperature_K':bath.phase.T,
+                                 'expansionRate_m3_s':wall.expansion_rate})})
     stats = net.solver_stats
-    vessel,net,_ = network(); steps = [[net.time,vessel.phase.T]]
+    vessel,net,_,wall,bath = network(); steps = [[net.time,vessel.phase.T]]
     while net.time < times[-1]:
         if len(steps) > STEP_LIMIT:
             raise ValueError('ignition pass exceeded the native step limit')
         net.step(); steps.append([net.time,vessel.phase.T]); bounded(net.time,vessel.phase.T)
     return rows,{'reactor':{'native':'cantera.ReactorNet','solver':solver,'initial':start,'samples':reactor_rows,
-                            'solverStats':{k:int(v) for k,v in stats.items()},'steps':steps}}
+                            'solverStats':{k:int(v) for k,v in stats.items()},'steps':steps,
+                            **({} if thermal is None else {'thermal':thermal})}}
 
 
 if __name__ == '__main__':
@@ -111,6 +138,9 @@ if __name__ == '__main__':
     try:
         main(directory,stage)
     except Exception as error:
-        code = 'UNSUPPORTED_STATE' if isinstance(error,UnsupportedState) else 'NATIVE_EXECUTION_FAILED'
-        (directory/'native-fault.json').write_text(json.dumps({'code':code,'message':str(error)}))
+        code = {UnsupportedState:'UNSUPPORTED_STATE',NativeUnavailable:'NATIVE_UNAVAILABLE',
+                UnsupportedRuntime:'UNSUPPORTED_RUNTIME'}.get(type(error),'NATIVE_EXECUTION_FAILED')
+        record = {'code':code,'message':str(error)}
+        if isinstance(error,UnsupportedRuntime): record['observed'] = {'version':error.version}
+        (directory/'native-fault.json').write_text(json.dumps(record))
         raise

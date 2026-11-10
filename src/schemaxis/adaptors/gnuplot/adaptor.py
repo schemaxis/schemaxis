@@ -15,7 +15,7 @@ import time
 
 from schemaxis.artifacts import atomic_json
 from schemaxis.core.declarations import validate_arguments
-from schemaxis.core.faults import SchemaxisError
+from schemaxis.core.faults import Fault, SchemaxisError
 from schemaxis.dispatch import cancellation_requested
 from schemaxis.errors import fail, keys
 from schemaxis.native_command import execute
@@ -31,6 +31,7 @@ AXIS = {'type':'object','properties':{
 COLUMN = {'type':'object','properties':{'name':TEXT,'unit':TEXT}}
 SERIES = {'type':'object','properties':{'label':TEXT,'x':TEXT,'y':TEXT,
     'error':{**TEXT,'required':False},
+    'bounds':{'type':'object','required':False,'properties':{'lower':TEXT,'upper':TEXT}},
     'colour':{'type':'enum','values':['red','blue','green','purple'],'default':'red'}}}
 OPTIONS = {'title':TEXT,'source':{**TEXT,'maxLength':4096},
     'columns':{'type':'array','items':COLUMN,'minItems':2,'maxItems':12,'required':True},
@@ -38,8 +39,9 @@ OPTIONS = {'title':TEXT,'source':{**TEXT,'maxLength':4096},
     'xAxis':{**AXIS,'required':True},'yAxis':{**AXIS,'required':True},
     'width':{'type':'integer','minimum':640,'maximum':1600,'default':800},
     'height':{'type':'integer','minimum':480,'maximum':1200,'default':600}}
-DECLARATIONS = {'plot':{'native':'plot using x:y[:dy] with linespoints/yerrorlines; set xrange/yrange/logscale; svg/png terminals',
+DECLARATIONS = {'plot':{'native':'plot using x:y[:dy] with linespoints/yerrorlines, or x:lower:upper with filledcurves plus x:y with linespoints; set xrange/yrange/logscale; set style fill transparent solid 0.2 noborder; svg/png terminals',
     'kinds':['image','text','file'],'inputs':{},'options':{k:{'value':v} for k,v in OPTIONS.items()}}}
+BAND_LOSS='A bounds series draws a piecewise-linear shaded envelope (fixed 20 percent opacity) through ASSERTED lower and upper columns around the central curve; it computes no quantile, distribution, confidence level, simultaneous coverage or model validity, and interpolation between rows is display only. One linear-axis envelope per plot, each row at least 24 pixels tall.'
 COLOURS = {'red':'#d62728','blue':'#1f77b4','green':'#2ca02c','purple':'#9467bd'}
 LOSSES = ['Only numeric rectangular CSV, 2–2048 rows, 2–12 named columns and 1–4 series; no missing values, dates or expressions.',
     'Each column declares a unit; axis units must match mapped columns. No conversion or physical dimensional inference.',
@@ -83,7 +85,18 @@ def plan(document):
             if s[role] not in units: fail('INVALID_PLOT_COLUMNS','map each series role to a declared column',at+'.'+role)
             axis=p['xAxis' if role=='x' else 'yAxis']
             if units[s[role]]!=axis['unit']: fail('PLOT_UNIT_MISMATCH','mapped column unit must equal its axis unit; convert data explicitly',at+'.'+role)
-    return {'version':'schemaxis.gnuplot.plan/1','operation':'plot',**p,'losses':LOSSES}
+        if 'bounds' in s:
+            b=s['bounds']
+            if 'error' in s: fail('INVALID_PLOT_BOUNDS','a series is either a symmetric error or an asserted lower/upper envelope, not both',at+'.bounds')
+            if len(p['series'])!=1: fail('PLOT_BOUNDS_UNSUPPORTED','an asserted envelope must be the only series of its plot; overlapping envelopes cannot be verified',at+'.bounds')
+            for key in ('xAxis','yAxis'):
+                if p[key]['scale']!='linear': fail('PLOT_BOUNDS_UNSUPPORTED','an asserted envelope supports linear axes only',f'$.{key}.scale')
+            if len({s['y'],b['lower'],b['upper']})!=3: fail('INVALID_PLOT_BOUNDS','y, lower and upper must be three distinct declared columns',at+'.bounds')
+            for role in ('lower','upper'):
+                if b[role] not in units: fail('INVALID_PLOT_COLUMNS','map each bound to a declared column',f'{at}.bounds.{role}')
+                if units[b[role]]!=p['yAxis']['unit']: fail('PLOT_UNIT_MISMATCH','bound column unit must equal the y-axis unit; convert data explicitly',f'{at}.bounds.{role}')
+    extra=[BAND_LOSS] if any('bounds' in s for s in p['series']) else []
+    return {'version':'schemaxis.gnuplot.plan/1','operation':'plot',**p,'losses':LOSSES+extra}
 
 
 def schema():
@@ -134,8 +147,22 @@ def table(data,p):
                 for axis,points in ((p['xAxis'],[x]),(p['yAxis'],[y-dy,y+dy])):
                     if axis['scale']=='log10' and any(v<=0 for v in points): fail('INVALID_LOG_DATA','all log samples and uncertainty endpoints must be positive',f'$.series[{i}] row {j+2}')
                     if any(v<axis['range'][0] or v>axis['range'][1] for v in points): fail('PLOT_DATA_OUTSIDE_RANGE','explicit ranges must contain every sample and uncertainty endpoint',f'$.series[{i}] row {j+2}')
+            if 'bounds' in s: band(i,s,p,values)
         return values
     except (ValueError,UnicodeError,csv.Error,OverflowError) as error: fail('INVALID_PLOT_DATA','use a bounded numeric CSV: '+str(error),'$.source')
+
+
+def band(i,s,p,values):
+    """Every asserted bound is checked exactly; nothing is clipped, sorted or imputed."""
+    lo,hi=s['bounds']['lower'],s['bounds']['upper'];at=f'$.series[{i}]'
+    for j,row in enumerate(values):
+        l,c,u=row[lo],row[s['y']],row[hi]
+        if not l<=c<=u: fail('INVALID_PLOT_BOUNDS','require lower <= representative <= upper in every row',f'{at}.bounds row {j+2}')
+        if l>=u: fail('INVALID_PLOT_BOUNDS','require lower < upper in every row; use a point series for a zero-width interval',f'{at}.bounds row {j+2}')
+        if any(v<p['yAxis']['range'][0] or v>p['yAxis']['range'][1] for v in (l,u)): fail('PLOT_DATA_OUTSIDE_RANGE','explicit y range must contain every lower and upper bound',f'{at}.bounds row {j+2}')
+    from .inspection import band_samples
+    try: band_samples(p,s,values)
+    except ValueError as error: fail('PLOT_BAND_UNVERIFIABLE',str(error),f'{at}.bounds')
 
 
 def reusableInputs(document):
@@ -155,12 +182,32 @@ def script(p):
         if a['scale']=='log10': lines.append(f'set logscale {native} 10')
     names=[c['name'] for c in p['columns']];parts=[]
     for s in p['series']:
+        if 'bounds' in s:
+            index=lambda k:str(names.index(k)+1)
+            parts.append(f"'captured.csv' every ::1 using {index(s['x'])}:{index(s['bounds']['lower'])}:{index(s['bounds']['upper'])} with filledcurves lc rgb '{COLOURS[s['colour']]}' title '{s['label']} range'")
+            parts.append(f"'captured.csv' every ::1 using {index(s['x'])}:{index(s['y'])} with linespoints lw 2 pt 7 ps 0.7 lc rgb '{COLOURS[s['colour']]}' title '{s['label']}'")
+            continue
         columns=':'.join(str(names.index(s[k])+1) for k in ('x','y','error') if k in s)
         style='yerrorlines' if 'error' in s else 'linespoints'
         parts.append(f"'captured.csv' every ::1 using {columns} with {style} lw 2 pt 7 ps 0.7 lc rgb '{COLOURS[s['colour']]}' title '{s['label']}'")
+    if any('bounds' in s for s in p['series']): lines.append('set style fill transparent solid 0.2 noborder')
     lines += [f'set terminal svg size {p["width"]},{p["height"]} noenhanced',"set output 'plot.svg'",'plot '+', '.join(parts),
         f'set terminal png truecolor size {p["width"]},{p["height"]} noenhanced',"set output 'plot.png'",'replot','unset output']
     return '\n'.join(lines)+'\n'
+
+
+def producing_directory(directory):
+    # An export's origin is only a location hint: every retained byte is still read
+    # from the selected directory and every recorded path must match exactly.
+    from schemaxis.run_paths import recorded_directory
+    return recorded_directory(directory) or directory
+
+
+def moved(message,location,observed=None):
+    raise SchemaxisError(Fault('VERIFICATION_FAILED',message,location,'pipeline',observed=observed or {},
+        recovery='Verify the run in its original directory, or copy it with schemaxis export so '
+                 'publication-metadata.json records its origin; do not move files by hand. '
+                 'If retained bytes were edited, restore the intact evidence or render a fresh run.'))
 
 
 def read(directory,name): return json.loads(bounded(directory/name))
@@ -180,8 +227,9 @@ def launcher(directory,stage,command):
         +'os.execvpe(command[0],command,os.environ)\n')
 
 
-def artifacts(directory):
-    return [{'file':str(directory/n),'kind':kind,'sha256':digest(directory,n)} for n,kind in
+def artifacts(directory,recorded=None):
+    # Bytes always come from `directory`; receipts name the producing location.
+    return [{'file':str((recorded or directory)/n),'kind':kind,'sha256':digest(directory,n)} for n,kind in
         [('plot.svg','image'),('plot.png','image'),('plot.gp','text'),('captured.csv','file'),('plot-summary.json','text')]]
 
 
@@ -225,7 +273,7 @@ def run(document,directory,*,executable=None,timeout=300):
 
 
 def verify(directory,require_result=True):
-    directory=Path(directory).absolute()
+    directory=Path(directory).absolute();origin=producing_directory(directory)
     try:
         p=plan(read(directory,'authored.json'));receipt=read(directory,'verification.json')
         if read(directory,'plan.json')!=p: fail('VERIFICATION_FAILED','effective plot plan differs')
@@ -237,14 +285,15 @@ def verify(directory,require_result=True):
         if not isinstance(executable,str) or not Path(executable).is_absolute(): fail('VERIFICATION_FAILED','native executable identity must be absolute')
         for stage,command in commands(executable).items():
             submission=read(directory,stage+'-submission.json');interpreter=submission.get('interpreter',{}).get('executable');path=directory/(stage+'-launcher.py')
-            if not isinstance(interpreter,str) or not Path(interpreter).is_absolute() or submission.get('nativeCommand')!=[interpreter,str(path)] or type(submission.get('exitCode')) is not int or submission['exitCode']!=0: fail('VERIFICATION_FAILED','native command/completion differs',stage)
-            if bounded(path).decode()!=launcher(directory,stage,command): fail('VERIFICATION_FAILED','trusted native launcher differs',stage)
-            if read(directory,stage+'-inputs.json')!={str(directory/n):digest(directory,n) for n in stage_inputs(stage)}: fail('VERIFICATION_FAILED','native plot input binding differs',stage)
+            if not isinstance(interpreter,str) or not Path(interpreter).is_absolute() or type(submission.get('exitCode')) is not int or submission['exitCode']!=0: fail('VERIFICATION_FAILED','native command/completion differs',stage)
+            if submission.get('nativeCommand')!=[interpreter,str(origin/path.name)]: moved('native command/completion differs',stage)
+            if bounded(path).decode()!=launcher(origin,stage,command): moved('trusted native launcher differs',stage)
+            if read(directory,stage+'-inputs.json')!={str(origin/n):digest(directory,n) for n in stage_inputs(stage)}: moved('native plot input binding differs',stage)
         runtime=bounded(directory/'version.stdout').decode().strip()
         if not re.fullmatch(r'gnuplot [0-9]+\.[0-9]+ patchlevel [0-9]+',runtime) or receipt['runtime']!=runtime: fail('VERIFICATION_FAILED','Gnuplot runtime identity differs')
         summary=inspect(directory,p)
         if read(directory,'plot-summary.json')!=summary: fail('VERIFICATION_FAILED','plot summary differs')
-        if receipt['artifacts']!=artifacts(directory): fail('VERIFICATION_FAILED','plot publication membership/digest differs')
+        if receipt['artifacts']!=artifacts(directory,origin): moved('plot publication membership/digest differs','verification.json')
         if set(receipt['evidence'])!=evidence_names(): fail('VERIFICATION_FAILED','native evidence membership differs')
         for n in evidence_names():
             if digest(directory,n)!=receipt['evidence'][n]: fail('VERIFICATION_FAILED','retained native evidence differs',n)

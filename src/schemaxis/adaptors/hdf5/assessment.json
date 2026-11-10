@@ -1,0 +1,47 @@
+{
+  "version": "schemaxis.adaptor-assessment/1",
+  "rubric": "schemaxis.strength-rubric/1",
+  "assessmentVersion": "2026-11-05.8",
+  "assessedOn": "2026-11-05",
+  "assessor": "Schemaxis editorial assessment (implementation owner; independent whole-inventory review reconciled, final engineering acceptance recorded separately)",
+  "provider": "hdf5",
+  "providerVersion": "schemaxis.hdf5/1",
+  "routes": [
+    "schemaxis.hdf5/1"
+  ],
+  "sourceFingerprint": "sha256:e7efc6e17827dc41d072b0c06f239f198253943e5dda7de219605545ff5e3587",
+  "coverage": {
+    "percent": 75,
+    "status": "subjective",
+    "scope": {
+      "kind": "whole-application",
+      "description": "Whole h5py/HDF5 breadth across useful scientific-data families.",
+      "denominator": "Files/drivers/format bounds, groups and links, typed datasets and attributes, selections, chunking/filters/fill, resizing, dimension scales, references and committed types, virtual and external storage, inspection, editing/repacking, SWMR, parallel MPI-IO, remote drivers, filter plugins, low-level property tuning and interoperable mesh/table handoffs."
+    },
+    "rationale": "Eight operations cover creation, adoption, extraction (memory-bounded streaming, typed where row filters, chunk indexes and local MPI parallel reads), editing/repack (including compound field writes and copyChunks direct chunk copies), comparison, XDMF mesh/field series, SWMR acquisition and local MPI-IO writes, with typed access tuning (chunk cache, sieve buffer, alignment, metadata block, page buffer), null-dataspace datasets, large attributes in creation order and verified NumPy, meshio and xarray handoffs. Remote ros3/S3, third-party filter plugins and multi-node MPI are absent; MPI is local to one machine by the accepted v1 scope.",
+    "confidence": "medium"
+  },
+  "abstraction": {
+    "percent": 70,
+    "status": "subjective",
+    "scope": {
+      "kind": "declared-workflows",
+      "description": "Typed path-addressed HDF5 intent: objects, storage, scales, links, edits, extracts, expectations, mesh fields and SWMR series.",
+      "denominator": "User intent and domain decisions within the named supported workflows, including declared inputs, composition and useful outputs; excluded application features do not enter this score."
+    },
+    "rationale": "Users declare paths, types, units, scales, selections and edits rather than h5py calls; defaults choose layouts, and the host locates faults and simulates edits. Users still choose element widths, chunk shapes and filter options, which is appropriate for HDF5 but remains native-level detail.",
+    "confidence": "medium"
+  },
+  "evidence": [
+    "src/schemaxis/adaptors/hdf5/adaptor.json",
+    "src/schemaxis/adaptors/hdf5/readiness.json",
+    "docs/hdf5.md",
+    "verification/2026-11-05-hdf5-completion.md"
+  ],
+  "limitations": [
+    "MPI-IO (parallelWrite, parallel extraction) runs on one local machine only, qualified with Open MPI 4.1.7 and 2-3 ranks; multi-node correctness and scaling are future work (docs/design/hdf5-multinode-mpi-backlog.md). Remote drivers and filter plugins are unavailable.",
+    "Values independently compared literally up to 1,048,576 elements per file; larger files rely on digests of the h5py readback for unedited data and on h5dump hyperslab reads of selected or written regions.",
+    "Some facts (UTF-8 attribute encoding, LZF/scale-offset presence, region references, non-native fill values) are observable only by the h5py readback, not h5dump XML; null dataspaces are confirmed from h5dump DDL headers.",
+    "Compound/vlen bases are one level deep; dimension scales are one-dimensional; CSV extracts carry enum codes and no type metadata; chunk indexes and copyChunks cover gzip/shuffle/Fletcher-32 single-file layouts."
+  ]
+}

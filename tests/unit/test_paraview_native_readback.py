@@ -11,6 +11,32 @@ import sys
 import types
 from unittest import mock
 from schemaxis.adaptors.paraview.writers import check_ioss_global_ids, input_time_steps
+from schemaxis.adaptors.paraview.publication import observed_slice_plane
+
+
+class SlicePlaneMetadataTests(unittest.TestCase):
+    def test_curated_slice_pins_a_single_zero_offset_before_publication(self):
+        from schemaxis.adaptors.paraview.filters import catalogue
+        self.assertEqual(catalogue()['slice']['fixed']['SliceOffsetValues'], [0])
+
+    def proxy(self, *, native='Cut', implicit='Plane', crinkle=False, offsets=None):
+        return types.SimpleNamespace(
+            SMProxy=types.SimpleNamespace(GetXMLName=lambda: native), Crinkleslice=crinkle,
+            SliceType=types.SimpleNamespace(SMProxy=types.SimpleNamespace(GetXMLName=lambda: implicit),
+                                           Origin=[2,3,4], Normal=[1,0,0]),
+            ListProperties=lambda: ['SliceOffsetValues'] if offsets is not None else [],
+            SliceOffsetValues=offsets)
+
+    def test_single_native_plane_records_observed_coordinates(self):
+        for offsets in (None, [0.0]):
+            self.assertEqual(observed_slice_plane(self.proxy(offsets=offsets)),
+                             {'origin': [2,3,4], 'normal': [1,0,0]})
+
+    def test_ambiguous_or_nonplanar_cuts_do_not_claim_a_texture_plane(self):
+        for settings in ({'native': 'SphereSource'}, {'implicit': 'Sphere'}, {'crinkle': True},
+                         {'offsets': []}, {'offsets': [0,1]}, {'offsets': [2]}):
+            with self.subTest(settings=settings):
+                self.assertIsNone(observed_slice_plane(self.proxy(**settings)))
 
 
 class ComponentProxy:

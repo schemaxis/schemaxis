@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.webp/1"
+    },
+    "operation": {
+      "enum": [
+        "encodeLossless",
+        "encodeLossy",
+        "decodeToPng"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "quality": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "maxMeanRGBError": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "maxBytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16777216
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation"
+  ],
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.webp/1"
+        },
+        "operation": {
+          "const": "encodeLossless"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.webp/1"
+        },
+        "operation": {
+          "const": "encodeLossy"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "quality": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "maxMeanRGBError": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "maxBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "quality",
+        "maxMeanRGBError"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.webp/1"
+        },
+        "operation": {
+          "const": "decodeToPng"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source"
+      ]
+    }
+  ]
+}

@@ -122,6 +122,26 @@ class ViewUpTests(unittest.TestCase):
         self.assertEqual(resolve_direction("x+").notes, ())
 
 
+class InterpreterIndependenceTests(unittest.TestCase):
+    """Host and native interpreters must resolve identical bits.
+
+    Built-in float sum() became compensated in Python 3.12, so a host on 3.12+
+    and a native ParaView interpreter on 3.10 disagreed in the last bit and exact
+    presentation verification refused the run. These literals are the correctly
+    rounded results; plain left-to-right summation misses them on Python 3.10.
+    """
+
+    def test_a_reported_orbit_camera_resolves_to_the_correctly_rounded_vector(self) -> None:
+        self.assertEqual(resolve_direction({"azimuth": 49.09, "elevation": 25}).vector,
+                         (0.5935162502410517, 0.6849323072706318, 0.4226182617406995))
+
+    def test_cancelling_terms_are_summed_exactly(self) -> None:
+        from schemaxis.core.directions import _combine, _dot
+        self.assertEqual(_dot((1e16, 1.0, -1e16), (1.0, 1.0, 1.0)), 1.0)
+        self.assertEqual(_combine((1e16, (1.0, 0.0, 0.0)), (1.0, (1.0, 0.0, 0.0)), (-1e16, (1.0, 0.0, 0.0))),
+                         (1.0, 0.0, 0.0))
+
+
 class SpecificationTests(unittest.TestCase):
     def test_declaring_two_spellings_at_once_is_refused(self) -> None:
         fault = fault_of(self, {"axis": "x+", "vector": [0, 1, 0]})

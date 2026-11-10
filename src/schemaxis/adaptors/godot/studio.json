@@ -151,6 +151,55 @@
         "file": "/library-fixtures/sprite.png"
       },
       "requires": "An existing PNG is needed at execution."
+    },
+    {
+      "id": "animated-sprite",
+      "title": "Animated sprite scene",
+      "description": "Baseline: one forward Aseprite tag looping in a scene with a single inspection camera. Variant: switch Repeat off to play once and hold the last frame.",
+      "file": "studio/templates/animated-sprite.json",
+      "fields": {
+        "file": {
+          "label": "Aseprite sheet .png",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "png"
+          ]
+        },
+        "metadata": {
+          "label": "Sheet metadata .json",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "json"
+          ]
+        },
+        "animation": {
+          "label": "Aseprite tag to play",
+          "type": "id",
+          "required": true,
+          "default": "pulse"
+        },
+        "loop": {
+          "label": "Repeat",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        },
+        "pixelSize": {
+          "label": "Pixel size",
+          "type": "number",
+          "required": true,
+          "minimum": 1e-05,
+          "maximum": 10,
+          "default": 0.05
+        }
+      },
+      "testValues": {
+        "file": "/library-fixtures/animated-sheet.png",
+        "metadata": "/library-fixtures/animated-sheet.json"
+      },
+      "requires": "An Aseprite sheet.png and its sheet.json with a forward tag are required for native execution."
     }
   ],
   "snippets": [
@@ -642,6 +691,104 @@
         "file": "/library-fixtures/asset.png"
       },
       "requires": "An existing absolute PNG path is required for native execution."
+    },
+    {
+      "id": "add-animatedSprite3D",
+      "title": "Animated sprite",
+      "category": "import",
+      "description": "Play one forward Aseprite tag from a sheet PNG and its sheet.json as a timed AnimatedSprite3D; frame durations stay in milliseconds.",
+      "fields": {
+        "id": {
+          "label": "Node ID",
+          "type": "id",
+          "required": true,
+          "default": "newAnimatedSprite3D"
+        },
+        "file": {
+          "label": "Aseprite sheet .png",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "png"
+          ]
+        },
+        "metadata": {
+          "label": "Sheet metadata .json",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "json"
+          ]
+        },
+        "animation": {
+          "label": "Aseprite tag to play",
+          "type": "id",
+          "required": true,
+          "default": "pulse"
+        },
+        "loop": {
+          "label": "Repeat",
+          "type": "boolean",
+          "required": true,
+          "default": true
+        },
+        "pixelSize": {
+          "label": "Pixel size",
+          "type": "number",
+          "required": true,
+          "minimum": 1e-05,
+          "maximum": 10,
+          "default": 0.05
+        },
+        "position": {
+          "label": "Position",
+          "type": "vector3",
+          "required": true,
+          "default": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "animatedSprite3D",
+              "options": {
+                "file": {
+                  "$fill": "file"
+                },
+                "metadata": {
+                  "$fill": "metadata"
+                },
+                "animation": {
+                  "$fill": "animation"
+                },
+                "loop": {
+                  "$fill": "loop"
+                },
+                "pixelSize": {
+                  "$fill": "pixelSize"
+                },
+                "position": {
+                  "$fill": "position"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "testValues": {
+        "file": "/library-fixtures/animated-sheet.png",
+        "metadata": "/library-fixtures/animated-sheet.json"
+      },
+      "requires": "An Aseprite sheet.png and its sheet.json (schemaxis.aseprite.sheet/1) with a forward tag are required for native execution."
     },
     {
       "id": "configure-camera",

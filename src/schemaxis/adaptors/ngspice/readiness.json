@@ -4,11 +4,11 @@
     "schemaxis.ngspice/1": {
       "guide": "docs/ngspice.md",
       "context": {
-        "purpose": "Simulate declared ideal linear circuits and publish verified numeric tables: DC resistor/capacitor sweeps, AC resistor/capacitor/inductor frequency response and one first-order RC step response. Optional named finite-sample voltage or AC gain acceptance determines whether the verified circuit meets the intended performance.",
-        "assumptions": "Qualified ngspice-47 executable in an isolated process with startup files disabled. SI volts, ohms, farads, henries, Hz and seconds. One ideal voltage source to ground node 0. AC phasors use exp(+j*omega*t).",
-        "constraints": "At most sixteen non-ground nodes, 64 resistors, 64 capacitors, 64 AC-only uncoupled inductors and 512 samples. Every node needs a resistor/inductor path to ground or the driven node. No ideal-inductor loops or inductive shorts across the source. No arbitrary netlists, models, semiconductors, mutual coupling, imported KiCad projects, inductor DC sweeps or general transient networks. rcStep is exactly series R and shunt C, initially uncharged, over 0.01\u201320 RC time constants. AC requires at least three points and at most fifteen selected probes within the shared 64-column table limit. Every requested frequency must have a nonsingular, sufficiently conditioned nodal system. Requirements inspect declared samples only; no continuous operating-envelope or all-component-tolerance guarantee. Phase acceptance is unsupported.",
-        "inspection": "Inspect results.csv for selected voltages and AC real/imaginary/magnitude/phase columns. circuit-summary.json retains topology, units, first/last sample and independent maximum voltage discrepancy. circuit.cir is the generated inspectable netlist. Named requirements retain minimum/maximum native observations, signed bound margins and worst sample coordinates.",
-        "recovery": "FLOATING_CIRCUIT needs a resistor/inductor reference path. INVALID_SWEEP needs stop > start. ILL_CONDITIONED_CIRCUIT needs damping or bounded component ratios. UNSUPPORTED_CIRCUIT requires the first-order RC topology for rcStep or removal of an ideal-inductor/source loop for AC. Configure ngspice-47 for INTERPRETER_NOT_FOUND; retain native logs and correct the input before a fresh attempt. INVALID_REQUIREMENT needs a supported quantity/probe and an ordered sample-containing window. PERFORMANCE_NOT_MET needs review of the worst condition, circuit/excitation or authored bounds, then a fresh attempt; this is distinct from native/physics failure."
+        "purpose": "Analyse bounded ideal linear networks: DC voltages, linear/decade/octave AC frequency response, input impedance/current/power, passive branch current/power, and first-order RC charging. Named finite-sample voltage, gain, relative phase, current, power and impedance requirements gate publication.",
+        "assumptions": "Qualified ngspice-47 executable in an isolated process with startup files disabled. SI volts, ohms, farads, henries, Hz and seconds. One ideal voltage source to ground node 0. The node name gnd is reserved in any case because ngspice rewrites it to node 0. AC phasors use exp(+j*omega*t). AC amplitudeConvention declares peak (default; power factor 1/2) or rms (power factor 1). Source input current is native -i(vdrive), independently checked against KCL; branch currents and powers derive from verified native terminal voltages.",
+        "constraints": "At most sixteen non-ground nodes, 64 resistors, 64 capacitors, 64 AC-only uncoupled inductors and 512 actual samples. Every node needs a resistor/inductor path to ground or the driven node. No ideal-inductor loops or inductive shorts across the source. No arbitrary netlists, models, semiconductors, mutual coupling, imported KiCad projects, inductor DC sweeps or general transient networks. rcStep is exactly series R and shunt C, initially uncharged, over 0.01–20 RC time constants. AC requires at least three points and at most fifteen selected probes within the shared 64-column table limit. Every requested frequency must have a nonsingular, sufficiently conditioned nodal system. Requirements inspect declared samples only; no continuous operating-envelope or all-component-tolerance guarantee. Phase acceptance uses relative output/source principal phase in [-180,180] degrees and refuses zero response. Logarithmic points is nominal samples per decade/octave; actual count must be 3–512. Selected outputs together must fit 64 numeric columns. portMetrics refuses undefined or numerically ill-conditioned input impedance near zero current.",
+        "inspection": "Inspect results.csv for selected voltages and AC real/imaginary/magnitude/phase columns. circuit-summary.json retains topology, units, first/last sample and independent maximum voltage discrepancy. circuit.cir is the generated inspectable netlist. Named requirements retain minimum/maximum native observations, signed bound margins and worst sample coordinates. AC branchProbes add derived current phasors and passive active/reactive power. portMetrics adds native-observed input current, derived input impedance and complex/apparent power; amplitudeConvention and complexPowerFactor are retained. frequencyGrid records spacing and actual sample count.",
+        "recovery": "INVALID_CIRCUIT at a node named gnd (any case) needs 0 for ground or another node name: ngspice rewrites gnd to node 0, so the reserved alias is refused rather than normalised. FLOATING_CIRCUIT needs a resistor/inductor reference path. INVALID_SWEEP needs stop > start. ILL_CONDITIONED_CIRCUIT needs damping or bounded component ratios. UNSUPPORTED_CIRCUIT requires the first-order RC topology for rcStep or removal of an ideal-inductor/source loop for AC. Configure ngspice-47 for INTERPRETER_NOT_FOUND; retain native logs and correct the input before a fresh attempt. INVALID_REQUIREMENT needs a supported quantity/probe and an ordered sample-containing window. PERFORMANCE_NOT_MET needs review of the worst condition, circuit/excitation or authored bounds, then a fresh attempt; this is distinct from native/physics failure. UNDEFINED_OBSERVABLE needs nonzero measured response for phase/dB, or a physical input load/disabled portMetrics for input impedance. RESOURCE_LIMIT at circuit needs fewer published probes."
       },
       "examples": [
         {
@@ -61,6 +61,40 @@
           },
           "expect": "invalid",
           "fault": "FLOATING_CIRCUIT",
+          "schemaValid": true
+        },
+        {
+          "id": "reserved-ground-alias",
+          "document": {
+            "version": "schemaxis.ngspice/1",
+            "operation": "dcSweep",
+            "circuit": {
+              "source": "in",
+              "resistors": [
+                {
+                  "name": "r1",
+                  "a": "in",
+                  "b": "out",
+                  "resistance": 1000
+                },
+                {
+                  "name": "r2",
+                  "a": "out",
+                  "b": "GND",
+                  "resistance": 2000
+                }
+              ],
+              "capacitors": [],
+              "probes": [
+                "out"
+              ]
+            },
+            "start": 0,
+            "stop": 5,
+            "points": 6
+          },
+          "expect": "invalid",
+          "fault": "INVALID_CIRCUIT",
           "schemaValid": true
         },
         {
@@ -264,6 +298,134 @@
           "expect": "invalid",
           "fault": "INVALID_REQUIREMENT",
           "schemaValid": true
+        },
+        {
+          "id": "filter-characterisation",
+          "reference": "examples/schemaxis/ngspice-filter-characterisation.json"
+        },
+        {
+          "id": "resonator-power",
+          "reference": "examples/schemaxis/ngspice-resonator-power.json"
+        },
+        {
+          "id": "octave-filter",
+          "reference": "examples/schemaxis/ngspice-octave-filter.json"
+        },
+        {
+          "id": "unknown-branch",
+          "document": {
+            "version": "schemaxis.ngspice/1",
+            "operation": "acSweep",
+            "circuit": {
+              "source": "in",
+              "resistors": [
+                {
+                  "name": "r1",
+                  "a": "in",
+                  "b": "out",
+                  "resistance": 1000
+                }
+              ],
+              "capacitors": [
+                {
+                  "name": "c1",
+                  "a": "out",
+                  "b": "0",
+                  "capacitance": 1e-06
+                }
+              ],
+              "probes": [
+                "out"
+              ],
+              "branchProbes": [
+                "absent"
+              ]
+            },
+            "start": 159.15494309189532,
+            "stop": 15915.494309189531,
+            "points": 4,
+            "amplitude": 1,
+            "spacing": "decade",
+            "portMetrics": true,
+            "amplitudeConvention": "peak",
+            "requirements": [
+              {
+                "name": "phase_lag",
+                "probe": "out",
+                "quantity": "phase_deg",
+                "axis": "frequency_Hz",
+                "window": [
+                  159.15494309189532,
+                  15915.494309189531
+                ],
+                "minimum": -90,
+                "maximum": -44
+              },
+              {
+                "name": "attenuation",
+                "probe": "out",
+                "quantity": "gain_dB",
+                "axis": "frequency_Hz",
+                "window": [
+                  159.15494309189532,
+                  15915.494309189531
+                ],
+                "minimum": -41,
+                "maximum": -3
+              },
+              {
+                "name": "input_current",
+                "probe": "$input",
+                "quantity": "currentMagnitude_A",
+                "axis": "frequency_Hz",
+                "window": [
+                  159.15494309189532,
+                  15915.494309189531
+                ],
+                "minimum": 0.0007,
+                "maximum": 0.00101
+              },
+              {
+                "name": "resistor_heating",
+                "probe": "r1",
+                "quantity": "activePower_W",
+                "axis": "frequency_Hz",
+                "window": [
+                  159.15494309189532,
+                  15915.494309189531
+                ],
+                "minimum": 0.00024,
+                "maximum": 0.00051
+              },
+              {
+                "name": "capacitor_reactive",
+                "probe": "c1",
+                "quantity": "reactivePower_var",
+                "axis": "frequency_Hz",
+                "window": [
+                  159.15494309189532,
+                  15915.494309189531
+                ],
+                "minimum": -0.00026,
+                "maximum": 0
+              },
+              {
+                "name": "input_loading",
+                "probe": "$input",
+                "quantity": "impedanceMagnitude_Ohm",
+                "axis": "frequency_Hz",
+                "window": [
+                  159.15494309189532,
+                  15915.494309189531
+                ],
+                "minimum": 1000,
+                "maximum": 1500
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "INVALID_SELECTION",
+          "schemaValid": true
         }
       ],
       "conformance": [
@@ -301,7 +463,7 @@
           "timeout": "One deadline covers runtime identification, simulation and fresh-process raw-data reopen. Shared kit watchdog independently bounds the entire attempt. A final deadline check also bounds CPU verification before success publication.",
           "cancellation": "Shared owned-process cancellation and final cancellation check before publication; no resident simulator.",
           "logs": "Retain authored/effective plans, deterministic netlists, runtime/version logs, simulation and reopen stdout/stderr, ASCII raw data, native/reopened tables, publications and failure results.",
-          "verification": "Independent partial-pivot complex nodal equations check all native node voltages for DC/AC. First-order RC voltage is compared to V*(1-exp(-t/RC)). Exact sample coordinates, publication conversions and a separate ASCII raw parser are checked; a fresh ngspice process reloads the raw data. Digest and authored/plan checks run offline. Inductive AC uses 1/(j*omega*L) stamps, checks every requested frequency before native launch and preserves uncancelled admittance scales to reject undamped resonant cancellation. Closed-form RL and series/parallel RLC transfer functions supply independent fixture expectations. Performance is recomputed from checked native voltages and authored requirements, so refreshing ordinary summary hashes cannot turn an unmet bound into success."
+          "verification": "Independent partial-pivot complex nodal equations check all native node voltages for DC/AC. First-order RC voltage is compared to V*(1-exp(-t/RC)). Exact sample coordinates, publication conversions and a separate ASCII raw parser are checked; a fresh ngspice process reloads the raw data. Digest and authored/plan checks run offline. Inductive AC uses 1/(j*omega*L) stamps, checks every requested frequency before native launch and preserves uncancelled admittance scales to reject undamped resonant cancellation. Closed-form RL and series/parallel RLC transfer functions supply independent fixture expectations. Performance is recomputed from checked native voltages and authored requirements, so refreshing ordinary summary hashes cannot turn an unmet bound into success. AC portMetrics saves native i(vdrive), independently checks network input current/KCL, and verifies raw/reopened current columns. Branch currents and complex powers derive from independently checked native voltages using passive sign and explicit peak/RMS convention. Logarithmic grids are independently reconstructed; exact actual count and coordinates are verified."
         },
         "data": [
           {
@@ -311,13 +473,13 @@
             "format": "numeric CSV",
             "traits": {
               "units": "SI with voltage/frequency/time columns; phase in degrees",
-              "samples": "2\u2013512"
+              "samples": "2–512"
             },
             "losses": [
-              "Selected node voltages only; no device currents or nonlinear model data.",
+              "AC branch currents/powers derive from verified terminal voltages; portMetrics source current is native observed. No nonlinear device/model data.",
               "CSV alone omits circuit topology; retain netlist and summary."
             ],
-            "scope": "DC or first-order RC voltage tables; AC real/imaginary/magnitude/principal phase at linearly spaced frequencies."
+            "scope": "DC or first-order RC voltage tables; linear/logarithmic AC voltage phasors, derived passive branch current/power, optional native input current and derived input impedance/power."
           },
           {
             "id": "netlist",
@@ -1059,13 +1221,169 @@
                 "relative": 1e-08
               }
             ]
+          },
+          {
+            "id": "log-filter-electrical",
+            "example": "filter-characterisation",
+            "edits": [],
+            "scope": "RC cutoff: Z=1000-j1000 ohm, I=(1+j)/2000 A and peak S=(1-j)/4000 VA. Nine logarithmic samples from cutoff to 100 cutoff.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/samples",
+                "expected": 9,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow/21",
+                "expected": 1000,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow/22",
+                "expected": -1000,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow/24",
+                "expected": 0.00025,
+                "absolute": 1e-11,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow/25",
+                "expected": -0.00025,
+                "absolute": 1e-11,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "log-filter-rms",
+            "example": "filter-characterisation",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/amplitudeConvention",
+                "value": "rms"
+              },
+              {
+                "op": "remove",
+                "path": "/requirements"
+              }
+            ],
+            "scope": "RMS convention preserves voltage/current and doubles peak-reference average/reactive power.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/complexPowerFactor",
+                "expected": 1,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow/24",
+                "expected": 0.0005,
+                "absolute": 1e-11,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow/25",
+                "expected": -0.0005,
+                "absolute": 1e-11,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "log-resonator-power",
+            "example": "resonator-power",
+            "edits": [],
+            "scope": "Series RLC with RMS 1V: x=.1 gives input Z=1000-j9900 ohm, while x=10 gives 1000+j9900. Passive capacitor Q negative and inductor Q positive.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/samples",
+                "expected": 9,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow/27",
+                "expected": 1000,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/firstRow/28",
+                "expected": -9900,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/lastRow/28",
+                "expected": 9900,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "octave-grid",
+            "example": "octave-filter",
+            "edits": [],
+            "scope": "Four samples per octave from100 to900Hz ends at800Hz; no implicit sample at upper bound.",
+            "checks": [
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/samples",
+                "expected": 13,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              },
+              {
+                "file": "circuit-summary.json",
+                "format": "json",
+                "pointer": "/frequencyGrid/lastFrequency_Hz",
+                "expected": 800,
+                "absolute": 1e-08,
+                "relative": 1e-08
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Primary route: preserved conceptual guidance and examples; curated discovery phrases, Studio Add and contextual Help. Native behaviour is unchanged.",
+        "scope": "2026-11-03: complete supported linear-frequency characterisation family: linear/decade/octave grids, declared peak/RMS amplitude convention, native input current/KCL, derived passive branch current/complex power and input impedance, sampled phase/dB/current/power/impedance requirements; prior DC and RC scope regression-checked. Whole ngspice breadth remains explicitly excluded.",
         "review": [
-          "verification/2026-10-10-adaptor-completion.md"
+          "verification/2026-10-10-adaptor-completion.md",
+          "verification/2026-10-25-ngspice-36.md",
+          "verification/2026-11-03-ngspice-characterisation.md"
         ],
         "notApplicable": {}
       }

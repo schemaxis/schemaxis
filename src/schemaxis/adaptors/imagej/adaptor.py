@@ -1,5 +1,5 @@
 # Copyright (C) 2026 David L F Gaden
-"""Bounded thresholded particle measurement with headless ImageJ 1.x."""
+"""Bounded thresholded particle and repeated rectangular-region measurement with headless ImageJ 1.x."""
 import hashlib
 import json
 import math
@@ -17,7 +17,7 @@ from schemaxis.dispatch import cancellation_requested
 from schemaxis.errors import fail, keys
 from schemaxis.native_command import execute
 from schemaxis.tabular import parse_csv, write_csv
-from . import images
+from . import images, regions
 from .program import NAME, PROGRAM
 
 VERSION = 'schemaxis.imagej/1'
@@ -42,6 +42,7 @@ DECLARATIONS = {'analyzeParticles': {
     'native': 'ij.plugin.filter.ParticleAnalyzer (ImageJ 1.x Analyze Particles)',
     'kinds': ['table', 'text'], 'inputs': {},
     'options': {key: {'value': value} for key, value in OPTIONS.items()}}}
+DECLARATIONS.update(regions.DECLARATIONS)
 COLUMNS = ['particle', 'pixelCount', 'area_{u}2', 'centroidX_{u}', 'centroidY_{u}', 'boundsX_{u}', 'boundsY_{u}',
            'boundsWidth_{u}', 'boundsHeight_{u}', 'meanIntensity', 'minimumIntensity', 'maximumIntensity']
 NATIVE_COLUMNS = ['Area', 'Mean', 'Min', 'Max', 'X', 'Y', 'BX', 'BY', 'Width', 'Height']
@@ -61,9 +62,10 @@ def columns(unit):
 
 
 def plan(document):
+    if isinstance(document, dict) and document.get('operation') == regions.OPERATION: return regions.plan(document)
     keys(document, ('version', 'operation', *OPTIONS), '$')
     if document.get('version') != VERSION: fail('UNSUPPORTED_VERSION', 'expected '+VERSION)
-    if document.get('operation') != 'analyzeParticles': fail('UNKNOWN_FILTER', 'select analyzeParticles', '$.operation')
+    if document.get('operation') != 'analyzeParticles': fail('UNKNOWN_FILTER', 'select analyzeParticles or measureRegions', '$.operation')
     prepared = validate_arguments(OPTIONS, {k: v for k, v in document.items() if k not in ('version', 'operation')}, location='$')
     path = prepared['image']
     if any(ord(char) < 32 or ord(char) == 127 for char in path) or not Path(path).is_absolute():
@@ -97,7 +99,10 @@ def schema():
     from schemaxis.schema import DRAFT, argument_schema, object_schema
     fields = {'version': {'const': VERSION}, 'operation': {'const': 'analyzeParticles'},
               **{key: argument_schema(value) for key, value in OPTIONS.items()}}
-    return {'$schema': DRAFT, **object_schema(fields, ['version', 'operation', 'image', 'calibration', 'threshold'])}
+    particles = object_schema(fields, ['version', 'operation', 'image', 'calibration', 'threshold'])
+    series = regions.schema_branch()
+    properties = {**particles['properties'], **series['properties'], 'operation': {'enum': ['analyzeParticles', regions.OPERATION]}}
+    return {'$schema': DRAFT, **object_schema(properties, ['version', 'operation']), 'oneOf': [particles, series]}
 
 
 def query(document):
@@ -106,6 +111,7 @@ def query(document):
 
 
 def reusableInputs(document):
+    if isinstance(document, dict) and document.get('operation') == regions.OPERATION: return regions.reusable(document)
     path = Path(plan(document)['image'])
     try:
         return {str(path): hashlib.sha256(source_bytes(path)).hexdigest()}
@@ -303,6 +309,8 @@ def manifest(directory):
 
 
 def run(document, directory, *, executable=None, jar=None, timeout=300):
+    if isinstance(document, dict) and document.get('operation') == regions.OPERATION:
+        return regions.run(document, directory, executable=executable, jar=jar, timeout=timeout)
     prepared = plan(document)
     executable = executable or shutil.which('java')
     if not executable or not Path(executable).is_absolute() or not Path(executable).is_file() or not os.access(executable, os.X_OK):
@@ -372,7 +380,9 @@ def native_options(prepared):
 def verify(directory, require_result=True):
     directory = Path(directory).absolute()
     try:
-        prepared = plan(read_json(directory, 'authored.json'))
+        authored = read_json(directory, 'authored.json')
+        if authored.get('operation') == regions.OPERATION: return regions.verify(directory, require_result)
+        prepared = plan(authored)
         check(read_json(directory, 'plan.json') == prepared, 'effective plan differs from authored particle analysis')
         if require_result:
             result = read_json(directory, 'result.json')

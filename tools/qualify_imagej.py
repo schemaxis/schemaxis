@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 David L F Gaden
-"""Native ImageJ particle kit, tamper probes, Calc handoff/reuse and public agent reuse.
+# Copyright (C) 2026 David L. F. Gaden
+"""Native ImageJ kit (both operations), tamper probes, Calc handoffs/reuse and public agent reuse.
 
 Requires a Java 11+ runtime with jdk.compiler and ImageJ 1.54 ij.jar. The Calc
 handoff runs only when a Calc location is supplied; otherwise it is reported as
@@ -22,6 +22,7 @@ from schemaxis.artifacts import file_digest
 from schemaxis.core.faults import SchemaxisError
 from schemaxis.tabular import close, read_csv
 from schemaxis import workflow
+import qualify_imagej_regions as regionsq
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = 'schemaxis.imagej/1'
@@ -38,6 +39,7 @@ def rejected(action, code):
 
 def tamper(target, report):
     """A refreshed digest cannot hide a changed label or measurement."""
+    if (target/'region-measurements.json').is_file(): return regionsq.tamper(target, report)  # measureRegions evidence
     receipt_path = target/'verification.json'; saved_receipt = receipt_path.read_bytes()
     for name, old, new in (('count-mask.pgm', None, None), ('native-particles.csv', b'27.0,', b'27.5,'),
                            ('reopen-particles.csv', b'160.0', b'159.0')):
@@ -82,6 +84,35 @@ def handoff(directory, locations, report):
     report['workflows'].append({'changedImageReuse': reused})
 
 
+def inspect_walk(client, resource_id, pointer, revision=None):
+    """Follow the documented bounded inspect_resource members and pages for one pointer, with the default budget."""
+    page = client.call('inspect_resource', resource_id=resource_id, pointer=pointer, revision=revision)
+    stamp = page['revision']
+    if page['mode'] == 'value': return page['value'], stamp
+    value = {} if page['container'] == 'object' else []
+    while True:
+        for item in page['items']:
+            child = item['value'] if 'value' in item else inspect_walk(client, resource_id, item['pointer'], stamp)[0]
+            if isinstance(value, dict): value[item['key']] = child
+            else: value.append(child)
+        if page['page']['nextOffset'] is None: return value, stamp
+        page = client.call('inspect_resource', resource_id=resource_id, pointer=pointer, revision=stamp, offset=page['page']['nextOffset'])
+
+
+def inspect_checks(client, resource_id, checks):
+    """Return {pointer: observed} by bounded queries of each asserted field's parent, pinned to one revision."""
+    parents, observed, revision = {}, {}, None
+    for check in checks:
+        assert '~' not in check['pointer'], check
+        parent, token = check['pointer'].rsplit('/', 1)
+        if not parent:  # a root member: ask for that exact field rather than walking the whole publication
+            observed[check['pointer']], revision = inspect_walk(client, resource_id, check['pointer'], revision); continue
+        if parent not in parents: parents[parent], revision = inspect_walk(client, resource_id, parent, revision)
+        container = parents[parent]
+        observed[check['pointer']] = container[int(token)] if isinstance(container, list) else container[token]
+    return observed, revision
+
+
 def public_loop(directory, config, report):
     sys.path.insert(0, str(ROOT/'tools'))
     from qualify_agent_service import Client
@@ -92,7 +123,7 @@ def public_loop(directory, config, report):
         materials, _ = context(client, VERSION, '/materials', stamp)
         assert materials['development']['authoring']['model'] == 'document'
         _, _, entry = route_materials(VERSION)
-        cases = [c for c in materials['development']['cases'] if c['id'] in ('baseline-8bit', 'anisotropic-millimetres')]
+        cases = [c for c in materials['development']['cases'] if c['id'] in ('baseline-8bit', 'anisotropic-millimetres', 'regions-baseline-8bit', 'regions-fractional-8bit')]
         task = client.call('create_task', objective='Measure calibrated particles and refine calibration', allowed_providers=[provider],
                            budget={'maxAttempts': len(cases)+2, 'maxElapsedSeconds': 300})
         draft = client.call('create_draft', provider=provider, name='Particle measurement'); revision = 0
@@ -107,15 +138,26 @@ def public_loop(directory, config, report):
             assert client.wait(job)['status'] == 'succeeded', client.call('observe', job_id=job['id'], section='fault')
             assert client.call('verify', job_id=job['id'])['value']['verified']
             resources = client.call('observe', job_id=job['id'], section='resources')['value']
-            resource = next(r for r in resources if Path(r['file']).name == 'particle-summary.json')
-            summary = client.call('inspect_resource', resource_id=resource['id'])['value']
-            for check in case['checks']:
-                if check['file'] != 'particle-summary.json': continue
-                value = summary
-                for part in check['pointer'].split('/')[1:]: value = value[part]
-                assert close(value, check['expected'], rel=check['relative'], absolute=check['absolute']), (case['id'], check)
-            report['publicCases'].append({'case': case['id'], 'particleCount': summary['particleCount'],
-                                          'totalArea': summary['totalArea'], 'areaUnit': summary['calibration']['areaUnit']})
+            name = 'region-measurements.json' if case['id'].startswith('regions-') else 'particle-summary.json'
+            resource = next(r for r in resources if Path(r['file']).name == name)
+            before = len(client.records)
+            checks = [c for c in case['checks'] if c['file'] == name]
+            observed, _ = inspect_checks(client, resource['id'], checks)
+            for check in checks:
+                assert close(observed[check['pointer']], check['expected'], rel=check['relative'], absolute=check['absolute']), (case['id'], check, observed[check['pointer']])
+            requests = client.records[before:]
+            assert all(r['method'] == 'inspect_resource' and r['ok'] for r in requests)
+            entry_report = {'case': case['id'], 'inspectedFields': len(checks), 'inspectRequests': len(requests),
+                            'maxResponseBytes': max(r['responseBytes'] for r in requests)}
+            field = lambda pointer: client.call('inspect_resource', resource_id=resource['id'], pointer=pointer)['value']
+            entry_report['areaUnit'] = field('/calibration/areaUnit')
+            if name.startswith('region'):
+                total = client.call('inspect_resource', resource_id=resource['id'], pointer='/records', limit=1)
+                entry_report['records'] = len(total['value']) if total['mode'] == 'value' else total['page']['total']
+                assert entry_report['records'] == 1+max(int(c['pointer'].split('/')[2]) for c in checks), entry_report
+            else:
+                entry_report.update(particleCount=field('/particleCount'), totalArea=field('/totalArea'))
+            report['publicCases'].append(entry_report)
         invalid = next(e for e in materials['examples'] if e.get('expect') == 'invalid')
         refused = client.request('plan', task_id=task['id'], expected_revision=revision, document=example_document(invalid, ROOT))
         assert not refused['ok'] and refused['fault']['code'] == invalid['fault']
@@ -150,6 +192,9 @@ def main():
         fixtures = subprocess.run([sys.executable, str(ROOT/'tools/qualify_imagej_fixtures.py'), '--check'],
                                   capture_output=True, text=True, timeout=60)
         assert fixtures.returncode == 0, fixtures.stderr
+        series = subprocess.run([sys.executable, str(ROOT/'tools/qualify_imagej_series_fixtures.py'), '--check'], capture_output=True, text=True, timeout=60)
+        assert series.returncode == 0, 'stale ImageJ series fixtures refused: '+series.stderr
+        report['seriesFixtures'] = series.stdout.strip()
         receipt = qualify(VERSION, directory/'native', native=True, locations=locations, timeout=120, wall_timeout=args.wall_timeout)
         assert receipt['verified'], receipt
         report['receipt'] = str(directory/'native/qualification.json')
@@ -157,8 +202,10 @@ def main():
                             'integrityProbes': len(c['integrity'])} for c in receipt['cases']]
         report['lifecycle'] = receipt['lifecycle']
         tamper(directory/'native/baseline-8bit', report)
+        regionsq.lifecycle(directory, locations, report)  # measureRegions own timeout/cancellation, not the particle kit
+        tamper(directory/'native'/regionsq.CASE, report)  # operation-specific evidence dispatch
         if locations.get('calc'):
-            handoff(directory, locations, report); report['calc'] = 'qualified'
+            handoff(directory, locations, report); regionsq.handoff(directory, locations, report); report['calc'] = 'qualified'
         public_loop(directory/'public', config, report)
         report['verified'] = True
     finally:

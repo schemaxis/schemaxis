@@ -577,6 +577,162 @@ and [Blender-to-ParaView workflow](../examples/schemaxis/expanded/blender-to-par
 show other supported boundaries. Handoffs do not preserve every material, unit,
 topological identifier or external dependency across formats.
 
+### Adopt a saved application file or directory
+
+A file you saved from an application becomes workflow input through a copied,
+digest-pinned snapshot rather than the live save location:
+
+```bash
+python3 -m schemaxis input adopt saved/surface.vtp snapshots/surface-001
+python3 -m schemaxis input adopt saved/blocks snapshots/blocks-001 \
+  --kind directory --max-files 100
+python3 -m schemaxis input verify snapshots/surface-001 --digest <digest>
+```
+
+Save a stable checkpoint first; adoption refuses ordinary concurrent changes and
+existing destinations. `--kind file-set --member PATH` captures an explicit list.
+The command prints a `reference` to place where the reader expects a path:
+
+```json
+{"$resource": "/absolute/snapshots/blocks-001", "digest": "<64 hex>",
+ "member": "blocks.vtm", "origin": "saved after review"}
+```
+
+Planning, every run and `verify` recheck the exact snapshot membership and bytes
+and compare its manifest digest with the digest pinned in the workflow. Each run
+checks again after the consuming application returns, so a snapshot edited while
+it was being read fails the workflow instead of succeeding. Changed or tampered
+content is refused; adopt a new snapshot and update the workflow to accept a
+change. `--max-files`/`--max-bytes` chosen at adoption are kept in the reference
+as `maxFiles`/`maxBytes` and bound every later check. Move a
+snapshot only together with its reference. Run evidence (`handoffs`) records the
+snapshot, member, digest, reader policy and optional origin. Units and coordinate
+frames are recorded as `unknown`.
+
+The consuming adaptor decides what each reader may open. ParaView accepts a file
+or a captured member for single-file readers (`readSurface`, `readUnstructuredGrid`,
+`readImageData`, `readStructuredGrid`, `readRectilinearGrid`, `readSTL`,
+`readPLY`). `readMultiBlock`, `readParallelPolyData` and
+`readParallelUnstructuredGrid` need a directory or file-set snapshot whose XML
+piece references all resolve to captured members. The selected member must be a
+`.vtm`, `.pvtp` or `.pvtu` (any letter case) of the reader's type. Every referenced
+document's `VTKFile` type is read from a bounded header and must match its name
+(`.vtp`, `.vtu`, `.vti`, `.vts`, `.vtr` or a parallel/multiblock container), so
+renamed containers and unsupported names such as `.dat` are refused; containers
+are traversed, leaf payloads are not parsed. Container metadata is limited to
+16 MiB per file, 64 MiB across the closure, 65,536 reference occurrences
+(including repeats) and 128 nested XML elements. Repeated references reuse the
+header check while retaining each parallel reader's piece-type requirement.
+`foam` needs the whole case
+directory, accepted only within an include-free subset. A selected name beginning
+with `controlDict` is refused, because the reader would then treat the parent
+directory as the case. The selected member and every file, whatever its name or
+suffix, under `system`, `constant`, `processor*` and any top-level directory whose
+name does not start with a letter (or starts with `inf`/`nan`) are scanned. Gzip is
+detected by magic, and scanning stops at 512 MiB decompressed per file and 2 GiB
+per case. Any active `#` (every `#include` variant and other directive), binary
+format, control bytes, quoted strings over 1000 bytes, and ambiguous or
+unterminated strings and comments are refused. `#` in comments and short quoted
+strings is allowed. This scope is a conservative superset of the case layout read
+by ParaView 5.13.3's OpenFOAM reader (`system`, `constant` and its region meshes,
+`processor*` and time directories starting with a digit, `+` or `-`). Other
+top-level files and letter-named directories (logs, scripts, `postProcessing`) are
+not scanned, since that reader does not open them. Other readers or versions may
+differ. Other adaptors and options refuse
+`$resource` until they declare a policy. ParaView resume reruns readers of
+captured inputs rather than claiming reuse. To edit an intermediate result, use
+an explicit revision (below) rather than editing a snapshot in place.
+
+A reference may also be defined once in an operation's `settings` or the
+workflow's `definitions` and placed at a reader option with an ordinary
+`$document` reference, for example `"settings": {"case": {"$resource": ...}}`
+with `"file": {"$document": "/settings/case"}`. Reader policy, digest checks and
+evidence then apply at that reader option; the definition itself is left
+unchanged and is never treated as a reader. A definition that no reader uses is
+not opened, and a `$document` that places a reference at an
+unsupported option is refused.
+
+Workflow and workflow-design schemas, and Studio's editor for an operation inside a
+workflow, offer `$resource` with field help at exactly these reader positions;
+malformed digests, members, limits or extra keys are refused as you type. A
+standalone document cannot consume a captured input, so Studio asks you to run
+such an operation from its workflow instead of creating a standalone preview.
+Adoption itself is still a command or API step.
+
+### Edit one intermediate artifact as an explicit revision
+
+A completed workflow can hand one verified producer artifact to you for editing
+in its application, then run the downstream work again as a new child revision.
+The parent result is never edited or resumed:
+
+```bash
+python3 -m schemaxis revision checkout evidence/handoff-001 --consumer consume \
+  --pointer /nodes/0/options/files/0 --destination edits/surface.vtp
+# open edits/surface.vtp in the application, edit and save it
+python3 -m schemaxis revision prepare evidence/handoff-001 --consumer consume \
+  --pointer /nodes/0/options/files/0 --replacement edits/surface.vtp \
+  --snapshot snapshots/surface-edit-001 --reason "smoothed the inlet edge" \
+  --output revisions/surface-edit-001.json
+python3 -m schemaxis plan revisions/surface-edit-001.json
+python3 -m schemaxis run revisions/surface-edit-001.json \
+  --output-directory evidence/handoff-001-edit-001
+python3 -m schemaxis verify evidence/handoff-001-edit-001
+```
+
+`--pointer` is a JSON pointer inside the consumer operation's document and must
+select a direct `{"$artifact": ..., "index": ...}` reference at a reader field
+whose adaptor declares a captured-input policy. The parent must be a verified,
+successful workflow without studies and without workflow-level `settings`,
+`definitions`, `dimensions`, `axes` or `execution`, or operation-level
+`execution`. It may be a serial
+result or a simple scheduled one: adaptors such as FreeCAD and Gmsh are always
+run by the scheduler, so a two-operation FreeCAD to Gmsh workflow qualifies even
+though you never wrote any `execution`. Every operation must then be one
+batch with one native visit, so an operation that carries its own `axes` study of
+several states is refused wherever it sits (a study of a single state
+qualifies). The consumer's recorded handoff must show it received the selected
+artifact at the selected field. The producer
+must have a single visit, and the selected artifact must be one regular file
+whose bytes match its receipt. A scheduled parent is re-verified in full by the
+scheduler's own checks, and the producer's recorded attempt is re-verified with
+its provider. `selection.file` is then relative to the producer's directory and
+names that attempt, for example `batch-0/attempt-0001/part.step`. Multi-visit,
+multi-file, distributed, unverified, unfinished or revision-chain parents, and
+those with authored execution, composition or studies, remain refused.
+`checkout` copies that file to a new working copy. `prepare` adopts the saved
+copy as a pinned single-file snapshot and writes a closed
+`schemaxis.revision/1` document recording the parent directory and authored
+digest, the producer, artifact index, owned file and SHA-256, the consumer
+pointer and its original reference, the replacement reference, the working copy,
+the reason, the derived child workflow digest, and `unknown` units and frame.
+
+`plan`, `run` and `verify` each verify the parent again, rederive the child
+workflow from it and compare every recorded identity; a changed parent,
+selection, pointer, replacement or child workflow fails. The run writes its
+record and `result.json` in the output directory and the child workflow under
+`workflow/`, rechecks the snapshot before and after its consumer, and reruns
+every operation: `result.json` lists them under `rerun`, with `reused` empty.
+Failed or cancelled children keep their partial evidence. The working copy,
+snapshot, revision document and child output must each be outside the parent
+result and must not contain it; symlinked spellings are resolved before any
+write. A revision result cannot yet be the parent of another revision, so
+verification never follows a lineage chain. `--resume` does not apply to
+revisions, and ordinary `--resume` still requires an identical workflow.
+If preparation is refused after adoption, its newly created snapshot is removed
+so a corrected request can retry at the same destination. Existing snapshots are
+never removed by a refused request.
+
+The revision record is provenance, not a signature, and does not show that the
+edited data is scientifically equivalent to the original. Selective continuation
+(reusing untouched operations), multi-file or directory edits, composed
+`$document`/`$value` inputs, multiple visits, parents with authored scheduler
+execution and Studio editing of revisions are not implemented yet. Every
+operation of a scheduled parent is rerun in the child, including the producer
+whose output you replaced.
+The revision also depends on the retained parent and adopted snapshot at their
+recorded absolute paths. Backing up or relocating only the child result is not a
+self-contained backup; retain those dependencies separately.
+
 Workflow root `execution` budgets constrain concurrent workers, CPUs, memory and
 GPU slots. Per-operation `execution` requests threads, ranks and other declared
 resources. Memory budgets are scheduling estimates, not operating-system memory
@@ -1018,6 +1174,7 @@ use the native application directly or request an explicit adaptor extension.
 ## 13. Find deeper documentation
 
 - [JSON input](json-input.md): authoring syntax and document examples.
+- [ParaView export integrity](paraview-export-integrity.md): finite comparison data, retained member checks and refusal recovery.
 - [Schema guide](schema-guide.md): exact export modes, validation boundaries and native guards.
 - [Human input](human-input.md): dimensions, settings and reusable authoring constructs.
 - [Console](console.md): session commands, persistence and live/batch behaviour.

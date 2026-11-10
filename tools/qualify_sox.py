@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-# Copyright (C) 2026 David L F Gaden
-"""Qualify native PCM edits, analytic sample oracle, evidence and workflow lifecycle."""
+# Copyright (C) 2026 David L. F. Gaden
+"""Qualify native PCM edits and speech conform: analytic/exact oracles, evidence and workflow lifecycle."""
 import argparse
 import copy
+from fractions import Fraction
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -20,6 +22,9 @@ from schemaxis.artifacts import atomic_json
 from schemaxis.core.faults import SchemaxisError
 from schemaxis.dispatch import allocation
 from schemaxis import workflow
+from qualify_sox_conform import accept as conform_acceptance
+from qualify_sox_normalise import check as normalise_check
+from qualify_sox_mix import kit_case as mix_kit_case
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -58,6 +63,48 @@ def sample_oracle(directory,document):
     return {'scalarSamplesChecked':count,'maxErrorPCM16LSB':maximum,'exactConcatenation':True,'rateChannelsFrames':list(final_info)}
 
 
+def timeline_oracle(directory,document):
+    """Independent transcript-handoff check: exact rate/frames/duration and half-open cut origins."""
+    summary=json.loads((directory/'audio-summary.json').read_text());(rate,channels,frames),_=wave_samples(directory/'audio.wav')
+    assert (summary['rate'],summary['channels'],summary['frames'])==(rate,channels,frames)==(summary['rate'],summary['channels'],sum(c['frameCount'] for c in document['clips']))
+    assert Fraction(summary['durationExact']['numerator'],summary['durationExact']['denominator'])==Fraction(frames,rate)
+    assert summary['timeline']['originalTimestampsPreserved'] is False and len(summary['segments'])==len(document['clips'])
+    origin=0
+    for index,(clip,segment) in enumerate(zip(document['clips'],summary['segments'])):
+        captured=(directory/f'captured-{index}.wav').read_bytes();(source_rate,source_channels,source_frames),_=wave_samples(directory/f'captured-{index}.wav')
+        assert segment=={'clip':index,'sourceSha256':hashlib.sha256(captured).hexdigest(),'sourceFrames':source_frames,
+            'sourceStartFrame':clip['startFrame'],'sourceEndFrame':clip['startFrame']+clip['frameCount'],'outputStartFrame':origin,'outputEndFrame':origin+clip['frameCount'],
+            'gain':clip['gain'],'fadeInFrames':clip['fadeInFrames'],'fadeOutFrames':clip['fadeOutFrames']},(index,segment)
+        assert (source_rate,source_channels)==(rate,channels);origin+=clip['frameCount']
+    return {'rate':rate,'channels':channels,'frames':frames,'exactSeconds':str(Fraction(frames,rate)),'segmentsChecked':len(summary['segments']),'originalTimestampsPreserved':False}
+
+
+def chunk(name,payload):return name+struct.pack('<I',len(payload))+payload+(b'\0' if len(payload)&1 else b'')
+
+
+def riff(*chunks):
+    body=b''.join(chunks);return b'RIFF'+struct.pack('<I',4+len(body))+b'WAVE'+body
+
+
+def ancillary_sources(directory,executable):
+    """Observed native behaviour for LIST/JUNK-bearing PCM16 sources; this is not a metadata-stripping claim."""
+    rate,values=8000,[(i*997)%24001-12000 for i in range(64)]
+    format_chunk=chunk(b'fmt ',struct.pack('<HHIIHH',1,1,rate,rate*2,2,16));audio=chunk(b'data',struct.pack('<64h',*values))
+    listing=chunk(b'LIST',b'INFOICMT'+struct.pack('<I',8)+b'ancillary');junk=chunk(b'JUNK',b'padding')
+    variants={'listBeforeData':[format_chunk,listing,audio],'junkBeforeFormat':[junk,format_chunk,audio],'junkAndListAroundFormat':[junk,format_chunk,listing,audio],'listAfterData':[format_chunk,audio,listing]}
+    results={}
+    for name,chunks in variants.items():
+        source=directory/f'ancillary-{name}.wav';source.write_bytes(riff(*chunks))
+        document={'version':a.VERSION,'operation':'assemble','clips':[{'source':str(source),'startFrame':5,'frameCount':32,'gain':.5,'fadeInFrames':8,'fadeOutFrames':8},
+            {'source':str(source),'startFrame':40,'frameCount':24,'gain':1,'fadeInFrames':0,'fadeOutFrames':0}]}
+        target=directory/f'ancillary-{name}';a.run(document,target,executable=executable,timeout=20);assert a.verify(target)['verified']
+        oracle=sample_oracle(target,a.plan(document));timeline=timeline_oracle(target,document)
+        for output in ['audio.wav','clip-0.wav','clip-1.wav']:
+            raw=(target/output).read_bytes();assert raw[12:16]==b'fmt ' and raw[36:40]==b'data' and len(raw)==44+struct.unpack_from('<I',raw,40)[0] and b'ancillary' not in raw and b'padding' not in raw
+        results[name]={'verified':True,'outputHeader':'canonical 44-byte fmt+data','ancillaryTextInOutput':False,'sourceCaptureRetainsAncillaryBytes':b'ancillary' in (target/'captured-0.wav').read_bytes() or b'padding' in (target/'captured-0.wav').read_bytes(),**oracle,'timeline':timeline}
+    return results
+
+
 def refresh(directory):
     receipt=a.read(directory,'verification.json');receipt['artifacts']=a.artifacts(directory)
     receipt['evidence']={n:a.digest(directory,n) for n in receipt['evidence']};atomic_json(directory/'verification.json',receipt)
@@ -68,14 +115,20 @@ def refresh(directory):
 def negative(directory):
     report={};saved={p:p.read_bytes() for p in directory.rglob('*') if p.is_file()}
     def restore():
+        for path in [p for p in directory.rglob('*') if p.is_file() and p not in saved]:path.unlink()
         for path,data in saved.items():path.write_bytes(data)
+    def inject_list(data):
+        listing=chunk(b'LIST',b'INFOICMT'+struct.pack('<I',8)+b'injected');return riff(data[12:36],listing,data[36:])
     def mutate_sample(data,delta=100,sample_offset=24):
         offset=data.index(b'data')+8;value=struct.unpack_from('<h',data,offset+sample_offset)[0]
         return data[:offset+sample_offset]+struct.pack('<h',value+delta)+data[offset+sample_offset+2:]
     for name,target,mutate in [('outputSample','audio.wav',mutate_sample),('processedClipSample','clip-0.wav',mutate_sample),
         ('riffSize','audio.wav',lambda b:b[:4]+struct.pack('<I',len(b)-9)+b[8:]),
         ('duplicateDataChunk','audio.wav',lambda b:b[:4]+struct.pack('<I',len(b)+len(b[b.index(b'data'):])-8)+b[8:]+b[b.index(b'data'):]),
-        ('summaryFrameCount','audio-summary.json',lambda b:b.replace(b'"frames": 1536',b'"frames": 1535'))]:
+        ('summaryFrameCount','audio-summary.json',lambda b:b.replace(b'"frames": 1536',b'"frames": 1535')),
+        ('summaryCutOrigin','audio-summary.json',lambda b:b.replace(b'"sourceStartFrame": 17',b'"sourceStartFrame": 18')),
+        ('summaryTimestampClaim','audio-summary.json',lambda b:b.replace(b'"originalTimestampsPreserved": false',b'"originalTimestampsPreserved": true')),
+        ('injectedListOnFinalOutput','audio.wav',inject_list),('injectedListOnProcessedClip','clip-0.wav',inject_list)]:
         try:
             path=directory/target;before=path.read_bytes();after=mutate(before);assert after!=before,name;path.write_bytes(after)
             # Rebind the clip consumed by concatenation, so semantic checks, not
@@ -90,7 +143,13 @@ def negative(directory):
         bindings=a.read(directory,'clip-0-inputs.json');bindings[str(path)]=a.digest(directory,path.name);atomic_json(directory/'clip-0-inputs.json',bindings)
         refresh(directory);report['changedCapturedPCMWithRefreshedBindings']=refused(lambda:a.verify(directory))['code']
     finally:restore()
-    for name,mutation in [('missingEvidence',lambda r:r['evidence'].pop('assemble.stdout')),
+    try:
+        (directory/'clip-9.wav').write_bytes(a.bounded(directory/'clip-0.wav'));refresh(directory);report['unreferencedProcessedClipWithRefreshedHashes']=refused(lambda:a.verify(directory))['code']
+    finally:restore()
+    try:
+        forged=a.read(directory,'result.json');forged['frames']+=1;atomic_json(directory/'result.json',forged);report['forgedRetainedResult']=refused(lambda:a.verify(directory))['code']
+    finally:restore()
+    for name,mutation in [('receiptExtraClaim',lambda r:r.update(qualified=True)),('missingEvidence',lambda r:r['evidence'].pop('assemble.stdout')),
             ('extraEvidence',lambda r:r['evidence'].update({'extra.json':'0'*64})),
             ('publicationMembership',lambda r:r['artifacts'].pop()),('runtimeIdentity',lambda r:r.update(runtime='SoX v99.9.9'))]:
         try:
@@ -158,8 +217,24 @@ def main():
         report['native']={'verified':receipt['verified'],'cases':[c['id'] for c in receipt['cases']],'runtimes':[c['runtime'] for c in receipt['cases']],'lifecycle':receipt['lifecycle']}
         _,_,entry=route_materials(a.VERSION)
         report['independentSamples']={}
+        report['conformKitCases']={}
+        report['normaliseKitCases']={}
+        report['mixKitCases']={}
         for case in entry['development']['cases']:
-            doc=case_document(entry,case,ROOT);report['independentSamples'][case['id']]=sample_oracle(directory/'kit'/case['id'],a.plan(doc))
+            doc=case_document(entry,case,ROOT)
+            if doc['operation']=='conform':
+                # Native kit execution and expectation checks ran in qualify(); the independent analytic/exact oracles for conform run in conform_acceptance().
+                report['conformKitCases'][case['id']]=a.read(directory/'kit'/case['id'],'audio-summary.json')['frames'];continue
+            if doc['operation']=='normalise':
+                # Independent integer rule over every output sample and the output peak, from the retained captured source (qualify_sox_normalise.check).
+                (rate,channels,_),values=wave_samples(directory/'kit'/case['id']/'captured-0.wav')
+                report['normaliseKitCases'][case['id']]=normalise_check(directory/'kit'/case['id'],values,rate,channels,doc['targetPeak'],case['id']);continue
+            if doc['operation']=='mix':
+                # Independent exact gained-sum oracle over every output sample, from the retained captured tracks (qualify_sox_mix.kit_case).
+                report['mixKitCases'][case['id']]=mix_kit_case(directory/'kit'/case['id'],doc);continue
+            assert doc['operation']=='assemble',(case['id'],doc['operation'])
+            report['independentSamples'][case['id']]=sample_oracle(directory/'kit'/case['id'],a.plan(doc))
+            report['independentSamples'][case['id']]['timeline']=timeline_oracle(directory/'kit'/case['id'],a.plan(doc))
         _,literal=wave_samples(directory/'kit/fade-endpoints/audio.wav')
         assert literal==[0,-6000,12000,-12000,12000,-9000,6000,-3000];report['literalFadeEndpoints']=literal
         _,extrema=wave_samples(directory/'kit/boundary-extrema/audio.wav')
@@ -187,8 +262,10 @@ def main():
         report['handoff']['workflowRequiresCurrentOriginalSource']=refused(lambda:workflow.verify(directory/'handoff'),'INVALID_AUDIO_SOURCE')['code']
         study=case_document(entry,entry['development']['cases'][0],ROOT);study['definitions']={'level':.25};study['clips'][0]['gain']={'$document':'/definitions/level'};study['axes']=[{'name':'level','values':[.25,.5]}];study['clips'][1]['gain']={'$axis':'level'}
         result=a.run(study,directory/'study',executable=locations['sox'],timeout=30);assert a.verify(directory/'study')['verified'];assert len(result['states'])==2;report['composition']={'states':2,'verified':True}
+        report['ancillaryChunkSources']=ancillary_sources(directory,locations['sox'])
         report['sampleRateBoundaries']=rate_boundaries(directory,locations['sox'])
         report['inflightLifecycle']=interrupted_processes(directory,case_document(entry,entry['development']['cases'][0],ROOT))
+        report['conform']=conform_acceptance(directory/'conform',locations['sox'],ROOT)
         if args.register:register(directory/'kit/qualification.json')
         report['verified']=True
     finally:atomic_json(directory/'acceptance.json',report)

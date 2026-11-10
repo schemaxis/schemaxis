@@ -1,0 +1,48 @@
+{
+  "version": "schemaxis.adaptor-assessment/1",
+  "rubric": "schemaxis.strength-rubric/1",
+  "assessmentVersion": "2026-10-26.1",
+  "assessedOn": "2026-10-26",
+  "assessor": "Schemaxis editorial assessment",
+  "provider": "apachearrow",
+  "providerVersion": "schemaxis.apachearrow/1",
+  "routes": [
+    "schemaxis.apachearrow/1"
+  ],
+  "sourceFingerprint": "sha256:44cfc7b5efafdbdec4071ac4bd36a60fe58f6ef7b8c7322d39433dc4c3f5f9b8",
+  "coverage": {
+    "percent": 10,
+    "status": "subjective",
+    "scope": {
+      "kind": "whole-application",
+      "description": "Whole apachearrow application/library breadth across useful functional families.",
+      "denominator": "Typed arrays and tables, CSV/columnar interchange, datasets, compute, streaming and cross-language memory exchange."
+    },
+    "rationale": "Prepared tables can now publish an explicitly opted-in typed CSV alongside Parquet and the report, connecting selected rows to declared CSV consumers. This deepens bounded interchange; general datasets, streaming, memory exchange and most compute remain absent, so whole-application breadth stays at 10%.",
+    "confidence": "medium"
+  },
+  "abstraction": {
+    "percent": 75,
+    "status": "subjective",
+    "scope": {
+      "kind": "declared-workflows",
+      "description": "Explicit typed nullable CSV table selection, renaming, widening and null replacement into independently checked Parquet and optional typed CSV publications.",
+      "denominator": "User intent and domain decisions within the named supported workflows, including declared inputs, composition and useful outputs; excluded application features do not enter this score."
+    },
+    "rationale": "Declared schemas, predicates and publication intent hide native parsing, table operations and writer configuration. Users still choose physical types and compatible downstream contracts; the existing 75% estimate is retained within this bounded interchange family.",
+    "confidence": "medium"
+  },
+  "evidence": [
+    "src/schemaxis/adaptors/apachearrow/adaptor.json",
+    "src/schemaxis/adaptors/apachearrow/readiness.json",
+    "docs/apachearrow.md",
+    "verification/2026-10-25-apachearrow-35.md",
+    "verification/2026-10-25-apachearrow-65.md"
+  ],
+  "limitations": [
+    "Six flat scalar types and bounded CSV input; no general Parquet ingestion, nested types, metadata, units or dataset operations.",
+    "Optional CSV preserves the closed lexical/null contract but carries no schema. Consumers must declare compatible types; a literal nonnull reserved null token cannot be represented. Spreadsheet consumers may support a stricter subset.",
+    "Canonical floating-point text is an observed PyArrow 26.0.0 writer contract; sample probes and independent typed readback support this bounded implementation, not every future native writer.",
+    "Subjective source-contract assessment, not an exhaustive API measurement. Verification confidence, native availability and source-bound qualification remain independent of both strength scores."
+  ]
+}

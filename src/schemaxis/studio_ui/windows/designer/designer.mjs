@@ -108,6 +108,16 @@ function designer(ctx, documentId, host) {
   ctx.designers.set(documentId, {model, canvas, actions});
   return {
     element,
+    variableContext: async () => {
+      if (bottom.isDirty()) throw Error('Apply or discard the edits in the design tables or Source tab before editing shared variables.');
+      const record = await model.record();
+      if (!record?.document) throw Error('Wait for the design to load.');
+      return {root: record.document, label: `${record.name} · shared workflow values and Case Runner parameters`,
+        applyLabel: 'Save changes to workflow', commit: async root => {
+          if (bottom.isDirty()) throw Error('The design has unapplied edits. Apply them first.');
+          await model.saveDocument(root, record.revision);
+        }};
+    },
     isDirty: () => bottom.isDirty() || canvas.isDirty() || model.store.get().busy
       || Object.keys(model.store.get().local).length > 0,
     canClose: async () => !bottom.isDirty() || Boolean(await confirmDialog('Discard unapplied design edits?',

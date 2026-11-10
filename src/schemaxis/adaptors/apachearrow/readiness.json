@@ -4,11 +4,11 @@
     "schemaxis.apachearrow/1": {
       "guide": "docs/apachearrow.md",
       "context": {
-        "purpose": "Prepare a typed nullable CSV table for Parquet interchange with exact identifiers, Unicode and UTC microseconds.",
+        "purpose": "Prepare a typed nullable CSV table for Parquet interchange, with an optional declared-schema typed CSV publication, keeping exact identifiers, Unicode and UTC microseconds.",
         "assumptions": "Explicit six-type schema, nullability and reserved \\N; isolated PyArrow26.0.0/C++26.0.0 on POSIX.",
-        "constraints": "32 columns,10000 rows,200000 cells,8MiB CSV,4096-byte text cells; no metadata/units,nested types,SQL or general Parquet input.",
-        "inspection": "Inspect table-report.json; independent decoding checks every output value/null/type and native CSV snapshots check all source cells.",
-        "recovery": "Correct located source/column/predicate/selection/literal faults, configure isolated native Python, retain failed verification evidence and retry in a fresh directory."
+        "constraints": "32 columns,10000 rows,200000 cells,8MiB CSV (also the table.csv limit),4096-byte text cells; no metadata/units,nested types,SQL or general Parquet input; table.csv has no type metadata.",
+        "inspection": "Inspect table-report.json; independent decoding checks every output value/null/type, native CSV snapshots check all source cells, and an opted-in table.csv is checked byte-for-byte against its canonical encoding and parsed under the declared schema.",
+        "recovery": "Correct located source/column/predicate/selection/literal/publishCSV faults, shorten or disable an over-budget CSV publication, configure isolated native Python, retain failed verification evidence and retry in a fresh directory."
       },
       "examples": [
         {
@@ -28,11 +28,22 @@
           "reference": "examples/schemaxis/apachearrow-null-row.json"
         },
         {
+          "id": "csv-publication",
+          "reference": "examples/schemaxis/apachearrow-csv-publication.json"
+        },
+        {
           "id": "invalid-cast",
           "reference": "examples/schemaxis/apachearrow-cast-invalid.json",
           "expect": "invalid",
           "fault": "INVALID_ARROW_SELECTION",
           "schemaValid": true
+        },
+        {
+          "id": "invalid-publish-option",
+          "reference": "examples/schemaxis/apachearrow-csv-option-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
         }
       ],
       "conformance": [
@@ -43,10 +54,11 @@
       ],
       "profiles": {
         "workflow": {
-          "scope": "Verified CSV artifact paths and report values use scheduled workflow handoffs.",
+          "scope": "Verified CSV artifact paths (including an opted-in table.csv at artifact index 2, which the consumer must declare with the identical schema) and report values use scheduled workflow handoffs.",
           "references": [
             "docs/apachearrow.md",
-            "tools/qualify_apachearrow.py"
+            "tools/qualify_apachearrow.py",
+            "examples/schemaxis/apachearrow-csv-handoff.json"
           ]
         },
         "composition": {
@@ -63,13 +75,15 @@
           "https://arrow.apache.org/docs/python/generated/pyarrow.Table.html",
           "https://arrow.apache.org/docs/python/generated/pyarrow.compute.cast.html",
           "https://arrow.apache.org/docs/python/generated/pyarrow.parquet.write_table.html",
+          "https://arrow.apache.org/docs/python/generated/pyarrow.csv.WriteOptions.html",
+          "https://arrow.apache.org/docs/python/generated/pyarrow.csv.write_csv.html",
           "https://github.com/apache/parquet-format/blob/master/src/main/thrift/parquet.thrift"
         ],
         "lifecycle": {
           "timeout": "Single total deadline plus native CPU30s,AS2GiB,FSIZE32MiB caps; default60s.",
           "cancellation": "Owned process-group cancellation and prepublication check.",
-          "logs": "Captured CSV,authored/plan/config/worker/current implementation fingerprints,consumed-input hashes,submissions/stdout/stderr.",
-          "verification": "Independent stdlib CSV oracle and closed Parquet Compact-Thrift/PLAIN/null-level decoder; exact float bits,logical schema,all nulls and ordered rows. Additional native source and fresh reopen snapshots."
+          "logs": "Captured CSV,authored/plan/config/worker/current implementation fingerprints,consumed-input hashes,submissions/stdout/stderr, including the csvreadback stage when table.csv is published.",
+          "verification": "Independent stdlib CSV oracle and closed Parquet Compact-Thrift/PLAIN/null-level decoder; exact float bits,logical schema,all nulls and ordered rows. Additional native source and fresh reopen snapshots. An opted-in table.csv must equal the host canonical encoding byte-for-byte, parse under the declared schema to the same typed rows and match a native declared-schema reopen."
         },
         "data": [
           {
@@ -113,6 +127,24 @@
               "Generic JSON consumers may erase signed zero; Parquet bits are checked separately."
             ],
             "scope": "All output rows,ordered columns,null counts,source row indices and source SHA256."
+          },
+          {
+            "id": "csv-output",
+            "direction": "output",
+            "kind": "file",
+            "format": "UTF-8 typed CSV, canonical schemaxis.apachearrow.table-csv/1 (opt-in publishCSV)",
+            "traits": {
+              "null": "bare reserved \\N",
+              "header": "bare output names",
+              "records": "LF, comma delimiter, no BOM",
+              "text": "utf8 and timestamp cells always quoted with doubled quotes",
+              "numbers": "bool/int bare; float64 shortest round-trip text"
+            },
+            "losses": [
+              "No type metadata: the consumer must declare the identical schema; nothing is inferred.",
+              "Formula-looking text is literal data; no spreadsheet sanitisation, workbook creation or other writer options."
+            ],
+            "scope": "Optional artifact index 2, at most 8MiB, verified cell-by-cell against the independent table."
           }
         ],
         "inspection": [
@@ -146,11 +178,11 @@
           },
           "conversion": {
             "status": "unsupported",
-            "scope": "No general Parquet importer or arbitrary format conversion; this route produces the closed declared CSV-to-Parquet subset."
+            "scope": "No general Parquet importer or arbitrary format conversion; this route produces the closed declared CSV-to-Parquet subset plus an optional canonical CSV of the same prepared table."
           },
           "workflow": {
             "status": "supported",
-            "scope": "Verified CSV artifact paths and report values use scheduled workflow handoffs."
+            "scope": "Verified CSV artifact paths (including an opted-in table.csv) and report values use scheduled workflow handoffs."
           },
           "composition": {
             "status": "supported",
@@ -170,7 +202,7 @@
           },
           "native-save": {
             "status": "supported",
-            "scope": "Publish a fresh typed nullable Parquet file checked by an independent stdlib decoder."
+            "scope": "Publish a fresh typed nullable Parquet file checked by an independent stdlib decoder, and optionally a canonical declared-schema CSV table."
           }
         },
         "cases": [
@@ -302,20 +334,74 @@
                 "relative": 0
               }
             ]
+          },
+          {
+            "id": "csv-publication",
+            "example": "csv-publication",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/apachearrow/measurements.csv"
+            },
+            "scope": "Opted-in typed CSV: exact bytes and digest from literal rows; agrees with the report and Parquet; native declared-schema reopen.",
+            "checks": [
+              {
+                "file": "table-report.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    "9007199254740993",
+                    "-2147483648",
+                    -0.0,
+                    true,
+                    "",
+                    "1969-12-31T23:59:59.999999Z"
+                  ],
+                  [
+                    "9223372036854775807",
+                    "2147483647",
+                    1.5,
+                    false,
+                    "NA",
+                    "2000-02-29T00:00:00.000001Z"
+                  ],
+                  [
+                    "-9223372036854775808",
+                    "0",
+                    null,
+                    null,
+                    "unlabelled",
+                    null
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "table.csv",
+                "format": "text",
+                "pointer": "",
+                "expected": "sample_id,batch,value,active,name,seen_at\n9007199254740993,-2147483648,-0,true,\"\",\"1969-12-31T23:59:59.999999Z\"\n9223372036854775807,2147483647,1.5,false,\"NA\",\"2000-02-29T00:00:00.000001Z\"\n-9223372036854775808,0,\\N,\\N,\"unlabelled\",\\N\n",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Initial prepareTable route,all nested fields,closed six-type CSV/Parquet semantics,normal independent verification and workflow handoff.",
+        "scope": "Initial prepareTable route,all nested fields,closed six-type CSV/Parquet semantics,normal independent verification and workflow handoff; later the opt-in publishCSV typed CSV publication at artifact index 2 and its Arrow-to-Arrow declared-schema handoff.",
         "review": [
-          "verification/2026-10-17-apachearrow-completion.md"
+          "verification/2026-10-17-apachearrow-completion.md",
+          "verification/2026-10-25-apachearrow-35.md",
+          "verification/2026-10-25-apachearrow-65.md"
         ],
         "notApplicable": {
           "native-inspection": "No interactive native table session; inspect the verified report.",
           "mpi": "One native CPU/I/O thread; no MPI.",
           "time-batches": "No time-list batches; use finite document studies.",
           "live-editing": "No persistent native state or reverse editing.",
-          "conversion": "No general Parquet importer or arbitrary format conversion; this route produces the closed declared CSV-to-Parquet subset."
+          "conversion": "No general Parquet importer or arbitrary format conversion; this route produces the closed declared CSV-to-Parquet subset plus an optional canonical CSV of the same prepared table."
         }
       }
     }

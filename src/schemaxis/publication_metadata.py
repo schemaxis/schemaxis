@@ -4,7 +4,7 @@ import copy
 import csv
 import json
 import math
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import struct
 
 from .artifacts import file_digest
@@ -26,7 +26,7 @@ def _path(directory, value):
     return owned_path(directory, value, fault='PUBLICATION_METADATA_FAILED').resolve()
 
 
-def _size(path):
+def _size(path, *, table=False):
     result = {'bytes': path.stat().st_size}
     if path.suffix.lower() == '.png':
         with path.open('rb') as stream:
@@ -34,12 +34,19 @@ def _size(path):
         if len(header) == 24 and header[:8] == b'\x89PNG\r\n\x1a\n' and header[12:16] == b'IHDR':
             result['pixels'] = list(struct.unpack('>II', header[16:24]))
     if path.suffix.lower() in ('.csv', '.tsv'):
-        with path.open(newline='', encoding='utf-8') as stream:
-            records, minimum, maximum = 0, None, 0
-            for row in csv.reader(stream, delimiter='\t' if path.suffix.lower() == '.tsv' else ',', strict=True):
-                records += 1
-                minimum = len(row) if minimum is None else min(minimum, len(row))
-                maximum = max(maximum, len(row))
+        try:
+            with path.open(newline='', encoding='utf-8') as stream:
+                records, minimum, maximum = 0, None, 0
+                for row in csv.reader(stream, delimiter='\t' if path.suffix.lower() == '.tsv' else ',', strict=True):
+                    records += 1
+                    minimum = len(row) if minimum is None else min(minimum, len(row))
+                    maximum = max(maximum, len(row))
+        except (UnicodeError, csv.Error) as error:
+            # A lossless file handoff can contain arbitrary bytes under any
+            # extension. Its suffix alone does not declare a table contract.
+            if table:
+                fail('PUBLICATION_METADATA_FAILED', 'Declared table cannot be inspected as UTF-8 CSV/TSV', str(path), detail=str(error))
+        else:
             # Header presence is an adaptor observation, never a filename
             # inference. Physical records include any header; logical rows may
             # subsequently be supplied by the verified native descriptor.
@@ -85,10 +92,37 @@ def camera_mapping(camera, pixels, plane=None):
             'scope': 'viewport projection; overlays and pixels without slice geometry are not surface samples' if plane else 'camera image plane only; surface depth is unavailable'}
 
 
+def _viewer_hints(artifact):
+    """Retain explicit presentation hints without guessing physical semantics."""
+    result = {}
+    for key in ('group', 'sequence', 'overview'):
+        if key not in artifact:
+            continue
+        value = artifact[key]
+        if key == 'group':
+            valid = isinstance(value, str) and bool(value.strip())
+        elif key == 'sequence':
+            valid = (isinstance(value, dict)
+                     and isinstance(value.get('id'), str) and bool(value['id'].strip())
+                     and value.get('axis') in ('x', 'y', 'z', 'time')
+                     and type(value.get('value')) in (int, float) and math.isfinite(value['value'])
+                     and ('units' not in value or isinstance(value['units'], str)))
+        else:
+            reference = value.get('file') if isinstance(value, dict) else None
+            valid = (isinstance(reference, str) and bool(reference.strip())
+                     and not Path(reference).is_absolute()
+                     and not PureWindowsPath(reference).is_absolute()
+                     and ':' not in reference and '\\' not in reference)
+        if not valid:
+            fail('PUBLICATION_METADATA_FAILED', 'invalid explicit viewer '+key, key)
+        result[key] = copy.deepcopy(value)
+    return result
+
+
 def describe(directory, artifact):
     directory = Path(directory).resolve()
     path = _path(directory, artifact.get('file', artifact.get('path')))
-    size = _size(path)
+    size = _size(path, table=artifact.get('kind', artifact.get('identity', {}).get('kind')) == 'table')
     observations = artifact.get('data', {})
     for key in ('dimensions', 'points', 'cells', 'rows', 'columns', 'frames', 'duration', 'triangles', 'facets', 'features', 'nodes', 'elements'):
         if key in artifact: size[key] = copy.deepcopy(artifact[key])
@@ -109,6 +143,7 @@ def describe(directory, artifact):
               'size': size, 'spatial': spatial}
     for key in ('identity', 'verificationScope', 'losses', 'viewTime'):
         if key in artifact: result[key] = copy.deepcopy(artifact[key])
+    result.update(_viewer_hints(artifact))
     members = artifact.get('files', [])
     if members:
         records = []
@@ -182,6 +217,8 @@ def publish_artifacts(directory, artifacts):
             if companion in unique:
                 fail('PUBLICATION_METADATA_FAILED', 'metadata companion collides with an output', str(companion))
             temporary = companion.with_name(companion.name+'.staging')
+            if temporary in unique:
+                fail('PUBLICATION_METADATA_FAILED', 'metadata staging file collides with an output', str(temporary))
             atomic_json(temporary, value)
             staged.append((temporary, companion))
             entries.append({'file': path.relative_to(directory).as_posix(),

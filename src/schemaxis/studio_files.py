@@ -37,7 +37,8 @@ def choose_input_file(app, filename='', extensions=None):
             not isinstance(ext, str) or not ext or any(c in ext for c in ('\x00', '\n', '|')) for ext in extensions):
         fail('INVALID_REQUEST', 'Provide a list of file extensions', 'extensions')
     executable = shutil.which('zenity')
-    if not executable or not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):
+    disabled = os.environ.get('SCHEMAXIS_DESKTOP_CHOOSER') == '0'
+    if disabled or not executable or not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):
         return {'status': 'unavailable', 'message': 'Desktop file chooser unavailable; use the folder browser.'}
     if not _PICKER_LOCK.acquire(blocking=False):
         fail('FILE_CHOOSER_BUSY', 'A file chooser is already open on the desktop')

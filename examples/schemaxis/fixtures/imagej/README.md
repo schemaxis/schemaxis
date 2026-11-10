@@ -25,3 +25,27 @@ Source-bound qualification digests include these bytes, so replacing them makes
 a recorded receipt stale. Do not regenerate them just to silence a stale check.
 Review any change to the geometry together with the literal expectations in
 `src/schemaxis/adaptors/imagej/readiness.json`.
+
+## Region-series ramps
+
+`series/` holds original analytic planes for `measureRegions`, also not
+experimental data. Every plane is 12x8 with value `base + sx*x + sy*y + st*f`
+for frame `f`: `ramp8-t0..3.pgm` (8-bit, 10 + 8x + 12y + 20f) and
+`ramp16-t0..2.tif` (16-bit little-endian one-strip TIFF,
+1000 + 900x + 1700y + 3000f). A rectangle's mean is the ramp at its centre and
+its minimum and maximum are at opposite corners, so every expectation in
+`readiness.json` has a closed form. `tools/qualify_imagej_series_fixtures.py
+--check` confirms the committed bytes; do not regenerate them to silence a stale
+receipt.
+
+### Fractional-mean planes
+
+`frac8-t0..2.pgm` (8-bit) and `frac16-t0..2.tif` (16-bit little-endian one-strip TIFF)
+are 9x6 planes with value `(a*x + b*y + c*f + d*x*y) mod m` for frame `f`:
+`(29, 53, 17, 11, 256)` for 8-bit and `(4099, 7919, 1013, 977, 65536)` for 16-bit. The
+cross term and the modulus make rectangle sums non-multiples of the pixel count, so many
+means are non-terminating fractions (for example the `frac8` rectangle `(1,2,3x1)` sums to
+368, 419 and 470 in the three frames: means 368/3, 419/3 and 470/3). Every expectation in
+`readiness.json` is an independent Fraction of this formula, never Schemaxis or ImageJ
+output. They are new files; the ramp planes above are unchanged, and
+`tools/qualify_imagej_series_fixtures.py --check` covers both sets.

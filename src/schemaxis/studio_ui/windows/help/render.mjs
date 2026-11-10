@@ -55,12 +55,14 @@ function flowchart(text) {
   return h('figure', {class: 'help-flowchart'}, svg, h('details', {}, h('summary', {}, 'Flow chart source'), h('pre', {}, text)));
 }
 
-export function renderPage(page, navigate, notify) {
+export function renderPage(page, navigate, notify, {omitParagraphs = []} = {}) {
   const article = h('article', {class: 'help-article'});
   if (page.format !== 'md') {
     article.append(h('h1', {}, page.title), code(page.body, page.format, notify)); return article;
   }
   for (const block of blocks(page.body)) {
+    if (block.type === 'paragraph' && omitParagraphs.some(text => text
+      && text.replace(/\s+/g, ' ').trim() === block.text.replace(/\s+/g, ' ').trim())) continue;
     if (block.type === 'heading') article.append(h(`h${block.level}`, {id: `help-${block.anchor}`, tabindex: '-1'}, ...inline(block.text, page, navigate)));
     else if (block.type === 'paragraph') article.append(h('p', {}, ...inline(block.text, page, navigate)));
     else if (block.type === 'code') article.append(block.language === 'mermaid' ? flowchart(block.text) : code(block.text, block.language, notify));

@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 
 from schemaxis.core.declarations import validate_arguments
-from schemaxis.core.faults import SchemaxisError
+from schemaxis.core.faults import Fault, SchemaxisError
 from schemaxis.core.runners import Interpreter
 from schemaxis.artifacts import atomic_json
 from schemaxis.dispatch import SubprocessRunner
@@ -296,8 +296,7 @@ def _verify(directory, require_result=True):
     receipt = read('verification.json')
     if receipt.get('freshProcess') is not True or not isinstance(receipt.get('runtime'), str):
         fail('VERIFICATION_FAILED', 'missing fresh-process runtime evidence')
-    if receipt.get('artifacts') != artifact_manifest(directory):
-        fail('VERIFICATION_FAILED', 'publication manifest differs')
+    check_publications(directory, receipt.get('artifacts'))
     from .inputs import inspect, records
     from .native_source import WORKER, LEGACY_PROCEDURAL_WORKER_SHA256
     worker = directory/'worker.lua'
@@ -324,15 +323,46 @@ def _verify(directory, require_result=True):
             fail('VERIFICATION_FAILED', 'native readback differs from independent raster model', key)
     if read('sheet.json') != metadata:
         fail('VERIFICATION_FAILED', 'spritesheet metadata differs')
+    digests = result.get('sha256', {})
+    if require_result and not isinstance(digests, dict):
+        fail('VERIFICATION_FAILED', 'result.json sha256 must map retained file names to digests', 'result.json')
     for filename in (*FILES, 'verification.json', 'worker.lua', *(() if legacy else ('input-manifest.json',))):
         path = directory/filename
         if path.is_symlink() or not path.is_file() or not path.stat().st_size:
             fail('VERIFICATION_FAILED', 'missing regular artifact', filename)
-        if require_result and digest(path) != result.get('sha256', {}).get(filename):
+        if require_result and digest(path) != digests.get(filename):
             fail('VERIFICATION_FAILED', 'artifact digest differs', filename)
     return {'verified': True, 'artifacts': 4, 'runtime': receipt['runtime'],
             'frames': len(native['durationsMS']), 'layers': len(native['layers']),
             'width': native['width'], 'height': native['height']}
+
+
+def check_publications(directory, recorded):
+    """Require the receipt's membership, kinds and digests to describe this run.
+
+    Recorded locations resolve through the shared owned-path rules, so an exported
+    copy is accepted through its recorded origin while an old absolute location,
+    link or outside file is never read. The receipt itself is never rewritten.
+    """
+    from schemaxis.run_paths import owned_path
+    expected = artifact_manifest(directory)
+    shape = lambda entry: isinstance(entry, dict) and set(entry) == {'file', 'kind', 'sha256'}
+    if (not isinstance(recorded, list) or len(recorded) != len(expected) or not all(map(shape, recorded))
+            or any(not isinstance(r['file'], str) for r in recorded)):
+        fail('VERIFICATION_FAILED', 'publication manifest differs', 'verification.json')
+    for entry, wanted in zip(recorded, expected):
+        if (entry['kind'], entry['sha256']) != (wanted['kind'], wanted['sha256']):
+            fail('VERIFICATION_FAILED', 'publication manifest differs', Path(wanted['file']).name)
+        try:
+            resolved = owned_path(directory, entry['file'])
+        except SchemaxisError:
+            resolved = None
+        if resolved != Path(wanted['file']):
+            raise SchemaxisError(Fault('VERIFICATION_FAILED',
+                'publication location is not this run\'s retained file', Path(wanted['file']).name, 'pipeline',
+                observed={'recorded': entry['file']},
+                recovery='Verify the run in its original directory, or copy it with schemaxis export '
+                         'so publication-metadata.json records its origin; do not move files by hand.'))
 
 
 def artifact_manifest(directory):

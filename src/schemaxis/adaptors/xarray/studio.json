@@ -1,0 +1,159 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.xarray/1",
+    "operation": "reduceProfile",
+    "source": "/replace/with/xarray-cube.nc",
+    "variable": {
+      "name": "temperature",
+      "unit": "K"
+    },
+    "coordinates": [
+      {
+        "name": "time",
+        "unit": "h"
+      },
+      {
+        "name": "depth",
+        "unit": "m"
+      },
+      {
+        "name": "station",
+        "unit": "km"
+      }
+    ],
+    "retain": "depth",
+    "missing": {
+      "value": -999.0,
+      "policy": "refuse"
+    }
+  },
+  "categories": [
+    {
+      "id": "analysis",
+      "title": "Measurement cubes",
+      "icon": "layers"
+    }
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "depth-profile",
+      "title": "Depth profile of a time-station cube",
+      "description": "Average time and station at each depth and publish the depth profile; refuse any missing cell. Replace the NetCDF path.",
+      "document": {
+        "version": "schemaxis.xarray/1",
+        "operation": "reduceProfile",
+        "source": {
+          "$fill": "source"
+        },
+        "variable": {
+          "name": "temperature",
+          "unit": "K"
+        },
+        "coordinates": [
+          {
+            "name": "time",
+            "unit": "h"
+          },
+          {
+            "name": "depth",
+            "unit": "m"
+          },
+          {
+            "name": "station",
+            "unit": "km"
+          }
+        ],
+        "retain": "depth",
+        "missing": {
+          "value": -999.0,
+          "policy": "refuse"
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/xarray-cube.nc"
+      },
+      "fields": {
+        "source": {
+          "label": "Classic NetCDF source",
+          "type": "path",
+          "required": true,
+          "description": "Absolute local classic NetCDF (CDF-1) .nc file whose variable and coordinates match this declaration.",
+          "extensions": [
+            "nc"
+          ],
+          "acceptsKinds": [
+            "file"
+          ]
+        }
+      },
+      "requires": "Configure an isolated Python with xarray 2026.9.0, SciPy 1.18.1 and NumPy 2.5.4 and select a bounded classic NetCDF cube."
+    },
+    {
+      "id": "range-skip",
+      "title": "Ranged profile skipping missing cells",
+      "description": "Select time 0-1 h and depth 0-20 m, average valid cells only and require at least two per point.",
+      "document": {
+        "version": "schemaxis.xarray/1",
+        "operation": "reduceProfile",
+        "source": {
+          "$fill": "source"
+        },
+        "variable": {
+          "name": "temperature",
+          "unit": "K"
+        },
+        "coordinates": [
+          {
+            "name": "time",
+            "unit": "h",
+            "range": {
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          {
+            "name": "depth",
+            "unit": "m",
+            "range": {
+              "minimum": 0,
+              "maximum": 20
+            }
+          },
+          {
+            "name": "station",
+            "unit": "km"
+          }
+        ],
+        "retain": "depth",
+        "missing": {
+          "value": -999.0,
+          "policy": "skip",
+          "minimumValid": 2
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/xarray-cube-missing.nc"
+      },
+      "fields": {
+        "source": {
+          "label": "Classic NetCDF source",
+          "type": "path",
+          "required": true,
+          "description": "Absolute local classic NetCDF (CDF-1) .nc file whose variable and coordinates match this declaration.",
+          "extensions": [
+            "nc"
+          ],
+          "acceptsKinds": [
+            "file"
+          ]
+        }
+      },
+      "requires": "Configure an isolated Python with xarray 2026.9.0, SciPy 1.18.1 and NumPy 2.5.4 and select a bounded classic NetCDF cube."
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

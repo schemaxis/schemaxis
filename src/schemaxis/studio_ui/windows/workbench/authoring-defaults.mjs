@@ -19,6 +19,20 @@ export function nextIdentity(base, used) {
   const id = base + number; used.add(id); return id;
 }
 
+/** A node name from a chosen file: its name without the extension, or its folder for a generic "case" file. */
+export function entryName(path, used) {
+  const parts = String(path || '').split(/[\\/]+/).filter(Boolean);
+  let base = (parts.at(-1) || '').replace(/\.[A-Za-z0-9]+$/, '');
+  if (!base || /^case$/i.test(base)) base = parts.at(-2) || base;
+  base = base.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!base) return null;
+  if (!/^[A-Za-z]/.test(base)) base = 'case_' + base;
+  if (!used.has(base)) return base;
+  let number = 2;
+  while (used.has(`${base}_${number}`)) number++;
+  return `${base}_${number}`;
+}
+
 export function pipelineChoices(documentValue, kind, kinds = {}) {
   return (Array.isArray(documentValue?.nodes) ? documentValue.nodes : [])
     .filter(node => typeof node?.id === 'string')

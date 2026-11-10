@@ -8,7 +8,7 @@ import Mesh
 import MeshPart
 from schemaxis.artifacts import atomic_json
 from schemaxis.errors import fail
-from .adaptor import DECLARATIONS, output_files, artifact_units, close, verify
+from .adaptor import DECLARATIONS, output_files, artifact_units, close
 from .operations import extra_objects
 from schemaxis.artifacts import file_digest
 
@@ -36,14 +36,16 @@ def export_snapshot(shape):
 
 
 def output_object(doc, prepared, identity=None):
-    from .operations import output_names
-    return doc.getObject(output_names(prepared)[identity or prepared['output']])
+    from .body_seed import output_name
+    return doc.getObject(output_name(prepared,identity or prepared['output']))
 
 
 def import_observations(doc, prepared, sources):
     from .step_import_native import observe
-    return {node['id']: observe(doc, node, index, sources[node['id']]['sha256'])
-            for index, node in enumerate(prepared['nodes']) if node['filter'] == 'importSTEP'}
+    from .mesh_native import observe as observe_mesh
+    return {node['id']:(observe_mesh(doc,node,index,sources) if node['filter']=='importMesh'
+                      else observe(doc,node,index,sources[node['id']]['sha256']))
+            for index,node in enumerate(prepared['nodes']) if node['filter'] in ('importSTEP','importMesh')}
 
 
 def check_runtime():
@@ -54,6 +56,8 @@ def check_runtime():
 
 
 def check_definition(doc, prepared, sources):
+    from .source_assets_native import observe as observe_assets
+    observe_assets(doc,prepared)
     if 'partDesign' in prepared:
         from .part_design_native import observe as observe_body
         observe_body(doc,prepared,visibility=False)
@@ -66,10 +70,10 @@ def check_definition(doc, prepared, sources):
         obj = doc.getObject('N'+str(index))
         if obj is None or obj.TypeId != DECLARATIONS[node['filter']]['native'] or obj.Label != node['id']:
             fail('VERIFICATION_FAILED', 'CAD feature identity differs')
-        if node['filter']=='body':continue
+        if node['filter'] in ('body','datumAxis'):continue
         from .features import check
         from .operations import output_names
-        check(obj,node,close,sources,output_names(prepared))
+        check(obj,node,close,sources,output_names(prepared),prepared)
         if obj.Shape.isNull() or not obj.Shape.isValid() or 'Invalid' in obj.State:
             fail('INVALID_GEOMETRY', 'CAD feature is invalid', node['id'])
 
@@ -92,11 +96,11 @@ def build(directory):
             obj = doc.addObject(DECLARATIONS[node['filter']]['native'], 'N'+str(index))
         obj.Label = node['id']
         from .features import configure
-        configure(obj,node,objects,sources)
+        configure(obj,node,objects,sources,prepared)
         if node.get('drive'):
             from .parameters_native import bind
             bind(obj, node)
-        if node['filter'] == 'importSTEP':
+        if node['filter'] in ('importSTEP','importMesh'):
             from .step_import_native import attach_refine
             obj = attach_refine(doc, obj, node, index)
         objects[node['id']] = obj
@@ -104,9 +108,14 @@ def build(directory):
         from .part_design_native import finish
         finish(doc,prepared)
     doc.recompute()
+    from .source_assets_native import attach as attach_assets
+    attach_assets(directory,doc,prepared,sources)
+    # Adding an included original touches its source. Publish a fully current
+    # graph, rather than admitting a saved Touched source into later capture.
+    doc.recompute()
     check_definition(doc, prepared, sources)
     imports = import_observations(doc, prepared, sources)
-    output = objects[prepared['output']]
+    output = output_object(doc,prepared)
     shape = snapshot(output.Shape)
     if shape['solids'] != 1 or shape['volume'] <= 0:
         fail('INVALID_GEOMETRY', 'CAD output must be one positive-volume solid')
@@ -117,7 +126,7 @@ def build(directory):
         for obj in doc.Objects:
             obj.Visibility = obj == output
     doc.saveAs(str(directory/'model.FCStd'))
-    if 'partDesign' in prepared or any(n['filter'] == 'importSTEP' for n in prepared['nodes']):
+    if 'partDesign' in prepared or any(n['filter'] in ('importSTEP','importMesh','draftProfile') for n in prepared['nodes']):
         # Without a view record the FreeCAD GUI opens every object hidden; record visibility only.
         from .gui_state import persist
         persist(directory/'model.FCStd',{obj.Name:bool(obj.Visibility) for obj in doc.Objects})
@@ -125,11 +134,23 @@ def build(directory):
     mesh = MeshPart.meshFromShape(Shape=output.Shape, LinearDeflection=prepared['linearDeflection']/2, AngularDeflection=0.1, Relative=False)
     mesh.write(str(directory/'model.stl'))
     from .selections import native_evidence
-    from .measurements import native_observations, evaluate
-    measurements = native_observations(doc, prepared)
+    from .measurements import native_observations, native_shapes, evaluate
+    from .helix import active as helical
+    from .helix_evidence import version as export_version
+    precision={}
+    if helical(prepared):
+        from .helix_precision_native import pair
+        exported=Part.Shape();exported.read(str(directory/'model.step'))
+        precision={'precision':pair(output.Shape,exported,
+            measurement_shapes=native_shapes(doc,prepared) if prepared.get('measurements') else None,
+            output_identity=prepared['output']),'step':export_snapshot(exported)}
+    measurements = native_observations(doc, prepared,
+        precision=precision.get('precision',{}).get('measurements'))
     if prepared.get('measurements'):
         atomic_json(directory/'measurements.json', evaluate(prepared, measurements))
     parameters = {}
+    from .body_seed_native import local_evidence
+    parameters.update(local_evidence(doc,prepared))
     if 'parameters' in prepared:
         from .parameters_native import observe
         parameters['parameterObservations'] = observe(doc, prepared)
@@ -140,7 +161,7 @@ def build(directory):
                                        'measurementObservations': measurements,
                                        'selections': native_evidence(doc, prepared),
                                        'importObservations': imports,
-                                       'exportEvidence': {'version': EXPORT_EVIDENCE, 'shape': export_snapshot(output.Shape),
+                                       'exportEvidence': {'version': export_version(prepared), 'shape': export_snapshot(output.Shape), **precision,
                                                           'meshing': {'linearDeflection': prepared['linearDeflection']/2,
                                                                       'angularDeflection': 0.1, 'relative': False}}})
     App.closeDocument(doc.Name)
@@ -180,10 +201,26 @@ def reopen(directory):
         receipt['partDesignObservations']=observe_body(doc,prepared)
     from .selections import native_evidence
     receipt['selections'] = native_evidence(doc, prepared)
-    from .measurements import native_observations
-    receipt['measurementObservations'] = native_observations(doc, prepared)
+    from .measurements import native_observations, native_shapes
+    from .helix import active as helical
+    precision=None
+    if helical(prepared):
+        from .helix_precision_native import pair
+        precision=pair(output.Shape,shape,
+            measurement_shapes=native_shapes(doc,prepared) if prepared.get('measurements') else None,
+            output_identity=prepared['output'])
+    receipt['measurementObservations'] = native_observations(doc, prepared,
+        precision=precision.get('measurements') if precision is not None else None)
     receipt['importObservations'] = import_observations(doc, prepared, sources)
-    receipt['exportEvidence'] = {'version': EXPORT_EVIDENCE, 'native': export_snapshot(output.Shape), 'step': export_snapshot(shape)}
+    from .helix_evidence import version as export_version
+    receipt['exportEvidence'] = {'version': export_version(prepared), 'native': export_snapshot(output.Shape), 'step': export_snapshot(shape)}
+    if precision is not None:
+        receipt['exportEvidence']['precision']=precision
+    from .body_seed_native import local_evidence
+    receipt.update(local_evidence(doc,prepared))
     atomic_json(directory/'verification.json', receipt)
-    verify(directory, require_result=False)
+    # This stage records observations, never publishes final verified success.
+    # adaptor._run performs mandatory host verification after this process exits.
+    # Host verifiers may launch isolated geometry readers and package current
+    # installed code; neither belongs inside an imported native runtime ZIP.
     App.closeDocument(doc.Name)

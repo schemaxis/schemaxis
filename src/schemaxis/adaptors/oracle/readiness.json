@@ -1,0 +1,593 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.oracle/1": {
+      "guide": "docs/oracle.md",
+      "context": {
+        "purpose": "Inspect an Oracle schema, load captured typed rows, publish exact relational reports and run atomic mutation transactions, each verified independently from a fresh connection.",
+        "assumptions": "A dedicated Python interpreter with python-oracledb (Thin mode) and a host-held connection profile (SCHEMAXIS_ORACLE_<PROFILE>_USER, _PASSWORD, _DSN environment variables). AL32UTF8 database; BOOLEAN needs Oracle Database 23 or later. The adaptor works in the connected schema.",
+        "constraints": "1-8 tables, 1-32 columns, up to 5000 rows per table and 4 MiB per source; NUMBER/VARCHAR2/DATE/TIMESTAMP/TIMESTAMP WITH TIME ZONE/RAW/BOOLEAN/CLOB/BLOB/native JSON; equi-joins, named null-aware conditions, bounded derived values, groups, windows and set operations; at most 10000 result rows. LOB cells are bounded to 262144 UTF-16 code units/bytes, JSON text to 262144 UTF-8 bytes; JSON scalar paths use member/index steps. No authored SQL, PL/SQL, packages, vectors or administration.",
+        "inspection": "Compare report.json/report.csv, snapshot.json, load-summary.json or transaction.json/state-after.json with the retained identify/apply/readback evidence; the verifier recomputes every expected row with an independent Decimal/datetime reference and compares the fresh-connection readback.",
+        "recovery": "ORACLE_CREDENTIALS_MISSING: export the named variables. ORACLE_AUTHENTICATION_FAILED/ORACLE_UNAVAILABLE: check the profile values and listener; nothing was changed. INVALID_ORACLE_TABLE/QUERY/TRANSACTION/VALUE/SOURCE: read the location and observed reason. ORACLE_OBJECT_EXISTS: choose a free name; tables are never replaced. ORACLE_CONSTRAINT_VIOLATION/ORACLE_ROWCOUNT_MISMATCH: the transaction was rolled back (observed.rollbackVerified). ORACLE_SERIALIZATION_CONFLICT: inspect current state and ledger, then make a fresh explicit attempt; provision external ledgers with SEGMENT CREATION IMMEDIATE. ORACLE_COMMIT_OUTCOME_UNKNOWN: never rerun; inspect first. INCOMPLETE_EXECUTION: fix the recorded faultCode and run in a fresh directory."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/oracle-report-revenue.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/oracle-report-variant.json"
+        },
+        {
+          "id": "lines",
+          "reference": "examples/schemaxis/oracle-report-lines.json"
+        },
+        {
+          "id": "load",
+          "reference": "examples/schemaxis/oracle-load.json"
+        },
+        {
+          "id": "inspect",
+          "reference": "examples/schemaxis/oracle-inspect.json"
+        },
+        {
+          "id": "transfer",
+          "reference": "examples/schemaxis/oracle-mutate-transfer.json"
+        },
+        {
+          "id": "savepoint",
+          "reference": "examples/schemaxis/oracle-mutate-savepoint.json"
+        },
+        {
+          "id": "rollback",
+          "reference": "examples/schemaxis/oracle-mutate-rollback.json"
+        },
+        {
+          "id": "existing",
+          "reference": "examples/schemaxis/oracle-mutate-existing.json"
+        },
+        {
+          "id": "bad-join",
+          "reference": "examples/schemaxis/oracle-bad-join.json",
+          "expect": "invalid",
+          "fault": "INVALID_ORACLE_QUERY",
+          "schemaValid": true
+        },
+        {
+          "id": "documents",
+          "reference": "examples/schemaxis/oracle-report-documents.json"
+        },
+        {
+          "id": "documents-load",
+          "reference": "examples/schemaxis/oracle-load-documents.json"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_oracle.py"
+      ],
+      "acceptance": [
+        "tools/qualify_oracle.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified report.json values and report.csv tables can feed downstream declared workflow fields; table definitions can be reused across operations with document references.",
+          "references": [
+            "docs/oracle.md",
+            "examples/schemaxis/oracle-calc-typed-workflow.json"
+          ]
+        },
+        "composition": {
+          "scope": "Shared references, closed expressions and finite visits resolve to the same literal typed contract.",
+          "references": [
+            "docs/oracle.md",
+            "examples/schemaxis/oracle-report-study.json",
+            "tools/qualify_oracle.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://python-oracledb.readthedocs.io/en/latest/",
+          "https://python-oracledb.readthedocs.io/en/latest/user_guide/sql_execution.html",
+          "https://python-oracledb.readthedocs.io/en/latest/user_guide/txn_management.html",
+          "https://python-oracledb.readthedocs.io/en/latest/user_guide/appendix_a.html",
+          "https://python-oracledb.readthedocs.io/en/latest/user_guide/appendix_b.html",
+          "https://docs.oracle.com/en/database/oracle/oracle-database/26/sqlrf/",
+          "https://docs.oracle.com/en/database/oracle/oracle-database/26/refrn/"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers the identify, apply and readback worker stages and final verification; the connection call timeout bounds each database call.",
+          "cancellation": "Shared owned-process-group cancellation; an abandoned session rolls back uncommitted work, and an unreadable COMMIT is reported as outcome unknown, never replayed.",
+          "logs": "Retain authored/effective plans, captured sources, generated programs, per-stage submissions, stdout/stderr and fault records; credential values, DSNs and host names are redacted and the run directory is scanned for credential values.",
+          "verification": "Independent literal Decimal/datetime/three-valued-logic reference for every report, constraint and mutation; fresh-connection dictionary and row readback; separate observer connection for uncommitted-invisible and post-finish state."
+        },
+        "data": [
+          {
+            "id": "tables",
+            "direction": "input",
+            "kind": "file",
+            "format": "JSON row-object arrays or CSV with header",
+            "traits": {
+              "types": [
+                "number",
+                "varchar2",
+                "date",
+                "timestamp",
+                "timestampTz",
+                "raw",
+                "boolean",
+                "null",
+                "clob",
+                "blob",
+                "json"
+              ]
+            },
+            "losses": [
+              "NUMBER is exact decimal text; scale loss is refused unless scalePolicy is round. Empty text and empty RAW are NULL in Oracle and are refused unless emptyText is null.",
+              "No FLOAT, NCLOB/BFILE, interval, object, XML, spatial or vector values; DATE has whole seconds and no zone; TIMESTAMP is limited to six fractional digits; time zones are fixed numeric offsets."
+            ],
+            "scope": "Each regular local source at most 4 MiB and 5000 rows; every column and key declared. Bounded CLOB/BLOB: non-empty Unicode/hex; native JSON: exact canonical standard JSON text."
+          },
+          {
+            "id": "result",
+            "direction": "output",
+            "kind": "table",
+            "format": "JSON columns/rows and typed CSV",
+            "traits": {
+              "numbers": "exact decimal text or exactly representable JSON numbers",
+              "null": "JSON null or CSV \\N"
+            },
+            "losses": [
+              "Rows are published in the declared order and, within ties, in canonical column order; ties across limit/offset are refused.",
+              "jsonNumber is refused when a value is not exactly representable as a double."
+            ],
+            "scope": "Artifact index 0 is report.json (columns, rows); index 1 is report.csv."
+          },
+          {
+            "id": "snapshot",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON dictionary snapshot",
+            "traits": {
+              "digest": "sha256 of the canonical snapshot"
+            },
+            "losses": [
+              "Check-constraint expressions, privileges, storage and partitioning are not part of the snapshot."
+            ],
+            "scope": "Tables, columns, keys, indexes, views and sequences of the connected schema."
+          },
+          {
+            "id": "transaction",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON transaction outcome and final table state",
+            "traits": {
+              "states": "before, in-transaction, observer and after states compared"
+            },
+            "losses": [
+              "External tables require SERIALIZABLE, database enforcement and an idempotency ledger. Prospective validation and native row comparison occur before COMMIT. A failed COMMIT is never replayed."
+            ],
+            "scope": "transaction.json (steps, outcome) and state-after.json (canonical rows)."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "View report.json, report.csv, snapshot.json, load-summary.json, transaction.json and state-after.json.",
+            "limits": "The database itself is not browsed; verification reads it through fresh connections."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the example's tables and report/transaction fields in place; table declarations can be shared between operations with document references. Runs are never reused by input identity because live database state is not part of it."
+        },
+        "features": {
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "The adaptor does not implement native-inspection; edit declared inputs and execute a new verified run."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The adaptor does not implement mpi; Oracle workflows are serial."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "The adaptor does not implement time-batches; edit declared inputs and execute a new verified run."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "The adaptor does not implement live-editing; edit declared inputs and execute a new verified run."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "The adaptor does not implement conversion; relational results are published as typed JSON and CSV only."
+          },
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified JSON values and CSV tables feed downstream declared workflow fields; load/inspect/report/mutate share table records with document references."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared references, closed expressions and finite visits resolve to the same literal typed contract."
+          },
+          "reusable-inputs": {
+            "status": "unsupported",
+            "scope": "A live database's rows and schema change independently of the local source files, so no run is reusable by input identity; every execution re-runs. A rerun starts from captured sources and refuses (ORACLE_OBJECT_EXISTS) when its table names are taken, so a retained or interrupted earlier run must be inspected and removed first; an unknown commit outcome is never retried automatically."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit table sources and declarations through shared JSON authoring and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Edit tables, relations, conditions, measures, windows and transaction steps through nested shared forms."
+          },
+          "native-save": {
+            "status": "supported",
+            "scope": "load persists committed, independently reopened tables in the connected schema when setup.retain is true."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/tables/0/source/path": "examples/schemaxis/fixtures/oracle/customers.json",
+              "/tables/1/source/path": "examples/schemaxis/fixtures/oracle/orders.json"
+            },
+            "scope": "Left join, null-aware grouping and exact NUMBER sums over a fresh-connection-verified load; includes a NULL group key, a NULL total, a customer without orders and Unicode names.",
+            "checks": [
+              {
+                "file": "report.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    "north",
+                    "3",
+                    "350.5"
+                  ],
+                  [
+                    "south",
+                    "1",
+                    "80"
+                  ],
+                  [
+                    null,
+                    "0",
+                    null
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/tables/0/source/path": "examples/schemaxis/fixtures/oracle/customers.json",
+              "/tables/1/source/path": "examples/schemaxis/fixtures/oracle/orders.json"
+            },
+            "scope": "Full outer join exposes an order without a customer in the NULL region group while the customer without orders adds no count.",
+            "checks": [
+              {
+                "file": "report.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    "north",
+                    "3",
+                    "350.5"
+                  ],
+                  [
+                    "south",
+                    "1",
+                    "80"
+                  ],
+                  [
+                    null,
+                    "1",
+                    "5.55"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "lines",
+            "example": "lines",
+            "edits": [],
+            "resources": {
+              "/tables/0/source/path": "examples/schemaxis/fixtures/oracle/customers.json",
+              "/tables/1/source/path": "examples/schemaxis/fixtures/oracle/orders.json",
+              "/tables/2/source/path": "examples/schemaxis/fixtures/oracle/order_lines.csv"
+            },
+            "scope": "Three-table join with CSV input including a timestamp-with-time-zone column, a derived product, HAVING and a rank window; hand-computed 2 x 25.05 + 50.00 = 100.10 and 10 x 25.04 = 250.40.",
+            "checks": [
+              {
+                "file": "report.json",
+                "format": "json",
+                "pointer": "/rows",
+                "expected": [
+                  [
+                    "11",
+                    "1",
+                    "10",
+                    "250.4",
+                    "1"
+                  ],
+                  [
+                    "10",
+                    "2",
+                    "3",
+                    "100.1",
+                    "2"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "load",
+            "example": "load",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/setup/retain",
+                "value": false
+              }
+            ],
+            "resources": {
+              "/tables/0/source/path": "examples/schemaxis/fixtures/oracle/customers.json",
+              "/tables/1/source/path": "examples/schemaxis/fixtures/oracle/orders.json",
+              "/tables/2/source/path": "examples/schemaxis/fixtures/oracle/order_lines.csv"
+            },
+            "scope": "Row accounting after a fresh-connection readback of three created tables with keys and a cascade rule.",
+            "checks": [
+              {
+                "file": "load-summary.json",
+                "format": "json",
+                "pointer": "/tables/0/rows",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "load-summary.json",
+                "format": "json",
+                "pointer": "/tables/2/rows",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "inspect",
+            "example": "inspect",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/inspection/names",
+                "value": [
+                  "absent_object"
+                ]
+              }
+            ],
+            "resources": {},
+            "scope": "A snapshot restricted to a name that does not exist is empty and stable across two fresh connections.",
+            "checks": [
+              {
+                "file": "snapshot.json",
+                "format": "json",
+                "pointer": "/snapshot/tables",
+                "expected": [],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "transfer",
+            "example": "transfer",
+            "edits": [],
+            "resources": {
+              "/tables/0/source/path": "examples/schemaxis/fixtures/oracle/accounts.json"
+            },
+            "scope": "Committed transfer with savepoint, insert and merge; observer connection sees nothing before the commit.",
+            "checks": [
+              {
+                "file": "state-after.json",
+                "format": "json",
+                "pointer": "/tables/accounts/rows",
+                "expected": [
+                  [
+                    "1",
+                    "alice",
+                    "75"
+                  ],
+                  [
+                    "2",
+                    "bob",
+                    "75"
+                  ],
+                  [
+                    "3",
+                    "carol",
+                    "5"
+                  ],
+                  [
+                    "4",
+                    "dave",
+                    "10"
+                  ],
+                  [
+                    "5",
+                    "erin",
+                    "1"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "transaction.json",
+                "format": "json",
+                "pointer": "/outcome",
+                "expected": "committed",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "savepoint",
+            "example": "savepoint",
+            "edits": [],
+            "resources": {
+              "/tables/0/source/path": "examples/schemaxis/fixtures/oracle/accounts.json"
+            },
+            "scope": "ROLLBACK TO SAVEPOINT undoes an insert but keeps the earlier debit; serializable isolation.",
+            "checks": [
+              {
+                "file": "state-after.json",
+                "format": "json",
+                "pointer": "/tables/accounts/rows",
+                "expected": [
+                  [
+                    "1",
+                    "alice",
+                    "75"
+                  ],
+                  [
+                    "2",
+                    "bob",
+                    "50"
+                  ],
+                  [
+                    "3",
+                    "carol",
+                    "0"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "rollback",
+            "example": "rollback",
+            "edits": [],
+            "resources": {
+              "/tables/0/source/path": "examples/schemaxis/fixtures/oracle/accounts.json"
+            },
+            "scope": "A transaction that deletes every row and inserts another finishes by rolling back; the original rows remain.",
+            "checks": [
+              {
+                "file": "state-after.json",
+                "format": "json",
+                "pointer": "/tables/accounts/rows",
+                "expected": [
+                  [
+                    "1",
+                    "alice",
+                    "100"
+                  ],
+                  [
+                    "2",
+                    "bob",
+                    "50"
+                  ],
+                  [
+                    "3",
+                    "carol",
+                    "0"
+                  ]
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "transaction.json",
+                "format": "json",
+                "pointer": "/outcome",
+                "expected": "rolledBack",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "documents",
+            "example": "documents",
+            "edits": [],
+            "resources": {
+              "/tables/0/source/path": "examples/schemaxis/fixtures/oracle/documents.json"
+            },
+            "scope": "Unicode CLOB beyond VARCHAR2 capacity, binary BLOB, native JSON and exact typed number/text/boolean extraction, including JSON null, missing members and empty scalar text.",
+            "checks": [
+              {
+                "file": "report.json",
+                "format": "json",
+                "pointer": "/rows/0/4",
+                "expected": "12.5",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report.json",
+                "format": "json",
+                "pointer": "/rows/0/2",
+                "expected": "0001ff80",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report.json",
+                "format": "json",
+                "pointer": "/rows/0/6",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report.json",
+                "format": "json",
+                "pointer": "/rows/1/6",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Supported relational/document workflow scope: connection/identity, dictionary inspection and drift, exact scalar types, bounded CLOB/BLOB and native JSON with typed member/index extraction, table/constraint definitions, typed loading, relational reports, atomic mutation with prospective and precommit checks, external-table idempotency. These are partial Oracle capability families; schema evolution, PL/SQL, vector, advanced types, spatial/graph/text, AQ and other families remain visible in docs/design/oracle-coverage.md.",
+        "review": [
+          "verification/2026-11-03-oracle-completion.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The adaptor does not implement native-inspection; edit declared inputs and execute a new verified run.",
+          "mpi": "The adaptor does not implement mpi; Oracle workflows are serial.",
+          "time-batches": "The adaptor does not implement time-batches; edit declared inputs and execute a new verified run.",
+          "live-editing": "The adaptor does not implement live-editing; edit declared inputs and execute a new verified run.",
+          "conversion": "The adaptor does not implement conversion; relational results are published as typed JSON and CSV only.",
+          "reusable-inputs": "A live database's rows and schema change independently of the local source files, so no run is reusable by input identity; every execution re-runs. A rerun starts from captured sources and refuses (ORACLE_OBJECT_EXISTS) when its table names are taken, so a retained or interrupted earlier run must be inspected and removed first; an unknown commit outcome is never retried automatically."
+        }
+      }
+    }
+  }
+}

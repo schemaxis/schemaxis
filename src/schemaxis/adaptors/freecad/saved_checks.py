@@ -1,5 +1,5 @@
 # Copyright (C) 2026 David L F Gaden
-"""Saved-run checks for captured STEP sources, import observations and hardened exports (host-only).
+"""Saved-run checks for captured Geometry sources, import observations and hardened exports (host-only).
 
 Saved verification never opens an original STEP path. It replays planning from the
 retained copy (bound to its capture record and the saved plan), and checks every
@@ -16,7 +16,7 @@ from schemaxis.errors import fail
 from schemaxis.run_paths import owned_path
 
 EXPORT_EVIDENCE = 'schemaxis.freecad.export/2'
-SOURCE_NODES = ('readSTEP', 'importSTEP')
+SOURCE_NODES = ('readSTEP', 'importSTEP', 'importMesh')
 
 
 EVIDENCE_BYTES = 64*1024*1024
@@ -65,7 +65,7 @@ def records(directory):
         return {}
     value = read_json(directory, 'sources.json')
     if not isinstance(value, dict):
-        fail('VERIFICATION_FAILED', 'STEP capture record must be an object', str(directory))
+        fail('VERIFICATION_FAILED', 'Geometry capture record must be an object', str(directory))
     return value
 
 
@@ -80,36 +80,38 @@ def file_sha256(path):
 
 
 def verify_sources(directory, prepared, captured):
-    """Authenticated {original path: sha256} of every STEP source, from retained bytes only."""
+    """Authenticated {original path: sha256} of every Geometry source, from retained bytes only."""
     from .step_source import consistent
     directory = Path(directory).absolute()
     expected = {n['id'] for n in prepared['nodes'] if n['filter'] in SOURCE_NODES}
     if set(captured) != expected:
-        fail('VERIFICATION_FAILED', 'STEP source membership differs', str(directory))
-    result, legacy, imports = {}, 0, 0
+        fail('VERIFICATION_FAILED', 'Geometry source membership differs', str(directory))
+    result, legacy, imports, meshes = {}, 0, 0, 0
     for node in prepared['nodes']:
         if node['filter'] not in SOURCE_NODES:
             continue
         record = captured[node['id']]
         if not isinstance(record, dict):
-            fail('VERIFICATION_FAILED', 'STEP source record is malformed', node['id'])
+            fail('VERIFICATION_FAILED', 'Geometry source record is malformed', node['id'])
         if node['filter'] == 'readSTEP':
             name, legacy = 'source-'+str(legacy)+'.step', legacy+1
             if set(record) != {'file', 'retained', 'sha256'}:
-                fail('VERIFICATION_FAILED', 'STEP source provenance differs', node['id'])
+                fail('VERIFICATION_FAILED', 'Geometry source provenance differs', node['id'])
         else:
-            name, imports = 'import-'+str(imports)+'.step', imports+1
+            if node['filter']=='importMesh':
+                name,meshes='mesh-import-'+str(meshes)+'.stl',meshes+1
+            else:name,imports='import-'+str(imports)+'.step',imports+1
             source = node['source']
-            if (set(record) != {'file', 'retained', 'sha256', 'bytes', 'route'} or record['route'] != 'importSTEP'
+            if (set(record) != {'file', 'retained', 'sha256', 'bytes', 'route'} or record['route'] != node['filter']
                     or record['file'] != source['path'] or record['sha256'] != source['sha256'] or record['bytes'] != source['bytes']):
-                fail('VERIFICATION_FAILED', 'Captured STEP source differs from its plan', node['id'])
+                fail('VERIFICATION_FAILED', 'Captured Geometry source differs from its plan', node['id'])
         if not consistent(node['options']['file'], record.get('file')):
-            fail('VERIFICATION_FAILED', 'STEP source provenance differs from the authored file', node['id'])
+            fail('VERIFICATION_FAILED', 'Geometry source provenance differs from the authored file', node['id'])
         retained = owned_path(directory, record['retained'])
         if retained != directory/name or retained.resolve().parent != directory.resolve():
-            fail('VERIFICATION_FAILED', 'Retained STEP copy is not the run-owned capture', node['id'])
+            fail('VERIFICATION_FAILED', 'Retained geometry copy is not the run-owned capture', node['id'])
         if not isinstance(record['sha256'], str) or file_sha256(retained) != record['sha256']:
-            fail('INPUT_CHANGED', 'Retained STEP copy changed after capture', node['id'])
+            fail('INPUT_CHANGED', 'Retained geometry copy changed after capture', node['id'])
         result[record['file']] = record['sha256']
     return result
 
@@ -119,17 +121,19 @@ def verify_saved_document(path, prepared, captured):
     from .document_xml import Document, ARCHIVE_ERRORS
     from .operations import extra_objects
     try:
+        from .source_assets import verify as verify_assets
+        verify_assets(path,prepared,captured)
         xml = Document(path)
         for index, node in enumerate(prepared['nodes']):
             if node['filter'] not in SOURCE_NODES:
                 continue
             name = 'N'+str(index)
             if xml.types.get(name) != 'Part::Feature' or xml.string(name, 'SourceSHA256') != captured[node['id']]['sha256']:
-                raise ValueError('saved STEP object digest differs')
+                raise ValueError('saved external geometry object digest differs')
         for name, kind in extra_objects(prepared).items():
             if xml.types.get(name) != kind or xml.link(name, 'Source') != name[:-len('Refined')]:
                 raise ValueError('saved refine output is not linked to its imported source')
-        if any(n['filter'] == 'importSTEP' for n in prepared['nodes']):
+        if 'partDesign' not in prepared and any(n['filter'] in ('importSTEP','importMesh','draftProfile') for n in prepared['nodes']):
             from . import gui_state
             from .operations import output_names
             output = output_names(prepared)[prepared['output']]
@@ -138,7 +142,7 @@ def verify_saved_document(path, prepared, captured):
         fail('VERIFICATION_FAILED', 'Saved FCStd archive or its XML is corrupt, malformed or uses an unsupported feature', 'model.FCStd',
              error=type(error).__name__, detail=str(error)[:300])
     except (OSError, ValueError, KeyError, AttributeError, TypeError) as error:
-        fail('VERIFICATION_FAILED', 'Saved STEP provenance in the FCStd is missing or differs', 'model.FCStd',
+        fail('VERIFICATION_FAILED', 'Saved external geometry provenance in the FCStd is missing or differs', 'model.FCStd',
              error=type(error).__name__, detail=str(error)[:300])
 
 
@@ -154,7 +158,7 @@ IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]
 
 def verify_imports(prepared, built, receipt):
     from .step_import import evaluate
-    nodes = [(i, n) for i, n in enumerate(prepared['nodes']) if n['filter'] == 'importSTEP']
+    nodes = [(i,n) for i,n in enumerate(prepared['nodes']) if n['filter'] in ('importSTEP','importMesh')]
     first, second = built.get('importObservations'), receipt.get('importObservations')
     if not isinstance(first, dict) or not isinstance(second, dict) or set(first) != {n['id'] for _, n in nodes} or set(second) != set(first):
         fail('VERIFICATION_FAILED', 'Import observation membership differs')
@@ -166,7 +170,10 @@ def verify_imports(prepared, built, receipt):
             if not isinstance(record, dict) or record.get('sourceObject') != 'N'+str(index) \
                     or record.get('sourceSHA256') != node['source']['sha256'] or not _close(record.get('placement'), placement, 1e-9, 1e-9):
                 fail('VERIFICATION_FAILED', 'Imported source object, digest or placement differs', node['id'], stage=label)
-            evaluate(node['options']['expect'], record.get('part', {}), node['id']+'.options.expect')
+            if node['filter']=='importMesh':
+                from .mesh_verify import verify_observation
+                verify_observation(node,record,label)
+            else:evaluate(node['options']['expect'],record.get('part',{}),node['id']+'.options.expect')
             refine = record.get('refine')
             if node['options']['refine']:
                 if (not isinstance(refine, dict) or refine.get('object') != 'N'+str(index)+'Refined'
@@ -183,20 +190,28 @@ def verify_imports(prepared, built, receipt):
                          facts=key, measure=measure)
 
 
-def require_hardened(built, receipt, directory):
+def require_hardened(built, receipt, directory, *, prepared=None):
+    from .helix_evidence import version
+    required=version(prepared) if prepared is not None else EXPORT_EVIDENCE
     for record in (built.get('exportEvidence'), receipt.get('exportEvidence')):
-        if not isinstance(record, dict) or record.get('version') != EXPORT_EVIDENCE:
+        if not isinstance(record, dict) or record.get('version') != required:
             fail('RERUN_REQUIRED', 'This run has no hardened export evidence (signed STL integrals, centre of mass, '
                  'curved area and STEP unit). Its receipt stays historical evidence but is not verified now; rerun the document.',
                  str(directory), exportChecks='unqualified-for-hardened-verification')
 
 
-def verify_exports(directory, prepared, built, receipt):
+def verify_exports(directory, prepared, built, receipt, *, authority=None):
     from .export_checks import native_facts, check_stl
     from .step_source import read_bounded, admit, EXPORT_LIMITS
     directory = Path(directory).absolute()
-    require_hardened(built, receipt, directory)
+    require_hardened(built, receipt, directory, prepared=prepared)
     first, second = built['exportEvidence'], receipt['exportEvidence']
+    from .helix import active as helical
+    precision={}
+    if helical(prepared):
+        from .helix_evidence import verify as verify_precision
+        if authority is None:fail('VERIFICATION_FAILED','Helix exports require fresh complete geometry authority')
+        precision=verify_precision(first,second,authority)
     meshing = first.get('meshing')
     if meshing != {'linearDeflection': prepared['linearDeflection']/2, 'angularDeflection': 0.1, 'relative': False}:
         fail('VERIFICATION_FAILED', 'Meshing parameters differ from the plan', str(directory))
@@ -210,6 +225,7 @@ def verify_exports(directory, prepared, built, receipt):
     for label, other, measures in (('reopen', native, ('volume', 'area', 'bounds', 'centreOfMass', 'curvedArea')),
                                    ('step', step, ('volume', 'area', 'bounds', 'centreOfMass'))):
         for measure in measures:
+            if label=='step' and helical(prepared) and measure!='bounds':continue
             if not _close(other[measure], build[measure]):
                 fail('VERIFICATION_FAILED', 'Native export facts changed after export or fresh reopening', label, measure=measure)
     if native['faces'] != build['faces']:
@@ -228,6 +244,6 @@ def verify_exports(directory, prepared, built, receipt):
         raise
     if facts['unit'] != 'mm':
         fail('VERIFICATION_FAILED', 'Published STEP declares a length unit other than mm', 'model.step', unit=facts['unit'])
-    return {'level': 'hardened', 'volumeError': stl['volumeError'], 'volumeAllowance': stl['volumeAllowance'],
+    return {'level': 'hardened', **({'precision':precision} if precision else {}), 'volumeError': stl['volumeError'], 'volumeAllowance': stl['volumeAllowance'],
             'volumeCeiling': stl['volumeCeiling'], 'centreError': stl['centreError'], 'centreAllowance': stl['centreAllowance'],
             'mirrorDiscriminability': stl['mirrorDiscriminability'], 'stepUnit': facts['unit'], 'stlFacets': stl['host']['facets']}

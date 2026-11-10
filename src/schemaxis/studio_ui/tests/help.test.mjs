@@ -18,6 +18,46 @@ test('Help prose matches word prefixes without unrelated embedded words', () => 
   assert.deepEqual(searchTopics(entries, '[image]'), []);
 });
 
+test('declared native identifiers are found exactly and case-insensitively without matching prose prefixes', () => {
+  const entries = [
+    {title: 'locate', search: 'photo location altitude reference distance to a point', nativeTerms: ['compareto', 'media']},
+    {title: 'compareMetadata', search: 'compare photo metadata of two files'},
+    {title: 'legacy', search: 'an older entry without the optional field'},
+  ];
+  const titles = (query) => searchTopics(entries, query).map(item => item.title);
+  assert.deepEqual(titles('compareTo'), ['locate']);
+  assert.deepEqual(titles('COMPARETO'), ['locate']);
+  assert.deepEqual(titles('compareto'), ['locate']);
+  // A prose word that is only the leading part of an identifier does not match it.
+  assert.deepEqual(titles('compare'), ['compareMetadata']);
+  assert.deepEqual(titles('compare photo metadata'), ['compareMetadata']);
+  assert.deepEqual(titles('compareT'), []);
+  assert.deepEqual(titles('medi'), []);
+  // Identifier terms combine with prose terms, and title substring matching is unchanged.
+  assert.deepEqual(titles('compareTo altitude'), ['locate']);
+  assert.deepEqual(titles('compareTo compare'), []);
+  assert.deepEqual(titles('metadata'), ['compareMetadata']);
+  assert.deepEqual(titles('older field'), ['legacy']);
+  assert.deepEqual(searchTopics(entries, 'compareTo', 'Other'), []);
+  assert.deepEqual(searchTopics([{title: 'x', search: 'y', nativeTerms: 'compareto'}], 'compareTo'), []);
+});
+
+test('packaged help finds an operation by its declared native name but not by a prose prefix of it', () => {
+  const found = (query) => searchTopics(index.entries, query).map((entry) => entry.capabilityId);
+  assert.ok(found('compareTo').includes('operation/exiftool/locate'));
+  assert.ok(found('compareto').includes('operation/exiftool/locate'));
+  assert.ok(!found('compare photos').includes('operation/exiftool/locate'));
+  assert.ok(found('compare photos').includes('operation/exiftool/compareMetadata'));
+  // Every declared identifier finds its own operation.
+  const withNames = index.entries.filter((entry) => entry.nativeTerms);
+  assert.ok(withNames.length > 100);
+  for (const entry of withNames) {
+    for (const term of entry.nativeTerms) {
+      assert.ok(searchTopics([entry], term).length === 1, `${entry.title}: ${term}`);
+    }
+  }
+});
+
 test('packaged help searches native options and dollar syntax, and resolves adaptor context', () => {
   assert.equal(index.entries.filter((entry) => entry.provider === 'paraview' && entry.operation).length, 645);
   assert.equal(searchTopics(index.entries, 'pvClip')[0].title, 'pvClip');

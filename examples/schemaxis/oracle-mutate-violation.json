@@ -1,0 +1,25 @@
+{
+  "version": "schemaxis.oracle/1",
+  "operation": "mutate",
+  "connection": {"profile": "free_local"},
+  "tables": [
+    {
+      "name": "accounts",
+      "columns": [
+        {"name": "id", "type": "number", "precision": 10, "scale": 0},
+        {"name": "owner", "type": "varchar2", "length": 20},
+        {"name": "balance", "type": "number", "precision": 12, "scale": 2}
+      ],
+      "primaryKey": ["id"],
+      "unique": [{"columns": ["owner"]}],
+      "source": {"path": "/replace/with/accounts.json"}
+    }
+  ],
+  "transaction": {
+    "steps": [
+      {"kind": "insert", "table": "accounts", "columns": ["id", "owner", "balance"], "rows": [[4, "dave", "10.00"]], "expectRows": 1},
+      {"kind": "insert", "table": "accounts", "columns": ["id", "owner", "balance"], "rows": [[5, "alice", "1.00"]], "expectRows": 1}
+    ],
+    "enforcement": "database"
+  }
+}

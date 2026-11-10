@@ -12,6 +12,8 @@ let nextId = 1;
 
 export class Notifier {
   constructor() {
+    this.suppressed = false;
+    this.openProblems = null;
     this.store = new Store({problems: [], log: []});
     this.container = h('div', {class: 'toasts', role: 'region', 'aria-label': 'Notifications'});
   }
@@ -70,7 +72,8 @@ export class Notifier {
     this.store.set((state) => ({problems: [...state.problems, ...entries],
       log: [...state.log, ...entries].slice(-500)}));
     this.toast({level: entries.some((item) => item.level === 'error') ? 'error' : 'warn',
-      title: `${entries.length} problem${entries.length === 1 ? '' : 's'} — see Problems`});
+      title: `${entries.length} problem${entries.length === 1 ? '' : 's'} — see Problems`, activate: () => this.openProblems?.()},
+      [{label: 'Show Problems', run: () => this.openProblems?.()}]);
     return entries;
   }
 
@@ -83,6 +86,7 @@ export class Notifier {
   }
 
   toast(entry, actions = [], sticky = false) {
+    if (this.suppressed) return;
     const close = () => {
       element.remove();
     };
@@ -93,7 +97,8 @@ export class Notifier {
         close();
       },
     }, action.label));
-    const element = h('div', {class: ['toast', entry.level], role: entry.level === 'error' ? 'alert' : 'status'},
+    const element = h('div', {class: ['toast', entry.level], role: entry.level === 'error' ? 'alert' : 'status',
+      onClick: entry.activate ? event => { if (!event.target.closest('button')) entry.activate(); } : undefined},
       icon(ICONS[entry.level]),
       h('div', {},
         h('div', {class: 'toast-title'}, entry.title),

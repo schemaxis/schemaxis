@@ -4,6 +4,13 @@ Install Python 3.10 or newer, then run `python3 -m pip install .` from the repos
 Install the native applications you need from their official distributors. Schemaxis
 keeps planning and discovery independent of those installations.
 
+Managed CLI runs and Studio Case Runner default to packaged application modules.
+See [application modules](application-modules.md) for image registration, fetching,
+offline downloads, cache inspection and reviewed cleanup. A public module catalogue
+and native desktop installer are not bundled here. Use `--backend native` on
+`run`, or save the native preference, to use the separate installations described
+below. Native interactive consoles retain their existing application setup.
+
 The base installation supports [headless CLI operation](headless.md) without a
 Schemaxis GUI dependency. Use `schemaxis --version`, `schemaxis --help` or
 `schemaxis help TOPIC` for [command and capability discovery](cli-discovery.md).
@@ -25,6 +32,9 @@ schemaxis configure cantera /path/to/cantera-environment/bin/python
 schemaxis configure ngspice /path/to/ngspice
 schemaxis configure inkscape /path/to/inkscape
 schemaxis configure ffmpeg /path/to/ffmpeg
+schemaxis configure webp /path/to/cwebp
+schemaxis configure flac /path/to/flac
+schemaxis configure espeakng /path/to/espeak-ng
 schemaxis configure shotcut /path/to/Shotcut.app/melt
 schemaxis configure kicad /path/to/kicad-cli
 schemaxis configure imagej /path/to/java
@@ -56,6 +66,31 @@ root locations are canonicalised separately.
 Additional launcher keys such as `freecad_gui` can be added to `locations` for
 assembly execution. FreeCAD's live GUI workflows may require a GUI launcher: use `console --executable`
 or the console's configuration command when its launcher differs from batch FreeCAD.
+
+The [WebP image publisher](webp.md) uses libwebp 1.6 tools. Execution needs
+both `cwebp` and `dwebp`; use `--webp` and `--dwebp` on `run`, or store `webp` and
+`dwebp` paths in the private configuration's `locations` object. `configure` names
+adaptors, so add the auxiliary `dwebp` key to that JSON file directly, or set
+`SCHEMAXIS_DWEBP`. Later `schemaxis verify` needs that trusted decoder to reopen
+the actual retained WebP bytes. Executable paths in a receipt are never used to
+choose a command. Discovery and planning do not need either native tool.
+
+The [FLAC recording and archive bridge](flac.md) uses FLAC 1.5.x; bounded native
+acceptance exercised 1.5.0. Set the `flac` location or `SCHEMAXIS_FLAC`, or pass
+`--flac` for execution. Both execution and later verification require this trusted
+executable to decode the actual retained FLAC bytes. Verification does not use PATH
+or executable paths from receipts. The bounded route accepts PCM16 mono/stereo
+recordings and can hand decoded WAV to SoX; it does not preserve tags in WAV.
+
+The [offline synthetic narration adaptor](espeakng.md) uses eSpeak NG 1.52.0 with
+its English (United States) voice and matching native data. Set the `espeakng`
+location or `SCHEMAXIS_ESPEAKNG`, or pass `--espeakng` for execution. Verification
+re-synthesises the captured text with the trusted executable and its data; it
+requires the matching runtime and data even when a changed data file would produce
+the same PCM. Keep that installation available for retained runs. The bounded
+qualification used a file-output-only build with Sonic, MBROLA and playback
+disabled; other builds need their own qualification. Discovery and planning load
+no speech engine. Output remains a synthetic draft for a person to listen to.
 
 Check host setup with `schemaxis discover` and `schemaxis plan INPUT.json`.
 Native qualification is separate: execute a representative example and verify its
@@ -104,3 +139,23 @@ inside Premiere on Windows/macOS. Supply an existing private job directory with
 `configure`. It has host contract tests but no native qualification yet. Linux
 can plan and inspect retained results; native acquisition reports
 `NATIVE_ENVIRONMENT_UNAVAILABLE`.
+
+## Structural and solid thermal runtimes
+
+The [OpenSees planar truss adaptor](opensees.md) uses an isolated Python with
+OpenSeesPy 3.8.0.0 and OpenSees engine 3.8.0. Configure that interpreter under
+`opensees`, or pass `--opensees /absolute/path/to/python`; the host never imports
+OpenSeesPy. Missing packages and unsupported versions have distinct recovery
+faults. The supported product is linear elastic planar trusses, with independent
+stiffness and equilibrium checks.
+
+The [Elmer solid-conduction adaptor](elmer.md) uses a serial ElmerSolver built
+from stable 26.2.1. Configure `elmer`, or pass `--elmer /absolute/path/to/ElmerSolver`.
+The binary reports only major/minor 26.2; retain the release-source provenance
+separately. Its native ASCII restart retains full-precision temperature values;
+the exported ASCII VTU has eight significant digits. The declared product covers
+layered steady solids, source and end-condition alternatives, and sampled limits.
+
+The [FreeCAD finite-depth machining examples](freecad-part-design.md#blind-pockets-and-counterbores) are
+qualified on FreeCAD 1.1.4. Keep an older installation alongside an update when
+existing workflows depend on it, and select the intended executable explicitly.

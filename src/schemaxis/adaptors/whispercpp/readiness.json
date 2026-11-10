@@ -1,0 +1,2871 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.whispercpp/1": {
+      "guide": "docs/whispercpp.md",
+      "context": {
+        "purpose": "Transcribe a local PCM16 mono 16 kHz speech recording offline into checked millisecond segments, plain text, SRT and WebVTT. Optional caption review flags cue duration and density by fixed editorial thresholds, and an optional segmentation target asks whisper.cpp for shorter word-aware cues. Output is for human review.",
+        "assumptions": "Absolute local WAV and ggml model paths, lowercase SHA-256 model pin, English or one explicit lowercase code from the 100 whisper.cpp 1.9.5 language codes (membership does not certify that the model is multilingual or recognises that language); latest stable whisper.cpp 1.9.5 whisper-cli executable.",
+        "constraints": "PCM16 mono 16000 Hz, at most 600 seconds and 32MiB audio; model at most 4GiB; 2000 segments, 262144 characters; one CPU thread. No download, prompt, translation, diarisation, VAD, language detection or authored native flags; the only native option is the optional maxSegmentLength (16 to 200 code points, mapped to -ml N -sow), a target that long words and unspaced scripts can exceed, with experimental token-level cue timing. Accuracy is not certified. Caption review thresholds are editorial defaults, not standards, and are not authored.",
+        "inspection": "Reopen captured audio and native JSON with strict closed parsing; independently check hashes, finite integral-millisecond timestamps, ordering, non-overlap and audio duration, then regenerate text/SRT/WebVTT byte-for-byte. Native SRT is compared with native JSON. The optional caption review is rebuilt from the checked segments and must match byte-for-byte after strict member and type checks. With maxSegmentLength, the argv must carry exactly the authored -ml N -sow, and segments.json records the target, enforced false and the host-counted cues over it; over-target cues are published, not refused.",
+        "recovery": "INVALID_AUDIO_DATA: export PCM16 mono 16000 Hz WAV. AUDIO_RESOURCE_LIMIT: split audio. AUDIO_HASH_MISMATCH/MODEL_HASH_MISMATCH: restore the pinned bytes or update the pin deliberately. MODEL_CHANGED: do not modify the model during a run. TRANSCRIPT_EMPTY: no speech segments, nothing published. TRANSCRIPT_TIMING/TRANSCRIPT_INVALID: native output violated the contract (including a blank-looking or non-text cue); inspect native.json at the reported cue, then use cleaner audio or another pinned model. If maxSegmentLength was set, retry with it omitted or larger. INVALID_LANGUAGE at $.language: use one lowercase code from the schema enum (default en); full names, uppercase, auto and aliases are refused before any file is read. INVALID_ARGUMENT at $.arguments.maxSegmentLength: use a whole number from 16 to 200 or omit it. UNSUPPORTED_NATIVE_VERSION: configure whisper.cpp 1.9.5. VERIFICATION_FAILED on caption-review.json: the report differs from independent recomputation or exists without (or is missing despite) captionReview; rerun from the declared input."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/whispercpp-jfk.json"
+        },
+        {
+          "id": "excerpt",
+          "reference": "examples/schemaxis/whispercpp-excerpt.json"
+        },
+        {
+          "id": "caption-review",
+          "reference": "examples/schemaxis/whispercpp-caption-review.json"
+        },
+        {
+          "id": "short-cues",
+          "reference": "examples/schemaxis/whispercpp-short-cues.json"
+        },
+        {
+          "id": "relative-invalid",
+          "reference": "examples/schemaxis/whispercpp-relative-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_AUDIO_SOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "hash-invalid",
+          "reference": "examples/schemaxis/whispercpp-hash-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_SHA256",
+          "schemaValid": true
+        },
+        {
+          "id": "invalid-language",
+          "reference": "examples/schemaxis/whispercpp-invalid-language.json",
+          "expect": "invalid",
+          "fault": "INVALID_LANGUAGE",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_whispercpp.py"
+      ],
+      "acceptance": [
+        "tools/qualify_whispercpp.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Isolated transcription jobs support source-byte reuse invalidation and verified file artifacts.",
+          "references": [
+            "docs/whispercpp.md",
+            "tools/qualify_whispercpp.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references and finite studies resolve before native transcription.",
+          "references": [
+            "docs/whispercpp.md",
+            "tools/qualify_whispercpp.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/ggml-org/whisper.cpp/tree/v1.9.5/examples/cli",
+          "https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.5"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers capture, model hashing, version, dependency trace, transcription and verification; CPU 3600s, address space 16GiB, file 16MiB per native process.",
+          "cancellation": "Cancellation and deadline are checked before capture, before model hashing, after native stages and before publication; shared tracked process-group cancellation terminates owned native jobs.",
+          "logs": "Authored/effective plans, captured audio, model/runtime identities, trusted launchers, input bindings, submissions/stdout/stderr, native JSON/SRT and four publications retained (five with captionReview enabled).",
+          "verification": "Strict closed JSON, model/audio/runtime hash binding, integral millisecond monotonic nonoverlapping segments inside audio duration, byte-exact regenerated text/SRT/WebVTT, exact membership. Accuracy is not verified. The optional caption review report is recomputed from the checked segments and compared exactly. With maxSegmentLength the segmentation member (target, enforced false, cue and over-target counts) is rebuilt from the checked segments and compared exactly; the cue length is never a pass/fail check."
+        },
+        "data": [
+          {
+            "id": "speech",
+            "direction": "input",
+            "kind": "file",
+            "format": "PCM16 WAV",
+            "traits": {
+              "channels": 1,
+              "sampleRate": 16000,
+              "maxSeconds": 600
+            },
+            "losses": [
+              "No resampling, channel conversion or compressed audio; metadata chunks are not certified or stripped."
+            ],
+            "scope": "Captured canonical RIFF PCM16 mono 16000 Hz, optionally pinned by SHA-256."
+          },
+          {
+            "id": "segments",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.segments/1 JSON",
+            "traits": {
+              "timeUnit": "millisecond",
+              "accuracyCertified": false
+            },
+            "losses": [
+              "No word timing, confidence or speaker labels; recognition accuracy is not certified.",
+              "With maxSegmentLength the cue boundaries are native experimental token-level timing and the target is not a guaranteed maximum; both are observed, not certified."
+            ],
+            "scope": "Closed segment evidence and review limits; with maxSegmentLength also the segmentation member."
+          },
+          {
+            "id": "transcript",
+            "direction": "output",
+            "kind": "text",
+            "format": "UTF-8 text",
+            "traits": {
+              "linePerSegment": true
+            },
+            "losses": [
+              "Text is native recognition output with surrounding spaces removed."
+            ],
+            "scope": "Generated from checked segments."
+          },
+          {
+            "id": "captions",
+            "direction": "output",
+            "kind": "file",
+            "format": "SRT and WebVTT",
+            "traits": {
+              "timeUnit": "millisecond",
+              "encoding": "UTF-8"
+            },
+            "losses": [
+              "Cue line-breaking, styling and readability are not produced or certified; the optional segmentation target only asks whisper.cpp for shorter cues."
+            ],
+            "scope": "Generated byte-for-byte from checked segments."
+          },
+          {
+            "id": "caption-review",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.caption-review/1 JSON",
+            "traits": {
+              "unit": "millisecond and Unicode code point",
+              "optional": true,
+              "passCertified": false
+            },
+            "losses": [
+              "Fixed editorial flags only; not a standard, accessibility or readability certification, and not grapheme or display-width aware."
+            ],
+            "scope": "Optional per-cue duration, code point count and rate with short-duration, long-duration and dense-text flags, derived from checked segments."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect segments.json, transcript.txt and the two caption files. With captionReview, also inspect caption-review.json.",
+            "limits": "No playback, editing or accuracy review; listen to the audio and correct text externally."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit JSON paths and pins, plan and run; audio/model byte changes invalidate workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Isolated verified transcription jobs and file artifacts."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Common references and finite studies resolve before native transcription."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Audio and model byte digests invalidate stale reuse."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer editing of paths, pins and language."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "The bounded serial offline transcription route does not implement native-inspection."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The bounded serial offline transcription route does not implement mpi."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "The bounded serial offline transcription route does not implement time-batches."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "The bounded serial offline transcription route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The bounded serial offline transcription route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "The bounded serial offline transcription route does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "jfk-english",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Public 11 s English sample with ggml-base.en under whisper.cpp 1.9.5: literal quotation words, one segment, 0-11000 ms. Scope is this fixture/model/runtime only; accuracy is not certified.",
+            "checks": [
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segmentCount",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/audio/durationMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/0/startMs",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/0/endMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/0/text",
+                "expected": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country.",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/review/accuracyCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "jfk-first-eight-seconds",
+            "example": "excerpt",
+            "edits": [],
+            "scope": "Held-out exact first 128000 frames (8 s) of the same sample. The literal text is the observed ggml-base.en output, which adds a comma the quotation lacks; word identity is separately checked by tools/qualify_whispercpp.py. A 6 s cut of the same audio was observed to mis-transcribe, so no general accuracy is claimed.",
+            "checks": [
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segmentCount",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/audio/durationMs",
+                "expected": 8000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/0/endMs",
+                "expected": 8000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/0/text",
+                "expected": "And so, my fellow Americans, ask not what your country can do for you.",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "jfk-caption-review",
+            "example": "caption-review",
+            "scope": "Public 11 s English sample with ggml-base.en under whisper.cpp 1.9.5 and captionReview enabled: one cue of 11000 ms flagged long-duration only; the 107 code point count and 9727 milli code points per second are recomputed independently. Scope is this fixture/model/runtime; editorial flags certify nothing.",
+            "checks": [
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cueCount",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/flaggedCueCount",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/0/durationMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/0/codePoints",
+                "expected": 107,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/0/codePointsPerSecondMilli",
+                "expected": 9727,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/0/flags/0",
+                "expected": "long-duration",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/flagCounts/dense-text",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/review/passCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/review/humanReviewRequired",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/0/endMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "jfk-short-cues",
+            "example": "short-cues",
+            "edits": [],
+            "scope": "Public 11 s English sample with ggml-base.en under whisper.cpp 1.9.5 (reported 1.9.5-dev) and maxSegmentLength 42: the one 11000 ms cue of the baseline becomes three cues with literal native boundaries 0/5410/9040/11000 ms, none over 42 code points. Scope is this fixture/model/runtime; the target is native and not guaranteed, cue timing is experimental native token timing observed and not certified, and accuracy is not certified.",
+            "checks": [
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segmentCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/audio/durationMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/0/startMs",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/0/endMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/0/text",
+                "expected": "And so my fellow Americans, ask not what",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/1/startMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/1/endMs",
+                "expected": 9040,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/1/text",
+                "expected": "your country can do for you, ask what you",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/2/startMs",
+                "expected": 9040,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/2/endMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segments/2/text",
+                "expected": "can do for your country.",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segmentation/maxSegmentLength",
+                "expected": 42,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segmentation/cueCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segmentation/cuesOverTarget",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segmentation/enforced",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/review/humanReviewRequired",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/review/accuracyCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "jfk-short-cues-review",
+            "example": "short-cues",
+            "edits": [
+              {
+                "op": "add",
+                "path": "/captionReview",
+                "value": true
+              }
+            ],
+            "scope": "The same 42 code point target with captionReview enabled: the three cues of 5410, 3630 and 1960 ms are recomputed independently and none is flagged, where the unsplit 11000 ms cue is flagged long-duration. No flag is not a pass; no readability, accessibility or accuracy certification.",
+            "checks": [
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cueCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/flaggedCueCount",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/flagCounts/long-duration",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/0/durationMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/0/codePoints",
+                "expected": 40,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/0/codePointsPerSecondMilli",
+                "expected": 7393,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/1/durationMs",
+                "expected": 3630,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/1/codePoints",
+                "expected": 41,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/1/codePointsPerSecondMilli",
+                "expected": 11294,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/2/durationMs",
+                "expected": 1960,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/2/codePoints",
+                "expected": 24,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/cues/2/codePointsPerSecondMilli",
+                "expected": 12244,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/review/passCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-review.json",
+                "format": "json",
+                "pointer": "/review/humanReviewRequired",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "segments.json",
+                "format": "json",
+                "pointer": "/segmentation/cuesOverTarget",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial transcribe route: all fields, strict native evidence, deterministic text/SRT/WebVTT, independent verification and lifecycle. Accuracy is not certified. Optional captionReview: fixed editorial per-cue duration/density report, independently recomputed; not a certification. Allocation: blank-looking and non-text native cues are refused before publication. Allocation 32: optional maxSegmentLength (16 to 200) mapped to native -ml N -sow, a word-aware segmentation target with honest UTF-8 code point and experimental timing semantics; over-target cues are counted, never refused; unauthored plans, receipts and results are unchanged.",
+        "review": [
+          "verification/2026-10-24-whispercpp-completion.md",
+          "verification/2026-10-24-caption-review.md",
+          "verification/2026-10-24-whispercpp-allocation.md",
+          "verification/2026-10-25-whispercpp-32.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The bounded serial offline transcription route does not implement native-inspection.",
+          "mpi": "The bounded serial offline transcription route does not implement mpi.",
+          "time-batches": "The bounded serial offline transcription route does not implement time-batches.",
+          "live-editing": "The bounded serial offline transcription route does not implement live-editing.",
+          "native-save": "The bounded serial offline transcription route does not implement native-save.",
+          "conversion": "The bounded serial offline transcription route does not implement conversion."
+        }
+      }
+    },
+    "schemaxis.whispercpp.correct/1": {
+      "guide": "docs/whispercpp.md",
+      "context": {
+        "purpose": "Apply authored per-cue human text corrections, with a declared review status and note, to one retained whisper.cpp machine segments.json and publish a reviewed timed-text document, transcript text, SRT, WebVTT and an exact correction ledger. Host-only: whisper-cli is never launched.",
+        "assumptions": "A retained unedited machine segments.json (schemaxis.whispercpp.segments/1) within the shared timed-text budgets, and its SHA-256 copied from the draft the author reviewed. Corrections are text replacements by cue index.",
+        "constraints": "Host-only and not native-qualified: no audio, model or recognition run is read or repeated, there is no qualification record for this route, and a transcription receipt for the provider does not qualify it. At most 512 cues, 256 characters per cue and 32768 in total; at most 512 corrections; note 1 to 500 plain-text characters. No timing edits, splits, merges, insertions or deletions. The review status is the author's declaration; reviewer identity, hearing the audio, accuracy, readability and accessibility are not verified or certified.",
+        "inspection": "Capture the draft bytes, require them to hash to basisSha256, then derive every publication again from those bytes and the authored edits and compare each file byte for byte: reviewed-segments.json (schemaxis.timedtext.reviewed/1, parsed by the shared validator), transcript.txt, captions.srt, captions.vtt, the corrections.json ledger and the optional caption-review.json recomputed on the corrected text. Membership is exact and any native launcher, submission or log is a failure.",
+        "recovery": "CORRECTIONS_STALE: review the current draft and copy its sha256 into basisSha256. CORRECTION_INDEX_INVALID, CORRECTION_DUPLICATE, CORRECTION_NOOP, CORRECTION_TEXT_INVALID and CORRECTIONS_NOTE_INVALID name the entry to fix at its location. CORRECTIONS_STATUS_CONFLICT: use human-corrected with corrections or human-reviewed-unchanged without. DRAFT_NOT_MACHINE_DRAFT: correct the original machine draft, not a reviewed document. DRAFT_SOURCE_MISSING: the draft file or a directory on its path does not exist; INVALID_DRAFT_SOURCE: the path is relative, a link, a directory, not a regular file or over the byte budget. MISSING_ARGUMENT: add the absent required member. TIMED_TEXT_RESOURCE_LIMIT at $.corrections[n].text: shorten replacements so the corrected transcript stays within 32768 characters. UNKNOWN_ARGUMENT/INVALID_ARGUMENT: remove or fix the located member. TIMED_TEXT_*: the draft breaks the shared contract or budgets. VERIFICATION_FAILED: a retained file differs from independent replay; rerun from the declared input."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/whispercpp-corrections.json"
+        },
+        {
+          "id": "unchanged",
+          "reference": "examples/schemaxis/whispercpp-corrections-unchanged.json"
+        },
+        {
+          "id": "blank-invalid",
+          "reference": "examples/schemaxis/whispercpp-corrections-blank-invalid.json",
+          "expect": "invalid",
+          "fault": "CORRECTION_TEXT_INVALID",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_whispercpp_corrections.py",
+        "tests/unit/test_timed_text.py"
+      ],
+      "acceptance": [
+        "tools/qualify_whispercpp.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "A verified correction job hands reviewed-segments.json to the Pandoc transcript block as a text artifact; the corrected publishing workflow example is the host proof.",
+          "references": [
+            "docs/whispercpp.md",
+            "tests/unit/test_whispercpp_corrections.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references resolve before the host-only correction runs.",
+          "references": [
+            "docs/whispercpp.md",
+            "tests/unit/test_whispercpp_corrections.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/ggml-org/whisper.cpp/tree/v1.9.5/examples/cli"
+        ],
+        "lifecycle": {
+          "timeout": "Host-only: reading one draft of at most 4MiB and writing six small files; no native process, so no native resource limits apply.",
+          "cancellation": "No native process exists to cancel; a fresh output directory is required and a failure records result.json with the structured fault.",
+          "logs": "Authored/effective plans, captured draft bytes, the capture record, the receipt and the publications are retained; no launcher, submission, stdout or stderr exists, and any such file is a membership failure.",
+          "verification": "Semantic replay from the captured draft bytes and authored edits; byte-exact comparison of every publication including the ledger, canonical form, exact membership, retained result agreement. Refreshed ordinary hashes cannot hide a changed publication. Accuracy and reviewer identity are never verified."
+        },
+        "data": [
+          {
+            "id": "draft",
+            "direction": "input",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.segments/1 JSON",
+            "traits": {
+              "status": "machine-draft",
+              "maxCues": 512
+            },
+            "losses": [
+              "The draft is unedited machine output pinned by SHA-256; a reviewed document is refused as a draft."
+            ],
+            "scope": "Captured once through one descriptor, at most 4MiB."
+          },
+          {
+            "id": "reviewed-segments",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.timedtext.reviewed/1 JSON",
+            "traits": {
+              "timeUnit": "millisecond",
+              "accuracyCertified": false,
+              "identityVerified": false
+            },
+            "losses": [
+              "The status is an author declaration; timings are unchanged from the draft and were never certified."
+            ],
+            "scope": "Closed reviewed contract read by the shared timed-text validator and the Pandoc transcript block."
+          },
+          {
+            "id": "transcript",
+            "direction": "output",
+            "kind": "text",
+            "format": "UTF-8 text",
+            "traits": {
+              "linePerSegment": true
+            },
+            "losses": [
+              "Corrected author text, one line per cue."
+            ],
+            "scope": "Generated from the reviewed cues."
+          },
+          {
+            "id": "captions",
+            "direction": "output",
+            "kind": "file",
+            "format": "SRT and WebVTT",
+            "traits": {
+              "timeUnit": "millisecond",
+              "encoding": "UTF-8"
+            },
+            "losses": [
+              "Cue line-breaking, styling and readability are not produced or certified."
+            ],
+            "scope": "Generated byte-for-byte from the reviewed cues."
+          },
+          {
+            "id": "corrections",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.corrections/1 JSON",
+            "traits": {
+              "entries": "index, times, original, replacement"
+            },
+            "losses": [
+              "Proves what changed against which draft; not that replacements are right or who made them."
+            ],
+            "scope": "Exact ledger binding the draft SHA-256 and the reviewed document SHA-256."
+          },
+          {
+            "id": "caption-review",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.caption-review/1 JSON",
+            "traits": {
+              "optional": true
+            },
+            "losses": [
+              "Fixed editorial heuristics recomputed on corrected text; not a standard or certification."
+            ],
+            "scope": "Present only with captionReview."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect reviewed-segments.json, transcript.txt, the caption files and corrections.json; with captionReview also caption-review.json.",
+            "limits": "No playback or accuracy review; the status is a declaration."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the draft path, pin, status, note and corrections, plan and run; a changed draft file invalidates workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Isolated verified host-only correction jobs and file artifacts; no native process is launched."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Common references and finite studies resolve before the host-only correction plan is made; no native transcription is involved."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The pinned machine-draft SHA-256 (basisSha256) and the draft file bytes invalidate stale reuse; no audio or model is read."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer editing of the draft path, the basisSha256 pin, the review status and note, and the edit lists."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement native-inspection."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement mpi."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement time-batches."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "corrected-three-cue-draft",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Real native three-cue draft (public jfk.wav, ggml-base.en, whisper.cpp 1.9.5-dev, maxSegmentLength 42; boundaries 0/5410/9040/11000 ms). Two cues get authored punctuation; the third and every time stay. Host-only: this case does not qualify the native route and no recognition accuracy is claimed.",
+            "checks": [
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/version",
+                "expected": "schemaxis.timedtext.reviewed/1",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segmentCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/0/text",
+                "expected": "And so, my fellow Americans: ask not what",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/text",
+                "expected": "your country can do for you; ask what you",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/2/text",
+                "expected": "can do for your country.",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/startMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/2/startMs",
+                "expected": 9040,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/2/endMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/status",
+                "expected": "human-corrected",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/correctionCount",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/identityVerified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/accuracyCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/basis/sha256",
+                "expected": "0fb466aec743b3a236655d7b29e4d3a1003bcd5230abcd4276af56b08cb4ba04",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/entries/0/original",
+                "expected": "And so my fellow Americans, ask not what",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/entries/0/replacement",
+                "expected": "And so, my fellow Americans: ask not what",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/correctionCount",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "reviewed-unchanged-three-cue-draft",
+            "example": "unchanged",
+            "edits": [],
+            "scope": "Held-out declaration on the same real native draft that no cue changes: the words and every time stay exactly as the machine draft, with the distinct human-reviewed-unchanged status and an empty ledger. Host-only; no accuracy or reviewer identity is claimed.",
+            "checks": [
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/status",
+                "expected": "human-reviewed-unchanged",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/correctionCount",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/0/text",
+                "expected": "And so my fellow Americans, ask not what",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/text",
+                "expected": "your country can do for you, ask what you",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/2/endMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/correctionCount",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/unchangedCueCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/identityVerified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Allocation 38: new separate host-only route schemaxis.whispercpp.correct/1 (corrections.py): authored per-cue text corrections of a pinned machine draft, the closed reviewed contract schemaxis.timedtext.reviewed/1 in the shared timed-text validator, corrected publications and a ledger, exact semantic replay, and the Pandoc transcript provenance paragraph for a reviewed document. Review covers this route and the shared/Pandoc extensions only. It is host-only with no native qualification; the transcription route and its official 1.9.5 mapping are unchanged and are not re-reviewed.",
+        "review": [
+          "verification/2026-10-25-whispercpp-38.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The host-only corrections route does not implement native-inspection.",
+          "mpi": "The host-only corrections route does not implement mpi.",
+          "time-batches": "The host-only corrections route does not implement time-batches.",
+          "live-editing": "The host-only corrections route does not implement live-editing.",
+          "native-save": "The host-only corrections route does not implement native-save.",
+          "conversion": "The host-only corrections route does not implement conversion."
+        }
+      }
+    },
+    "schemaxis.whispercpp.correct/2": {
+      "guide": "docs/whispercpp.md",
+      "context": {
+        "purpose": "Apply authored per-cue text replacements and whole-cue deletions by source index, with a declared review status and note, to one retained whisper.cpp machine segments.json and publish a separately versioned reviewed timed-text document (reviewed/2), transcript text, SRT, WebVTT and an exact ledger that maps each published cue to its source cue. Host-only: whisper-cli is never launched. correct/1 and reviewed/1 are unchanged.",
+        "assumptions": "A retained unedited machine segments.json (schemaxis.whispercpp.segments/1) with at least one cue, within the shared timed-text budgets, and its SHA-256 copied from the draft the author reviewed. Replacements and deletions name source indices of that draft.",
+        "constraints": "Host-only and not native-qualified: no audio, model or recognition run is read or repeated, there is no qualification record for this route, and a transcription receipt for the provider does not qualify it. At most 512 cues, 256 characters per cue and 32768 in total; at most 512 replacements and 512 deletions; note 1 to 500 plain-text characters. No timing edits, splits, merges, insertions or imports. Deleting every cue of a nonempty draft is allowed and publishes an empty transcript, an empty SRT and a bare WEBVTT header; an original draft with zero cues and a reviewed document used as a draft are refused; captionReview is refused when nothing is retained. The review status is the author's declaration; reviewer identity, hearing the audio, whether a deletion was right, accuracy, readability and accessibility are not verified or certified, and an empty result is not evidence about the recording.",
+        "inspection": "Capture the draft bytes, require them to hash to basisSha256, then derive every publication again from those bytes and the authored edits and compare each file byte for byte: reviewed-segments.json (schemaxis.timedtext.reviewed/2, parsed by the shared validator, which accepts an empty cue list only when every cue of the nonempty pinned draft is recorded as deleted), transcript.txt, captions.srt, captions.vtt, the corrections.json ledger (replacements, deletions with original text and timing, and the published-to-source mapping) and the optional caption-review.json recomputed on the retained text. Membership is exact and any native launcher, submission or log is a failure.",
+        "recovery": "CORRECTIONS_STALE: review the current draft and copy its sha256 into basisSha256. DELETION_DUPLICATE, CORRECTION_DELETION_CONFLICT, CORRECTION_DUPLICATE, CORRECTION_NOOP, CORRECTION_TEXT_INVALID and CORRECTIONS_NOTE_INVALID name the entry to fix at its location. DELETION_INDEX_INVALID and CORRECTION_INDEX_INVALID: use a source index of the draft. CORRECTIONS_STATUS_CONFLICT: use human-corrected with at least one replacement or deletion, or human-reviewed-unchanged with neither. DRAFT_NOT_MACHINE_DRAFT: edit the original machine draft, not a reviewed document. CAPTION_REVIEW_EMPTY: omit captionReview or keep a cue. DRAFT_SOURCE_MISSING: the draft file or a directory on its path does not exist; INVALID_DRAFT_SOURCE: the path is relative, a link, a directory, not a regular file or over the byte budget. MISSING_ARGUMENT: add the absent required member. TIMED_TEXT_RESOURCE_LIMIT at $.corrections[n].text: shorten replacements or delete cues so the transcript stays within 32768 characters. UNKNOWN_ARGUMENT/INVALID_ARGUMENT: remove or fix the located member. TIMED_TEXT_*: the draft breaks the shared contract or budgets (a draft with no cues is TIMED_TEXT_INVALID at $.draft.segments). VERIFICATION_FAILED: a retained file differs from independent replay; rerun from the declared input."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/whispercpp-deletions-partial.json"
+        },
+        {
+          "id": "delete-all",
+          "reference": "examples/schemaxis/whispercpp-deletions-all.json"
+        },
+        {
+          "id": "unchanged",
+          "reference": "examples/schemaxis/whispercpp-deletions-unchanged.json"
+        },
+        {
+          "id": "conflict-invalid",
+          "reference": "examples/schemaxis/whispercpp-deletions-conflict-invalid.json",
+          "expect": "invalid",
+          "fault": "CORRECTION_DELETION_CONFLICT",
+          "schemaValid": true
+        },
+        {
+          "id": "duplicate-invalid",
+          "reference": "examples/schemaxis/whispercpp-deletions-duplicate-invalid.json",
+          "expect": "invalid",
+          "fault": "DELETION_DUPLICATE",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_whispercpp_deletions.py",
+        "tests/unit/test_timed_text_deletions.py",
+        "tests/unit/test_pandoc_deletions.py"
+      ],
+      "acceptance": [
+        "tools/qualify_whispercpp_deletions.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "A verified correction job hands reviewed-segments.json (reviewed/2, possibly with no cues) to the Pandoc transcript block as a text artifact; the all-cues-deleted and partial-deletion workflow examples are the host proof.",
+          "references": [
+            "docs/whispercpp.md",
+            "tests/unit/test_whispercpp_deletions.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references resolve before the host-only correction runs.",
+          "references": [
+            "docs/whispercpp.md",
+            "tests/unit/test_whispercpp_deletions.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/ggml-org/whisper.cpp/tree/v1.9.5/examples/cli"
+        ],
+        "lifecycle": {
+          "timeout": "Host-only: reading one draft of at most 4MiB and writing five or six small files (some may be empty); no native process, so no native resource limits apply.",
+          "cancellation": "No native process exists to cancel; a fresh output directory is required and a failure records result.json with the structured fault.",
+          "logs": "Authored/effective plans, captured draft bytes, the capture record, the receipt and the publications are retained; no launcher, submission, stdout or stderr exists, and any such file is a membership failure.",
+          "verification": "Semantic replay from the captured draft bytes and authored edits; byte-exact comparison of every publication including the ledger, canonical form, exact membership, retained result agreement. Refreshed ordinary hashes cannot hide a changed publication. Accuracy and reviewer identity are never verified."
+        },
+        "data": [
+          {
+            "id": "draft",
+            "direction": "input",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.segments/1 JSON",
+            "traits": {
+              "status": "machine-draft",
+              "maxCues": 512
+            },
+            "losses": [
+              "The draft is unedited machine output with at least one cue, pinned by SHA-256; a reviewed document of either version is refused as a draft and a zero-cue draft is refused."
+            ],
+            "scope": "Captured once through one descriptor, at most 4MiB."
+          },
+          {
+            "id": "reviewed-segments",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.timedtext.reviewed/2 JSON",
+            "traits": {
+              "timeUnit": "millisecond",
+              "accuracyCertified": false,
+              "identityVerified": false,
+              "deletedSourceIndices": "unique ascending source indices",
+              "retainedSourceIndices": "source index of each published cue"
+            },
+            "losses": [
+              "The status is an author declaration; retained timings are unchanged from the draft and were never certified; deleted cues are absent here and recorded only in the ledger."
+            ],
+            "scope": "Closed reviewed/2 contract read by the shared timed-text validator and the Pandoc transcript block; the only document that may hold no cues, and only when every cue of the nonempty pinned draft is recorded as deleted."
+          },
+          {
+            "id": "transcript",
+            "direction": "output",
+            "kind": "text",
+            "format": "UTF-8 text",
+            "traits": {
+              "linePerSegment": true
+            },
+            "losses": [
+              "Corrected author text of the retained cues, one line per cue; empty when every cue is deleted."
+            ],
+            "scope": "Generated from the reviewed cues."
+          },
+          {
+            "id": "captions",
+            "direction": "output",
+            "kind": "file",
+            "format": "SRT and WebVTT",
+            "traits": {
+              "timeUnit": "millisecond",
+              "encoding": "UTF-8"
+            },
+            "losses": [
+              "Cue line-breaking, styling and readability are not produced or certified; SRT is empty and WebVTT is only its header when every cue is deleted."
+            ],
+            "scope": "Generated byte-for-byte from the reviewed cues."
+          },
+          {
+            "id": "corrections",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.corrections/2 JSON",
+            "traits": {
+              "replacements": "source and published index, times, original, replacement",
+              "deletions": "source index, times, original",
+              "retained": "published index, source index, times, original, text, edited"
+            },
+            "losses": [
+              "Proves what changed or was removed against which draft; not that edits are right, who made them or that the audio was reviewed."
+            ],
+            "scope": "Exact ledger binding the draft SHA-256 and the reviewed document SHA-256."
+          },
+          {
+            "id": "caption-review",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.caption-review/1 JSON",
+            "traits": {
+              "optional": true
+            },
+            "losses": [
+              "Fixed editorial heuristics recomputed on corrected text; not a standard or certification."
+            ],
+            "scope": "Present only with captionReview and at least one retained cue."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect reviewed-segments.json, transcript.txt, the caption files and corrections.json; with captionReview also caption-review.json.",
+            "limits": "No playback or accuracy review; the status is a declaration."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the draft path, pin, status, note, replacements and deletions, plan and run; a changed draft file invalidates workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Isolated verified host-only correction jobs and file artifacts; no native process is launched."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Common references and finite studies resolve before the host-only correction plan is made; no native transcription is involved."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The pinned machine-draft SHA-256 (basisSha256) and the draft file bytes invalidate stale reuse; no audio or model is read."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer editing of the draft path, the basisSha256 pin, the review status and note, and the edit lists."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement native-inspection."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement mpi."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement time-batches."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "partial-deletion-three-cue-draft",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Real native three-cue draft (public jfk.wav, ggml-base.en, whisper.cpp 1.9.5-dev, maxSegmentLength 42; boundaries 0/5410/9040/11000 ms). Cue 0 gets authored punctuation and cue 1 is deleted; cue 2 and its times stay and are renumbered to published index 1. Host-only: this case does not qualify the native route and no recognition accuracy is claimed.",
+            "checks": [
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/version",
+                "expected": "schemaxis.timedtext.reviewed/2",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segmentCount",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/0/text",
+                "expected": "And so, my fellow Americans: ask not what",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/text",
+                "expected": "can do for your country.",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/index",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/startMs",
+                "expected": 9040,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/endMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/status",
+                "expected": "human-corrected",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/deletedSourceIndices/0",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/retainedSourceIndices/1",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/basis/cueCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/basis/sha256",
+                "expected": "0fb466aec743b3a236655d7b29e4d3a1003bcd5230abcd4276af56b08cb4ba04",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/identityVerified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/accuracyCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/version",
+                "expected": "schemaxis.whispercpp.corrections/2",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/deletions/0/sourceIndex",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/deletions/0/original",
+                "expected": "your country can do for you, ask what you",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/deletions/0/startMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/deletions/0/endMs",
+                "expected": 9040,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/retained/1/sourceIndex",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/retained/1/publishedIndex",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/replacements/0/sourceIndex",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/publishedCueCount",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/sourceCueCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "delete-every-cue-silent-draft",
+            "example": "delete-all",
+            "edits": [],
+            "scope": "Real native whisper.cpp 1.9.5-dev draft of a two second silent recording whose one cue \"You\" is a recognition artefact. Deleting it leaves no cue: empty plain text and SRT and a bare WebVTT header. Host-only; the deletion is an automated illustrative declaration, not evidence that a person heard the recording or that it holds no speech.",
+            "checks": [
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/version",
+                "expected": "schemaxis.timedtext.reviewed/2",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segmentCount",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/status",
+                "expected": "human-corrected",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/deletionCount",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/deletedSourceIndices/0",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/basis/cueCount",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/basis/sha256",
+                "expected": "ce623bde74e436a134230ba80cee7613fd61358acac8e1094ff35d5293ca27be",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/identityVerified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/accuracyCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/deletions/0/original",
+                "expected": "You",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/deletions/0/startMs",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/deletions/0/endMs",
+                "expected": 2000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/publishedCueCount",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/sourceCueCount",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "reviewed-unchanged-three-cue-draft",
+            "example": "unchanged",
+            "edits": [],
+            "scope": "Held-out declaration on the real native three-cue draft that no cue changes and none is deleted: the words, times and numbering stay exactly as the machine draft, with the distinct human-reviewed-unchanged status. Host-only; no accuracy or reviewer identity is claimed.",
+            "checks": [
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/status",
+                "expected": "human-reviewed-unchanged",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/deletionCount",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/correctionCount",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segmentCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/retainedSourceIndices/2",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/text",
+                "expected": "your country can do for you, ask what you",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/deletionCount",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/unchangedCueCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/identityVerified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Allocation 45: new separate host-only route schemaxis.whispercpp.correct/2 (corrections_deletion.py): authored unique source-index cue deletion beside text replacement, the separately versioned closed reviewed contract schemaxis.timedtext.reviewed/2 in the shared timed-text validator (the only version that may hold no cues, and only when every cue of a nonempty pinned draft is deleted), the exact ledger with the published-to-source mapping, semantic replay, and the Pandoc transcript paragraph for a reviewed/2 document. Review covers this route and the shared/Pandoc extensions only. correct/1, reviewed/1, their plans and publications, the transcription route and its official 1.9.5 mapping are unchanged and are not re-reviewed. Host-only with no native qualification.",
+        "review": [
+          "verification/2026-10-25-whispercpp-45.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The host-only corrections route does not implement native-inspection.",
+          "mpi": "The host-only corrections route does not implement mpi.",
+          "time-batches": "The host-only corrections route does not implement time-batches.",
+          "live-editing": "The host-only corrections route does not implement live-editing.",
+          "native-save": "The host-only corrections route does not implement native-save.",
+          "conversion": "The host-only corrections route does not implement conversion."
+        }
+      }
+    },
+    "schemaxis.whispercpp.correct/3": {
+      "guide": "docs/whispercpp.md",
+      "context": {
+        "purpose": "Apply authored per-cue text replacements, whole-cue deletions and whole-interval timing edits by original source index, with a declared review status and note, to one retained whisper.cpp machine segments.json and publish a separately versioned reviewed timed-text document (reviewed/3), transcript text, SRT, WebVTT and an exact ledger that maps each published cue to its source cue and records the original and edited time of every retimed cue. Host-only: whisper-cli is never launched. correct/1, correct/2, reviewed/1 and reviewed/2 promise the original timestamps and are unchanged.",
+        "assumptions": "A retained unedited machine segments.json (schemaxis.whispercpp.segments/1) with at least one cue, within the shared timed-text budgets, and its SHA-256 copied from the draft the author reviewed. Replacements, deletions and timing edits name source indices of that draft; the author states each new interval as integer elapsed milliseconds.",
+        "constraints": "Host-only and not native-qualified: no audio, model or recognition run is read or repeated, there is no qualification record for this route, and a transcription receipt for the provider does not qualify it. At most 512 cues, 256 characters per cue and 32768 in total; at most 512 replacements, deletions and timing edits; note 1 to 500 plain-text characters. The finished cue set must be ordered, nonoverlapping and 0 <= start < end <= the audio duration rounded up to a millisecond; times are never clamped, reordered or rounded, and cues are never added, split or merged. Deleting every cue of a nonempty draft is allowed and publishes empty captions; an original draft with zero cues and a reviewed document used as a draft are refused; captionReview is refused when nothing is retained. The review status and every edited time are the author's declaration; reviewer identity, hearing the audio, audio synchronization, accuracy, readability and accessibility are not verified or certified.",
+        "inspection": "Capture the draft bytes, require them to hash to basisSha256, then derive every publication again from those bytes and the authored edits and compare each file byte for byte: reviewed-segments.json (schemaxis.timedtext.reviewed/3, parsed by the shared validator, which proves that the declared edited indices are exactly the retained cues whose published interval differs from the recorded original and that the published times are ordered, nonoverlapping and inside the audio), transcript.txt, captions.srt, captions.vtt, the corrections.json ledger (replacements and timing edits, each with the original draft times as originalStartMs/originalEndMs and the published times as startMs/endMs; deletions with original text and originalStartMs/originalEndMs only; and the published-to-source mapping) and the optional caption-review.json recomputed on the retained text and published times. Membership is exact and any native launcher, submission or log is a failure.",
+        "recovery": "CORRECTIONS_STALE: review the current draft and copy its sha256 into basisSha256. TIMING_DUPLICATE, TIMING_DELETION_CONFLICT, TIMING_INTERVAL_INVALID, DELETION_DUPLICATE, CORRECTION_DELETION_CONFLICT, CORRECTION_DUPLICATE, CORRECTION_NOOP, CORRECTION_TEXT_INVALID and CORRECTIONS_NOTE_INVALID name the entry to fix at its location. TIMING_NOOP: remove the entry equal to the existing interval. TIMING_OVERLAP and TIMING_AFTER_AUDIO name the offending edit: adjust it or its neighbour so the finished cues are ordered, nonoverlapping and inside the audio. TIMING_INDEX_INVALID, DELETION_INDEX_INVALID and CORRECTION_INDEX_INVALID: use a source index of the draft. CORRECTIONS_STATUS_CONFLICT: use human-corrected with at least one replacement, deletion or timing edit, or human-reviewed-unchanged with none. DRAFT_NOT_MACHINE_DRAFT: edit the original machine draft, not a reviewed document. CAPTION_REVIEW_EMPTY: omit captionReview or keep a cue. DRAFT_SOURCE_MISSING: the draft file or a directory on its path does not exist; INVALID_DRAFT_SOURCE: the path is relative, a link, a directory, not a regular file or over the byte budget. MISSING_ARGUMENT: add the absent required member. TIMED_TEXT_RESOURCE_LIMIT at $.corrections[n].text: shorten replacements or delete cues so the transcript stays within 32768 characters. UNKNOWN_ARGUMENT/INVALID_ARGUMENT: remove or fix the located member (times are integers, never floats or booleans). TIMED_TEXT_*: the draft breaks the shared contract or budgets. VERIFICATION_FAILED: a retained file differs from independent replay; rerun from the declared input."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/whispercpp-timing-edit.json"
+        },
+        {
+          "id": "combined",
+          "reference": "examples/schemaxis/whispercpp-timing-combined.json"
+        },
+        {
+          "id": "unchanged-conflict-invalid",
+          "reference": "examples/schemaxis/whispercpp-timing-unchanged-conflict-invalid.json",
+          "expect": "invalid",
+          "fault": "CORRECTIONS_STATUS_CONFLICT",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_whispercpp_timing.py",
+        "tests/unit/test_timed_text_timing.py",
+        "tests/unit/test_pandoc_timing.py"
+      ],
+      "acceptance": [
+        "tools/qualify_whispercpp_timing.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "A verified correction job hands reviewed-segments.json (reviewed/3) to the Pandoc transcript block as a text artifact; examples/schemaxis/whispercpp-timing-workflow.json is the host proof and tools/qualify_whispercpp_timing.py reads the native Pandoc output back.",
+          "references": [
+            "docs/whispercpp.md",
+            "tests/unit/test_whispercpp_timing.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references resolve before the host-only correction runs.",
+          "references": [
+            "docs/whispercpp.md",
+            "tests/unit/test_whispercpp_timing.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/ggml-org/whisper.cpp/tree/v1.9.5/examples/cli"
+        ],
+        "lifecycle": {
+          "timeout": "Host-only: reading one draft of at most 4MiB and writing five or six small files; no native process, so no native resource limits apply.",
+          "cancellation": "No native process exists to cancel; a fresh output directory is required and a failure records result.json with the structured fault.",
+          "logs": "Authored/effective plans, captured draft bytes, the capture record, the receipt and the publications are retained; no launcher, submission, stdout or stderr exists, and any such file is a membership failure.",
+          "verification": "Semantic replay from the captured draft bytes and authored edits; byte-exact comparison of every publication including the ledger, canonical form, exact membership, retained result agreement. Refreshed ordinary hashes cannot hide a changed publication. Accuracy and reviewer identity are never verified."
+        },
+        "data": [
+          {
+            "id": "draft",
+            "direction": "input",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.segments/1 JSON",
+            "traits": {
+              "status": "machine-draft",
+              "maxCues": 512
+            },
+            "losses": [
+              "The draft is unedited machine output with at least one cue, pinned by SHA-256; a reviewed document of either version is refused as a draft and a zero-cue draft is refused."
+            ],
+            "scope": "Captured once through one descriptor, at most 4MiB."
+          },
+          {
+            "id": "reviewed-segments",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.timedtext.reviewed/3 JSON",
+            "traits": {
+              "timeUnit": "millisecond",
+              "accuracyCertified": false,
+              "identityVerified": false,
+              "deletedSourceIndices": "unique ascending source indices",
+              "retainedSourceIndices": "source index of each published cue",
+              "synchronizationCertified": false,
+              "timingEditedIndices": "unique ascending source indices of retimed cues",
+              "originalTimings": "original start and end of every retained cue, by source index"
+            },
+            "losses": [
+              "The status and every edited time are author declarations, not measured against the audio; the original machine time of each retimed cue is recorded here and in the ledger; deleted cues are absent here and recorded only in the ledger."
+            ],
+            "scope": "Closed reviewed/3 contract read by the shared timed-text validator and the Pandoc transcript block; the validator proves the edited indices equal the cues whose published interval differs from the recorded original."
+          },
+          {
+            "id": "transcript",
+            "direction": "output",
+            "kind": "text",
+            "format": "UTF-8 text",
+            "traits": {
+              "linePerSegment": true
+            },
+            "losses": [
+              "Corrected author text of the retained cues, one line per cue; empty when every cue is deleted."
+            ],
+            "scope": "Generated from the reviewed cues."
+          },
+          {
+            "id": "captions",
+            "direction": "output",
+            "kind": "file",
+            "format": "SRT and WebVTT",
+            "traits": {
+              "timeUnit": "millisecond",
+              "encoding": "UTF-8"
+            },
+            "losses": [
+              "Cue line-breaking, styling and readability are not produced or certified; times are the published, possibly author-edited, times; SRT is empty and WebVTT is only its header when every cue is deleted."
+            ],
+            "scope": "Generated byte-for-byte from the reviewed cues."
+          },
+          {
+            "id": "corrections",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.corrections/3 JSON",
+            "traits": {
+              "replacements": "source and published index, original and published times, original, replacement",
+              "deletions": "source index, original times, original",
+              "retained": "published index, source index, original and published times, original, text, edited, retimed",
+              "timingEdits": "source and published index, original and new times"
+            },
+            "losses": [
+              "Proves what changed, was retimed or was removed against which draft; not that edits are right, that times are synchronized with the audio, who made them or that the audio was reviewed."
+            ],
+            "scope": "Exact ledger binding the draft SHA-256 and the reviewed document SHA-256."
+          },
+          {
+            "id": "caption-review",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.caption-review/1 JSON",
+            "traits": {
+              "optional": true
+            },
+            "losses": [
+              "Fixed editorial heuristics recomputed on corrected text and the published (possibly edited) durations; not a standard or certification."
+            ],
+            "scope": "Present only with captionReview and at least one retained cue."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect reviewed-segments.json, transcript.txt, the caption files and corrections.json; with captionReview also caption-review.json.",
+            "limits": "No playback or accuracy review; the status is a declaration."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the draft path, pin, status, note, replacements, deletions and timings, plan and run; a changed draft file invalidates workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Isolated verified host-only correction jobs and file artifacts; no native process is launched."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Common references and finite studies resolve before the host-only correction plan is made; no native transcription is involved."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The pinned machine-draft SHA-256 (basisSha256) and the draft file bytes invalidate stale reuse; no audio or model is read."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer editing of the draft path, the basisSha256 pin, the review status and note, and the edit lists."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement native-inspection."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement mpi."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement time-batches."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "The host-only correction route does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "timing-edit-three-cue-draft",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Real native three-cue draft (public jfk.wav, ggml-base.en, whisper.cpp 1.9.5-dev, maxSegmentLength 42; boundaries 0/5410/9040/11000 ms). Cue 0 is given the interval 120-5300 ms and cue 2 the interval 9100-10950 ms by the author; cue 1 keeps its machine time. Host-only: this case does not qualify the native route and neither accuracy nor audio synchronization is claimed.",
+            "checks": [
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/version",
+                "expected": "schemaxis.timedtext.reviewed/3",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/0/startMs",
+                "expected": 120,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/0/endMs",
+                "expected": 5300,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/startMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/2/startMs",
+                "expected": 9100,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/2/endMs",
+                "expected": 10950,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/timingEditedIndices/0",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/timingEditedIndices/1",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/originalTimings/0/endMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/originalTimings/2/startMs",
+                "expected": 9040,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/synchronizationCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/timingEditCount",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/timingEdits/0/originalEndMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/timingEdits/1/endMs",
+                "expected": 10950,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/unchangedCueCount",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/synchronizationCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "combined-text-deletion-timing",
+            "example": "combined",
+            "edits": [],
+            "scope": "Same real native draft: cue 0 gets authored punctuation, cue 1 is deleted and the retained cue 2 (published as cue 1) is given the interval 8000-10000 ms by its original source index. Host-only; no accuracy, identity or synchronization is claimed.",
+            "checks": [
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/version",
+                "expected": "schemaxis.timedtext.reviewed/3",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segmentCount",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/startMs",
+                "expected": 8000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/segments/1/endMs",
+                "expected": 10000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/deletedSourceIndices/0",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/retainedSourceIndices/1",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/timingEditedIndices/0",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "reviewed-segments.json",
+                "format": "json",
+                "pointer": "/review/correctedIndices/0",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/timingEdits/0/sourceIndex",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/timingEdits/0/publishedIndex",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/deletionCount",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "corrections.json",
+                "format": "json",
+                "pointer": "/identityVerified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Allocation 54: new separate host-only route schemaxis.whispercpp.correct/3 (corrections_timing.py): author-edited whole-interval cue times by original source index beside text replacement and deletion, the separately versioned closed reviewed contract schemaxis.timedtext.reviewed/3 in the shared timed-text validator, the exact ledger recording original and edited times, semantic replay, finished-set order/overlap/audio-bound validation and the Pandoc transcript provenance, summary and observations for a reviewed/3 document. Review covers this route and the shared/Pandoc extensions only. correct/1, correct/2, reviewed/1, reviewed/2, their plans and publications, the transcription route and its official 1.9.5 mapping are unchanged and are not re-reviewed. Host-only with no native qualification of the correction itself; the Pandoc publishing handoff is read back natively by tools/qualify_whispercpp_timing.py.",
+        "review": [
+          "verification/2026-10-25-whispercpp-54.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The host-only corrections route does not implement native-inspection.",
+          "mpi": "The host-only corrections route does not implement mpi.",
+          "time-batches": "The host-only corrections route does not implement time-batches.",
+          "live-editing": "The host-only corrections route does not implement live-editing.",
+          "native-save": "The host-only corrections route does not implement native-save.",
+          "conversion": "The host-only corrections route does not implement conversion."
+        }
+      }
+    },
+    "schemaxis.whispercpp.captions/1": {
+      "guide": "docs/whispercpp.md",
+      "context": {
+        "purpose": "Break each cue of one pinned timed transcript (a machine segments.json or a reviewed/1, /2 or /3 document) into explicit lines of at most maxLineCodePoints Unicode code points and at most maxLines lines, and publish captions.srt, captions.vtt and caption-layout.json. Host-only: whisper-cli is never launched. A break replaces one isolated ordinary space (a run of two or more adjacent spaces is never broken or normalised), so every word, cue index and millisecond is unchanged and joining the lines of a cue with one space restores its text exactly; the source status is carried unchanged and is never promoted.",
+        "assumptions": "A retained timed-text document read by the shared closed validator (at most 4MiB, 512 cues, 256 characters per cue, 32768 in total) and its SHA-256 copied from the document the author reviewed. Cue text may hold runs of adjacent ordinary spaces; they are kept inside an unbreakable run and never normalised. Both bounds are authored: maxLineCodePoints 8 to 80 and maxLines 1 to 3.",
+        "constraints": "Host-only and not native-qualified: no audio, model or recognition run is read or repeated, there is no qualification record for this route, and a transcription receipt does not qualify it. Lengths are Unicode code points of the source text, not grapheme clusters, display width, font metrics or readability. The layout is the fewest lines, then the smallest sum of squared line lengths, then the earliest breaks. An unbreakable run longer than maxLineCodePoints or a cue that needs more than maxLines is refused naming the cue; nothing is split inside a run, truncated, retimed or widened, and a script written without spaces can be refused although it looks narrow. SRT payload is plain text and WebVTT escapes & < > once per line; no cue settings, styles or speaker labels. The review status and language are the source author's declarations; accuracy, readability, accessibility, synchronization and reviewer identity are not verified or certified. Consumers can be stricter: the FFmpeg review movie accepts plain SRT of at most four lines per cue and refuses < > { } and backslash and format characters.",
+        "inspection": "Hold the source bytes, require them to hash to sourceSha256, derive every publication again from those bytes and the authored bounds and compare each file byte for byte: captions.srt, captions.vtt and the canonical caption-layout.json, then check the typed authored document, plan, receipt (runtime host-only, no executable or profile), exact membership (any native launcher, submission, log, link or planted .dispatch content is a failure), the source capture binding and the retained result. Nothing stored is trusted.",
+        "recovery": "LAYOUT_SOURCE_STALE: review the current source and copy its sha256 into sourceSha256. LAYOUT_SOURCE_CHANGED: the source changed while the layout ran; rerun. INVALID_SOURCE: use an absolute local .json regular file of at most 4MiB (no link, device, directory or FIFO). SOURCE_MISSING: the file or a directory on its path does not exist. TIMED_TEXT_*: the source breaks the shared contract or budgets. LAYOUT_WORD_TOO_LONG: raise maxLineCodePoints or correct the unbreakable run (a word, or words joined by a no-break space or by two or more adjacent ordinary spaces). LAYOUT_TOO_MANY_LINES: raise maxLines or maxLineCodePoints. INVALID_ARGUMENT: bounds are integers 8 to 80 and 1 to 3. UNKNOWN_ARGUMENT/MISSING_ARGUMENT: use exactly the declared members. RUNNER_CANCELLED/RUNNER_TIMED_OUT: rerun into a fresh directory. VERIFICATION_FAILED: a retained file differs from independent replay; rerun from the declared input."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/whispercpp-caption-layout.json"
+        },
+        {
+          "id": "two-lines",
+          "reference": "examples/schemaxis/whispercpp-caption-layout-two-lines.json"
+        },
+        {
+          "id": "word-too-long-invalid",
+          "reference": "examples/schemaxis/whispercpp-caption-layout-word-invalid.json"
+        },
+        {
+          "id": "too-many-lines-invalid",
+          "reference": "examples/schemaxis/whispercpp-caption-layout-lines-invalid.json"
+        },
+        {
+          "id": "relative-path-invalid",
+          "reference": "examples/schemaxis/whispercpp-caption-layout-relative-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_SOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "four-lines-invalid",
+          "reference": "examples/schemaxis/whispercpp-caption-layout-bounds-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_whispercpp_caption_layout.py",
+        "tests/unit/test_timed_text.py"
+      ],
+      "acceptance": [
+        "tools/qualify_whispercpp_caption_layout.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "A verified layout job hands captions.srt (file, index 0) to the FFmpeg review movie, whose independent Matroska readback tools/qualify_whispercpp_caption_layout.py checks against hand-written lines and times; examples/schemaxis/whispercpp-caption-layout-workflow.json chains a correction into a layout with a literal pin.",
+          "references": [
+            "docs/whispercpp.md",
+            "tests/unit/test_whispercpp_caption_layout.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references resolve before the host-only layout plan is made; a changed upstream artifact makes the literal source pin stale.",
+          "references": [
+            "docs/whispercpp.md",
+            "tests/unit/test_whispercpp_caption_layout.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://www.w3.org/TR/webvtt1/",
+          "https://github.com/ggml-org/whisper.cpp/tree/v1.9.5/examples/cli"
+        ],
+        "lifecycle": {
+          "timeout": "Host-only: holding one source of at most 4MiB and writing three small files; one total deadline (timeout, at most 3600 s) is checked between cues, and the dynamic program is bounded by the cue budget. No native process, so no native resource limits apply.",
+          "cancellation": "Shared cancellation is checked between cues; a cancelled, timed-out or failed run keeps a failed result.json and no verification.json; any captions or summary file written before a late failure is unverified, must not be published, and is refused by verification. A fresh output directory is required. No native process exists to cancel.",
+          "logs": "Authored/effective plans, the held source bytes, the capture record, the receipt and the publications are retained; no launcher, submission, stdout or stderr exists, and any such file is a membership failure.",
+          "verification": "Semantic replay from the held source bytes and authored bounds; byte-exact comparison of captions.srt, captions.vtt and caption-layout.json, typed plan, receipt and result, exact membership. Refreshed ordinary hashes cannot hide a changed line, time, status or claim; a coherent rewrite is new consistent data, not signed authentication. Accuracy, readability, accessibility, synchronization and reviewer identity are never verified."
+        },
+        "data": [
+          {
+            "id": "source",
+            "direction": "input",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.segments/1 or schemaxis.timedtext.reviewed/1, /2 or /3 JSON",
+            "traits": {
+              "maxCues": 512,
+              "pinned": "sourceSha256",
+              "status": "declared by the source author and carried unchanged"
+            },
+            "losses": [
+              "Only the cues, times, status, language and audio and model digests of the validated document are used; a document that fails the shared validator is refused and never repaired. A reviewed/2 or reviewed/3 document with no cues is accepted."
+            ],
+            "scope": "Held once through one descriptor (final path component never a link, device, directory or FIFO), at most 4MiB, and rechecked after the publications are written."
+          },
+          {
+            "id": "captions",
+            "direction": "output",
+            "kind": "file",
+            "format": "SRT and WebVTT",
+            "traits": {
+              "timeUnit": "millisecond",
+              "encoding": "UTF-8",
+              "maxLines": "1 to 3 authored",
+              "lineBreaks": "one isolated ordinary space per break"
+            },
+            "losses": [
+              "Plain explicit line breaks only: no cue positions, styles, voices or speaker labels; SRT payload is not escaped and WebVTT escapes & < > once per line; line length is in code points, not display width; how any player renders the text is not certified; empty SRT and a header-only WebVTT when the source has no cues."
+            ],
+            "scope": "Generated byte-for-byte from the held source and the bounds; every index and millisecond equals the source."
+          },
+          {
+            "id": "caption-layout",
+            "direction": "output",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.caption-layout/1 JSON",
+            "traits": {
+              "closed": true,
+              "perCue": "index, times, original text, lines, line code-point lengths, reflowed",
+              "review": "humanReviewRequired true; accuracy, readability, accessibility, synchronization and identity false"
+            },
+            "losses": [
+              "Records the layout and the declared source status; it publishes no source path and says nothing about who reviewed any recording."
+            ],
+            "scope": "Canonical JSON derived only from the pinned source bytes and the bounds."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Inspect captions.srt, captions.vtt and caption-layout.json.",
+            "limits": "No playback, readability or accuracy review; the status is the source author's declaration."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the source path, pin and the two bounds, plan and run; a changed source file invalidates workflow reuse and a changed pin makes the run stale."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Isolated verified host-only layout jobs and file artifacts; no native process is launched."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Common references and finite studies resolve before the host-only layout plan is made; no native transcription is involved."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "The source file bytes invalidate stale reuse and sourceSha256 pins them; no audio or model is read."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing and undo."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared pointer editing of the source path, the sourceSha256 pin and the two line bounds."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "The host-only layout route does not implement native-inspection."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The host-only layout route does not implement mpi."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "The host-only layout route does not implement time-batches."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "The host-only layout route does not implement live-editing."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The host-only layout route does not implement native-save."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "The host-only layout route does not implement conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "three-line-layout-of-the-public-draft",
+            "example": "baseline",
+            "resources": {
+              "/source/path": "examples/schemaxis/whispercpp-corrections-fixtures/jfk-short-cues-segments.json"
+            },
+            "edits": [],
+            "scope": "Real native three-cue draft (public jfk.wav, ggml-base.en, whisper.cpp 1.9.5-dev, maxSegmentLength 42; boundaries 0/5410/9040/11000 ms) laid out with at most 16 code points and 3 lines. Every cue is broken (3, 3 and 2 lines); expected lines are written by hand and cross-checked with an exhaustive search. Host-only: this case does not qualify the native route and no accuracy, readability or synchronization is claimed.",
+            "checks": [
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/version",
+                "expected": "schemaxis.whispercpp.caption-layout/1",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/source/version",
+                "expected": "schemaxis.whispercpp.segments/1",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/status",
+                "expected": "machine-draft",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/source/sha256",
+                "expected": "0fb466aec743b3a236655d7b29e4d3a1003bcd5230abcd4276af56b08cb4ba04",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cueCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/0/text",
+                "expected": "And so my fellow Americans, ask not what",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/0/startMs",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/0/endMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/2/startMs",
+                "expected": 9040,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/2/endMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/humanReviewRequired",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/accuracyCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/readabilityCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/accessibilityCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/synchronizationCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/bounds/maxLineCodePoints",
+                "expected": 16,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/bounds/maxLines",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/reflowedCueCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/lineCount",
+                "expected": 8,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/0/lines",
+                "expected": [
+                  "And so my fellow",
+                  "Americans,",
+                  "ask not what"
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/0/lineCodePoints",
+                "expected": [
+                  16,
+                  10,
+                  12
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/1/lines",
+                "expected": [
+                  "your country",
+                  "can do for you,",
+                  "ask what you"
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/2/lines",
+                "expected": [
+                  "can do for",
+                  "your country."
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/2/reflowed",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "two-line-layout-with-an-unbroken-cue",
+            "example": "two-lines",
+            "resources": {
+              "/source/path": "examples/schemaxis/whispercpp-corrections-fixtures/jfk-short-cues-segments.json"
+            },
+            "edits": [],
+            "scope": "The same draft laid out with at most 24 code points and 2 lines: cues 0 and 1 are broken into two lines and cue 2, exactly 24 code points, stays on one line, so a cue that fits is never broken. Host-only; no accuracy, readability or synchronization is claimed.",
+            "checks": [
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/version",
+                "expected": "schemaxis.whispercpp.caption-layout/1",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/source/version",
+                "expected": "schemaxis.whispercpp.segments/1",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/status",
+                "expected": "machine-draft",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/source/sha256",
+                "expected": "0fb466aec743b3a236655d7b29e4d3a1003bcd5230abcd4276af56b08cb4ba04",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cueCount",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/0/text",
+                "expected": "And so my fellow Americans, ask not what",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/0/startMs",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/0/endMs",
+                "expected": 5410,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/2/startMs",
+                "expected": 9040,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/2/endMs",
+                "expected": 11000,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/humanReviewRequired",
+                "expected": true,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/accuracyCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/readabilityCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/accessibilityCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/review/synchronizationCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/bounds/maxLineCodePoints",
+                "expected": 24,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/bounds/maxLines",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/reflowedCueCount",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/lineCount",
+                "expected": 5,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/0/lines",
+                "expected": [
+                  "And so my fellow",
+                  "Americans, ask not what"
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/1/lines",
+                "expected": [
+                  "your country can do",
+                  "for you, ask what you"
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/1/lineCodePoints",
+                "expected": [
+                  19,
+                  21
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/2/lines",
+                "expected": [
+                  "can do for your country."
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/2/lineCodePoints",
+                "expected": [
+                  24
+                ],
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "caption-layout.json",
+                "format": "json",
+                "pointer": "/cues/2/reflowed",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Allocation 59: new separate host-only route schemaxis.whispercpp.captions/1 (caption_layout.py): deterministic word-boundary line layout of a pinned timed transcript into SRT, WebVTT and a closed summary, with exact refusals for long words, too many lines and ambiguous spacing, source pin and recheck, semantic replay and typed verification. correct/1, correct/2, correct/3, reviewed/1 to reviewed/3, the shared timed-text validator, the transcription route and their publications are unchanged. Host-only with no native qualification of the layout itself; the published SRT is handed to the FFmpeg review movie and read back natively by tools/qualify_whispercpp_caption_layout.py.",
+        "review": [
+          "verification/2026-10-25-whispercpp-59.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The host-only layout route does not implement native-inspection.",
+          "mpi": "The host-only layout route does not implement mpi.",
+          "time-batches": "The host-only layout route does not implement time-batches.",
+          "live-editing": "The host-only layout route does not implement live-editing.",
+          "native-save": "The host-only layout route does not implement native-save.",
+          "conversion": "The host-only layout route does not implement conversion."
+        }
+      }
+    }
+  }
+}

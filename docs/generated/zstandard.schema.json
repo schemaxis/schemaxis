@@ -1,0 +1,4099 @@
+{
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.zstandard/1"
+    },
+    "operation": {
+      "enum": [
+        "compress",
+        "restore",
+        "inspect",
+        "trainDictionary",
+        "encodeDelta",
+        "concatenate",
+        "compareProfiles",
+        "benchmark",
+        "benchmarkDecode",
+        "inspectDictionary",
+        "compressFiles",
+        "restoreFiles"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "samples": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "minItems": 8,
+      "maxItems": 128
+    },
+    "dictionary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "dictionaryMode": {
+      "enum": [
+        "trained",
+        "raw"
+      ],
+      "default": "trained"
+    },
+    "sparseOutput": {
+      "type": "boolean",
+      "default": true
+    },
+    "format": {
+      "enum": [
+        "zstd",
+        "gzip",
+        "xz",
+        "lzma",
+        "lz4"
+      ],
+      "default": "zstd"
+    },
+    "level": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 22,
+      "default": 3
+    },
+    "fast": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "default": 0
+    },
+    "threads": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2,
+      "default": 1
+    },
+    "singleThread": {
+      "type": "boolean",
+      "default": false
+    },
+    "checksum": {
+      "type": "boolean",
+      "default": true
+    },
+    "dictionaryID": {
+      "type": "boolean",
+      "default": true
+    },
+    "longWindowLog": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 27,
+      "default": 0
+    },
+    "rsyncable": {
+      "type": "boolean",
+      "default": false
+    },
+    "literals": {
+      "enum": [
+        "automatic",
+        "compressed",
+        "raw"
+      ],
+      "default": "automatic"
+    },
+    "chunkBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 67108864,
+      "default": 0
+    },
+    "streamInput": {
+      "type": "boolean",
+      "default": false
+    },
+    "tuning": {
+      "type": "object",
+      "properties": {
+        "windowLog": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 27
+        },
+        "chainLog": {
+          "type": "integer",
+          "minimum": 6,
+          "maximum": 26
+        },
+        "hashLog": {
+          "type": "integer",
+          "minimum": 6,
+          "maximum": 25
+        },
+        "searchLog": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "minMatch": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 7
+        },
+        "targetLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999
+        },
+        "strategy": {
+          "enum": [
+            "fast",
+            "doubleFast",
+            "greedy",
+            "lazy",
+            "lazy2",
+            "btlazy2",
+            "btopt",
+            "btultra",
+            "btultra2"
+          ]
+        },
+        "overlapLog": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "ldmHashRateLog": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "ldmHashLog": {
+          "type": "integer",
+          "minimum": 6,
+          "maximum": 24
+        },
+        "ldmMinMatch": {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 4096
+        },
+        "ldmBucketSizeLog": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "maxDecodedBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 67108864,
+      "default": 67108864
+    },
+    "algorithm": {
+      "enum": [
+        "fastCover",
+        "cover",
+        "legacy"
+      ],
+      "default": "fastCover"
+    },
+    "maxDictionaryBytes": {
+      "type": "integer",
+      "minimum": 256,
+      "maximum": 1048576,
+      "default": 16384
+    },
+    "id": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4294967295,
+      "default": 32768
+    },
+    "segmentSize": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2048,
+      "default": 0
+    },
+    "dmerSize": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16,
+      "default": 0
+    },
+    "steps": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64,
+      "default": 4
+    },
+    "frequencyLog": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 23,
+      "default": 20
+    },
+    "acceleration": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 1
+    },
+    "trainingFraction": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 1,
+      "default": 0.75
+    },
+    "shrink": {
+      "type": "boolean",
+      "default": false
+    },
+    "selectivity": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "default": 9
+    },
+    "trainingLevel": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 19,
+      "default": 3
+    },
+    "sampleBlockBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1048576,
+      "default": 0
+    },
+    "shrinkRegression": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 1
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "format": {
+            "enum": [
+              "zstd",
+              "gzip",
+              "xz",
+              "lzma",
+              "lz4"
+            ],
+            "default": "zstd"
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 19,
+            "default": 3
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 4
+    },
+    "contentSize": {
+      "enum": [
+        "automatic",
+        "omit",
+        "require"
+      ],
+      "default": "automatic"
+    },
+    "pledgedBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 67108864
+    },
+    "sizeHintBytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 67108864
+    },
+    "targetBlockBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 131072,
+      "default": 0
+    },
+    "jobBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 67108864,
+      "default": 0
+    },
+    "adaptive": {
+      "type": "object",
+      "properties": {
+        "minLevel": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 22,
+          "default": 1
+        },
+        "maxLevel": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 22,
+          "default": 19
+        }
+      },
+      "additionalProperties": false
+    },
+    "firstLevel": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 22,
+      "default": 1
+    },
+    "lastLevel": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 22,
+      "default": 3
+    },
+    "minimumSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3,
+      "default": 1
+    },
+    "benchmarkBlockBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 67108864,
+      "default": 0
+    },
+    "fileSet": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "name"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        "recursive": {
+          "type": "boolean",
+          "default": true
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "minItems": 1,
+          "maxItems": 16,
+          "default": [
+            "*"
+          ]
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 16,
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "compress"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "format": {
+          "enum": [
+            "zstd",
+            "gzip",
+            "xz",
+            "lzma",
+            "lz4"
+          ],
+          "default": "zstd"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 22,
+          "default": 3
+        },
+        "fast": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0
+        },
+        "threads": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2,
+          "default": 1
+        },
+        "singleThread": {
+          "type": "boolean",
+          "default": false
+        },
+        "checksum": {
+          "type": "boolean",
+          "default": true
+        },
+        "dictionaryID": {
+          "type": "boolean",
+          "default": true
+        },
+        "longWindowLog": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 27,
+          "default": 0
+        },
+        "rsyncable": {
+          "type": "boolean",
+          "default": false
+        },
+        "literals": {
+          "enum": [
+            "automatic",
+            "compressed",
+            "raw"
+          ],
+          "default": "automatic"
+        },
+        "chunkBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 0
+        },
+        "streamInput": {
+          "type": "boolean",
+          "default": false
+        },
+        "tuning": {
+          "type": "object",
+          "properties": {
+            "windowLog": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 27
+            },
+            "chainLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 26
+            },
+            "hashLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 25
+            },
+            "searchLog": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "minMatch": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 7
+            },
+            "targetLength": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            },
+            "strategy": {
+              "enum": [
+                "fast",
+                "doubleFast",
+                "greedy",
+                "lazy",
+                "lazy2",
+                "btlazy2",
+                "btopt",
+                "btultra",
+                "btultra2"
+              ]
+            },
+            "overlapLog": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9
+            },
+            "ldmHashRateLog": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "ldmHashLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 24
+            },
+            "ldmMinMatch": {
+              "type": "integer",
+              "minimum": 4,
+              "maximum": 4096
+            },
+            "ldmBucketSizeLog": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "dictionary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        },
+        "contentSize": {
+          "enum": [
+            "automatic",
+            "omit",
+            "require"
+          ],
+          "default": "automatic"
+        },
+        "pledgedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864
+        },
+        "sizeHintBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
+        "targetBlockBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 131072,
+          "default": 0
+        },
+        "jobBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 0
+        },
+        "adaptive": {
+          "type": "object",
+          "properties": {
+            "minLevel": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 22,
+              "default": 1
+            },
+            "maxLevel": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 22,
+              "default": 19
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "source"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "maxDecodedBytes"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "sparseOutput"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "restore"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "maxDecodedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 67108864
+        },
+        "sparseOutput": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "source"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "adaptive"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "checksum"
+            ]
+          },
+          {
+            "required": [
+              "chunkBytes"
+            ]
+          },
+          {
+            "required": [
+              "contentSize"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryID"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fast"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "format"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "jobBytes"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "level"
+            ]
+          },
+          {
+            "required": [
+              "literals"
+            ]
+          },
+          {
+            "required": [
+              "longWindowLog"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "rsyncable"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "singleThread"
+            ]
+          },
+          {
+            "required": [
+              "sizeHintBytes"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "streamInput"
+            ]
+          },
+          {
+            "required": [
+              "targetBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "threads"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          },
+          {
+            "required": [
+              "tuning"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "inspect"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "maxDecodedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 67108864
+        },
+        "sparseOutput": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "source"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "adaptive"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "checksum"
+            ]
+          },
+          {
+            "required": [
+              "chunkBytes"
+            ]
+          },
+          {
+            "required": [
+              "contentSize"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryID"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fast"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "format"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "jobBytes"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "level"
+            ]
+          },
+          {
+            "required": [
+              "literals"
+            ]
+          },
+          {
+            "required": [
+              "longWindowLog"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "rsyncable"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "singleThread"
+            ]
+          },
+          {
+            "required": [
+              "sizeHintBytes"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "streamInput"
+            ]
+          },
+          {
+            "required": [
+              "targetBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "threads"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          },
+          {
+            "required": [
+              "tuning"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "trainDictionary"
+        },
+        "samples": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "minItems": 8,
+          "maxItems": 128
+        },
+        "algorithm": {
+          "enum": [
+            "fastCover",
+            "cover",
+            "legacy"
+          ],
+          "default": "fastCover"
+        },
+        "maxDictionaryBytes": {
+          "type": "integer",
+          "minimum": 256,
+          "maximum": 1048576,
+          "default": 16384
+        },
+        "id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295,
+          "default": 32768
+        },
+        "segmentSize": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2048,
+          "default": 0
+        },
+        "dmerSize": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16,
+          "default": 0
+        },
+        "steps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "default": 4
+        },
+        "frequencyLog": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 23,
+          "default": 20
+        },
+        "acceleration": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 1
+        },
+        "trainingFraction": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1,
+          "default": 0.75
+        },
+        "shrink": {
+          "type": "boolean",
+          "default": false
+        },
+        "shrinkRegression": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 1
+        },
+        "selectivity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 9
+        },
+        "trainingLevel": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 19,
+          "default": 3
+        },
+        "sampleBlockBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576,
+          "default": 0
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "samples"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "adaptive"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "checksum"
+            ]
+          },
+          {
+            "required": [
+              "chunkBytes"
+            ]
+          },
+          {
+            "required": [
+              "contentSize"
+            ]
+          },
+          {
+            "required": [
+              "dictionary"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryID"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryMode"
+            ]
+          },
+          {
+            "required": [
+              "fast"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "format"
+            ]
+          },
+          {
+            "required": [
+              "jobBytes"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "level"
+            ]
+          },
+          {
+            "required": [
+              "literals"
+            ]
+          },
+          {
+            "required": [
+              "longWindowLog"
+            ]
+          },
+          {
+            "required": [
+              "maxDecodedBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          },
+          {
+            "required": [
+              "rsyncable"
+            ]
+          },
+          {
+            "required": [
+              "singleThread"
+            ]
+          },
+          {
+            "required": [
+              "sizeHintBytes"
+            ]
+          },
+          {
+            "required": [
+              "source"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "sparseOutput"
+            ]
+          },
+          {
+            "required": [
+              "streamInput"
+            ]
+          },
+          {
+            "required": [
+              "targetBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "threads"
+            ]
+          },
+          {
+            "required": [
+              "tuning"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "encodeDelta"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "format": {
+          "enum": [
+            "zstd",
+            "gzip",
+            "xz",
+            "lzma",
+            "lz4"
+          ],
+          "default": "zstd"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 22,
+          "default": 3
+        },
+        "fast": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0
+        },
+        "threads": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2,
+          "default": 1
+        },
+        "singleThread": {
+          "type": "boolean",
+          "default": false
+        },
+        "checksum": {
+          "type": "boolean",
+          "default": true
+        },
+        "dictionaryID": {
+          "type": "boolean",
+          "default": true
+        },
+        "longWindowLog": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 27,
+          "default": 0
+        },
+        "rsyncable": {
+          "type": "boolean",
+          "default": false
+        },
+        "literals": {
+          "enum": [
+            "automatic",
+            "compressed",
+            "raw"
+          ],
+          "default": "automatic"
+        },
+        "chunkBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 0
+        },
+        "streamInput": {
+          "type": "boolean",
+          "default": false
+        },
+        "tuning": {
+          "type": "object",
+          "properties": {
+            "windowLog": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 27
+            },
+            "chainLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 26
+            },
+            "hashLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 25
+            },
+            "searchLog": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "minMatch": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 7
+            },
+            "targetLength": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            },
+            "strategy": {
+              "enum": [
+                "fast",
+                "doubleFast",
+                "greedy",
+                "lazy",
+                "lazy2",
+                "btlazy2",
+                "btopt",
+                "btultra",
+                "btultra2"
+              ]
+            },
+            "overlapLog": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9
+            },
+            "ldmHashRateLog": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "ldmHashLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 24
+            },
+            "ldmMinMatch": {
+              "type": "integer",
+              "minimum": 4,
+              "maximum": 4096
+            },
+            "ldmBucketSizeLog": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "dictionary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        },
+        "contentSize": {
+          "enum": [
+            "automatic",
+            "omit",
+            "require"
+          ],
+          "default": "automatic"
+        },
+        "pledgedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864
+        },
+        "sizeHintBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
+        "targetBlockBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 131072,
+          "default": 0
+        },
+        "jobBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 0
+        },
+        "adaptive": {
+          "type": "object",
+          "properties": {
+            "minLevel": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 22,
+              "default": 1
+            },
+            "maxLevel": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 22,
+              "default": 19
+            }
+          },
+          "additionalProperties": false
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "reference"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "maxDecodedBytes"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "sparseOutput"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "concatenate"
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        "dictionary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        },
+        "maxDecodedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 67108864
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "sources"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "adaptive"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "checksum"
+            ]
+          },
+          {
+            "required": [
+              "chunkBytes"
+            ]
+          },
+          {
+            "required": [
+              "contentSize"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryID"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fast"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "format"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "jobBytes"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "level"
+            ]
+          },
+          {
+            "required": [
+              "literals"
+            ]
+          },
+          {
+            "required": [
+              "longWindowLog"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          },
+          {
+            "required": [
+              "rsyncable"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "singleThread"
+            ]
+          },
+          {
+            "required": [
+              "sizeHintBytes"
+            ]
+          },
+          {
+            "required": [
+              "source"
+            ]
+          },
+          {
+            "required": [
+              "sparseOutput"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "streamInput"
+            ]
+          },
+          {
+            "required": [
+              "targetBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "threads"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          },
+          {
+            "required": [
+              "tuning"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "compareProfiles"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "format": {
+                "enum": [
+                  "zstd",
+                  "gzip",
+                  "xz",
+                  "lzma",
+                  "lz4"
+                ],
+                "default": "zstd"
+              },
+              "level": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 19,
+                "default": 3
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 4
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "profiles"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "adaptive"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "checksum"
+            ]
+          },
+          {
+            "required": [
+              "chunkBytes"
+            ]
+          },
+          {
+            "required": [
+              "contentSize"
+            ]
+          },
+          {
+            "required": [
+              "dictionary"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryID"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryMode"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fast"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "format"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "jobBytes"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "level"
+            ]
+          },
+          {
+            "required": [
+              "literals"
+            ]
+          },
+          {
+            "required": [
+              "longWindowLog"
+            ]
+          },
+          {
+            "required": [
+              "maxDecodedBytes"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          },
+          {
+            "required": [
+              "rsyncable"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "singleThread"
+            ]
+          },
+          {
+            "required": [
+              "sizeHintBytes"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "sparseOutput"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "streamInput"
+            ]
+          },
+          {
+            "required": [
+              "targetBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "threads"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          },
+          {
+            "required": [
+              "tuning"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "benchmark"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "firstLevel": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 22,
+          "default": 1
+        },
+        "lastLevel": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 22,
+          "default": 3
+        },
+        "minimumSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3,
+          "default": 1
+        },
+        "benchmarkBlockBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 0
+        },
+        "threads": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2,
+          "default": 1
+        },
+        "dictionary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        },
+        "tuning": {
+          "type": "object",
+          "properties": {
+            "windowLog": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 27
+            },
+            "chainLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 26
+            },
+            "hashLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 25
+            },
+            "searchLog": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "minMatch": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 7
+            },
+            "targetLength": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            },
+            "strategy": {
+              "enum": [
+                "fast",
+                "doubleFast",
+                "greedy",
+                "lazy",
+                "lazy2",
+                "btlazy2",
+                "btopt",
+                "btultra",
+                "btultra2"
+              ]
+            },
+            "overlapLog": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9
+            },
+            "ldmHashRateLog": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "ldmHashLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 24
+            },
+            "ldmMinMatch": {
+              "type": "integer",
+              "minimum": 4,
+              "maximum": 4096
+            },
+            "ldmBucketSizeLog": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "longWindowLog": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 27,
+          "default": 0
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "source"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "adaptive"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "checksum"
+            ]
+          },
+          {
+            "required": [
+              "chunkBytes"
+            ]
+          },
+          {
+            "required": [
+              "contentSize"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryID"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fast"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "format"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "jobBytes"
+            ]
+          },
+          {
+            "required": [
+              "level"
+            ]
+          },
+          {
+            "required": [
+              "literals"
+            ]
+          },
+          {
+            "required": [
+              "maxDecodedBytes"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          },
+          {
+            "required": [
+              "rsyncable"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "singleThread"
+            ]
+          },
+          {
+            "required": [
+              "sizeHintBytes"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "sparseOutput"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "streamInput"
+            ]
+          },
+          {
+            "required": [
+              "targetBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "benchmarkDecode"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "minimumSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3,
+          "default": 1
+        },
+        "dictionary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "source"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "adaptive"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "checksum"
+            ]
+          },
+          {
+            "required": [
+              "chunkBytes"
+            ]
+          },
+          {
+            "required": [
+              "contentSize"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryID"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fast"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "format"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "jobBytes"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "level"
+            ]
+          },
+          {
+            "required": [
+              "literals"
+            ]
+          },
+          {
+            "required": [
+              "longWindowLog"
+            ]
+          },
+          {
+            "required": [
+              "maxDecodedBytes"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          },
+          {
+            "required": [
+              "rsyncable"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "singleThread"
+            ]
+          },
+          {
+            "required": [
+              "sizeHintBytes"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "sparseOutput"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "streamInput"
+            ]
+          },
+          {
+            "required": [
+              "targetBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "threads"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          },
+          {
+            "required": [
+              "tuning"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "inspectDictionary"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "source"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "adaptive"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "checksum"
+            ]
+          },
+          {
+            "required": [
+              "chunkBytes"
+            ]
+          },
+          {
+            "required": [
+              "contentSize"
+            ]
+          },
+          {
+            "required": [
+              "dictionary"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryID"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fast"
+            ]
+          },
+          {
+            "required": [
+              "fileSet"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "format"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "jobBytes"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "level"
+            ]
+          },
+          {
+            "required": [
+              "literals"
+            ]
+          },
+          {
+            "required": [
+              "longWindowLog"
+            ]
+          },
+          {
+            "required": [
+              "maxDecodedBytes"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          },
+          {
+            "required": [
+              "rsyncable"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "singleThread"
+            ]
+          },
+          {
+            "required": [
+              "sizeHintBytes"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "sparseOutput"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "streamInput"
+            ]
+          },
+          {
+            "required": [
+              "targetBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "threads"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          },
+          {
+            "required": [
+              "tuning"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "compressFiles"
+        },
+        "fileSet": {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "source",
+                  "name"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 32
+            },
+            "recursive": {
+              "type": "boolean",
+              "default": true
+            },
+            "include": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "minItems": 1,
+              "maxItems": 16,
+              "default": [
+                "*"
+              ]
+            },
+            "exclude": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 16,
+              "default": []
+            }
+          },
+          "additionalProperties": false
+        },
+        "format": {
+          "enum": [
+            "zstd",
+            "gzip",
+            "xz",
+            "lzma",
+            "lz4"
+          ],
+          "default": "zstd"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 22,
+          "default": 3
+        },
+        "fast": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0
+        },
+        "threads": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2,
+          "default": 1
+        },
+        "singleThread": {
+          "type": "boolean",
+          "default": false
+        },
+        "checksum": {
+          "type": "boolean",
+          "default": true
+        },
+        "dictionaryID": {
+          "type": "boolean",
+          "default": true
+        },
+        "longWindowLog": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 27,
+          "default": 0
+        },
+        "rsyncable": {
+          "type": "boolean",
+          "default": false
+        },
+        "literals": {
+          "enum": [
+            "automatic",
+            "compressed",
+            "raw"
+          ],
+          "default": "automatic"
+        },
+        "chunkBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 0
+        },
+        "streamInput": {
+          "type": "boolean",
+          "default": false
+        },
+        "tuning": {
+          "type": "object",
+          "properties": {
+            "windowLog": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 27
+            },
+            "chainLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 26
+            },
+            "hashLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 25
+            },
+            "searchLog": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "minMatch": {
+              "type": "integer",
+              "minimum": 3,
+              "maximum": 7
+            },
+            "targetLength": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999
+            },
+            "strategy": {
+              "enum": [
+                "fast",
+                "doubleFast",
+                "greedy",
+                "lazy",
+                "lazy2",
+                "btlazy2",
+                "btopt",
+                "btultra",
+                "btultra2"
+              ]
+            },
+            "overlapLog": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9
+            },
+            "ldmHashRateLog": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "ldmHashLog": {
+              "type": "integer",
+              "minimum": 6,
+              "maximum": 24
+            },
+            "ldmMinMatch": {
+              "type": "integer",
+              "minimum": 4,
+              "maximum": 4096
+            },
+            "ldmBucketSizeLog": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "dictionary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        },
+        "contentSize": {
+          "enum": [
+            "automatic",
+            "omit",
+            "require"
+          ],
+          "default": "automatic"
+        },
+        "sizeHintBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
+        "targetBlockBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 131072,
+          "default": 0
+        },
+        "jobBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 0
+        },
+        "adaptive": {
+          "type": "object",
+          "properties": {
+            "minLevel": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 22,
+              "default": 1
+            },
+            "maxLevel": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 22,
+              "default": 19
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "fileSet"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "maxDecodedBytes"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "source"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "sparseOutput"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.zstandard/1"
+        },
+        "operation": {
+          "const": "restoreFiles"
+        },
+        "fileSet": {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "source",
+                  "name"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 32
+            },
+            "recursive": {
+              "type": "boolean",
+              "default": true
+            },
+            "include": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "minItems": 1,
+              "maxItems": 16,
+              "default": [
+                "*"
+              ]
+            },
+            "exclude": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 16,
+              "default": []
+            }
+          },
+          "additionalProperties": false
+        },
+        "dictionary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "dictionaryMode": {
+          "enum": [
+            "trained",
+            "raw"
+          ],
+          "default": "trained"
+        },
+        "maxDecodedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864,
+          "default": 67108864
+        },
+        "sparseOutput": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "version",
+        "operation",
+        "fileSet"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "acceleration"
+            ]
+          },
+          {
+            "required": [
+              "adaptive"
+            ]
+          },
+          {
+            "required": [
+              "algorithm"
+            ]
+          },
+          {
+            "required": [
+              "benchmarkBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "checksum"
+            ]
+          },
+          {
+            "required": [
+              "chunkBytes"
+            ]
+          },
+          {
+            "required": [
+              "contentSize"
+            ]
+          },
+          {
+            "required": [
+              "dictionaryID"
+            ]
+          },
+          {
+            "required": [
+              "dmerSize"
+            ]
+          },
+          {
+            "required": [
+              "fast"
+            ]
+          },
+          {
+            "required": [
+              "firstLevel"
+            ]
+          },
+          {
+            "required": [
+              "format"
+            ]
+          },
+          {
+            "required": [
+              "frequencyLog"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "jobBytes"
+            ]
+          },
+          {
+            "required": [
+              "lastLevel"
+            ]
+          },
+          {
+            "required": [
+              "level"
+            ]
+          },
+          {
+            "required": [
+              "literals"
+            ]
+          },
+          {
+            "required": [
+              "longWindowLog"
+            ]
+          },
+          {
+            "required": [
+              "maxDictionaryBytes"
+            ]
+          },
+          {
+            "required": [
+              "minimumSeconds"
+            ]
+          },
+          {
+            "required": [
+              "pledgedBytes"
+            ]
+          },
+          {
+            "required": [
+              "profiles"
+            ]
+          },
+          {
+            "required": [
+              "reference"
+            ]
+          },
+          {
+            "required": [
+              "rsyncable"
+            ]
+          },
+          {
+            "required": [
+              "sampleBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "samples"
+            ]
+          },
+          {
+            "required": [
+              "segmentSize"
+            ]
+          },
+          {
+            "required": [
+              "selectivity"
+            ]
+          },
+          {
+            "required": [
+              "shrink"
+            ]
+          },
+          {
+            "required": [
+              "shrinkRegression"
+            ]
+          },
+          {
+            "required": [
+              "singleThread"
+            ]
+          },
+          {
+            "required": [
+              "sizeHintBytes"
+            ]
+          },
+          {
+            "required": [
+              "source"
+            ]
+          },
+          {
+            "required": [
+              "sources"
+            ]
+          },
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "streamInput"
+            ]
+          },
+          {
+            "required": [
+              "targetBlockBytes"
+            ]
+          },
+          {
+            "required": [
+              "threads"
+            ]
+          },
+          {
+            "required": [
+              "trainingFraction"
+            ]
+          },
+          {
+            "required": [
+              "trainingLevel"
+            ]
+          },
+          {
+            "required": [
+              "tuning"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

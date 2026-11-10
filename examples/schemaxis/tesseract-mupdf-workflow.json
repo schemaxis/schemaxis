@@ -1,0 +1,44 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "page",
+      "document": {
+        "version": "schemaxis.mupdf/1",
+        "operation": "review",
+        "source": "/replace/with/scanned.pdf",
+        "pages": [
+          2
+        ],
+        "dpi": 72,
+        "rotation": 0
+      }
+    },
+    {
+      "id": "ocr",
+      "document": {
+        "version": "schemaxis.tesseract/1",
+        "operation": "recognizePage",
+        "image": {
+          "path": {
+            "$artifact": "page",
+            "index": 0
+          }
+        },
+        "model": {
+          "path": "/replace/with/eng.traineddata",
+          "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+        },
+        "origin": {
+          "kind": "mupdf-review",
+          "summary": {
+            "$artifact": "page",
+            "index": 2
+          },
+          "page": 2
+        },
+        "pageSegmentation": "uniform-block"
+      }
+    }
+  ]
+}

@@ -6,11 +6,15 @@ optional measurements (3). Related guides:
 
 - [CAD and mesh workflows](cad-and-mesh-workflows.md): primitives, booleans,
   sketches, sweeps and finishing.
-- [PartDesign parts](freecad-part-design.md) and
+- [General design histories](freecad-histories.md), [PartDesign parts](freecad-part-design.md) and
   [design parameters](freecad-parameters.md): editable sketch and feature history.
 - [Assemblies](freecad-assemblies.md), [measurements](freecad-measurements.md),
   [semantic edge selections](freecad-selections.md),
   [design studies](freecad-design-studies.md) and [examples](freecad-examples.md).
+
+The separate [solid elasticity guide](freecad-analysis.md) covers checked CAD →
+editable native FEM material, mesh, geometric supports/tractions and CalculiX
+results with independent physical verification.
 
 This guide covers `importSTEP`, which brings an external STEP part into a model
 with explicit units, orientation and placement, checks it against facts you
@@ -264,6 +268,18 @@ evidence. Run the document again to obtain verifiable publications.
 | `INPUT_CHANGED` | `<id>.options.file` | The source changed after planning. Plan and run again. |
 | `RERUN_REQUIRED` | run directory | The run predates hardened export checks. Rerun the document. |
 
+## Measurements and selectors on pointed or spherical solids
+
+Edge inventories keep the native topology numbering, including degenerated edges: the poles
+of a sphere and the apex of a pointed cone. They are recorded as curve `Degenerate` with
+their measured length (at most 1e-7 mm) and are never matched by `curve`, `onPlane`,
+`length` or `parallelTo` predicates, so `{"curve": "circle"}` on a pointed cone selects only
+its base circle. Explicit one-based indices still address them. A native edge with a real
+length but no analytic curve is refused with `UNSUPPORTED_EDGE` (the fault names its index);
+select explicit indices that avoid it, or simplify the source solid. Run directories made
+before this note keep their original inventories and verify unchanged. This is host-side
+selection semantics; it adds no native option and no new format.
+
 ## Qualification and limits
 
 `tools/qualify_freecad_step_import.py` writes every STEP input itself, with no CAD
@@ -286,3 +302,7 @@ Not supported in this release:
 
 Only FreeCAD 1.1.4 with OCCT 7.8.1 is qualified, and only B-spline-free curved
 inputs (planes and cylinders) were checked against independent writers.
+
+[Native spreadsheet dimensions](freecad-spreadsheets.md) retain editable mixed-unit
+input cells and affine formula aliases that drive part histories. Broader table,
+angular, nonlinear and cross-document workflows remain open.

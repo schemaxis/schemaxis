@@ -45,6 +45,30 @@ class WorkflowDesignTests(unittest.TestCase):
         self.assertFalse(view['executionAvailable'])
         self.fault('EMPTY_WORKFLOW', lambda: design.compile(value))
 
+    def test_parameters_can_precede_operations_without_becoming_executable(self):
+        value = design.create()
+        value['workflow']['dimensions'] = {'distance': 10}
+        value['parameters'] = {'distance': {'label': 'Distance', 'kind': 'number', 'units': 'mm',
+            'default': 10, 'target': {'scope': 'workflow', 'pointer': '/dimensions/distance'}}}
+        view = design.validate(value)
+        self.assertEqual(view['status'], 'empty')
+        self.assertFalse(view['compilationAvailable'])
+        self.assertFalse(view['templateExportAvailable'])
+        self.assertEqual(view['parameters']['distance']['units'], 'mm')
+        self.fault('EMPTY_WORKFLOW', lambda: design.compile(value))
+        value['workflow']['dimensions']['distance'] = 'wrong type'
+        self.fault('INVALID_PARAMETER', lambda: design.validate(value))
+
+    def test_values_before_operations_validate_sweeps_and_defer_placeholders(self):
+        value = design.create()
+        value['workflow']['definitions'] = {'diameter': {'$expr': {'op': 'multiply', 'args': [2, {'$fill': 'radius'}]}}}
+        self.assertEqual(design.validate(value)['status'], 'unfilled')
+        del value['workflow']['definitions']
+        value['workflow']['axes'] = [{'name': 'distance', 'values': []}]
+        self.fault('EMPTY_AXIS', lambda: design.validate(value))
+        value['workflow']['axes'][0]['values'] = [1, 2, 3]
+        self.assertEqual(design.validate(value)['status'], 'empty')
+
     def test_reentrant_adaptor_visits_are_not_feedback(self):
         value = design.connect(design.create(body('a', 'b', 'aAgain')), connection())
         value = design.connect(value, connection('b', 'aAgain', 'next'))

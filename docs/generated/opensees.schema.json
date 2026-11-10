@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.opensees/1"
+    },
+    "operation": {
+      "const": "trussStatic"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "x_m": {
+            "type": "number",
+            "minimum": -10000.0,
+            "maximum": 10000.0
+          },
+          "y_m": {
+            "type": "number",
+            "minimum": -10000.0,
+            "maximum": 10000.0
+          },
+          "fixed": {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "default": [
+              false,
+              false
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "x_m",
+          "y_m"
+        ]
+      },
+      "minItems": 2,
+      "maxItems": 40
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "a": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "b": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "youngsModulus_Pa": {
+            "type": "number",
+            "minimum": 1000000.0,
+            "maximum": 1000000000000.0
+          },
+          "area_m2": {
+            "type": "number",
+            "minimum": 1e-08,
+            "maximum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "a",
+          "b",
+          "youngsModulus_Pa",
+          "area_m2"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 80
+    },
+    "loads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "force_N": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": -10000.0,
+              "maximum": 10000.0
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "node",
+          "force_N"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 40
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "quantity": {
+            "enum": [
+              "displacement_m",
+              "force_N",
+              "stress_Pa"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "maximum": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000000.0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "quantity",
+          "target",
+          "maximum"
+        ]
+      },
+      "maxItems": 32,
+      "default": []
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "nodes",
+    "members",
+    "loads"
+  ]
+}

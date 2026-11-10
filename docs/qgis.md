@@ -52,7 +52,10 @@ only, not a georeferenced raster or proof of geospatial correctness.
 Receipts retain native geometry/attribute snapshots, process/runtime evidence,
 source bytes, submitted worker, logs and publication hashes. Offline verification
 does not require QGIS or the original input files. Workflow resume additionally
-checks current external input hashes. Close/checkpoint input GeoPackages before
+checks current external input hashes.
+A missing, non-JSON, non-object or otherwise malformed retained receipt fails with
+`VERIFICATION_FAILED`, naming the file where it can; restore the whole original
+output directory or rerun into a fresh one, since verification never repairs evidence. Close/checkpoint input GeoPackages before
 running; SQLite WAL/journal sidecars are rejected rather than omitted from
 provenance. Shapefile bundles, rasters, remote services, authored expressions,
 plugins, arbitrary algorithms and 3D terrain export are outside this release.

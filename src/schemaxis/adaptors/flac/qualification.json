@@ -1,0 +1,935 @@
+{
+  "protocol": "schemaxis.adaptor-qualification/1",
+  "routes": {
+    "schemaxis.flac/1": {
+      "protocol": "schemaxis.adaptor-qualification/1",
+      "provider": "flac",
+      "documentVersion": "schemaxis.flac/1",
+      "mode": "native",
+      "verified": true,
+      "sourceDigest": "sha256:80a2aa55ec138dd8a9061ffc7bf3b8c9bc16e5db1673e6ac2bd8f5a09a541158",
+      "recordedAt": "2026-10-28T06:41:55.162834+00:00",
+      "scope": "Only named cases, recorded runtimes and tested lifecycle paths. No MPI or exhaustive operation qualification.",
+      "cases": [
+        {
+          "id": "baseline",
+          "scope": "Hand-built 48 kHz stereo WAV, 4099 frames (odd, spanning two FLAC blocks) with pinned asymmetric extrema: left -32768..32767, right -32768..20000. Counts and peaks are literal expectations from the fixture recipe, independent of the adaptor. The decision is the fresh native flac decode compared byte for byte with the captured PCM.",
+          "verified": true,
+          "documentDigest": "sha256:59821dd0988db4622ca5f199fc612f96c16fd48efe7f33307c2053a98e2ad26d",
+          "authoredDigest": "sha256:b121373655223cce50046272c1ca431e5308e0c78bb06b1e9e73139ace9be983",
+          "caseDigest": "sha256:172a4ae7a7d37c027f7d61bb7b1c43c1aca195af8f6292df06b2ec1bb1a05729",
+          "runtime": {
+            "flac": "flac 1.5.0",
+            "freshDecoder": "flac 1.5.0"
+          },
+          "checks": [
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/frames",
+              "observed": 4099,
+              "expected": 4099,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "95a937f0fecac305e02a84a08d9c7b467910c2aa4acf8a8b38def53937cd2644"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/channels",
+              "observed": 2,
+              "expected": 2,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "95a937f0fecac305e02a84a08d9c7b467910c2aa4acf8a8b38def53937cd2644"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/sampleRate",
+              "observed": 48000,
+              "expected": 48000,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "95a937f0fecac305e02a84a08d9c7b467910c2aa4acf8a8b38def53937cd2644"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/bytes",
+              "observed": 16396,
+              "expected": 16396,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "95a937f0fecac305e02a84a08d9c7b467910c2aa4acf8a8b38def53937cd2644"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/peakMin",
+              "observed": [
+                -32768,
+                -32768
+              ],
+              "expected": [
+                -32768,
+                -32768
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "95a937f0fecac305e02a84a08d9c7b467910c2aa4acf8a8b38def53937cd2644"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/peakMax",
+              "observed": [
+                32767,
+                20000
+              ],
+              "expected": [
+                32767,
+                20000
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "95a937f0fecac305e02a84a08d9c7b467910c2aa4acf8a8b38def53937cd2644"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing audio.flac",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered audio.flac",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "variant",
+          "scope": "Hand-built 8 kHz mono WAV, 1001 frames with a LIST chunk (dropped and listed) and extrema -32768 and 32767 plus 0, 1 and -1 at the start. Literal expectations; fresh native decode compared byte for byte.",
+          "verified": true,
+          "documentDigest": "sha256:7e257734d4b78d93d78df52ada73ad7ba883015b173142a5658699f353b4460e",
+          "authoredDigest": "sha256:94562ce356f5b6b2c16c666255248e4049da19fd428f10c8243fd9e31294a316",
+          "caseDigest": "sha256:2a96c33bf854872b1d101ca59201f883ca8c5a35c1cfab2c6134c15b9914f535",
+          "runtime": {
+            "flac": "flac 1.5.0",
+            "freshDecoder": "flac 1.5.0"
+          },
+          "checks": [
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/frames",
+              "observed": 1001,
+              "expected": 1001,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "63bc88aeee58179420824244a33b53a0dd1002fe667ffb92b32822c36bcdd4f2"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/channels",
+              "observed": 1,
+              "expected": 1,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "63bc88aeee58179420824244a33b53a0dd1002fe667ffb92b32822c36bcdd4f2"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/bytes",
+              "observed": 2002,
+              "expected": 2002,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "63bc88aeee58179420824244a33b53a0dd1002fe667ffb92b32822c36bcdd4f2"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/peakMin",
+              "observed": [
+                -32768
+              ],
+              "expected": [
+                -32768
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "63bc88aeee58179420824244a33b53a0dd1002fe667ffb92b32822c36bcdd4f2"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/peakMax",
+              "observed": [
+                32767
+              ],
+              "expected": [
+                32767
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "63bc88aeee58179420824244a33b53a0dd1002fe667ffb92b32822c36bcdd4f2"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/source/droppedChunks",
+              "observed": [
+                "LIST"
+              ],
+              "expected": [
+                "LIST"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "63bc88aeee58179420824244a33b53a0dd1002fe667ffb92b32822c36bcdd4f2"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing audio.flac",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered audio.flac",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "tag-archive",
+          "scope": "The 8 kHz mono LIST-bearing fixture archived with all three ASCII labels, one value containing \"=\". The published VORBIS_COMMENT must hold exactly TITLE, ARTIST and DESCRIPTION in that order (hand-counted block size 152 bytes: 32-byte libFLAC vendor string plus three length-prefixed entries); the fresh native decode must still equal the captured PCM byte for byte.",
+          "verified": true,
+          "documentDigest": "sha256:1c96668e660572ad6dc422aef1b1aa36264f7667354d26eba555baf0358c353a",
+          "authoredDigest": "sha256:56bc92601b45105099ffaaa49a6e7b6441e9f60e9e31fac9ff530b30eb8bf7c5",
+          "caseDigest": "sha256:27734abc895300d3308777bfc86bfd4929bc0df98ac02c32b465e802ed66596c",
+          "runtime": {
+            "flac": "flac 1.5.0",
+            "freshDecoder": "flac 1.5.0"
+          },
+          "checks": [
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/frames",
+              "observed": 1001,
+              "expected": 1001,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/bytes",
+              "observed": 2002,
+              "expected": 2002,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/source/droppedChunks",
+              "observed": [
+                "LIST"
+              ],
+              "expected": [
+                "LIST"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/mode",
+              "observed": "authoredLabels",
+              "expected": "authoredLabels",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/0/field",
+              "observed": "TITLE",
+              "expected": "TITLE",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/0/value",
+              "observed": "Site visit, north bank",
+              "expected": "Site visit, north bank",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/1/field",
+              "observed": "ARTIST",
+              "expected": "ARTIST",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/1/value",
+              "observed": "A. Reviewer",
+              "expected": "A. Reviewer",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/2/field",
+              "observed": "DESCRIPTION",
+              "expected": "DESCRIPTION",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/2/value",
+              "observed": "Field note A=B; recorded before the repair",
+              "expected": "Field note A=B; recorded before the repair",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/vorbisCommentBytes",
+              "observed": 152,
+              "expected": 152,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/readback/exactPcm",
+              "observed": true,
+              "expected": true,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fea4058b473a34f12d54f387d8d2568388274b8d54f849e3f32e192cdffb9b28"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing audio.flac",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered audio.flac",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "tag-unicode",
+          "scope": "The 16 kHz stereo fixture archived with non-ASCII labels (accents, an en dash, Japanese, an arrow and a check mark). Values are preserved as exact UTF-8 bytes (36, 12 and 35 bytes for 22, 9 and 28 code points; block size 160) without normalisation, and the PCM identity is unchanged.",
+          "verified": true,
+          "documentDigest": "sha256:40fb137a10660b2a5a7639d965f2683adc322059fa6ceacf362c08347d6015c0",
+          "authoredDigest": "sha256:098774a274a913ecb3064342b2fbe01022534113b0d45a3896b8ba244e1e10f2",
+          "caseDigest": "sha256:1895ff231fe93b857104b2969e73c30340c7eba9463f0059bdd228ed801a4591",
+          "runtime": {
+            "flac": "flac 1.5.0",
+            "freshDecoder": "flac 1.5.0"
+          },
+          "checks": [
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/frames",
+              "observed": 2049,
+              "expected": 2049,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/bytes",
+              "observed": 8196,
+              "expected": 8196,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/0/value",
+              "observed": "Caf\u00e9 du M\u00fcller \u2013 \u65e5\u672c\u8a9e\u30e1\u30e2",
+              "expected": "Caf\u00e9 du M\u00fcller \u2013 \u65e5\u672c\u8a9e\u30e1\u30e2",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/0/utf8Bytes",
+              "observed": 36,
+              "expected": 36,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/1/value",
+              "observed": "Zo\u00eb N\u00fa\u00f1ez",
+              "expected": "Zo\u00eb N\u00fa\u00f1ez",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/1/utf8Bytes",
+              "observed": 12,
+              "expected": 12,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/2/value",
+              "observed": "Entrevue n\u00b0 3 \u2192 \u00e0 v\u00e9rifier \u2713",
+              "expected": "Entrevue n\u00b0 3 \u2192 \u00e0 v\u00e9rifier \u2713",
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/comments/2/utf8Bytes",
+              "observed": 35,
+              "expected": 35,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/metadata/vorbisCommentBytes",
+              "observed": 160,
+              "expected": 160,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/peakMax",
+              "observed": [
+                32766,
+                32767
+              ],
+              "expected": [
+                32766,
+                32767
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4d70f206ad446f821d18b3dfb93c9c8e56fd8f282a52464e7f21bcdeea95d78a"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing audio.flac",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered audio.flac",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "decode",
+          "scope": "Native FLAC of a hand-built 16 kHz stereo recording of 2049 frames with literal extrema left -32768..32766 and right -32767..32767. The decoded WAV payload must reproduce the STREAMINFO MD5 and sample count and equal the fresh native decode.",
+          "verified": true,
+          "documentDigest": "sha256:e693cb426cf5ff857ac02b63905771b463f1225a8c53c24a65c0271a8eb126bc",
+          "authoredDigest": "sha256:ecfb6087eb39f7d30809a281c972c8a3e7891568bb3965a22fd2e9334337ebce",
+          "caseDigest": "sha256:8ee45ba69bea8df154467dbdef1cc7cfd25ddd149f2036f87adaa323f32b86ac",
+          "runtime": {
+            "flac": "flac 1.5.0",
+            "freshDecoder": "flac 1.5.0"
+          },
+          "checks": [
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/frames",
+              "observed": 2049,
+              "expected": 2049,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "a796af743bbbf4bd2d15afa77fcdeb35207b8fa53e2dcfc077022b557bb2d0e3"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/sampleRate",
+              "observed": 16000,
+              "expected": 16000,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "a796af743bbbf4bd2d15afa77fcdeb35207b8fa53e2dcfc077022b557bb2d0e3"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/bytes",
+              "observed": 8196,
+              "expected": 8196,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "a796af743bbbf4bd2d15afa77fcdeb35207b8fa53e2dcfc077022b557bb2d0e3"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/peakMin",
+              "observed": [
+                -32768,
+                -32767
+              ],
+              "expected": [
+                -32768,
+                -32767
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "a796af743bbbf4bd2d15afa77fcdeb35207b8fa53e2dcfc077022b557bb2d0e3"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/peakMax",
+              "observed": [
+                32766,
+                32767
+              ],
+              "expected": [
+                32766,
+                32767
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "a796af743bbbf4bd2d15afa77fcdeb35207b8fa53e2dcfc077022b557bb2d0e3"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/wav/bytes",
+              "observed": 8240,
+              "expected": 8240,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "a796af743bbbf4bd2d15afa77fcdeb35207b8fa53e2dcfc077022b557bb2d0e3"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/readback/streaminfoMd5Matches",
+              "observed": true,
+              "expected": true,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "a796af743bbbf4bd2d15afa77fcdeb35207b8fa53e2dcfc077022b557bb2d0e3"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing audio.wav",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered audio.wav",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "decode-tagged",
+          "scope": "The same 16 kHz stereo audio in a FLAC that also carries a seek table, Vorbis comments and padding: the metadata is dropped and listed, and the decoded PCM is identical to the untagged case.",
+          "verified": true,
+          "documentDigest": "sha256:9687fe048ebdde8b822a7b31220332050bdec18b74ff2b172db87aa115b16f64",
+          "authoredDigest": "sha256:1c50c07799ef1d3f887971702080114c1abb5eff7e7967b6273c52510baf8e53",
+          "caseDigest": "sha256:0a2bd8e31bd2181fd2ce37ed6f7de5758fad17561d333f3a713bba98370055a4",
+          "runtime": {
+            "flac": "flac 1.5.0",
+            "freshDecoder": "flac 1.5.0"
+          },
+          "checks": [
+            {
+              "file": "flac-summary.json",
+              "pointer": "/audio/frames",
+              "observed": 2049,
+              "expected": 2049,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "27583571a91b6b890c19424b5bf0fd8890311f760eb7e095b5c5429693e1071c"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/source/droppedMetadataBlocks",
+              "observed": [
+                "SEEKTABLE",
+                "VORBIS_COMMENT",
+                "PADDING"
+              ],
+              "expected": [
+                "SEEKTABLE",
+                "VORBIS_COMMENT",
+                "PADDING"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "27583571a91b6b890c19424b5bf0fd8890311f760eb7e095b5c5429693e1071c"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/pcm/peakMax",
+              "observed": [
+                32766,
+                32767
+              ],
+              "expected": [
+                32766,
+                32767
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "27583571a91b6b890c19424b5bf0fd8890311f760eb7e095b5c5429693e1071c"
+            },
+            {
+              "file": "flac-summary.json",
+              "pointer": "/wav/bytes",
+              "observed": 8240,
+              "expected": 8240,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "27583571a91b6b890c19424b5bf0fd8890311f760eb7e095b5c5429693e1071c"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing audio.wav",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered audio.wav",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered flac-summary.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        }
+      ],
+      "lifecycle": [
+        {
+          "check": "native runner timeout",
+          "fault": "RUNNER_TIMED_OUT",
+          "verified": true
+        },
+        {
+          "check": "pre-launch cancellation",
+          "fault": "RUNNER_CANCELLED",
+          "verified": true
+        }
+      ],
+      "host": {
+        "verified": true,
+        "scope": "Fixture schema/planner agreement, deterministic validation and typed defaults; not exhaustive input equivalence.",
+        "checks": [
+          "schema expectation: baseline",
+          "valid plan: baseline",
+          "deterministic planning: baseline",
+          "planner preserves caller input: baseline",
+          "schema expectation: variant",
+          "valid plan: variant",
+          "deterministic planning: variant",
+          "planner preserves caller input: variant",
+          "schema expectation: decode",
+          "valid plan: decode",
+          "deterministic planning: decode",
+          "planner preserves caller input: decode",
+          "schema expectation: decode-tagged",
+          "valid plan: decode-tagged",
+          "deterministic planning: decode-tagged",
+          "planner preserves caller input: decode-tagged",
+          "schema expectation: tag-archive",
+          "valid plan: tag-archive",
+          "deterministic planning: tag-archive",
+          "planner preserves caller input: tag-archive",
+          "schema expectation: tag-unicode",
+          "valid plan: tag-unicode",
+          "deterministic planning: tag-unicode",
+          "planner preserves caller input: tag-unicode",
+          "schema expectation: invalid-source",
+          "exact invalid fault: invalid-source",
+          "planner preserves caller input: invalid-source",
+          "schema expectation: tag-invalid-label",
+          "exact invalid fault: tag-invalid-label",
+          "planner preserves caller input: tag-invalid-label",
+          "schema rejects an undeclared root field",
+          "planner rejects an undeclared root field with a structured fault",
+          "acceptance case matches authored schema: baseline",
+          "acceptance case matches authored schema: variant",
+          "acceptance case matches authored schema: tag-archive",
+          "acceptance case matches authored schema: tag-unicode",
+          "acceptance case matches authored schema: decode",
+          "acceptance case matches authored schema: decode-tagged",
+          "baseline and held-out case produce distinct effective plans"
+        ]
+      }
+    }
+  }
+}

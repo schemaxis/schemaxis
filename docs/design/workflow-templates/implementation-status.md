@@ -13,8 +13,10 @@
 
 Exact first-subset contracts are [template-contract.md](template-contract.md) and
 [resource-contract.md](resource-contract.md). The broader architecture remains a
-roadmap. Resource capture is a Python foundation; it is not yet wired into template
-parameters or workflow execution.
+roadmap. Resource capture is a Python foundation; workflows consume adopted
+snapshots through `$resource` (see the resource contract), which workflow schemas
+and Studio's nested operation editor admit at declared reader positions, but
+template parameters do not bind them yet.
 
 The CLI now provides `template inspect`, `template bind` and `template plan`.
 The service provides `prepare_template`. Both use the same binder and emit an

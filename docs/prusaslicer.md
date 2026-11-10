@@ -196,10 +196,16 @@ column names.
 | `INVALID_MODEL` | Open, inverted, degenerate, multi-solid or too-narrow mesh | Export one closed, consistently oriented solid; no repair is attempted |
 | `INPUT_DIGEST_MISMATCH` | STL bytes differ from `model.sha256` | Restore the file or deliberately update the digest |
 | `MODEL_OUT_OF_BOUNDS` | Footprint or height does not fit | Move the centre, scale the model, or declare the real bed |
-| `UNSUPPORTED_RUNTIME` | Not PrusaSlicer 2.9.6 | Configure a 2.9.6 console executable |
+| `UNSUPPORTED_RUNTIME` | The executable's `--help` does not report PrusaSlicer 2.9.6 (checked first; no `--info` or slice is launched) | Configure a 2.9.6 console executable |
 | `RUNNER_FAILED`, `NATIVE_EXECUTION_FAILED` | PrusaSlicer refused or produced no G-code, for example an object with no first-layer extrusion (a point or edge resting on the bed) | Read the retained stage stderr; reorient or flatten the base before exporting the STL |
-| `VERIFICATION_FAILED` | Native readback or replay disagrees | Inspect the retained logs; rerun in a fresh directory |
+| `VERIFICATION_FAILED` | Native readback or replay disagrees. A native `--info` that disagrees with the independent STL analysis (`stage: info`) stops the attempt before slicing | Inspect the retained logs; rerun in a fresh directory |
 | `PERFORMANCE_NOT_MET` | A native estimate exceeds a named limit | Change the profile or revise the limit; rerun |
+
+Native stages are gated in order: the runtime identity is checked as soon as
+`--help` returns, and the native `--info` readback is compared with the host STL
+analysis before the slice starts. A refused attempt keeps its `result.json` fault
+and the stage logs that ran, and publishes no G-code. These checks are repeated
+when `verify` replays retained attempts, so they only move earlier.
 
 ## Assumptions and limits
 

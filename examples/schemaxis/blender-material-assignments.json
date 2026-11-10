@@ -1,0 +1,317 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "id": "linked-material-editions",
+  "size": [
+    320,
+    160
+  ],
+  "cameras": [
+    {
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "scale": 4
+    }
+  ],
+  "render": {
+    "renderer": {
+      "kind": "workbench",
+      "lighting": {
+        "kind": "flat"
+      },
+      "colourSource": {
+        "kind": "material"
+      },
+      "antiAliasing": "OFF"
+    },
+    "threads": 2,
+    "colourManagement": {
+      "view": {
+        "kind": "standard"
+      }
+    }
+  },
+  "production": {
+    "objects": [
+      {
+        "id": "housing",
+        "kind": "mesh",
+        "location": [
+          -1,
+          0,
+          0
+        ],
+        "vertices": [
+          [
+            -0.8,
+            -0.8,
+            0
+          ],
+          [
+            0,
+            -0.8,
+            0
+          ],
+          [
+            0,
+            0.8,
+            0
+          ],
+          [
+            -0.8,
+            0.8,
+            0
+          ],
+          [
+            0.8,
+            -0.8,
+            0
+          ],
+          [
+            0.8,
+            0.8,
+            0
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2,
+            3
+          ],
+          [
+            1,
+            4,
+            5,
+            2
+          ]
+        ]
+      },
+      {
+        "id": "otherHousing",
+        "kind": "instance",
+        "source": "housing",
+        "location": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "materialGraphs": [
+      {
+        "id": "shell",
+        "viewportColour": [
+          0.05,
+          0.2,
+          0.4
+        ],
+        "nodes": [
+          {
+            "id": "colour",
+            "kind": "emission",
+            "values": {
+              "colour": [
+                0.05,
+                0.2,
+                0.4,
+                1
+              ]
+            }
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "colour",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "output",
+              "socket": "surface"
+            }
+          }
+        ]
+      },
+      {
+        "id": "label",
+        "viewportColour": [
+          0.9,
+          0.25,
+          0.02
+        ],
+        "nodes": [
+          {
+            "id": "colour",
+            "kind": "emission",
+            "values": {
+              "colour": [
+                0.9,
+                0.25,
+                0.02,
+                1
+              ]
+            }
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "colour",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "output",
+              "socket": "surface"
+            }
+          }
+        ]
+      },
+      {
+        "id": "alternateShell",
+        "viewportColour": [
+          0.1,
+          0.4,
+          0.08
+        ],
+        "nodes": [
+          {
+            "id": "colour",
+            "kind": "emission",
+            "values": {
+              "colour": [
+                0.1,
+                0.4,
+                0.08,
+                1
+              ]
+            }
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "colour",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "output",
+              "socket": "surface"
+            }
+          }
+        ]
+      },
+      {
+        "id": "alternateLabel",
+        "viewportColour": [
+          0.7,
+          0.7,
+          0.15
+        ],
+        "nodes": [
+          {
+            "id": "colour",
+            "kind": "emission",
+            "values": {
+              "colour": [
+                0.7,
+                0.7,
+                0.15,
+                1
+              ]
+            }
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "colour",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "output",
+              "socket": "surface"
+            }
+          }
+        ]
+      }
+    ],
+    "materialAssignments": [
+      {
+        "id": "finish",
+        "kind": "layout",
+        "object": "housing",
+        "sharing": "shared",
+        "slots": [
+          {
+            "id": "shell",
+            "material": "shell"
+          },
+          {
+            "id": "label",
+            "material": "label"
+          }
+        ],
+        "defaultSlot": "shell",
+        "regions": [
+          {
+            "slot": "label",
+            "selection": {
+              "kind": "faceBox",
+              "minimum": [
+                0,
+                -1,
+                -1
+              ],
+              "maximum": [
+                1,
+                1,
+                1
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "secondEdition",
+        "kind": "override",
+        "object": "otherHousing",
+        "layout": "finish",
+        "slots": [
+          {
+            "id": "label",
+            "material": "alternateLabel"
+          },
+          {
+            "id": "shell",
+            "material": "alternateShell"
+          }
+        ]
+      }
+    ]
+  }
+}

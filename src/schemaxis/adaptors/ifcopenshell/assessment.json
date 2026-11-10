@@ -1,0 +1,46 @@
+{
+  "version": "schemaxis.adaptor-assessment/1",
+  "rubric": "schemaxis.strength-rubric/1",
+  "assessmentVersion": "2026-10-26.1",
+  "assessedOn": "2026-10-26",
+  "assessor": "Schemaxis editorial assessment",
+  "provider": "ifcopenshell",
+  "providerVersion": "schemaxis.ifcopenshell/1",
+  "routes": [
+    "schemaxis.ifcopenshell/1"
+  ],
+  "sourceFingerprint": "sha256:8597acc3ef8317431895b8f1c3a05a03858c818334eb0a54655aba3c20a4c775",
+  "coverage": {
+    "percent": 5,
+    "status": "subjective",
+    "scope": {
+      "kind": "whole-application",
+      "description": "Whole IfcOpenShell library and tooling breadth across model reading, authoring, geometry, validation, schema versions and utilities.",
+      "denominator": "IFC reading and writing across schemas, entity and property families, geometry processing, units and placement, validation, classification, cost and scheduling utilities and conversion tools."
+    },
+    "rationale": "One IFC4 wall schedule with a small property and quantity subset exercises a tiny part of the library. Geometry, other classes, schemas and authoring are outside the integration.",
+    "confidence": "low"
+  },
+  "abstraction": {
+    "percent": 40,
+    "status": "subjective",
+    "scope": {
+      "kind": "declared-workflows",
+      "description": "Bounded GUID-linked IfcWall property and quantity schedule with explicit precedence, missingness and units, handed to a typed workbook.",
+      "denominator": "User intent and domain decisions within this one wall-schedule workflow; other classes, geometry and model authoring are outside this denominator."
+    },
+    "rationale": "Authors name property and quantity columns and policies and receive a verified typed schedule without writing native code. They still decide which quantities are meaningful, supply the exact set names and judge whether the stored values are right; the workflow is a hypothesis without demonstrated customer demand.",
+    "confidence": "low"
+  },
+  "evidence": [
+    "src/schemaxis/adaptors/ifcopenshell/adaptor.json",
+    "src/schemaxis/adaptors/ifcopenshell/readiness.json",
+    "docs/ifcopenshell.md",
+    "verification/2026-10-26-ifcopenshell-wall-schedule.md"
+  ],
+  "limitations": [
+    "One ASCII IFC4 file, plain IfcWall only, IfcPropertySingleValue and three plain-SI quantity kinds; no geometry, other classes, schema versions, materials, relationships or authoring. Numbers and #ids anywhere in the file are held to a declared lexical budget (40 mantissa digits, exponent magnitude 400, 10 id digits) and must be valid STEP INTEGER or REAL text; larger exact decimals are unsupported. Unselected entities and geometry are unassessed.",
+    "Agreement between IfcOpenShell and the independent reader shows both read the same stated values; it does not show the model, its quantities or the schedule are right for the building. The workflow is a hypothesis without demonstrated customer demand.",
+    "Subjective source-contract assessment; no exhaustive API denominator supports these percentages."
+  ]
+}

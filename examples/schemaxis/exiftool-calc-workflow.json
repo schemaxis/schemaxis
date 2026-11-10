@@ -1,0 +1,93 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "inventory",
+      "document": {
+        "version": "schemaxis.exiftool/1",
+        "operation": "inventoryPhotos",
+        "photos": [
+          {
+            "id": "north_gate",
+            "path": "/tmp/schemaxis-exiftool-acceptance/north-gate.jpg"
+          },
+          {
+            "id": "river_bend",
+            "path": "/tmp/schemaxis-exiftool-acceptance/river-bend.jpg"
+          },
+          {
+            "id": "quarry",
+            "path": "/tmp/schemaxis-exiftool-acceptance/quarry.jpg"
+          },
+          {
+            "id": "unmarked",
+            "path": "/tmp/schemaxis-exiftool-acceptance/unmarked.jpg"
+          }
+        ]
+      }
+    },
+    {
+      "id": "workbook",
+      "document": {
+        "version": "schemaxis.calc/1",
+        "nodes": [
+          {
+            "id": "photos",
+            "filter": "readTypedCSV",
+            "options": {
+              "file": {
+                "$artifact": "inventory",
+                "index": 1
+              },
+              "nullToken": "\\N",
+              "columns": [
+                {
+                  "name": "id",
+                  "kind": "text"
+                },
+                {
+                  "name": "width",
+                  "kind": "number"
+                },
+                {
+                  "name": "height",
+                  "kind": "number"
+                },
+                {
+                  "name": "orientation",
+                  "kind": "number",
+                  "nullable": true
+                },
+                {
+                  "name": "cameraMake",
+                  "kind": "text",
+                  "nullable": true
+                },
+                {
+                  "name": "cameraModel",
+                  "kind": "text",
+                  "nullable": true
+                },
+                {
+                  "name": "capturedLocal",
+                  "kind": "text",
+                  "nullable": true
+                },
+                {
+                  "name": "utcOffset",
+                  "kind": "text",
+                  "nullable": true
+                },
+                {
+                  "name": "capturedUtc",
+                  "kind": "text",
+                  "nullable": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

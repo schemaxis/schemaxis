@@ -6,6 +6,10 @@ baseline is the 20 application providers in the working tree at the start of the
 programme (`main`, starting commit `fe31946`, including existing uncommitted work).
 Implementation by other programme workers can make this baseline historical.
 
+**Historical assessment:** the [current scored assessment service](../adaptor-assessments.md)
+and [generated inventory](../generated/adaptor-assessments.md) supersede the
+non-percentage policy and inventory below. This dated record is preserved.
+
 ## Scope and method
 
 The comparison separates three questions:

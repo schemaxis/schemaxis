@@ -246,6 +246,11 @@ export function createViewers({ctx, store, onTab, onObservation = () => {}}) {
   }
 
   return {references, artifacts, get, addReference,
+    async showDraftGeometry(data, label) {
+      const target = get('3d');
+      await finishLoad(target, beginLoad(target), data, {origin: 'draft'}, label);
+      onObservation(data.observations || {}); onTab('3d');
+    },
     async showArtifacts(items) {
       const record = store.get().record;
       const provenance = {origin: 'artifact', document: record.id, revision: record.revision};

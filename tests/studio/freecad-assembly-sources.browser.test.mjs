@@ -129,7 +129,9 @@ test('FreeCAD Studio authors sourced-part joints with guidance, bounds, cancella
       assert.equal(await s.evaluate(`!!document.querySelector(${JSON.stringify('[aria-label="'+label+'"]')})`), true, label);
     }
     assert.match(await fieldHelp(s, 'parts[0].source'), /model\.FCStd publication of a verified schemaxis\.freecad\/1 run/);
-    assert.match(await fieldHelp(s, 'parts[0].mounts'), /Joints connect mounts/);
+    const mountHelp=await fieldHelp(s, 'parts[0].mounts');
+    assert.match(mountHelp, /mounting frames on the selected source Body/);
+    assert.match(mountHelp, /Joint endpoints use mount IDs/);
     // Mounts use a JSON control; malformed JSON is refused before any draft edit.
     await field(s, 'parts[0].id', 'bracket');
     await field(s, 'parts[0].source', '/replace/with/bracket/model.FCStd');

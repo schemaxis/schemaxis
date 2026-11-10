@@ -51,6 +51,19 @@ WORKER = '''extends SceneTree
 var definition: Dictionary
 var stage: String
 var failed = false
+var recording = false
+var clock = 0.0
+var clock_frames = 0
+var clock_min = 1.0
+var clock_max = 0.0
+
+func _process(delta):
+    if recording:
+        clock += delta
+        clock_frames += 1
+        clock_min = min(clock_min, delta)
+        clock_max = max(clock_max, delta)
+    return false
 
 func emit(path, value):
     var stream = FileAccess.open(path, FileAccess.WRITE)
@@ -85,6 +98,37 @@ func material_readback(material):
         return {}
     return {"colour": [material.albedo_color.r, material.albedo_color.g, material.albedo_color.b],
             "roughness": material.roughness, "metallic": material.metallic}
+
+func animation_readback(node):
+    var frames = node.sprite_frames
+    var name = String(node.animation)
+    var names = []
+    for item in frames.get_animation_names():
+        names.append(String(item))
+    var listed = []
+    var raw = PackedByteArray()
+    var atlas = {}
+    for index in range(frames.get_frame_count(name)):
+        var texture = frames.get_frame_texture(name, index)
+        var image = texture.get_image()
+        image.convert(Image.FORMAT_RGBA8)
+        listed.append({"rect": [texture.region.position.x, texture.region.position.y,
+            texture.region.size.x, texture.region.size.y],
+            "duration": frames.get_frame_duration(name, index), "rgbaSHA256": image_digest(image)})
+        raw.append_array(image.get_data())
+        if index == 0:
+            var sheet = texture.atlas.get_image()
+            sheet.convert(Image.FORMAT_RGBA8)
+            atlas = {"width": sheet.get_width(), "height": sheet.get_height(), "rgbaSHA256": image_digest(sheet)}
+    if stage == "reopen":
+        var stream = FileAccess.open("res://animation_" + str(node.name) + ".rgba", FileAccess.WRITE)
+        if stream == null:
+            push_error("Cannot write frame pixels")
+        else:
+            stream.store_buffer(raw)
+    return {"names": names, "current": name, "autoplay": String(node.autoplay), "speedScale": node.speed_scale,
+        "fps": frames.get_animation_speed(name), "loopMode": int(frames.get_animation_loop_mode(name)),
+        "frames": listed, "atlas": atlas}
 
 func mesh_nodes(node, found):
     if node is MeshInstance3D:
@@ -157,6 +201,10 @@ func measure(scene):
             record["pixelSize"] = node.pixel_size
             record["image"] = {"width": image.get_width(), "height": image.get_height(),
                 "rgbaSHA256": image_digest(image)}
+        elif node is AnimatedSprite3D:
+            record["position"] = arr(node.position)
+            record["pixelSize"] = node.pixel_size
+            record["animation"] = animation_readback(node)
         elif node is Camera3D:
             record["position"] = arr(node.position)
             record["forward"] = arr(-node.transform.basis.z.normalized())
@@ -182,6 +230,64 @@ func measure(scene):
                     "rotation": arr(node.rotation_degrees)})
         records[str(node.name)] = record
     return {"nodeCount": count_nodes(scene), "nodes": records}
+
+func animated_sprites(scene):
+    var found = []
+    var all_nodes = []
+    descendants(scene, all_nodes)
+    for node in all_nodes:
+        if node is AnimatedSprite3D:
+            found.append(node)
+    return found
+
+func run_playback(scene):
+    # Real SceneTree process frames: each frame is a fixed 1 ms delta (--fixed-fps).
+    # Samples are read from the node's own advancing state; nothing is assigned.
+    var sprites = animated_sprites(scene)
+    var specs = {}
+    var results = {}
+    var cursor = {}
+    for node in sprites:
+        var spec = JSON.parse_string(FileAccess.get_file_as_string("res://animation_" + str(node.name) + ".json"))
+        if not spec is Dictionary:
+            abort_job("INVALID_DOCUMENT", "Animation definition is missing or invalid", str(node.name))
+            return null
+        specs[str(node.name)] = spec
+        results[str(node.name)] = []
+        cursor[str(node.name)] = 0
+    for _warmup in range(int(specs[str(sprites[0].name)].warmupFrames)):
+        await process_frame
+    for node in sprites:
+        node.stop()
+        node.set_frame_and_progress(0, 0.0)
+        node.play(specs[str(node.name)].name)
+    clock = 0.0
+    clock_frames = 0
+    clock_min = 1.0
+    clock_max = 0.0
+    recording = true
+    var remaining = sprites.size()
+    while remaining > 0:
+        await process_frame
+        if clock_frames > 20000:
+            abort_job("PLAYBACK_TIMEOUT", "Playback samples were not reached within 20000 process frames")
+            return null
+        for node in sprites:
+            var key = str(node.name)
+            var targets = specs[key].sampleTargets
+            while cursor[key] < targets.size() and clock >= float(targets[cursor[key]]) - 0.0000001:
+                results[key].append({"target": targets[cursor[key]], "elapsed": clock, "frame": node.frame,
+                    "progress": node.frame_progress, "playing": node.is_playing(),
+                    "animation": String(node.animation), "playingSpeed": node.get_playing_speed()})
+                cursor[key] += 1
+                if cursor[key] == targets.size():
+                    remaining -= 1
+    recording = false
+    var summary = {}
+    for key in results:
+        summary[key] = {"samples": results[key]}
+    return {"sprites": summary, "clock": {"warmupFrames": int(specs[str(sprites[0].name)].warmupFrames),
+        "frames": clock_frames, "minDelta": clock_min, "maxDelta": clock_max}}
 
 func construct():
     var scene = Node3D.new()
@@ -225,6 +331,32 @@ func construct():
                 return null
             image.convert(Image.FORMAT_RGBA8)
             node.texture = ImageTexture.create_from_image(image)
+            node.pixel_size = options.pixelSize
+            node.position = vec(options.position)
+            node.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+        elif operation == "animatedSprite3D":
+            var spec = JSON.parse_string(FileAccess.get_file_as_string("res://animation_" + item.id + ".json"))
+            var sheet = Image.load_from_file("res://source_" + item.id + ".png")
+            if not spec is Dictionary or sheet == null or sheet.is_empty():
+                abort_job("IMPORT_FAILED", "Cannot load animated sprite sheet or animation", item.id)
+                scene.free()
+                return null
+            sheet.convert(Image.FORMAT_RGBA8)
+            var atlas = ImageTexture.create_from_image(sheet)
+            var frames = SpriteFrames.new()
+            frames.remove_animation("default")
+            frames.add_animation(spec.name)
+            frames.set_animation_speed(spec.name, spec.fps)
+            frames.set_animation_loop_mode(spec.name, SpriteFrames.LOOP_LINEAR if spec.loop else SpriteFrames.LOOP_NONE)
+            for frame in spec.frames:
+                var region = AtlasTexture.new()
+                region.atlas = atlas
+                region.region = Rect2(frame.rect[0], frame.rect[1], frame.rect[2], frame.rect[3])
+                frames.add_frame(spec.name, region, frame.duration)
+            node = AnimatedSprite3D.new()
+            node.sprite_frames = frames
+            node.animation = spec.name
+            node.autoplay = spec.name
             node.pixel_size = options.pixelSize
             node.position = vec(options.position)
             node.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
@@ -328,7 +460,7 @@ func _initialize():
 
 func execute():
     var arguments = OS.get_cmdline_user_args()
-    if arguments.size() != 1 or not arguments[0] in ["build", "reopen", "render"]:
+    if arguments.size() != 1 or not arguments[0] in ["build", "reopen", "render", "playback"]:
         abort_job("INVALID_ARGUMENT", "Expected build, reopen or render stage")
         return
     stage = arguments[0]
@@ -394,6 +526,21 @@ func execute():
             "image": {"size": [640, 480], "reloaded": true, "frames": 3,
                 "display": DisplayServer.get_name(), "renderer": RenderingServer.get_video_adapter_name(),
                 "sha256": FileAccess.get_sha256("res://preview.png")}})
+        scene.free()
+        quit(0)
+        return
+    if stage == "playback":
+        if animated_sprites(scene).is_empty():
+            abort_job("INVALID_DOCUMENT", "The saved scene has no AnimatedSprite3D")
+            scene.free()
+            return
+        var played = await run_playback(scene)
+        if played == null or failed:
+            scene.free()
+            return
+        emit("res://playback.json", {"stage": stage, "pid": OS.get_process_id(),
+            "runtime": Engine.get_version_info().string, "definition": definition, "scene": measure(scene),
+            "sprites": played.sprites, "clock": played.clock})
         scene.free()
         quit(0)
         return

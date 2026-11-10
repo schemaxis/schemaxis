@@ -168,9 +168,11 @@ class PlanTests(Fixture):
         self.assertEqual(self.code(lambda: prepare_live(self.doc(path))).code, 'UNSUPPORTED_LIVE_INPUT')
 
     def test_old_routes_and_schema_order_are_unchanged(self):
-        self.assertEqual(list(DECLARATIONS)[-1], 'importSTEP')
+        # New choices append after the existing importer; its schema address
+        # and reviewed field guidance must stay attached to the same operation.
+        self.assertEqual(list(DECLARATIONS)[41], 'importSTEP')
         alternatives = schema()['properties']['nodes']['items']['oneOf']
-        self.assertEqual(alternatives[-1]['properties']['filter'], {'const': 'importSTEP'})
+        self.assertEqual(alternatives[41]['properties']['filter'], {'const': 'importSTEP'})
         legacy = plan({'version': 'schemaxis.freecad/1', 'nodes': [{'id': 's', 'filter': 'readSTEP', 'options': {'file': 'x.step'}}], 'output': 's'})
         self.assertEqual(set(legacy['nodes'][0]), {'id', 'filter', 'options', 'inputs'})
 

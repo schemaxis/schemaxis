@@ -185,6 +185,20 @@ request, the captured sources and the output consistently produces a new valid r
 wrong runtime, a timeout, or a cancellation faults (`INTERPRETER_NOT_FOUND`, `UNSUPPORTED_RUNTIME`,
 `RUNNER_TIMED_OUT`, `RUNNER_CANCELLED`); none returns `verified`.
 
+### The published summary and source identity
+
+`assembly-summary.json` (`schemaxis.qpdf.summary/2`) is the per-page identity map handed to later
+steps. Each entry of `sources` carries the authored `name`, the captured `bytes` count and `sha256`
+of exactly the file the run captured, the page count and any discarded document data; each page
+entry names its source, source page, rotation, geometry, 36 dpi raster digest and text length. Two
+inputs that render identically but differ in bytes therefore publish different summaries, and a
+consumer can match a page to its source by digest without reading the run's evidence folder.
+Verification recomputes the summary from the captured bytes and requires equality, so a changed
+digest, a missing digest or an unknown summary version is `VERIFICATION_FAILED`. Runs made before
+this field existed publish `schemaxis.qpdf.summary/1` (no `bytes` or `sha256`); they are still
+verified against the earlier shape and are not rewritten. The digest identifies the captured source
+bytes; it is not a signature and not historical attestation.
+
 ## Limits, lifecycle and reuse
 
 * Sources ≤ 16 MiB each, ≤ 32 MiB together, ≤ 500 pages each; ≤ 4 sources; ≤ 200 output pages; QPDF JSON

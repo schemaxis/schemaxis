@@ -6,7 +6,7 @@ from importlib.resources import files
 
 def catalogue():
     return {'application': {'label': 'Cantera',
-                'purpose': 'Compute ideal-gas hydrogen/oxygen thermodynamic tables, TP/HP chemical equilibrium and closed adiabatic reactor ignition histories with the h2o2 mechanism, independently verified on the host.',
+                'purpose': 'Compute ideal-gas hydrogen/oxygen thermodynamic tables, TP/HP chemical equilibrium and closed reactor ignition/cooling histories with optional fixed-bath heat loss with the h2o2 mechanism, independently verified on the host.',
                 'keywords': ['chemical kinetics', 'combustion chemistry', 'thermochemistry', 'equilibrium', 'hydrogen combustion']},
         'searchCases': json.loads(files(__package__).joinpath('search-cases.json').read_text()),
         'requirements':[
@@ -33,11 +33,11 @@ def catalogue():
                                         'Independent verification checks element inventories, NASA7 properties and all accessible species chemical potentials.'],
                            'examples':[{'reference':'examples/schemaxis/cantera-equilibrium.json','purpose':'Inspect temperature-dependent hydrogen/oxygen equilibrium.'},
                                        {'reference':'examples/schemaxis/cantera-adiabatic.json','purpose':'Inspect adiabatic equilibrium temperatures for hydrogen/air.'}]},
-            'reactorHistory':{'purpose':'Integrate a closed adiabatic constant-pressure or constant-volume ideal-gas reactor in time and sample its state, with an explicit temperature-rise ignition delay.',
+            'reactorHistory':{'purpose':'Integrate a closed constant-pressure or constant-volume ideal-gas reactor in time and sample its state, with an explicit temperature-rise ignition delay.',
                               'keywords':['ignition delay', 'autoignition', 'time history', 'reaction kinetics', 'batch reactor',
-                                          'zero-dimensional reactor', '0D reactor', 'homogeneous reactor', 'ReactorNet', 'induction time'],
+                                          'zero-dimensional reactor', '0D reactor', 'homogeneous reactor', 'ReactorNet', 'induction time', 'adiabatic', 'reactor heat loss', 'thermal bath', 'Newton cooling', 'heat transfer', 'Wall', 'Reservoir'],
                               'related':['equilibrate'],
-                              'semantics':['constantPressure uses IdealGasConstPressureReactor (enthalpy conserved); constantVolume uses IdealGasReactor (internal energy and density conserved).',
+                              'semantics':['constantPressure holds pressure with fixed mass and changing volume; constantVolume holds density/volume with fixed mass. Adiabatic energy is conserved; optional thermalConductance W/K and bathTemperature K exchange heat linearly with a fixed bath.',
                                            'times lists 2–100 strictly increasing sample times, each in seconds between 0 and 1. relativeTolerance (1e-12–1e-8), absoluteTolerance (1e-20–1e-12) and maxSteps are assigned to ReactorNet and read back.',
                                            'Ignition delay is the first time T reaches the initial T plus ignitionTemperatureRise, linear between native integrator steps; null if not reached by the last sample.',
                                            'Host Python integrates the same 29 reactions independently; samples must agree within a 1% time window and the delay within 1%. Long histories approach equilibrium.'],

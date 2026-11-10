@@ -1,14 +1,14 @@
 // Copyright (C) 2026 David L F Gaden
 // Forms and browsable schema built from the selected node's actual authored schema.
 
+import {schemaTree, hierarchyControls} from '../../lib/hierarchy.mjs';
 import {conceptHelp, nativeBinding} from './concept-help.mjs';
 import {h, mount} from '../../lib/dom.mjs';
 import {fieldsAt, parseField, valueAt} from './model.mjs';
 import {selectLine} from './line-selector.mjs';
+import {readerSelection} from './reader-selection.mjs';
 import {inputBrowser} from './input-browser.mjs';
 import {referenceControl} from './pipeline-picker.mjs';
-import {blockControl} from './block-picker.mjs';
-import {openDialog} from '../../shell/dialog.mjs';
 import {dependentNodes} from './pipeline-edit.mjs';
 
 function valueText(field) {
@@ -22,12 +22,37 @@ function typeLabel(field) {
   return field.choices.length ? field.choices.join(' | ') : field.type === 'undefined' ? 'value' : field.type;
 }
 
-export function createProperties({ctx, onEdit, onReveal, onFillRequired, getSpatialContext, getDocument, getOperationKinds}) {
+export function createProperties({ctx, onEdit, onReveal, onFillRequired, onChooseValue, getSpatialContext, getDocument, getOperationKinds,
+  caseNames = null, onEditSettings = null, hasSettings = () => false}) {
   const element = h('section', {class: 'wb-properties'});
   const schemaElement = h('section', {class: 'wb-schema', 'aria-label': 'Selected node schema'});
   let currentDocument;
 
   function control(field) {
+    const element = propertyControl(field);
+    if (onChooseValue && !['id', 'filter', 'version'].includes(field.name)) element.append(
+      h('button', {class: 'button small', onClick: () => onChooseValue(field.pointer)}, 'Value or expression…'));
+    return element;
+  }
+
+  function propertyControl(field) {
+    if (field.schema['x-studio-control']?.kind === 'reader-selection') {
+      const snapshot = currentDocument, owner = field.pointer.split('/options/')[0], node = valueAt(snapshot, owner);
+      const picker = readerSelection({initial: field.value, label: field.pointer, field: field.schema['x-studio-control'].field,
+        fallback: field.schema.default, names: caseNames,
+        inspect: async live => {
+          const provider = ctx.store.get().adaptors.find(a => a.routes.includes(snapshot.version))?.id;
+          if (!live) return ctx.api.post('/api/peek-input', {provider, input: snapshot, node: node.id});
+          const request = await ctx.api.post('/api/inspect-input', {provider, input: snapshot, node: node.id, prepare: true});
+          return (await ctx.api.waitForJob(request.job)).result;
+        }});
+      return h('div', {class: 'wb-property'}, h('span', {}, field.schema.title || field.name), picker.element,
+        h('button', {class: 'button small', onClick: () => ctx.call(() => {
+          const value = picker.read();
+          if (value === undefined) throw Error('Add an entry or choose All first.');
+          onEdit(field.pointer, value);
+        }, {title: 'Nothing to apply'})}, 'Apply selection'));
+    }
     if (field.schema['x-studio-reference']) {
       const owner = field.pointer.split('/inputs/')[0];
       const node = valueAt(currentDocument, owner);
@@ -43,23 +68,24 @@ export function createProperties({ctx, onEdit, onReveal, onFillRequired, getSpat
     if (field.schema['x-studio-control']?.kind === 'blocks') {
       const snapshot = currentDocument, owner = field.pointer.split('/options/')[0], node = valueAt(snapshot, owner);
       const scope = valueAt(snapshot, owner.replace(/\/nodes\/\d+$/, '')) || snapshot;
-      return h('div', {class: 'wb-property'}, h('span', {class: 'wb-property-label'}, field.schema.title || field.name),
-        h('small', {}, Array.isArray(field.value) ? `${field.value.length} block selections` : 'No blocks selected'),
-        h('button', {class: 'button small', onClick: () => ctx.call(async () => {
-          const picker = blockControl({initial: field.value, getInput: () => node?.inputs?.[field.schema['x-studio-control'].input],
-            inspect: async source => {
-              const provider = ctx.store.get().adaptors.find(adaptor => adaptor.routes.includes(scope.version))?.id;
-              const request = await ctx.api.post('/api/inspect-input', {provider, input: scope,
-                node: typeof source === 'string' ? source : source.node, port: source.port || 0});
-              return (await ctx.api.waitForJob(request.job)).result;
-            }});
-          const result = await openDialog({title: 'Choose blocks to extract', wide: true, content: picker.element,
-            actions: [{label: 'Cancel', run: () => null}, {label: 'Use selected blocks', primary: true, run: () => picker.read().length ? picker.read() : false}]});
-          if (result) {
-            if (JSON.stringify(getDocument()) !== JSON.stringify(snapshot)) throw Error('The pipeline changed. Reopen the block chooser.');
-            onEdit(field.pointer, result);
-          }
-        }, {title: 'Could not choose blocks'})}, 'Choose blocks…'));
+      const picker = readerSelection({initial: field.value, label: field.pointer, field: 'regions', blocks: true, names: caseNames,
+        inspect: async () => {
+          const source = node?.inputs?.[field.schema['x-studio-control'].input];
+          if (!source) throw Error('Choose the pipeline input first.');
+          const provider = ctx.store.get().adaptors.find(adaptor => adaptor.routes.includes(scope.version))?.id;
+          const request = await ctx.api.post('/api/inspect-input', {provider, input: scope,
+            node: typeof source === 'string' ? source : source.node, port: source.port || 0});
+          const blocks = ((await ctx.api.waitForJob(request.job)).result.assemblies?.Hierarchy || []).filter(block => block.depth > 0);
+          const parents = new Set(blocks.map(block => block.parent));
+          return {available: true, regions: blocks.filter(block => !parents.has(block.selector)).map(block => block.label),
+            scope: 'Blocks reported by the application.'};
+        }});
+      return h('div', {class: 'wb-property'}, h('span', {class: 'wb-property-label'}, field.schema.title || field.name), picker.element,
+        h('button', {class: 'button small', onClick: () => ctx.call(() => {
+          const value = picker.read();
+          if (value === undefined) throw Error('Add an entry first.');
+          onEdit(field.pointer, value);
+        }, {title: 'Nothing to apply'})}, 'Apply selection'));
     }
     const choices = field.type === 'boolean' ? [true, false] : field.choices;
     const input = choices.length && (field.value === undefined || typeof field.value !== 'object')
@@ -82,7 +108,7 @@ export function createProperties({ctx, onEdit, onReveal, onFillRequired, getSpat
         field.required ? h('span', {class: 'wb-required', title: 'Required'}, ' *') : null), input, nativeBinding(field.schema['x-studio-guide']),
       field.schema.description ? h('small', {class: 'wb-help'}, field.schema.description) : null,
       field.schema['x-studio-file'] && field.type === 'string' ? inputBrowser(ctx, input, field.pointer, field.schema['x-studio-file'].extensions) : null,
-      field.schema['x-studio-guide'] ? h('details', {}, h('summary', {}, 'Conceptual help'), conceptHelp(field.schema['x-studio-guide'], field.name, ctx)) : null);
+      field.schema['x-studio-guide'] ? h('details', {}, h('summary', {}, 'Conceptual help'), conceptHelp(field.schema['x-studio-guide'], field.name, ctx, {shown: field.schema.description})) : null);
   }
 
   function groupForm(group) {
@@ -114,7 +140,11 @@ export function createProperties({ctx, onEdit, onReveal, onFillRequired, getSpat
         const nested = fieldsAt(schema, documentValue, options.pointer);
         groups.push({label: 'Options', pointer: options.pointer, fields: nested.length ? nested : [options]});
       }
-      mount(element, h('h3', {class: 'wb-section-title'}, 'Properties'),
+      const settingsPointer = pointer.match(/^(.*\/nodes\/\d+)(?:\/|$)/)?.[1];
+      mount(element, h('div', {class: 'wb-case-heading'}, h('h3', {class: 'wb-section-title'}, 'Properties'),
+        onEditSettings && settingsPointer && hasSettings(settingsPointer) ? h('button', {class: 'button small', type: 'button',
+          dataset: {action: 'edit-settings'}, title: 'Reopen the settings window this item was added with',
+          onClick: () => onEditSettings(settingsPointer)}, 'Edit settings…') : null),
         h('button', {class: 'wb-pointer mono', onClick: () => onReveal(pointer)}, pointer || '/'),
         options?.schema['x-studio-control']?.kind === 'line' ? h('button', {class: 'button small', onClick: () => ctx.call(async () => {
           const widget = options.schema['x-studio-control'];
@@ -125,13 +155,25 @@ export function createProperties({ctx, onEdit, onReveal, onFillRequired, getSpat
         }, {title: 'Could not place line'})}, 'Place line endpoints…') : null,
         ...groups.map(groupForm),
         !documentValue ? h('p', {class: 'wb-help'}, 'Repair JSON syntax to edit properties.') : null);
-      mount(schemaElement, h('div', {class: 'wb-schema-heading'},
+      const schemaBody = h('div', {class: 'wb-schema-body'});
+      const search = h('input', {class: 'input', type: 'search', 'aria-label': 'Search schema', placeholder: 'Search selected schema…',
+        onInput: () => {
+          for (const row of schemaBody.children) { row.hidden = !row.textContent.toLowerCase().includes(search.value.toLowerCase());
+            if (!row.hidden && search.value) row.querySelectorAll('details').forEach(item => { item.open = true; }); }
+        }});
+      const serialized = JSON.stringify(Object.fromEntries(groups.flatMap(g => g.fields).map(f => [f.name, f.schema])), null, 2);
+      mount(schemaElement, h('div', {class: 'operation-file-tools'}, search,
+        h('button', {class: 'button small', onClick: () => { const range = document.createRange(); range.selectNodeContents(schemaBody);
+          const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range); }}, 'Select all'),
+        h('button', {class: 'button small', onClick: () => ctx.call(() => navigator.clipboard.writeText(serialized))}, 'Copy schema')),
+        hierarchyControls(schemaBody), schemaBody);
+      mount(schemaBody, h('div', {class: 'wb-schema-heading'},
         h('h3', {}, `${title} schema`), h('p', {class: 'wb-help'},
           'Select a pipeline node or document section to browse its properties. Required fields are marked *.')),
       ...groups.flatMap((group) => group.fields).map((field) => h('details', {class: 'wb-schema-row'},
         h('summary', {}, h('span', {class: 'mono'}, field.pointer),
           h('span', {class: 'badge'}, typeLabel(field)), field.required ? ' *' : ''),
         field.schema.description ? h('p', {}, field.schema.description) : null,
-        h('pre', {class: 'mono'}, JSON.stringify(field.schema, null, 2)))));
+        schemaTree(field.schema, 'Definition'))));
     }};
 }

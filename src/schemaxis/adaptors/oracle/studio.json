@@ -1,0 +1,180 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "baseDocument": {
+    "version": "schemaxis.oracle/1",
+    "operation": "report",
+    "connection": {"profile": "free_local"},
+    "tables": [
+      {
+        "name": "customers",
+        "columns": [
+          {"name": "id", "type": "number", "precision": 10, "scale": 0},
+          {"name": "region", "type": "varchar2", "length": 12, "nullable": true}
+        ],
+        "primaryKey": ["id"],
+        "source": {"path": "/replace/with/customers.json"}
+      },
+      {
+        "name": "orders",
+        "columns": [
+          {"name": "id", "type": "number", "precision": 10, "scale": 0},
+          {"name": "customer_id", "type": "number", "precision": 10, "scale": 0, "nullable": true},
+          {"name": "total", "type": "number", "precision": 12, "scale": 2, "nullable": true}
+        ],
+        "primaryKey": ["id"],
+        "foreignKeys": [{"columns": ["customer_id"], "table": "customers", "references": ["id"]}],
+        "source": {"path": "/replace/with/orders.json"}
+      }
+    ],
+    "report": {
+      "selects": [
+        {
+          "from": {"table": "customers", "alias": "c"},
+          "joins": [{"type": "left", "table": "orders", "alias": "o", "on": [{"left": "c.id", "right": "o.customer_id"}]}],
+          "groupBy": [{"column": "c.region"}],
+          "measures": [
+            {"name": "orders", "function": "count", "argument": {"column": "o.id"}},
+            {"name": "revenue", "function": "sum", "argument": {"column": "o.total"}}
+          ],
+          "columns": [
+            {"name": "region", "operand": {"column": "c.region"}},
+            {"name": "orders", "operand": {"measure": "orders"}},
+            {"name": "revenue", "operand": {"measure": "revenue"}}
+          ]
+        }
+      ],
+      "orderBy": [{"column": "region"}]
+    }
+  },
+  "categories": [
+    {"id": "tables", "title": "Relational tables", "icon": "layers"}
+  ],
+  "snippets": [],
+  "templates": [
+    {
+      "id": "revenue-report",
+      "title": "Revenue by region",
+      "description": "Load customers and orders from captured files, left join them, group by region and sum exact NUMBER totals. Replace both absolute source paths and the connection profile name.",
+      "document": {
+        "version": "schemaxis.oracle/1",
+        "operation": "report",
+        "connection": {"profile": "free_local"},
+        "tables": [
+          {
+            "name": "customers",
+            "columns": [
+              {"name": "id", "type": "number", "precision": 10, "scale": 0},
+              {"name": "region", "type": "varchar2", "length": 12, "nullable": true}
+            ],
+            "primaryKey": ["id"],
+            "source": {"path": "/replace/with/customers.json"}
+          },
+          {
+            "name": "orders",
+            "columns": [
+              {"name": "id", "type": "number", "precision": 10, "scale": 0},
+              {"name": "customer_id", "type": "number", "precision": 10, "scale": 0, "nullable": true},
+              {"name": "total", "type": "number", "precision": 12, "scale": 2, "nullable": true}
+            ],
+            "primaryKey": ["id"],
+            "foreignKeys": [{"columns": ["customer_id"], "table": "customers", "references": ["id"]}],
+            "source": {"path": "/replace/with/orders.json"}
+          }
+        ],
+        "report": {
+          "selects": [
+            {
+              "from": {"table": "customers", "alias": "c"},
+              "joins": [{"type": "left", "table": "orders", "alias": "o", "on": [{"left": "c.id", "right": "o.customer_id"}]}],
+              "groupBy": [{"column": "c.region"}],
+              "measures": [
+                {"name": "orders", "function": "count", "argument": {"column": "o.id"}},
+                {"name": "revenue", "function": "sum", "argument": {"column": "o.total"}}
+              ],
+              "columns": [
+                {"name": "region", "operand": {"column": "c.region"}},
+                {"name": "orders", "operand": {"measure": "orders"}},
+                {"name": "revenue", "operand": {"measure": "revenue"}}
+              ]
+            }
+          ],
+          "orderBy": [{"column": "region"}]
+        }
+      }
+    },
+    {
+      "id": "balance-transaction",
+      "title": "Atomic balance update",
+      "description": "Load accounts, debit one with an expected row count, insert another account and commit; an observer session proves nothing was visible before the commit.",
+      "document": {
+        "version": "schemaxis.oracle/1",
+        "operation": "mutate",
+        "connection": {"profile": "free_local"},
+        "tables": [
+          {
+            "name": "accounts",
+            "columns": [
+              {"name": "id", "type": "number", "precision": 10, "scale": 0},
+              {"name": "owner", "type": "varchar2", "length": 20},
+              {"name": "balance", "type": "number", "precision": 12, "scale": 2}
+            ],
+            "primaryKey": ["id"],
+            "source": {"path": "/replace/with/accounts.json"}
+          }
+        ],
+        "transaction": {
+          "steps": [
+            {
+              "kind": "update",
+              "table": "accounts",
+              "computed": [{"name": "debited", "function": "subtract", "arguments": [{"column": "accounts.balance"}, {"literal": {"type": "number", "value": "25"}}]}],
+              "conditions": [{"name": "payer", "terms": [{"left": {"column": "accounts.id"}, "operator": "equals", "right": {"literal": {"type": "number", "value": "1"}}}]}],
+              "set": [{"column": "balance", "value": {"derived": "debited"}}],
+              "where": "payer",
+              "expectRows": 1
+            },
+            {"kind": "insert", "table": "accounts", "columns": ["id", "owner", "balance"], "rows": [[4, "dave", "10.00"]], "expectRows": 1}
+          ],
+          "finish": "commit"
+        }
+      }
+    },
+    {
+      "id": "typed-load",
+      "title": "Typed table load",
+      "description": "Create a table from a captured JSON file, keep it in the schema and prove the rows from a fresh connection. Replace the source path.",
+      "document": {
+        "version": "schemaxis.oracle/1",
+        "operation": "load",
+        "connection": {"profile": "free_local"},
+        "setup": {"retain": true},
+        "tables": [
+          {
+            "name": "customers",
+            "columns": [
+              {"name": "id", "type": "number", "precision": 10, "scale": 0},
+              {"name": "name", "type": "varchar2", "length": 40},
+              {"name": "region", "type": "varchar2", "length": 12, "nullable": true}
+            ],
+            "primaryKey": ["id"],
+            "source": {"path": "/replace/with/customers.json"}
+          }
+        ]
+      }
+    },
+    {
+      "id": "schema-snapshot",
+      "title": "Schema snapshot",
+      "description": "Snapshot the tables and indexes of the connected schema and check them against declared tables for drift.",
+      "document": {
+        "version": "schemaxis.oracle/1",
+        "operation": "inspect",
+        "connection": {"profile": "free_local"},
+        "inspection": {"kinds": ["tables", "indexes"]}
+      }
+    }
+  ],
+  "viewers": [
+    "text"
+  ]
+}

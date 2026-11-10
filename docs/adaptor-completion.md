@@ -12,6 +12,27 @@ redeclare schemas, operations or a second registry. Record the changed scope and
 item-by-item results in a compact `verification/` note, referenced by the affected
 route's `readiness.json` `completion.review`. Keep bulk transcripts in `evidence/`.
 
+## Sustained adaptor development
+
+For application-wide completion, use the [strategic completion definition](adaptor-strategic-completion.md). Passing this checklist for a feature or a deliberately
+bounded subset does not mean that the application adaptor is Done. Important
+stable workflow families remain required until implemented or explicitly omitted
+for a justified relevance or stability reason.
+
+Passing this checklist completes the reviewed change within its declared scope.
+For an adaptor programme, maintain a capability-family map that distinguishes
+upstream application breadth, the intended product workflows, implemented and
+verified capabilities, and remaining gaps. An accepted operation does not imply
+that the adaptor is complete. Review the abstractions across related workflows
+so that common domain records and decisions can be reused as coverage grows.
+
+Keep an implementation owner responsible from concept and API research through
+contracts, implementation, guidance, useful handoffs, verification, review and
+integration. Continue into the next planned capability family after a milestone;
+allocation numbers and review checkpoints record progress. Define completion
+against the intended product scope and retain explicit upstream exclusions,
+rather than inferring it from operation counts or passing tests.
+
 ## Completion items
 
 | ID | Deliverable and authoritative source | Completion check and reviewer | Retained evidence | Legitimate not-applicable |
@@ -25,9 +46,9 @@ route's `readiness.json` `completion.review`. Keep bulk transcripts in `evidence
 | guidance | Operation purpose/use, inputs/outputs, assumptions/limits and meaningful examples; every field's meaning, units/conventions, omission/default, valid choices and mistakes. `guidance.json`; [Studio contract](studio-adaptor-contract.md#conceptual-guidance-is-an-adaptor-deliverable). | Address/status/provenance/link audit (automated); prose sufficiency and scientific truth (editorial/domain). | Reviewed or attributed records, sources and unresolved questions. | Unitless fields say so where useful. Structural `$ref`/wrapper records may derive meaning with provenance. Nested and non-node fields are never exempt. |
 | help | Local guide, generated reference, contextual operation/field Help, stable faults and actionable recovery, relevant public API links. [Studio contract](studio-adaptor-contract.md). | Local files/anchors, packaged operation targets and generation drift (automated); external availability/relevance and useful recovery (review). | Generated artifacts, Help tests, review source/date and fault examples. | External sources are never fetched during normal admission. Unavailable upstream pages retain uncertainty and a repair task; placeholders do not count. |
 | examples | Editable standalone and Studio starters, meaningful baseline/variant and invalid cases, prerequisites and independent literal expectations. `readiness.json`, `studio.json`; [kit](adaptor-development.md). | Schema/host plan, placeholder/insert/undo/Help tests and bounded native runs (automated); realism and expectations (domain). | Example IDs, fixture files, expectation rationale and exact executed scope. | Resource/native prerequisites may prevent local execution; retain a usable host example and explicit unavailable result. |
-| tests | Changed host, schema, scaffold, discovery, guidance, reference and Studio behaviour; negative, stale and misleading cases. [Conformance](adaptor-development.md#reusable-conformance). | Execute appropriate suites and generated checks (automated); coverage adequacy (review). | Actual commands, results, skips/failures and limitations. | Native requalification is unnecessary for documentation/search-only behaviour changes; shared source changes still make old receipts stale. |
+| tests | Changed host, schema, scaffold, discovery, guidance, reference and Studio behaviour; negative, stale and misleading cases. [Conformance](adaptor-development.md#reusable-conformance). Include [assessment metadata and current-index parity](adaptor-assessments.md). | Execute appropriate suites and generated checks (automated), including the real `docs/generated/adaptor-assessments.md` parity test and `tools/generate_adaptor_assessments.py --check`; coverage adequacy (review). | Actual commands, results, skips/failures, assessment freshness and limitations. | Native requalification is unnecessary for documentation/search-only behaviour changes; shared source changes still make old receipts stale. |
 | qualification | Separate implementation, documentation coverage, local runtime availability and source-bound native qualification. [Readiness axes](adaptor-readiness.md#report-contract). | Conformance/record freshness and observed runtime checks (automated); interpretation of bounds (review). | Native receipt and exact cases/features/runtime, or explicit unknown/stale/unavailable. | No receipt is legitimate for an experimental host-only route, but it must never be labelled native-qualified. |
-| maintenance | Latest-stable release source, absorbed version, acceptance recipe, provenance and repair obligations in `upstream.json`. [Updates](updates.md). | Updates/host/native acceptance when absorbing a release (automated plus domain review). | Release source, repair brief, successful bounded evidence and unresolved work. | Manual upstream source checks need an explicit reason. Never advance absorbedVersion from documentation or host checks alone. |
+| maintenance | Latest-stable release source, absorbed version, acceptance recipe, provenance and repair obligations in `upstream.json`. [Updates](updates.md). Review adaptor-owned `assessment.json` breadth/abstraction scopes, rationale, date/version and source identity against useful workflow changes; see [strength assessments](adaptor-assessments.md). | Updates/host/native acceptance when absorbing a release (automated plus domain review). Editorially review changed assessment scope; leave an unreviewed score visibly stale, then regenerate the current index. A fix or extra test does not require increasing scores. | Release source, repair brief, successful bounded evidence, reviewed or stale strength assessment and unresolved work. Preserve accepted dated assessment baselines; create a new checkpoint instead of overwriting history. | Manual upstream source checks need an explicit reason. Never advance absorbedVersion from documentation or host checks alone. |
 
 ## Recording decisions and review
 
@@ -66,7 +87,11 @@ conformance and deliberate external source review are separate steps.
 4. Generate references and packaged Help, then run their `--check` modes. Run
    affected host/Studio tests and scoped conformance. New native behaviour requires
    bounded native acceptance; documentation-only work does not qualify a runtime.
-5. Record every checklist result, justified exceptions and unresolved work. Run
+5. Review assessment scopes/rationale/source identity for the changed workflow,
+   retaining explicit uncertainty and independent qualification. Regenerate the
+   current assessment index; run its real-output parity test and generator
+   `--check`. Keep accepted dated baselines immutable. Scores need not increase.
+6. Record every checklist result, justified exceptions and unresolved work. Run
    `readiness --app APP --admission --check`; failed documentation admission leaves
    existing discovery/planning/execution available. Keep wider migrations bounded.
 
@@ -78,6 +103,7 @@ PYTHONPATH=src python3 tools/generate_studio_help.py
 PYTHONPATH=src python3 -m schemaxis reference --check
 PYTHONPATH=src python3 tools/generate_paraview_guide.py --check
 PYTHONPATH=src python3 tools/generate_studio_help.py --check
+PYTHONPATH=src python3 tools/generate_adaptor_assessments.py --check
 PYTHONPATH=src python3 -m unittest discover -s tests/unit -q
 node --test src/schemaxis/studio_ui/tests/search-acceptance.test.mjs
 PYTHONPATH=src python3 -m schemaxis readiness --app APP --admission --check

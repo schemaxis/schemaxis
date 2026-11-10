@@ -4,8 +4,9 @@ This guide covers GNU Octave for real-valued 1D analysis and LibreOffice Calc fo
 editable spreadsheets with verified formulas. [R regression](r.md) additionally
 provides independently checked numeric linear models and finite fit requirements.
 They run in isolated native processes. The host Python package remains dependency-free.
-Current bounded qualification uses Octave 11.3.0, LibreOffice 26.8.1.1 and R 4.6.1;
-the original Octave/Calc workflow receipt below used LibreOffice 26.8.0.3.
+Recorded bounded qualification versions include Octave 11.3.0, LibreOffice 26.8.1.1 and R 4.6.1;
+readiness reports whether each receipt matches the current source.
+The original Octave/Calc workflow receipt below used LibreOffice 26.8.0.3.
 
 ## Install and run
 
@@ -51,7 +52,9 @@ operations, `inputs: {"input": "earlierNode"}`. There are eleven operations:
 Frequency is cycles per x unit; phase is radians. No implicit physical-unit
 conversion occurs. Derivatives, integrals and resampling require strictly increasing x. FFT needs
 uniform sampling and 4–8192 points in a power of two. An odd smoothing window cannot
-exceed the sample count. Fits need nondegenerate x variation.
+exceed the sample count. Fits need nondegenerate x variation. Literal-data nodes are
+checked during planning; CSV-dependent nodes are checked at run time without
+reading files during planning. See [planning checks and recovery](octave.md).
 
 Each table has 2–10000 samples. There are at most 64 nodes and 100000 intermediate
 samples in one run. Real finite values are bounded to ±1e100. These bounds prevent
@@ -71,7 +74,10 @@ recomputes results with independent host algorithms, including a radix-2 FFT.
 ## Calc contract
 
 Use `version: schemaxis.calc/1` and exactly one node: `fromRows` with `columns` and
-`rows`, or `readCSV` with an absolute `file`. Tables have 2–10000 rows and 1–64
+`rows`, or `readCSV` with an absolute `file`. Tables that mix text IDs or notes with
+measurements, or have missing values, use `fromTypedRows` or `readTypedCSV` instead; see
+[typed labelled tables](calc.md#typed-labelled-tables). The numeric operations below are
+unchanged. Tables have 2–10000 rows and 1–64
 unique, nonempty column names. All data cells must be finite real numbers. Header
 text is written as literal text, including text starting with `=`.
 

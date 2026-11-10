@@ -1,0 +1,117 @@
+{
+  "version": "schemaxis/1",
+  "nodes": [
+    {
+      "id": "sphere",
+      "filter": "pvSphere",
+      "options": {
+        "ThetaResolution": 8,
+        "PhiResolution": 8,
+        "Center": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "id": "centers",
+      "filter": "pvCellCenters",
+      "inputs": {
+        "Input": "sphere"
+      },
+      "options": {
+        "VertexCells": true
+      }
+    },
+    {
+      "id": "particles",
+      "filter": "pvTessellate",
+      "inputs": {
+        "Input": "centers"
+      },
+      "options": {
+        "MaximumNumberofSubdivisions": 0
+      }
+    },
+    {
+      "id": "x",
+      "filter": "pvCalculator",
+      "inputs": {
+        "Input": "particles"
+      },
+      "options": {
+        "Function": "coordsX",
+        "ResultArrayName": "x"
+      }
+    },
+    {
+      "id": "y",
+      "filter": "pvCalculator",
+      "inputs": {
+        "Input": "x"
+      },
+      "options": {
+        "Function": "coordsY",
+        "ResultArrayName": "y"
+      }
+    },
+    {
+      "id": "z",
+      "filter": "pvCalculator",
+      "inputs": {
+        "Input": "y"
+      },
+      "options": {
+        "Function": "coordsZ",
+        "ResultArrayName": "z"
+      }
+    },
+    {
+      "id": "data",
+      "filter": "pvGroupDatasets",
+      "inputs": {
+        "Input": [
+          "z"
+        ]
+      },
+      "options": {
+        "OutputType": "vtkMultiBlockDataSet"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "proof",
+      "exports": [
+        {
+          "id": "result",
+          "node": "data",
+          "writer": "pvWriteGenericIOWriter",
+          "options": {},
+          "comparison": "semantic",
+          "acceptLosses": [
+            "structure",
+            "point-identity",
+            "connectivity-order",
+            "storage-type"
+          ],
+          "tolerance": 0,
+          "readback": {
+            "operation": "pvGenericIOMultiBlockReader",
+            "options": {
+              "xAxis": "x",
+              "yAxis": "y",
+              "zAxis": "z",
+              "PointArrayStatus": [
+                "x",
+                "y",
+                "z"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

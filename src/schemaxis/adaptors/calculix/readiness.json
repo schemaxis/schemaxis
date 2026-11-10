@@ -4,11 +4,11 @@
     "schemaxis.calculix/1": {
       "guide": "docs/calculix.md",
       "context": {
-        "purpose": "Assess a bounded isotropic rectangular cantilever from beam/material/load intent with automatic quadratic meshes and native measured serviceability.",
-        "assumptions": "SI m/N/Pa; x-axis beam, centred y/z section, complete fixed x=0 clamp, uniform consistent end shear in z. Small strain/deformation, slenderness 20..40 and no plasticity.",
-        "constraints": "L 0.001..10 m, section 0.00001..1 m, aspect 0.5..2, E 1e6..1e12 Pa, nu 0..0.35, |F| 0.01..1e8 N, theory tip/L <= 0.01, engineering root stress/E <= 0.001. Base 12..24 axial and 2..3 section cells; separate 2x refinements. No generic FEA, imported decks, peak/root/yield stress certification.",
-        "inspection": "Reconstruct every editable deck; parse complete native DAT with exact IDs and Gauss coordinates; independently check actual support force/moment balance, area-mean tip Uz and interior Sxx. Fresh exact-deck reopening and CSV/assessment/hash verification.",
-        "recovery": "Invalid physical geometry fails before launch; numerical acceptance faults retain refinement/theory evidence; unmet named serviceability requirements retain measured margins and block consumers/reuse. Adjust stiffness/section/force or an explicit requirement and run a fresh attempt."
+        "purpose": "Assess rectangular isotropic elastic members under combined axial force, biaxial transverse force, torsion and biaxial end couples from physical intent and named native-measured serviceability requirements.",
+        "assumptions": "SI m/N/Pa/N m/rad; x-axis beam with centred y/z rectangle. Six signed end resultants use consistent face tractions. Clamped face, or transverse-contraction-permitting axialSlide for pure axial loading. Linear static isotropic elasticity; no stability or failure certification.",
+        "constraints": "Slenderness20..40, section aspect0.5..2, E1e6..1e12 Pa, nu0..0.35; small normal/shear strain scales<=0.001, theory translation/length<=0.01 and twist<=0.02 rad. Base12..24 by2..3 by2..3 quadratic cells, independent2x refinements. No arbitrary mesh/deck, nonlinearity or nonrectangular sections.",
+        "inspection": "Reconstruct all decks, check exact native IDs/Gauss coordinates, each active displacement/twist and independent interior normal/parity-isolated torsion stress references, force/moment balance, separate refinement, exact fine-deck reopening, CSV and assessment identity.",
+        "recovery": "Invalid geometry/load/restraint is rejected before launch. Native numerical disagreement and unmet named measurements remain distinct faults; retain evidence, adjust explicit intent/mesh within domain and rerun fresh. Requirements never change themselves."
       },
       "examples": [
         {
@@ -36,6 +36,46 @@
           "reference": "examples/schemaxis/calculix-beam-invalid.json",
           "expect": "invalid",
           "fault": "INVALID_BEAM"
+        },
+        {
+          "id": "axial",
+          "reference": "examples/schemaxis/calculix-axial.json"
+        },
+        {
+          "id": "bending-y",
+          "reference": "examples/schemaxis/calculix-bending-y.json"
+        },
+        {
+          "id": "moment-y",
+          "reference": "examples/schemaxis/calculix-moment-y.json"
+        },
+        {
+          "id": "moment-z",
+          "reference": "examples/schemaxis/calculix-moment-z.json"
+        },
+        {
+          "id": "torsion",
+          "reference": "examples/schemaxis/calculix-torsion.json"
+        },
+        {
+          "id": "combined",
+          "reference": "examples/schemaxis/calculix-combined.json"
+        },
+        {
+          "id": "axial-slide",
+          "reference": "examples/schemaxis/calculix-axial-slide.json"
+        },
+        {
+          "id": "torsion-wide",
+          "reference": "examples/schemaxis/calculix-torsion-wide.json"
+        },
+        {
+          "id": "torsion-tall",
+          "reference": "examples/schemaxis/calculix-torsion-tall.json"
+        },
+        {
+          "id": "cancellation",
+          "reference": "examples/schemaxis/calculix-cancellation.json"
         }
       ],
       "conformance": [
@@ -73,7 +113,7 @@
           "timeout": "One finite deadline covers version, four isolated solves and full independent verification.",
           "cancellation": "Shared process-tree cancellation and postverification cancellation gate; failed results never qualify for reuse.",
           "logs": "Every native stage retains submission, stdout/stderr and generated deck plus native DAT/FRD/STA.",
-          "verification": "Reconstruct every editable deck; parse complete native DAT with exact IDs and Gauss coordinates; independently check actual support force/moment balance, area-mean tip Uz and interior Sxx. Fresh exact-deck reopening and CSV/assessment/hash verification."
+          "verification": "Reconstruct all decks, check exact native IDs/Gauss coordinates, each active displacement/twist and independent interior normal/parity-isolated torsion stress references, force/moment balance, separate refinement, exact fine-deck reopening, CSV and assessment identity."
         },
         "data": [
           {
@@ -88,7 +128,7 @@
             "losses": [
               "Only generated bounded beam decks; no general imported-deck compatibility."
             ],
-            "scope": "Fine quadratic rectangular elastic cantilever; exact retained bytes reopened in fresh solver."
+            "scope": "Fine quadratic rectangular elastic member under six signed end resultants and compatible restraint; exact retained bytes reopened in a fresh solver."
           },
           {
             "id": "stress",
@@ -115,7 +155,7 @@
             "losses": [
               "Static small-deformation idealisation with explicit beam/refinement tolerances."
             ],
-            "scope": "Measured tip area mean, actual support equilibrium, interior normal stress, signed requirement margins."
+            "scope": "Measured tip translation vector and torsional twist, actual support force/moment equilibrium, interior normal/von Mises stress samples and signed requirement margins."
           }
         ],
         "inspection": [
@@ -405,8 +445,302 @@
                 "relative": 0
               }
             ]
+          },
+          {
+            "id": "axial",
+            "example": "axial",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/0",
+                "expected": 4.761904761904762e-06,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootReaction_N/0",
+                "expected": -1000,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              }
+            ]
+          },
+          {
+            "id": "bending-y",
+            "example": "bending-y",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/1",
+                "expected": 0.00038095238095238096,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/2",
+                "expected": -20,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              }
+            ]
+          },
+          {
+            "id": "moment-y",
+            "example": "moment-y",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/2",
+                "expected": -0.00028571428571428574,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/1",
+                "expected": -10,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              }
+            ]
+          },
+          {
+            "id": "moment-z",
+            "example": "moment-z",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/1",
+                "expected": -0.00014285714285714287,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/2",
+                "expected": 5,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              }
+            ]
+          },
+          {
+            "id": "torsion",
+            "example": "torsion",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipTwist_rad",
+                "expected": 0.000220180954986,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/0",
+                "expected": -1,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              }
+            ]
+          },
+          {
+            "id": "combined",
+            "example": "combined",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/0",
+                "expected": 4.761904761904762e-06,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/1",
+                "expected": 0.0001238095238095238,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/2",
+                "expected": -0.00028571428571428574,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipTwist_rad",
+                "expected": 0.000220180954986,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootReaction_N/0",
+                "expected": -1000,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootReaction_N/1",
+                "expected": -20,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootReaction_N/2",
+                "expected": 30,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/0",
+                "expected": -1,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/1",
+                "expected": -14,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/2",
+                "expected": -7,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              }
+            ]
+          },
+          {
+            "id": "axial-slide",
+            "example": "axial-slide",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/0",
+                "expected": -4.761904761904762e-06,
+                "absolute": 1e-12,
+                "relative": 0.03
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/maxInteriorSampleNormalStress_Pa",
+                "expected": 2500000.0,
+                "absolute": 1e-12,
+                "relative": 0.005
+              }
+            ]
+          },
+          {
+            "id": "torsion-wide",
+            "example": "torsion-wide",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/0",
+                "expected": -1,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              }
+            ]
+          },
+          {
+            "id": "torsion-tall",
+            "example": "torsion-tall",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/rootMomentAboutClampCentre_Nm/0",
+                "expected": 1,
+                "absolute": 1e-12,
+                "relative": 0.0001
+              }
+            ]
+          },
+          {
+            "id": "cancellation",
+            "example": "cancellation",
+            "edits": [],
+            "scope": "Six-resultant/axialSlide expansion: independent literal displacement/twist/reaction witnesses plus adaptor-enforced native componentwise theory, Prandtl torsion shear, refinement, equilibrium and exact deck readback. Cancellation uses absolute contribution scaling.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/fine/tipAreaMeanDisplacement_m/1",
+                "expected": 0,
+                "absolute": 1e-06,
+                "relative": 0
+              }
+            ]
           }
         ]
+      },
+      "completion": {
+        "scope": "All CalculiX fields and six-resultant clamped/pure-axial sliding rectangular workflows; whole-application capability-family map retained separately from supported-product completion.",
+        "review": [
+          "verification/2026-11-03-calculix-six-resultants.md"
+        ],
+        "notApplicable": {
+          "mpi": "Serial native solves only; no MPI claim.",
+          "native-inspection": "Batch solver readback retained; no native interactive inspection hook.",
+          "time-batches": "One static elastic step; no time-dependent analysis.",
+          "live-editing": "Independent solver visits; no persistent native solver or reverse editor sync.",
+          "native-save": "Editable deck is an ordinary publication, not a live console native-save hook.",
+          "conversion": "No arbitrary deck import or file conversion operation."
+        }
       }
     }
   }

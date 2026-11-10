@@ -68,7 +68,20 @@ for (const theme of ['light', 'dark']) {
       await session.clickSelector('[data-action="save"]');
       await session.wait(`document.querySelector('[aria-label="Source file path"]')`, 'save dialog');
       await session.clickSelector('.dialog .button.primary');
-      await session.wait(`${active}.store.get().record.file && !${active}.store.get().busy`, 'saved to disk');
+      try {
+        await session.wait(`${active}.store.get().record.file && !${active}.store.get().busy`, 'saved to disk');
+      } catch (error) {
+        console.error('Workbench save state', await session.evaluate(`(() => {
+          const state = ${active}.store.get();
+          return {file: state.record?.file, revision: state.record?.revision, busy: state.busy,
+            dialogs: [...document.querySelectorAll('.dialog')].map((dialog) => ({
+              title: dialog.getAttribute('aria-label'), path: dialog.querySelector('input')?.value,
+              buttons: [...dialog.querySelectorAll('button')].map((button) => ({
+                text: button.textContent, disabled: button.disabled}))})),
+            toasts: [...document.querySelectorAll('.toast')].map((toast) => toast.textContent)};
+        })()`));
+        throw error;
+      }
       assert.equal(await session.evaluate(`${active}.store.get().dirty`), false);
       await session.clickSelector('[data-tab="schema"]');
       await session.wait(`document.querySelector('.wb-schema-row') && !document.querySelector('.wb-schema').hidden`,
@@ -178,6 +191,9 @@ test('Workbench native Preview renders live FreeCAD topology',
     try {
       await start(session, 'light');
       await session.clickSelector('[data-action="preview"]');
+      await session.wait(`window.studio.windows.active().type === 'results'
+        || window.studio.notify.store.get().problems.length`, 'shared native results', 60000);
+      await session.evaluate(`(() => {const entry=[...studio.windows.instances.values()].find(item=>item.type==='workbench');studio.windows.activate(entry.key);})()`);
       await session.wait(`(${active}.store.get().tab === '3d' && !${active}.store.get().busy)
         || window.studio.notify.store.get().problems.length`, 'native 3D preview', 60000);
       const problems = await session.evaluate(`window.studio.notify.store.get().problems`);

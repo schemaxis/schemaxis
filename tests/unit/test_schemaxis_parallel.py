@@ -89,6 +89,9 @@ class SchedulerTests(unittest.TestCase):
                 source.unlink()
                 self.assertTrue(verify(target)['verified'])
                 self.assertTrue(verify(exported)['verified'])
+                resumed = execute(doc, target, resume=True)
+                self.assertTrue(resumed['jobs'][0]['reused'])
+                self.assertEqual(runner.call_count, 1)
                 source.write_text('changed')
                 self.assertTrue(verify(target)['verified'])
                 # An attacker changes both the scheduler result and reusable job
@@ -102,6 +105,34 @@ class SchedulerTests(unittest.TestCase):
                 self.assertEqual(runner.call_count, 2)
                 self.assertEqual(Path(resumed['jobs'][0]['directory'], 'captured.txt').read_text(), 'changed')
                 self.assertTrue(verify(target)['verified'])
+
+    def test_retired_capture_does_not_hide_changed_remaining_input(self):
+        from schemaxis.artifacts import file_digest
+        from schemaxis.publication_metadata import finalise
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp); sources = [base/'first.txt', base/'second.txt']
+            for index, source in enumerate(sources): source.write_text(str(index))
+            def current(document): return {str(p): file_digest(p) for p in sources}
+            def captured(target, document):
+                return {str(p): file_digest(Path(target)/p.name) for p in sources}
+            def run(document, target, *args):
+                result = fake_run(document, target)
+                for source in sources: (target/source.name).write_bytes(source.read_bytes())
+                finalise(target)
+                return result
+            with patch('schemaxis.parallel.run_native', side_effect=run) as runner, \
+                    patch('schemaxis.parallel.verify_native', side_effect=fake_verify), \
+                    patch('schemaxis.parallel.reusable_inputs', side_effect=current), \
+                    patch('schemaxis.parallel.retained_inputs', side_effect=captured):
+                target = base/'run'; doc = workflow(1)
+                execute(doc, target)
+                sources[0].unlink()
+                self.assertTrue(execute(doc, target, resume=True)['jobs'][0]['reused'])
+                self.assertEqual(runner.call_count, 1)
+                sources[1].write_text('changed while first source retired')
+                with self.assertRaises(FileNotFoundError): execute(doc, target, resume=True)
+                # Reuse was refused; fresh execution refuses at its input preflight.
+                self.assertEqual(runner.call_count, 1)
 
     def test_exported_artifact_handoff_retains_recorded_input_identity(self):
         from schemaxis.publication_metadata import finalise
@@ -218,6 +249,45 @@ class SchedulerTests(unittest.TestCase):
             execute(workflow(memoryMB=1024), Path(tmp)/'run')
             self.assertEqual(peak, 1)
 
+    def test_budget_blocked_job_does_not_resolve_inputs_on_each_poll(self):
+        from schemaxis import parallel
+        entered, release = threading.Event(), threading.Event()
+        premature, polls = [], []
+        original_resolve, original_wait = parallel.resolve, parallel.wait
+
+        def run(doc, target, *args):
+            if doc['test'] == 0:
+                entered.set()
+                if not release.wait(3):
+                    raise RuntimeError('test coordinator did not release the first job')
+            return fake_run(doc, target)
+
+        def resolve(doc, completed, **kwargs):
+            if doc['test'] == 1 and not release.is_set():
+                premature.append(doc['test'])
+            return original_resolve(doc, completed, **kwargs)
+
+        def poll(*args, **kwargs):
+            self.assertTrue(entered.wait(2))
+            polls.append(True)
+            if len(polls) == 2:
+                release.set()
+            return original_wait(*args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as tmp, \
+                patch('schemaxis.parallel.run_native', side_effect=run), \
+                patch('schemaxis.parallel.verify_native', side_effect=fake_verify), \
+                patch('schemaxis.parallel.resolve', side_effect=resolve) as resolution, \
+                patch('schemaxis.parallel.wait', side_effect=poll):
+            try:
+                result = execute(workflow(2, memoryMB=1024), Path(tmp)/'run')
+            finally:
+                release.set()
+            self.assertTrue(result['verified'])
+            self.assertGreaterEqual(len(polls), 2)
+            self.assertEqual(premature, [], 'blocked jobs must not rehash captured inputs while waiting')
+            self.assertEqual(resolution.call_count, 2, 'each job resolves freshly when it can dispatch')
+
     def test_failed_attempt_retained_and_verified_success_reused(self):
         doc = workflow(2, maxWorkers=1)
         failed = True
@@ -277,6 +347,19 @@ class SchedulerTests(unittest.TestCase):
 
 
 class InputProvenanceTests(unittest.TestCase):
+    def test_missing_input_reuse_requires_capture_and_rejects_dangling_replacement(self):
+        from schemaxis.parallel import resume_inputs
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp)/'source'; captured = {str(source): 'a'*64}
+            with patch('schemaxis.parallel.reusable_inputs', side_effect=FileNotFoundError) as current:
+                with self.assertRaises(FileNotFoundError): resume_inputs({}, None)
+                current.assert_called_once()
+                current.reset_mock()
+                self.assertEqual(resume_inputs({}, captured), captured)
+                current.assert_not_called()
+                source.symlink_to(Path(tmp)/'missing-replacement')
+                self.assertIsNone(resume_inputs({}, captured))
+
     def test_retained_hook_requires_complete_absolute_sha256_bindings(self):
         from schemaxis.parallel import retained_inputs
         with tempfile.TemporaryDirectory() as tmp:

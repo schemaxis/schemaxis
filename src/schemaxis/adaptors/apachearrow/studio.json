@@ -246,6 +246,104 @@
         }
       },
       "requires": "Configure isolated PyArrow 26.0.0 Python and select a bounded typed CSV."
+    },
+    {
+      "id": "csv-publication",
+      "title": "Publish typed CSV beside Parquet",
+      "description": "Filter, rename and fill a nullable table, then opt in to a canonical table.csv as artifact 2. The CSV has no types: its consumer must declare the same columns, types and nullability. Replace the CSV path.",
+      "document": {
+        "version": "schemaxis.apachearrow/1",
+        "operation": "prepareTable",
+        "source": {
+          "$fill": "source"
+        },
+        "columns": [
+          {
+            "name": "id",
+            "type": "int64",
+            "nullable": false
+          },
+          {
+            "name": "small",
+            "type": "int32",
+            "nullable": false
+          },
+          {
+            "name": "reading",
+            "type": "float64",
+            "nullable": true
+          },
+          {
+            "name": "enabled",
+            "type": "bool",
+            "nullable": true
+          },
+          {
+            "name": "label",
+            "type": "utf8",
+            "nullable": true
+          },
+          {
+            "name": "observed",
+            "type": "timestamp_us_utc",
+            "nullable": true
+          }
+        ],
+        "where": [
+          {
+            "column": "small",
+            "test": "ne",
+            "value": "1"
+          }
+        ],
+        "select": [
+          {
+            "column": "id",
+            "name": "sample_id"
+          },
+          {
+            "column": "small",
+            "name": "batch",
+            "cast": "int64"
+          },
+          {
+            "column": "reading",
+            "name": "value"
+          },
+          {
+            "column": "enabled",
+            "name": "active"
+          },
+          {
+            "column": "label",
+            "name": "name",
+            "fillNull": "unlabelled"
+          },
+          {
+            "column": "observed",
+            "name": "seen_at"
+          }
+        ],
+        "publishCSV": true
+      },
+      "testValues": {
+        "source": "/replace/with/measurements.csv"
+      },
+      "fields": {
+        "source": {
+          "label": "Typed CSV source",
+          "type": "path",
+          "required": true,
+          "description": "Absolute local UTF-8 CSV matching every declared column; no file symlink or schema inference.",
+          "extensions": [
+            "csv"
+          ],
+          "acceptsKinds": [
+            "file"
+          ]
+        }
+      },
+      "requires": "Configure isolated PyArrow 26.0.0 Python and select a bounded typed CSV."
     }
   ],
   "viewers": [

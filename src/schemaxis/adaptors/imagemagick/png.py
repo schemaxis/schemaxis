@@ -7,19 +7,45 @@ unfiltered according to PNG's five filters; no colour transforms are inferred.
 import struct
 import zlib
 
+from schemaxis.core.faults import Fault, SchemaxisError
 from schemaxis.errors import fail
 
 SIGNATURE = b'\x89PNG\r\n\x1a\n'
 PIXELS = 1048576
 BYTES = 8 * 1024 * 1024
 CHROMATICITIES = (31270, 32900, 64000, 33000, 30000, 60000, 15000, 6000)
+# Sample depths PNG itself allows per colour type; other pairs are malformed, not merely unsupported.
+LEGAL_DEPTHS = {0: (1, 2, 4, 8, 16), 2: (8, 16), 3: (1, 2, 4, 8), 4: (8, 16), 6: (8, 16)}
+MALFORMED_RECOVERY = ('The PNG data is corrupt, truncated or violates the PNG chunk structure. '
+    'Re-capture or re-export it from its producer, check that it transferred intact, and retry; do not repair it by hand.')
+UNSUPPORTED_RECOVERY = ('The PNG is intact but outside the supported subset and Schemaxis does not convert images. '
+    'Re-export it deliberately as a non-interlaced 8-bit RGB or RGBA PNG of at most 4096 pixels per side and 1,048,576 pixels, '
+    'with no ICC profile, palette, tRNS or animation and only sRGB, standard gAMA+cHRM, pHYs, tEXt or tIME metadata, then retry.')
+
+
+class Unsupported(ValueError):
+    """A well-formed PNG feature outside the supported subset (distinct from corruption)."""
+    def __init__(self, feature, reason):
+        super().__init__(reason); self.feature = feature; self.reason = reason
+
+
+def source_fault(code, category, feature, reason, recovery, location='$'):
+    prefix = 'PNG is malformed: ' if category == 'malformed' else 'PNG is well-formed but unsupported: '
+    return SchemaxisError(Fault(code, prefix + reason, location, 'pipeline',
+        observed={'category': category, 'feature': feature, 'reason': reason}, recovery=recovery))
 
 
 def decode(data, *, output=False):
     """Return width, height, RGBA8 bytes, and observed colour declaration."""
     try:
-        if len(data) > BYTES or not data.startswith(SIGNATURE): raise ValueError('require a bounded PNG signature')
-        pos = 8; chunks = []; compressed = bytearray(); seen = set(); ended_data = False
+        if not data.startswith(SIGNATURE): raise ValueError('require a PNG signature')
+        if len(data) > BYTES: raise Unsupported('byte-budget', 'PNG exceeds the 8MiB byte budget')
+        pos = 8; chunks = []; compressed = bytearray(); seen = set(); ended_data = False; unsupported = []
+        def note(feature, reason):
+            # Published output never has an unsupported category; source files are classified only after the
+            # whole chunk structure validated, so corruption is never mislabelled as unsupported.
+            if output: raise ValueError(reason)
+            if not unsupported: unsupported.append((feature, reason))
         width = height = channels = 0; srgb = gamma = chroma = False
         while pos < len(data):
             if pos + 12 > len(data): raise ValueError('truncated chunk')
@@ -28,12 +54,18 @@ def decode(data, *, output=False):
             value = data[pos+8:pos+8+size]; crc = struct.unpack('>I', data[pos+8+size:pos+12+size])[0]
             if zlib.crc32(kind+value) & 0xffffffff != crc: raise ValueError('chunk CRC differs')
             pos += size + 12
+            if not all(65 <= c <= 90 or 97 <= c <= 122 for c in kind): raise ValueError('invalid chunk name')
             if not chunks and kind != b'IHDR': raise ValueError('IHDR must be first')
             if kind == b'IHDR':
                 if chunks or size != 13: raise ValueError('one 13-byte IHDR required')
                 width,height,depth,colour,compression,filtering,interlace = struct.unpack('>IIBBBBB',value)
-                if not 1 <= width <= 4096 or not 1 <= height <= 4096 or width*height > PIXELS: raise ValueError('image pixel/dimension budget exceeded')
-                if depth != 8 or colour not in ((6,) if output else (2,6)) or (compression,filtering,interlace) != (0,0,0): raise ValueError('require non-interlaced RGBA8 output' if output else 'only non-interlaced RGB/RGBA8 PNG is supported')
+                if not 1 <= width <= 0x7fffffff or not 1 <= height <= 0x7fffffff: raise ValueError('image width and height must be positive')
+                if colour not in LEGAL_DEPTHS or depth not in LEGAL_DEPTHS[colour]: raise ValueError('invalid colour type and sample depth combination')
+                if (compression,filtering) != (0,0) or interlace not in (0,1): raise ValueError('invalid compression, filter or interlace method')
+                if width > 4096 or height > 4096 or width*height > PIXELS: note('dimensions', 'image pixel/dimension budget exceeded')
+                if depth != 8: note('bit-depth', f'{depth}-bit samples are not supported; only 8-bit')
+                if colour not in ((6,) if output else (2,6)): note('colour-type', f'PNG colour type {colour} is not supported; only RGB or RGBA' + (' output required' if output else ''))
+                if interlace: note('interlace', 'only non-interlaced PNG is supported')
                 channels = 3 if colour == 2 else 4
             elif kind == b'IDAT':
                 if ended_data: raise ValueError('IDAT chunks must be consecutive')
@@ -50,21 +82,25 @@ def decode(data, *, output=False):
                         if size != 1 or value[0] > 3: raise ValueError('invalid sRGB intent')
                         srgb = True
                     if kind == b'gAMA':
-                        if size != 4 or struct.unpack('>I',value)[0] != 45455: raise ValueError('only standard sRGB gamma is supported')
+                        if size != 4: raise ValueError('invalid gAMA length')
+                        if struct.unpack('>I',value)[0] != 45455: note('colour-declaration', 'only standard sRGB gamma is supported')
                         gamma = True
                     if kind == b'cHRM':
-                        if size != 32 or struct.unpack('>8I',value) != CHROMATICITIES: raise ValueError('only standard sRGB chromaticities are supported')
+                        if size != 32: raise ValueError('invalid cHRM length')
+                        if struct.unpack('>8I',value) != CHROMATICITIES: note('colour-declaration', 'only standard sRGB chromaticities are supported')
                         chroma = True
                     if kind == b'pHYs' and (size != 9 or value[-1] not in (0,1)): raise ValueError('invalid physical pixel metadata')
                 elif kind == b'tEXt':
-                    if size > 65536 or b'\0' not in value: raise ValueError('invalid bounded text metadata')
+                    if b'\0' not in value: raise ValueError('invalid text metadata: keyword separator missing')
+                    if size > 65536: note('metadata-size', 'text metadata exceeds the 64KiB bound')
                 elif kind == b'tIME':
                     if size != 7 or kind in seen: raise ValueError('invalid time metadata')
-                else: raise ValueError('unsupported chunk '+repr(kind)+'; no ICC, animation, palette, transparency keys or compressed metadata')
+                else: note('chunk', 'unsupported chunk '+kind.decode('ascii')+'; no ICC, animation, palette, transparency keys or compressed metadata')
             chunks.append(kind); seen.add(kind)
         if not chunks or chunks[-1] != b'IEND': raise ValueError('missing IEND')
         # A lone gAMA/cHRM assertion cannot establish sRGB interpretation.
-        if not srgb and gamma != chroma: raise ValueError('supply sRGB or matching standard gAMA+cHRM, or remove colour metadata and explicitly assume sRGB')
+        if not srgb and gamma != chroma: note('colour-declaration', 'supply sRGB or matching standard gAMA+cHRM, or remove colour metadata and explicitly assume sRGB')
+        if unsupported: raise Unsupported(*unsupported[0])
         stride = width*channels; expected = (stride+1)*height
         inflater = zlib.decompressobj(); raw = inflater.decompress(bytes(compressed),expected+1)
         if len(raw) != expected or not inflater.eof or inflater.unconsumed_tail or inflater.unused_data: raise ValueError('PNG decompression length/stream differs')
@@ -87,8 +123,11 @@ def decode(data, *, output=False):
             previous = row
         colour = 'sRGB chunk' if srgb else 'standard sRGB gAMA+cHRM' if gamma else 'untagged: authored assume-srgb'
         return width,height,bytes(rgba),colour
+    except Unsupported as error:
+        raise source_fault('UNSUPPORTED_RASTER_PNG','unsupported',error.feature,error.reason,UNSUPPORTED_RECOVERY) from None
     except (ValueError,struct.error,zlib.error,IndexError) as error:
-        fail('VERIFICATION_FAILED' if output else 'INVALID_RASTER_PNG',str(error))
+        if output: fail('VERIFICATION_FAILED',str(error))
+        raise source_fault('INVALID_RASTER_PNG','malformed','structure',str(error),MALFORMED_RECOVERY) from None
 
 
 def encode(width,height,rgba):

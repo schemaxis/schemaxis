@@ -11,9 +11,13 @@ import struct
 TYPES = ['bool', 'int32', 'int64', 'float64', 'utf8', 'timestamp_us_utc']
 NULL = '\\N'
 MAX_SOURCE = 8 * 1024**2
+# An opted-in table.csv is bounded by the typed CSV source limit, so that every
+# published table can itself be declared as an Arrow source.
+MAX_CSV = MAX_SOURCE
+CSV_FORMAT = 'schemaxis.apachearrow.table-csv/1'
 INTEGER = re.compile(r'(?:0|-[1-9][0-9]*|[1-9][0-9]*)\Z')
 NUMBER = re.compile(r'-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\Z')
-UTC = re.compile(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\+00:00)\Z', re.ASCII)
+UTC = re.compile(r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(?:Z|\+00:00)\Z', re.ASCII)
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
@@ -46,9 +50,14 @@ def scalar(text, kind):
             raise ValueError('float overflow, nonfinite value or nonzero underflow to zero')
         return value
     if kind == 'timestamp_us_utc':
-        if not UTC.fullmatch(text):
+        match = UTC.fullmatch(text)
+        if not match:
             raise ValueError('require UTC YYYY-MM-DDTHH:MM:SS[.ffffff]Z or +00:00')
-        civil = datetime.fromisoformat(text.replace('Z', '+00:00'))
+        # Explicit components: datetime.fromisoformat accepts only 3 or 6 fractional
+        # digits before Python 3.11, so the 1-6 digit grammar must not depend on it.
+        # The constructor still rejects impossible dates, hour 24 and leap seconds.
+        *whole, fraction = match.groups()
+        civil = datetime(*map(int, whole), int((fraction or '').ljust(6, '0')), timezone.utc)
         delta = civil - EPOCH
         return (delta.days * 86400 + delta.seconds) * 1000000 + delta.microseconds
     raise ValueError('unsupported declared type')
@@ -184,6 +193,11 @@ def equal(left, right):
     return left == right
 
 
+def timestamp_text(value):
+    civil = EPOCH + timedelta(microseconds=value)
+    return f'{civil.year:04d}-{civil.month:02d}-{civil.day:02d}T{civil.hour:02d}:{civil.minute:02d}:{civil.second:02d}.{civil.microsecond:06d}Z'
+
+
 def report(plan, rows, source_sha256):
     columns, output, selected = transform(plan, rows)
     published = []
@@ -193,11 +207,74 @@ def report(plan, rows, source_sha256):
             if value is not None and column['type'] == 'int64':
                 value = str(value)
             elif value is not None and column['type'] == 'timestamp_us_utc':
-                civil = EPOCH + timedelta(microseconds=value)
-                value = f'{civil.year:04d}-{civil.month:02d}-{civil.day:02d}T{civil.hour:02d}:{civil.minute:02d}:{civil.second:02d}.{civil.microsecond:06d}Z'
+                value = timestamp_text(value)
             values.append(value)
         published.append(values)
     return {'format': 'schemaxis.apachearrow.table-report/1', 'sourceSha256': source_sha256,
             'inputRows': len(rows), 'outputRows': len(output), 'sourceRowIndices': selected,
             'columns': columns, 'nullCounts': [sum(row[i] is None for row in output) for i in range(len(columns))],
             'rows': published}
+
+
+class NullCollision(ValueError):
+    """A nonnull text value spelled like the reserved null token."""
+
+    def __init__(self, row, column):
+        super().__init__(f'row {row}, column {column}: nonnull text \\N would be read back as null')
+        self.row, self.column = row, column
+
+
+class CSVBudget(ValueError):
+    """The encoded table.csv would exceed the publication byte budget."""
+
+
+def float_text(value):
+    """Shortest round-trip binary64 text in the layout Arrow C++ 26.0.0 writes.
+
+    Plain decimal when the decimal point falls after 1-10 digits or at most five
+    zeros before the first digit; otherwise d[.ddd]e+x/e-x with no padding. Digits
+    are Python's shortest round-trip digits. Signed zero prints as 0 or -0.
+    """
+    if value == 0:
+        return '-0' if math.copysign(1, value) < 0 else '0'
+    parts = Decimal(repr(abs(value))).normalize().as_tuple()
+    digits = ''.join(map(str, parts.digits))
+    point = len(digits) + parts.exponent
+    if 0 < point <= 10:
+        body = digits + '0' * (point - len(digits)) if point >= len(digits) else digits[:point] + '.' + digits[point:]
+    elif -6 < point <= 0:
+        body = '0.' + '0' * -point + digits
+    else:
+        exponent = point - 1
+        body = digits[0] + ('.' + digits[1:] if len(digits) > 1 else '') + 'e' + ('+' if exponent >= 0 else '-') + str(abs(exponent))
+    return ('-' if value < 0 else '') + body
+
+
+def csv_cell(kind, value):
+    """Canonical lexical cell: null is bare \\N, text and timestamps are quoted, others bare."""
+    if value is None:
+        return NULL
+    if kind == 'bool':
+        return 'true' if value else 'false'
+    if kind in ('int32', 'int64'):
+        return str(value)
+    if kind == 'float64':
+        return float_text(value)
+    quoted = timestamp_text(value) if kind == 'timestamp_us_utc' else value
+    return '"' + quoted.replace('"', '""') + '"'
+
+
+def csv_encode(columns, rows, limit=MAX_CSV):
+    """Canonical table.csv bytes: UTF-8, no BOM, LF records, bare header, comma delimiter."""
+    lines = [','.join(c['name'] for c in columns) + '\n']
+    size = len(lines[0])
+    for index, row in enumerate(rows):
+        for column, value in zip(columns, row):
+            if column['type'] == 'utf8' and value == NULL:
+                raise NullCollision(index, column['name'])
+        line = ','.join(csv_cell(c['type'], v) for c, v in zip(columns, row)) + '\n'
+        size += len(line.encode('utf-8'))
+        if size > limit:
+            raise CSVBudget(f'encoded CSV exceeds {limit} bytes at output row {index}')
+        lines.append(line)
+    return ''.join(lines).encode('utf-8')

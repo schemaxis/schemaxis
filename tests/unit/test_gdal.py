@@ -112,10 +112,11 @@ class GdalTests(unittest.TestCase):
         library=load_library('gdal');original=copy.deepcopy(library)
         for item in library['templates']:
             filled=instantiate_item(library,item,provider='gdal')
-            self.assertEqual(registry.plan(filled)['operation'],'window')
+            operation=item['document']['operation'];self.assertEqual(registry.plan(filled)['operation'],operation)
             with self.assertRaises(SchemaxisError):registry.plan(instantiate_item(library,item,provider='gdal',filled=False))
-            altered=apply_inserts(filled,[{'at':'','merge':{'outputWidth':2}}])
-            self.assertEqual(registry.plan(altered)['outputWidth'],2)
+            field,value=('outputWidth',2) if operation=='window' else ('missing','refuse')
+            altered=apply_inserts(filled,[{'at':'','merge':{field:value}}])
+            self.assertEqual(registry.plan(altered)[field],value)
         self.assertEqual(library,original)
         with tempfile.TemporaryDirectory() as folder:
             session=AdaptorConsoleSession(folder,provider='gdal')

@@ -1,0 +1,128 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "prepare",
+      "document": {
+        "version": "schemaxis.apachearrow/1",
+        "operation": "prepareTable",
+        "source": "/replace/with/arrow-band-source.csv",
+        "columns": [
+          {
+            "name": "x",
+            "type": "float64",
+            "nullable": false
+          },
+          {
+            "name": "mean",
+            "type": "float64",
+            "nullable": false
+          },
+          {
+            "name": "lower",
+            "type": "float64",
+            "nullable": false
+          },
+          {
+            "name": "upper",
+            "type": "float64",
+            "nullable": false
+          },
+          {
+            "name": "keep",
+            "type": "int32",
+            "nullable": false
+          }
+        ],
+        "where": [
+          {
+            "column": "keep",
+            "test": "ne",
+            "value": "0"
+          }
+        ],
+        "select": [
+          {
+            "column": "x",
+            "name": "x"
+          },
+          {
+            "column": "mean",
+            "name": "mean"
+          },
+          {
+            "column": "lower",
+            "name": "lower"
+          },
+          {
+            "column": "upper",
+            "name": "upper"
+          }
+        ],
+        "publishCSV": true
+      }
+    },
+    {
+      "id": "plot",
+      "document": {
+        "version": "schemaxis.gnuplot/1",
+        "operation": "plot",
+        "title": "Arrow range envelope",
+        "source": {
+          "$artifact": "prepare",
+          "index": 2
+        },
+        "columns": [
+          {
+            "name": "x",
+            "unit": "s"
+          },
+          {
+            "name": "mean",
+            "unit": "V"
+          },
+          {
+            "name": "lower",
+            "unit": "V"
+          },
+          {
+            "name": "upper",
+            "unit": "V"
+          }
+        ],
+        "series": [
+          {
+            "label": "Mean",
+            "x": "x",
+            "y": "mean",
+            "bounds": {
+              "lower": "lower",
+              "upper": "upper"
+            },
+            "colour": "red"
+          }
+        ],
+        "xAxis": {
+          "label": "Time",
+          "unit": "s",
+          "range": [
+            0,
+            2
+          ],
+          "scale": "linear"
+        },
+        "yAxis": {
+          "label": "Reading",
+          "unit": "V",
+          "range": [
+            0,
+            3
+          ],
+          "scale": "linear"
+        },
+        "width": 800,
+        "height": 600
+      }
+    }
+  ]
+}

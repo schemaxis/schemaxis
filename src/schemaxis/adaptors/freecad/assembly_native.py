@@ -272,8 +272,8 @@ def gui_finish(directory):
     doc.recompute()
     require(assembly.solve() == 0, 'GUI native solve failed')
     expected_placements(components, prepared)
-    Gui.activeDocument().activeView().viewAxonometric()
-    Gui.activeDocument().activeView().fitAll()
+    from .gui_native import frame_view
+    frame_view(doc,[obj.Name for obj in components.values()])
     area = Gui.getMainWindow().findChild(QtWidgets.QMdiArea)
     if area:
         for window in area.subWindowList():
@@ -290,8 +290,7 @@ def gui_finish(directory):
                     if window.windowTitle().startswith(doc.Label+' :'):
                         area.setActiveSubWindow(window)
                         break
-            Gui.activeDocument().activeView().viewAxonometric()
-            Gui.activeDocument().activeView().fitAll()
+            frame_view(doc,[obj.Name for obj in components.values()])
             Gui.updateGui()
             doc.save()
             # App::Link scenes can render blank via offscreen saveImage on the

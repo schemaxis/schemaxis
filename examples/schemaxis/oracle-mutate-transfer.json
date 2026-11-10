@@ -1,0 +1,54 @@
+{
+  "version": "schemaxis.oracle/1",
+  "operation": "mutate",
+  "connection": {"profile": "free_local"},
+  "tables": [
+    {
+      "name": "accounts",
+      "columns": [
+        {"name": "id", "type": "number", "precision": 10, "scale": 0},
+        {"name": "owner", "type": "varchar2", "length": 20},
+        {"name": "balance", "type": "number", "precision": 12, "scale": 2}
+      ],
+      "primaryKey": ["id"],
+      "unique": [{"columns": ["owner"]}],
+      "checks": [
+        {"name": "solvent", "terms": [{"left": {"column": "accounts.balance"}, "operator": "greaterOrEqual", "right": {"literal": {"type": "number", "value": "0"}}}]}
+      ],
+      "source": {"path": "/replace/with/accounts.json"}
+    }
+  ],
+  "transaction": {
+    "steps": [
+      {
+        "kind": "update",
+        "table": "accounts",
+        "computed": [{"name": "debited", "function": "subtract", "arguments": [{"column": "accounts.balance"}, {"literal": {"type": "number", "value": "25"}}]}],
+        "conditions": [{"name": "payer", "terms": [{"left": {"column": "accounts.id"}, "operator": "equals", "right": {"literal": {"type": "number", "value": "1"}}}]}],
+        "set": [{"column": "balance", "value": {"derived": "debited"}}],
+        "where": "payer",
+        "expectRows": 1
+      },
+      {"kind": "savepoint", "name": "after_debit"},
+      {
+        "kind": "update",
+        "table": "accounts",
+        "computed": [{"name": "credited", "function": "add", "arguments": [{"column": "accounts.balance"}, {"literal": {"type": "number", "value": "25"}}]}],
+        "conditions": [{"name": "payee", "terms": [{"left": {"column": "accounts.id"}, "operator": "equals", "right": {"literal": {"type": "number", "value": "2"}}}]}],
+        "set": [{"column": "balance", "value": {"derived": "credited"}}],
+        "where": "payee",
+        "expectRows": 1
+      },
+      {"kind": "insert", "table": "accounts", "columns": ["id", "owner", "balance"], "rows": [[4, "dave", "10.00"]], "expectRows": 1},
+      {"kind": "merge", "table": "accounts", "columns": ["id", "owner", "balance"], "keys": ["id"], "rows": [[3, "carol", "5.00"], [5, "erin", "1.00"]], "expectRows": 2},
+      {
+        "kind": "check",
+        "table": "accounts",
+        "conditions": [{"name": "solvent_rows", "terms": [{"left": {"column": "accounts.balance"}, "operator": "greaterOrEqual", "right": {"literal": {"type": "number", "value": "0"}}}]}],
+        "where": "solvent_rows",
+        "expectRows": 5
+      }
+    ],
+    "finish": "commit"
+  }
+}

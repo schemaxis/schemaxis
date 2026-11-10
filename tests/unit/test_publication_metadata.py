@@ -11,6 +11,75 @@ from schemaxis.core.faults import SchemaxisError
 
 
 class MetadataTests(unittest.TestCase):
+    def test_explicit_viewer_hints_survive_publication_and_verification(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root/'slice.png'
+            path.write_bytes(b'\x89PNG\r\n\x1a\n'+b'\0\0\0\rIHDR'+struct.pack('>II', 40, 20))
+            hints = {'group': 'Pressure slices',
+                     'sequence': {'id': 'pressure-x', 'axis': 'x', 'value': 2.5, 'units': 'm'},
+                     'overview': {'file': '../domain.png'}}
+            artifacts = [{'file': str(path), 'kind': 'image', **hints,
+                          'camera': {'position': [10,0,0], 'focalPoint': [0,0,0],
+                                     'up': [0,0,1], 'parallel': True, 'scale': 2},
+                          'slicePlane': {'origin': [2.5,0,0], 'normal': [1,0,0]},
+                          'units': 'm'}]
+            publish_artifacts(root, artifacts)
+            metadata = json.loads((root/'slice.png.metadata.json').read_text())
+            self.assertEqual({key: metadata[key] for key in hints}, hints)
+            self.assertEqual(metadata['spatial']['frame'], 'native-world')
+            self.assertEqual(metadata['spatial']['units'], 'm')
+            self.assertTrue(all(corner[0] == 2.5 for corner in metadata['spatial']['corners']))
+            self.assertTrue(verify(root, artifacts)['verified'])
+            artifacts[0]['sequence']['value'] = 3
+            with self.assertRaises(SchemaxisError):
+                verify(root, artifacts)
+
+    def test_invalid_viewer_hints_are_not_published(self):
+        invalid = [{'group': ''}, {'sequence': {'id': 'x', 'axis': 'distance', 'value': 1}},
+                   {'sequence': {'id': 'x', 'axis': 'x', 'value': True}},
+                   {'sequence': {'id': 'x', 'axis': 'x', 'value': float('inf')}},
+                   {'overview': {'file': '/private/domain.png'}},
+                   {'overview': {'file': 'https://example.com/domain.png'}},
+                   {'overview': {'file': 'C:\\private\\domain.png'}}]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root/'data').write_text('fixture')
+            for hints in invalid:
+                with self.subTest(hints=hints), self.assertRaises(SchemaxisError) as caught:
+                    publish_artifacts(root, [{'file': 'data', **hints}])
+                self.assertEqual(caught.exception.fault.code, 'PUBLICATION_METADATA_FAILED')
+                self.assertFalse((root/'publication-metadata.json').exists())
+
+    def test_filenames_and_timestamps_do_not_invent_sequence_metadata(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root/'pressure-x-002.png').write_bytes(b'fixture')
+            publish_artifacts(root, [{'file': 'pressure-x-002.png', 'viewTime': 1.5}])
+            metadata = json.loads((root/'pressure-x-002.png.metadata.json').read_text())
+            self.assertEqual(metadata['viewTime'], 1.5)
+            for key in ('group', 'sequence', 'overview'):
+                self.assertNotIn(key, metadata)
+
+    def test_opaque_csv_named_file_retains_bytes_without_inventing_a_table(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);path=root/'opaque.csv';original=b'\xff\xfe\x00literal bytes\n';path.write_bytes(original)
+            artifacts=[{'file':str(path),'kind':'file'}]
+            publish_artifacts(root,artifacts)
+            self.assertEqual(json.loads((root/'opaque.csv.metadata.json').read_text())['size'],{'bytes':len(original)})
+            self.assertTrue(verify(root,artifacts)['verified']);self.assertEqual(path.read_bytes(),original)
+            with self.assertRaises(SchemaxisError) as caught:publish_artifacts(root,[{'file':str(path),'kind':'table'}])
+            self.assertEqual(caught.exception.fault.code,'PUBLICATION_METADATA_FAILED');self.assertEqual(path.read_bytes(),original)
+
+    def test_metadata_staging_cannot_overwrite_another_publication(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);first=root/'data';second=root/'data.metadata.json.staging'
+            first.write_bytes(b'first');second.write_bytes(b'second')
+            with self.assertRaises(SchemaxisError) as caught:publish_artifacts(root,[{'file':str(first),'kind':'file'},{'file':str(second),'kind':'file'}])
+            self.assertEqual(caught.exception.fault.code,'PUBLICATION_METADATA_FAILED')
+            self.assertEqual(first.read_bytes(),b'first');self.assertEqual(second.read_bytes(),b'second')
+            self.assertFalse((root/'publication-metadata.json').exists())
+
     def test_table_records_do_not_invent_a_header(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

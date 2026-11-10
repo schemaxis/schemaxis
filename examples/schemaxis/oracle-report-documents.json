@@ -1,0 +1,132 @@
+{
+  "version": "schemaxis.oracle/1",
+  "operation": "report",
+  "connection": {
+    "profile": "free_local"
+  },
+  "tables": [
+    {
+      "name": "documents",
+      "columns": [
+        {
+          "name": "id",
+          "type": "number",
+          "precision": 10,
+          "scale": 0
+        },
+        {
+          "name": "note",
+          "type": "clob",
+          "nullable": true
+        },
+        {
+          "name": "payload",
+          "type": "blob",
+          "nullable": true
+        },
+        {
+          "name": "metadata",
+          "type": "json",
+          "nullable": true
+        }
+      ],
+      "primaryKey": [
+        "id"
+      ],
+      "source": {
+        "path": "/replace/with/documents.json"
+      }
+    }
+  ],
+  "report": {
+    "selects": [
+      {
+        "from": {
+          "table": "documents",
+          "alias": "d"
+        },
+        "computed": [
+          {
+            "name": "value",
+            "function": "jsonNumber",
+            "arguments": [
+              {
+                "column": "d.metadata"
+              }
+            ],
+            "path": "$.samples[0].value"
+          },
+          {
+            "name": "label",
+            "function": "jsonText",
+            "arguments": [
+              {
+                "column": "d.metadata"
+              }
+            ],
+            "path": "$.name"
+          },
+          {
+            "name": "approved",
+            "function": "jsonBoolean",
+            "arguments": [
+              {
+                "column": "d.metadata"
+              }
+            ],
+            "path": "$.approved"
+          }
+        ],
+        "columns": [
+          {
+            "name": "id",
+            "operand": {
+              "column": "d.id"
+            }
+          },
+          {
+            "name": "note",
+            "operand": {
+              "column": "d.note"
+            }
+          },
+          {
+            "name": "payload",
+            "operand": {
+              "column": "d.payload"
+            }
+          },
+          {
+            "name": "metadata",
+            "operand": {
+              "column": "d.metadata"
+            }
+          },
+          {
+            "name": "value",
+            "operand": {
+              "derived": "value"
+            }
+          },
+          {
+            "name": "label",
+            "operand": {
+              "derived": "label"
+            }
+          },
+          {
+            "name": "approved",
+            "operand": {
+              "derived": "approved"
+            }
+          }
+        ]
+      }
+    ],
+    "orderBy": [
+      {
+        "column": "id"
+      }
+    ]
+  }
+}

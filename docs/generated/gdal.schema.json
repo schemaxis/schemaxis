@@ -6,7 +6,10 @@
       "const": "schemaxis.gdal/1"
     },
     "operation": {
-      "const": "window"
+      "enum": [
+        "window",
+        "zonalSummary"
+      ]
     },
     "source": {
       "type": "string",
@@ -68,6 +71,55 @@
       "enum": [
         "strict"
       ]
+    },
+    "zones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4096
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4096
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4096
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "x",
+          "y",
+          "width",
+          "height"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 16
+    },
+    "missing": {
+      "enum": [
+        "exclude",
+        "refuse"
+      ]
     }
   },
   "additionalProperties": false,
@@ -75,16 +127,198 @@
     "version",
     "operation",
     "source",
-    "x",
-    "y",
-    "width",
-    "height",
-    "outputWidth",
-    "outputHeight",
     "epsg",
     "units",
     "nodata",
-    "resampling",
     "lossPolicy"
+  ],
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.gdal/1"
+        },
+        "operation": {
+          "const": "window"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "x": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "outputWidth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "outputHeight": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "epsg": {
+          "enum": [
+            4326,
+            3857
+          ]
+        },
+        "units": {
+          "enum": [
+            "m",
+            "K",
+            "1"
+          ]
+        },
+        "nodata": {
+          "type": "number"
+        },
+        "resampling": {
+          "enum": [
+            "nearest"
+          ]
+        },
+        "lossPolicy": {
+          "enum": [
+            "strict"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "x",
+        "y",
+        "width",
+        "height",
+        "outputWidth",
+        "outputHeight",
+        "epsg",
+        "units",
+        "nodata",
+        "resampling",
+        "lossPolicy"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.gdal/1"
+        },
+        "operation": {
+          "const": "zonalSummary"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "epsg": {
+          "enum": [
+            4326,
+            3857
+          ]
+        },
+        "units": {
+          "enum": [
+            "m",
+            "K",
+            "1"
+          ]
+        },
+        "nodata": {
+          "type": "number"
+        },
+        "zones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "x": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4096
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4096
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "x",
+              "y",
+              "width",
+              "height"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "missing": {
+          "enum": [
+            "exclude",
+            "refuse"
+          ]
+        },
+        "lossPolicy": {
+          "enum": [
+            "strict"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "source",
+        "epsg",
+        "units",
+        "nodata",
+        "zones",
+        "missing",
+        "lossPolicy"
+      ]
+    }
   ]
 }

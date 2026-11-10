@@ -1,0 +1,234 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "steadyHeat": {
+      "status": "reviewed",
+      "explanation": "Predict steady solid wall temperature, heater rise and heat loss through ordered material layers with fixed temperature, outward flux or convection films.",
+      "sources": [
+        "docs/elmer.md",
+        "https://github.com/ElmerCSC/elmerfem/tree/release-26.2.1"
+      ],
+      "pitfalls": [
+        "Linear nodal finite elements are checked against exact layered conduction and source-corrected conservation.",
+        "Heat flux is outward at boundaries and along +x in the derived element table; temperatures use kelvin.",
+        "One-dimensional constant-property solid model only; independent saved-result reopening is mandatory."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/elmer-composite.json",
+          "purpose": "Evaluate series thermal resistance and insulation."
+        },
+        {
+          "reference": "examples/schemaxis/elmer-source.json",
+          "purpose": "Check heater peak temperature and generation balance."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.elmer/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A declared steady solid thermal problem. Material layers, heat generation and the two end conditions determine temperature and heat loss; the native solution is published only after independent conservation checks. This is a one-dimensional constant-property wall/heater model in SI units.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "The fixed authored contract schemaxis.elmer/1. Retain this literal independently of the installed ElmerSolver release; it is not a native application version.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select steadyHeat to solve the supported steady solid conduction problem. It publishes native nodal temperature and derived element-midpoint Fourier heat flux; no fluid or coupled physics is selected.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/layers": {
+          "status": "reviewed",
+          "explanation": "Order one to sixteen solid materials from left x=0 to the right. Each layer shares interface temperature and physical heat flux with its neighbour under perfect contact. At most 512 total cells; no contact resistance or imported geometry.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/layers/items": {
+          "status": "reviewed",
+          "explanation": "One uniform solid layer. Required name, thickness and conductivity describe material identity and resistance; omitted generation is zero and omitted cells is sixteen. Use SI quantities and a unique name.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Required unique layer label for interpreting the thermal summary. Labels do not become native SIF code; any bounded readable string is acceptable, but repeated names are refused.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/thickness_m": {
+          "status": "reviewed",
+          "explanation": "Required layer thickness in metres, not millimetres. Together with conductivity it sets thermal resistance per area L/k. A thicker insulating layer generally reduces transmitted heat; thickness must be positive.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/conductivity_W_mK": {
+          "status": "reviewed",
+          "explanation": "Required constant isotropic thermal conductivity in W/(m K). Higher conductivity reduces the layer resistance. Use a positive material value appropriate to the temperature range; this model has no temperature-dependent material law.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/heatGeneration_W_m3": {
+          "status": "reviewed",
+          "explanation": "Uniform volumetric heat generation in W/m3. Omission means zero; positive generates heat and negative removes it. This is power per volume, so do not enter total watts. Continuum temperatures must remain nonnegative kelvin.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/layers/items/properties/cells": {
+          "status": "reviewed",
+          "explanation": "Number of equal linear finite elements within this layer; omission gives sixteen. More cells resolve the quadratic temperature curve between fixed interfaces, but optional limits still concern only nodes and midpoint flux. Total across all layers is at most 512; no automatic mesh convergence claim. Adjacent coordinates must remain distinct under the eight-significant-digit native VTU export; a collapsed export is refused before launching Elmer.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/left": {
+          "status": "reviewed",
+          "explanation": "Required left surface condition. Choose a fixed kelvin temperature, outward W/m2 flux, or convection film. At least one end must fix temperature or connect to an ambient film; two flux ends leave an undefined temperature offset.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/left/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Required boundary family: value fixes surface temperature in kelvin, flux prescribes outward heat flux, and convection specifies a positive film coefficient and ambient temperature. Supply only the fields belonging to the selected family.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/left/properties/value": {
+          "status": "reviewed",
+          "explanation": "Required only for value or flux. For value this is nonnegative surface kelvin. For flux it is outward W/m2 at this end; negative supplies heat. The left outward sign is opposite the +x element flux, so do not apply the right-end sign blindly at both ends.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/left/properties/coefficient": {
+          "status": "reviewed",
+          "explanation": "Required positive convection film coefficient in W/(m2 K), only for convection. Outward heat loss is coefficient times surface-minus-ambient temperature. Include ambient as well; omitting the coefficient does not create an insulated boundary.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/left/properties/ambient": {
+          "status": "reviewed",
+          "explanation": "Required nonnegative ambient kelvin for convection, only with its positive coefficient. It is the external environment temperature, not a fixed surface temperature; the solved surface may differ by heat flux divided by the coefficient.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/right": {
+          "status": "reviewed",
+          "explanation": "Required right surface condition. Choose a fixed kelvin temperature, outward W/m2 flux, or convection film. At least one end must fix temperature or connect to an ambient film; two flux ends leave an undefined temperature offset.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/right/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Required boundary family: value fixes surface temperature in kelvin, flux prescribes outward heat flux, and convection specifies a positive film coefficient and ambient temperature. Supply only the fields belonging to the selected family.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/right/properties/value": {
+          "status": "reviewed",
+          "explanation": "Required only for value or flux. For value this is nonnegative surface kelvin. For flux it is outward W/m2 at this end; negative supplies heat. The left outward sign is opposite the +x element flux, so do not apply the right-end sign blindly at both ends.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/right/properties/coefficient": {
+          "status": "reviewed",
+          "explanation": "Required positive convection film coefficient in W/(m2 K), only for convection. Outward heat loss is coefficient times surface-minus-ambient temperature. Include ambient as well; omitting the coefficient does not create an insulated boundary.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/right/properties/ambient": {
+          "status": "reviewed",
+          "explanation": "Required nonnegative ambient kelvin for convection, only with its positive coefficient. It is the external environment temperature, not a fixed surface temperature; the solved surface may differ by heat flux divided by the coefficient.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/area_m2": {
+          "status": "reviewed",
+          "explanation": "Constant solid cross-sectional area in square metres; omission gives one m2. It converts heat flux and volume generation to total watts. Under constant area it does not change the one-dimensional temperature field; do not use it to represent a tapered solid.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/limits": {
+          "status": "reviewed",
+          "explanation": "Optional sampled design criteria. Omission or an empty object imposes no design limit. Bounds are applied literally to native mesh-node temperatures and derived element-midpoint flux, with signed margins retained; they do not certify unsampled continuum extrema.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/limits/properties/minimumField": {
+          "status": "reviewed",
+          "explanation": "Optional lower bound on every native mesh-node temperature in kelvin. Omission imposes no lower design bound. Must not exceed maximumField; compare the retained signed margin, and remember the physical zero-kelvin check also examines interior continuum minima.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/limits/properties/maximumField": {
+          "status": "reviewed",
+          "explanation": "Optional upper bound on every native mesh-node temperature in kelvin, useful for heater or material rating checks. Omission imposes no upper design bound. A small real excess still fails; between-node continuum peaks are outside this sampled criterion.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        },
+        "/properties/limits/properties/maxAbsFlux": {
+          "status": "reviewed",
+          "explanation": "Optional upper bound on the absolute +x element-midpoint Fourier flux in W/m2. Omission imposes no flux criterion. This bounds heat flux rather than total watts, and source-corrected physical end flux can differ from the midpoint value.",
+          "sources": [
+            "docs/elmer.md",
+            "src/schemaxis/adaptors/elmer/adaptor.py"
+          ]
+        }
+      }
+    }
+  }
+}

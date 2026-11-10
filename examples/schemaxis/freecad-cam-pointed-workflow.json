@@ -1,0 +1,165 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "stock",
+      "document": {
+        "version": "schemaxis.freecad/1",
+        "units": "mm",
+        "nodes": [
+          {
+            "id": "blank",
+            "filter": "box",
+            "options": {
+              "length": 20,
+              "width": 20,
+              "height": 15,
+              "origin": [
+                -10,
+                -10,
+                -15
+              ]
+            }
+          },
+          {
+            "id": "cone",
+            "filter": "cone",
+            "options": {
+              "radius1": 1,
+              "radius2": 0,
+              "height": 1,
+              "origin": [
+                0,
+                0,
+                -7
+              ],
+              "axis": [
+                0,
+                0,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "cylinder",
+            "filter": "cylinder",
+            "options": {
+              "radius": 1,
+              "height": 7,
+              "origin": [
+                0,
+                0,
+                -7
+              ]
+            }
+          },
+          {
+            "id": "void",
+            "filter": "fuse",
+            "inputs": {
+              "base": "cone",
+              "tool": "cylinder"
+            }
+          },
+          {
+            "id": "finished",
+            "filter": "cut",
+            "inputs": {
+              "base": "blank",
+              "tool": "void"
+            }
+          }
+        ],
+        "output": "finished"
+      }
+    },
+    {
+      "id": "machining",
+      "document": {
+        "version": "schemaxis.freecad.cam/1",
+        "source": {
+          "file": {
+            "$artifact": "stock",
+            "index": 2
+          },
+          "units": "mm",
+          "expect": {
+            "volume": 5976.961653873675,
+            "bounds": [
+              -10,
+              10,
+              -10,
+              10,
+              -15,
+              0
+            ],
+            "centreOfMass": [
+              0,
+              0,
+              -7.514761077416506
+            ]
+          },
+          "object": "finished"
+        },
+        "stock": {
+          "top": 0,
+          "sides": 0,
+          "bottom": 0
+        },
+        "tools": [
+          {
+            "id": "pilot",
+            "kind": "drill",
+            "diameter": 2,
+            "tipAngle": 90,
+            "cuttingReach": 3,
+            "shankDiameter": 1,
+            "length": 16,
+            "rpm": 5000,
+            "feed": 400,
+            "plunge": 100,
+            "holder": {
+              "stickOut": 12,
+              "steps": [
+                {
+                  "diameter": 4,
+                  "length": 6
+                }
+              ]
+            }
+          }
+        ],
+        "operations": [
+          {
+            "id": "pilot-hole",
+            "operation": "drill",
+            "tool": "pilot",
+            "bottom": -8,
+            "depthReference": "tip",
+            "locations": {
+              "kind": "explicit",
+              "centres": [
+                [
+                  0,
+                  0
+                ]
+              ]
+            },
+            "cycle": {
+              "kind": "drill",
+              "return": "initial"
+            }
+          }
+        ],
+        "setup": {
+          "clearance": 5,
+          "safe": 3,
+          "toolClearance": {
+            "kind": "evolvingStock",
+            "minimumSeparation": 0.25
+          }
+        }
+      }
+    }
+  ]
+}

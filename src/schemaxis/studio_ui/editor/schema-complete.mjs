@@ -7,7 +7,7 @@
 
 import {parsePointer} from './json-pointer.mjs';
 import {propertyFill, expressionKinds, expressionExample} from './fill-schema.mjs';
-import {contextFor, expand, schemasAt, childSchemas} from './schema-core.mjs';
+import {contextFor, expand, schemasAt, childSchemas, excludedFields} from './schema-core.mjs';
 
 const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const MAX_ITEMS = 1000;
@@ -143,6 +143,10 @@ function summariseBranch(context, owner, key) {
   return lines.join('\n');
 }
 
+function valueAtPointer(value, pointer) {
+  return parsePointer(pointer).reduce((parent, key) => parent?.[key], value);
+}
+
 function propertyItems(rootSchema, documentValue, caret, text) {
   const context = contextFor(rootSchema);
   const prefix = (caret.keyPrefix || '').toLowerCase();
@@ -154,6 +158,7 @@ function propertyItems(rootSchema, documentValue, caret, text) {
   }
   const nodes = schemasAt(rootSchema, instance, caret.parentPointer, {includeMarkers});
   const existing = new Set(caret.existingKeys || []);
+  const excluded = excludedFields(nodes, valueAtPointer(instance, caret.parentPointer), rootSchema);
   const entries = new Map();
   let order = 0;
   for (const node of nodes) {
@@ -161,7 +166,7 @@ function propertyItems(rootSchema, documentValue, caret, text) {
       continue;
     }
     for (const [name, child] of Object.entries(node.properties)) {
-      if (existing.has(name) || (name[0] === '$' && !includeMarkers)) {
+      if (existing.has(name) || excluded.has(name) || (name[0] === '$' && !includeMarkers)) {
         continue;
       }
       let entry = entries.get(name);
@@ -247,7 +252,7 @@ function addValue(collected, value, info) {
   collected.set(insertText, {value, ...info});
 }
 
-function valueItems(rootSchema, documentValue, caret, text) {
+function valueItems(rootSchema, documentValue, caret, text, names = []) {
   const context = contextFor(rootSchema);
   const segments = parsePointer(caret.pointer || '');
   const key = segments.length ? segments[segments.length - 1] : null;
@@ -291,6 +296,9 @@ function valueItems(rootSchema, documentValue, caret, text) {
         addValue(collected, node.default, {detail: 'default', documentation: doc, order: 1});
       }
     }
+  }
+  if (types.has('string') && !collected.size) {
+    names.forEach((name) => addValue(collected, name.value, {detail: name.detail, order: 0}));
   }
   if (types.has('boolean')) {
     addValue(collected, true, {detail: 'boolean', order: 2});
@@ -349,13 +357,16 @@ function valueItems(rootSchema, documentValue, caret, text) {
 /**
  * Completions at a caret context (from pointerAt) inside `documentValue`.
  * Pointers in the caret context are relative to the schema's document.
+ * `names` are {value, detail} strings known from outside the schema, such as
+ * the regions and arrays of an inspected case; they are offered wherever text
+ * is accepted and the schema lists no values of its own.
  */
-export function completionsAt(rootSchema, documentValue, caret, text) {
+export function completionsAt(rootSchema, documentValue, caret, text, names = []) {
   let items = [];
   if (caret.position === 'key') {
     items = propertyItems(rootSchema, documentValue, caret, text);
   } else if (caret.position === 'value') {
-    items = valueItems(rootSchema, documentValue, caret, text);
+    items = valueItems(rootSchema, documentValue, caret, text, names);
   }
   items.sort((a, b) => (a.sortText < b.sortText ? -1 : a.sortText > b.sortText ? 1 : 0));
   return items.slice(0, MAX_ITEMS);

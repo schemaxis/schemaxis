@@ -4,11 +4,11 @@
     "schemaxis.cantera/1": {
       "guide": "docs/cantera.md",
       "context": {
-        "purpose": "Compute frozen-composition ideal-gas properties, TP/HP equilibrium sweeps or closed adiabatic constant-pressure/constant-volume reactor time histories for the ten-species hydrogen/oxygen h2o2 mechanism; export independently checked numeric state tables.",
-        "assumptions": "Isolated Cantera 3.2.x Python with the qualified h2o2.yaml SHA256. Only ideal-gas ohmech phase and its 29 reactions. SI K, Pa, kg, J, s; composition amounts are explicitly mole or mass basis and normalised. Reactors are closed, adiabatic and homogeneous with Cantera's default 1 m3 initial volume.",
-        "constraints": "Two nodes. Sweeps: 2\u2013100 independent temperature samples, 300\u20133500 K initial and final temperatures, 1000\u201310000000 Pa. Reactor histories: one initial temperature 300\u20133500 K, 2\u2013100 strictly increasing sample times, each in seconds between 0 and 1, rtol 1e-12\u20131e-8, atol 1e-20\u20131e-12, maxSteps 100\u2013100000 and all states within 300\u20133500 K. H2,H,O,O2,OH,H2O,HO2,H2O2,AR,N2 only. N2/Ar are inert; no NOx, carbon, condensed phases, transport, walls, heat loss, inflow or flames.",
-        "inspection": "Read results.csv with numeric columns including units and X_/Y_ species fractions; reactor tables start with time_s instead of initialTemperature_K. chemistry-summary.json explains mechanism hash, phase, input basis, independent element/equilibrium/energy residuals and, for reactors, model, read-back solver settings, the declared ignition criterion and delay, and verification tolerances. Keep both when handing the table to Calc.",
-        "recovery": "INVALID_COMPOSITION needs distinct supported species and positive total amount. INVALID_TIMES needs strictly increasing reactor sample times. INTERPRETER_NOT_FOUND needs a configured Cantera Python. UNSUPPORTED_STATE means a reactor state left 300\u20133500 K; dilute the mixture or start colder. A changed mechanism needs explicit requalification. HP states outside 300\u20133500 K fail verification; choose a supported initial state/composition. Native failures retain logs; use a fresh directory after correcting input."
+        "purpose": "Compute frozen-composition ideal-gas properties, TP/HP equilibrium sweeps or closed optionally bath-coupled constant-pressure/constant-volume reactor time histories for the ten-species hydrogen/oxygen h2o2 mechanism; export independently checked numeric state tables.",
+        "assumptions": "Isolated Cantera 3.2.x Python with the qualified h2o2.yaml SHA256. Only ideal-gas ohmech phase and its 29 reactions. SI K, Pa, kg, J, s; composition amounts are explicitly mole or mass basis and normalised. Reactors are closed and homogeneous (adiabatic by default, or constant total thermal conductance to a fixed-temperature bath) with Cantera's default 1 m3 initial volume.",
+        "constraints": "Two nodes. Sweeps: 2\u2013100 independent temperature samples, 300\u20133500 K initial and final temperatures, 1000\u201310000000 Pa. Reactor histories: one initial temperature 300\u20133500 K, 2\u2013100 strictly increasing sample times, each in seconds between 0 and 1, rtol 1e-12\u20131e-8, atol 1e-20\u20131e-12, maxSteps 100\u2013100000 and all states within 300\u20133500 K. H2,H,O,O2,OH,H2O,HO2,H2O2,AR,N2 only. N2/Ar are inert; no NOx, carbon, condensed phases, transport, moving/radiating walls, wall/bath heat capacity, inflow or flames. Thermal conductance 0\u20131000000 W/K and fixed bath 300\u20133500 K; zero conductance is adiabatic. Bath heating can cross the temperature-rise criterion without chemistry.",
+        "inspection": "Read results.csv with numeric columns including units and X_/Y_ species fractions; reactor tables start with time_s instead of initialTemperature_K. chemistry-summary.json explains mechanism hash, phase, input basis, independent element/equilibrium/energy residuals and, for reactors, model, read-back solver settings, the declared ignition criterion and delay, and verification tolerances. Keep both when handing the table to Calc. Thermal summaries distinguish independently integrated heat input J/kg and native instantaneous outward heat rate W, with independently checked energy changes.",
+        "recovery": "INVALID_COMPOSITION needs distinct supported species and positive total amount. INVALID_TIMES needs strictly increasing reactor sample times. INTERPRETER_NOT_FOUND needs an absolute executable Python; NATIVE_UNAVAILABLE means it cannot import Cantera; UNSUPPORTED_RUNTIME means Cantera is not 3.2.x (see observed.version). UNSUPPORTED_STATE means a reactor state left 300\u20133500 K; dilute the mixture or start colder. A changed mechanism needs explicit requalification. HP states outside 300\u20133500 K fail verification; choose a supported initial state/composition. Native failures retain logs; use a fresh directory after correcting input. If strong heat loss produces a negative trace fraction near solver absolute tolerance, tighten absoluteTolerance (for example 1e-18); fractions remain strictly nonnegative at verification. Keep all temperature bounds and verification tolerances."
       },
       "examples": [
         {
@@ -121,14 +121,81 @@
           "expect": "invalid",
           "fault": "INVALID_TIMES",
           "schemaValid": true
+        },
+        {
+          "id": "thermal",
+          "reference": "examples/schemaxis/cantera-thermal-reactor.json"
+        },
+        {
+          "id": "negative-thermal-conductance",
+          "document": {
+            "version": "schemaxis.cantera/1",
+            "nodes": [
+              {
+                "id": "fuelAir",
+                "filter": "gas",
+                "options": {
+                  "pressure": 101325,
+                  "basis": "mole",
+                  "composition": [
+                    {
+                      "species": "H2",
+                      "amount": 2
+                    },
+                    {
+                      "species": "O2",
+                      "amount": 1
+                    },
+                    {
+                      "species": "N2",
+                      "amount": 3.76
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "ignition",
+                "filter": "reactorHistory",
+                "inputs": {
+                  "input": "fuelAir"
+                },
+                "options": {
+                  "model": "constantPressure",
+                  "temperature": 1000,
+                  "times": [
+                    0,
+                    0.0001,
+                    0.0002,
+                    0.0003,
+                    0.0004,
+                    0.001,
+                    0.005,
+                    0.02
+                  ],
+                  "relativeTolerance": 1e-09,
+                  "absoluteTolerance": 1e-15,
+                  "maxSteps": 20000,
+                  "ignitionTemperatureRise": 400,
+                  "thermalConductance": -1,
+                  "bathTemperature": 500
+                }
+              }
+            ],
+            "output": "ignition"
+          },
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
         }
       ],
       "conformance": [
         "tests/unit/test_cantera_admission.py",
-        "tests/unit/test_cantera_reactor.py"
+        "tests/unit/test_cantera_reactor.py",
+        "tests/unit/test_cantera_thermal.py"
       ],
       "acceptance": [
-        "tools/qualify_cantera.py"
+        "tools/qualify_cantera.py",
+        "tools/qualify_cantera_thermal.py"
       ],
       "profiles": {
         "workflow": {
@@ -154,13 +221,16 @@
           "https://cantera.org/stable/python/zerodim.html",
           "https://cantera.org/stable/reference/reactors/ideal-gas-constant-pressure-reactor.html",
           "https://cantera.org/stable/reference/reactors/ideal-gas-reactor.html",
-          "https://cantera.org/stable/reference/kinetics/rate-constants.html"
+          "https://cantera.org/stable/reference/kinetics/rate-constants.html",
+          "https://cantera.org/stable/python/zerodim.html#cantera.Wall",
+          "https://cantera.org/stable/python/zerodim.html#cantera.Reservoir",
+          "https://cantera.org/stable/reference/reactors/interactions.html#walls"
         ],
         "lifecycle": {
           "timeout": "One total deadline bounds build (including the reactor sample and ignition passes) and fresh-process CSV reopen. ReactorNet maxSteps bounds each sample interval, the ignition pass stops after 200000 steps and host independent integration after 50000 steps. Kit watchdog independently bounds the entire attempt.",
           "cancellation": "Shared owned native process cancellation; final cancellation check precedes publication.",
           "logs": "authored.json, plan.json, built/reopened native records (reactor solver readback, initial mass/volume, per-sample mass/volume/net production rates and the ignition-pass step record), captured mechanism bytes/hash, worker source, stage stdout/stderr, CSV, summary and incomplete/failure results remain in each fresh attempt.",
-          "verification": "Pure host NASA7/ideal-gas formulas verify all thermodynamic properties, normalised mass/mole fractions and element inventories. Equilibrium checks all accessible species chemical potentials against element potentials; TP holds T/P, HP holds enthalpy/P. A second Cantera process reloads the saved CSV states. No success flag substitutes for numerical checks. Reactor histories: host Python re-evaluates all 29 h2o2 rates (elementary, three-body, Troe falloff, reverse rates from NASA7 equilibrium constants) and integrates the adiabatic reactor with its own L-stable Rosenbrock method. Native and fresh-process net production rates must agree within 1e-10 of the gross rate; sampled T/X must lie within the independent solution over a 1% time window (plus 0.5 K and 1e-6); the declared ignition delay must agree within 1%; elements, mass, density (constant volume) and specific enthalpy or internal energy are conserved; solver settings and the 1 m3 initial volume are read back."
+          "verification": "Pure host NASA7/ideal-gas formulas verify all thermodynamic properties, normalised mass/mole fractions and element inventories. Equilibrium checks all accessible species chemical potentials against element potentials; TP holds T/P, HP holds enthalpy/P. A second Cantera process reloads the saved CSV states. No success flag substitutes for numerical checks. Reactor histories: host Python re-evaluates all 29 h2o2 rates (elementary, three-body, Troe falloff, reverse rates from NASA7 equilibrium constants) and integrates the adiabatic reactor with its own L-stable Rosenbrock method. Native and fresh-process net production rates must agree within 1e-10 of the gross rate; sampled T/X must lie within the independent solution over a 1% time window (plus 0.5 K and 1e-6); the declared ignition delay must agree within 1%; elements, mass, density (constant volume) and specific enthalpy or internal energy are conserved; solver settings and the 1 m3 initial volume are read back. Optional thermal exchange: host independent ODE integrates heat input per fixed initial mass; observed enthalpy/internal-energy change must match it within 1e-6 cp*T0 plus the NASA7 boundary jump. Native Wall coefficient/area, fixed bath, no radiation/expansion and each outward heat rate are read back. Argon heating/cooling have independent analytic expectations in both models."
         },
         "data": [
           {
@@ -175,7 +245,7 @@
             },
             "losses": [
               "CSV alone omits input basis, mechanism provenance, reactor model and ignition criterion; retain summary.",
-              "No transport, phase transitions, carbon or NOx chemistry; reactor kinetics only for one closed adiabatic homogeneous reactor."
+              "No transport, phase transitions, carbon or NOx chemistry; reactor kinetics only for one closed optionally bath-coupled homogeneous reactor."
             ],
             "scope": "One row per independent initial temperature (sweeps) or per requested sample time (reactor histories), ten species X and Y; at most 100 rows."
           },
@@ -209,7 +279,7 @@
         "authoring": {
           "model": "nodes",
           "example": "baseline",
-          "reuse": "Edit gas pressure, composition and basis, then table temperatures/mode or reactor model, initial temperature, sample times and tolerances using shared source/property authoring. Plan a fresh revision; execute and inspect the same CSV/summary. Use the equilibrium/adiabatic examples for reactive equilibrium states and the reactor example for time histories."
+          "reuse": "Edit gas pressure, composition and basis, then table temperatures/mode or reactor model, initial temperature, sample times and tolerances using shared source/property authoring. Plan a fresh revision; execute and inspect the same CSV/summary. Use the equilibrium/adiabatic examples for reactive equilibrium states and the reactor example for time histories. The thermal template permits editing total conductance W/K and fixed bath K; use zero conductance to compare adiabatic behaviour. Public acceptance edits the same durable draft and verifies workflow resume."
         },
         "features": {
           "workflow": {
@@ -703,13 +773,269 @@
                 "relative": 1e-08
               }
             ]
+          },
+          {
+            "id": "thermal-argon-constantPressure-500",
+            "example": "thermal",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/composition",
+                "value": [
+                  {
+                    "species": "AR",
+                    "amount": 1
+                  }
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/model",
+                "value": "constantPressure"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/bathTemperature",
+                "value": 500
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/times",
+                "value": [
+                  0,
+                  0.01,
+                  0.1,
+                  1
+                ]
+              }
+            ],
+            "scope": "Independent closed-form inert argon T(t)=Tb+(T0-Tb) exp(-G t/(m c)), c=cp or cv, G=1000 W/K, m=initial ideal density times 1 m3. Hot-bath crossing is external heating, not chemical ignition.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/3/1",
+                "expected": 509.64958618027305,
+                "absolute": 2e-05
+              }
+            ]
+          },
+          {
+            "id": "thermal-argon-constantPressure-1500",
+            "example": "thermal",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/composition",
+                "value": [
+                  {
+                    "species": "AR",
+                    "amount": 1
+                  }
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/model",
+                "value": "constantPressure"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/bathTemperature",
+                "value": 1500
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/times",
+                "value": [
+                  0,
+                  0.01,
+                  0.1,
+                  1
+                ]
+              }
+            ],
+            "scope": "Independent closed-form inert argon T(t)=Tb+(T0-Tb) exp(-G t/(m c)), c=cp or cv, G=1000 W/K, m=initial ideal density times 1 m3. Hot-bath crossing is external heating, not chemical ignition.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/3/1",
+                "expected": 1490.350413819727,
+                "absolute": 2e-05
+              },
+              {
+                "file": "chemistry-summary.json",
+                "format": "json",
+                "pointer": "/ignition/delay_s",
+                "expected": 0.40769074119346305,
+                "relative": 0.001
+              }
+            ]
+          },
+          {
+            "id": "thermal-reactive-constantPressure",
+            "example": "thermal",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/model",
+                "value": "constantPressure"
+              }
+            ],
+            "scope": "Hydrogen/air coupled to a 500 K bath with total 1000 W/K conductance. Literal final T and criterion crossing come from independent host rate/energy integration, not the native solver. Every row also receives independent energy-balance and kinetics checks.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/7/1",
+                "expected": 2651.0640594797096,
+                "absolute": 0.5
+              },
+              {
+                "file": "chemistry-summary.json",
+                "format": "json",
+                "pointer": "/ignition/delay_s",
+                "expected": 0.00031231153595356095,
+                "relative": 0.01
+              }
+            ]
+          },
+          {
+            "id": "thermal-argon-constantVolume-500",
+            "example": "thermal",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/composition",
+                "value": [
+                  {
+                    "species": "AR",
+                    "amount": 1
+                  }
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/model",
+                "value": "constantVolume"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/bathTemperature",
+                "value": 500
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/times",
+                "value": [
+                  0,
+                  0.01,
+                  0.1,
+                  1
+                ]
+              }
+            ],
+            "scope": "Independent closed-form inert argon T(t)=Tb+(T0-Tb) exp(-G t/(m c)), c=cp or cv, G=1000 W/K, m=initial ideal density times 1 m3. Hot-bath crossing is external heating, not chemical ignition.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/3/1",
+                "expected": 500.69427971900984,
+                "absolute": 2e-05
+              }
+            ]
+          },
+          {
+            "id": "thermal-argon-constantVolume-1500",
+            "example": "thermal",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/composition",
+                "value": [
+                  {
+                    "species": "AR",
+                    "amount": 1
+                  }
+                ]
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/model",
+                "value": "constantVolume"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/bathTemperature",
+                "value": 1500
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/times",
+                "value": [
+                  0,
+                  0.01,
+                  0.1,
+                  1
+                ]
+              }
+            ],
+            "scope": "Independent closed-form inert argon T(t)=Tb+(T0-Tb) exp(-G t/(m c)), c=cp or cv, G=1000 W/K, m=initial ideal density times 1 m3. Hot-bath crossing is external heating, not chemical ignition.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/3/1",
+                "expected": 1499.3057202809903,
+                "absolute": 2e-05
+              },
+              {
+                "file": "chemistry-summary.json",
+                "format": "json",
+                "pointer": "/ignition/delay_s",
+                "expected": 0.24461444471607777,
+                "relative": 0.001
+              }
+            ]
+          },
+          {
+            "id": "thermal-reactive-constantVolume",
+            "example": "thermal",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/model",
+                "value": "constantVolume"
+              }
+            ],
+            "scope": "Hydrogen/air coupled to a 500 K bath with total 1000 W/K conductance. Literal final T and criterion crossing come from independent host rate/energy integration, not the native solver. Every row also receives independent energy-balance and kinetics checks.",
+            "checks": [
+              {
+                "file": "built.json",
+                "format": "json",
+                "pointer": "/rows/7/1",
+                "expected": 2860.1517358103874,
+                "absolute": 0.5
+              },
+              {
+                "file": "chemistry-summary.json",
+                "format": "json",
+                "pointer": "/ignition/delay_s",
+                "expected": 0.00030565239768445807,
+                "relative": 0.01
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Route schemaxis.cantera/1: new reactorHistory operation (schema, planning, native ReactorNet mapping, independent kinetics verification, guidance, discovery, Studio starter/snippets, examples, host tests, conformance cases and native acceptance); gas/document/output guidance updated for the third table operation. thermoSweep/equilibrate behaviour unchanged and not re-reviewed beyond regression.",
+        "scope": "Route schemaxis.cantera/1: new reactorHistory operation (schema, planning, native ReactorNet mapping, independent kinetics verification, guidance, discovery, Studio starter/snippets, examples, host tests, conformance cases and native acceptance); gas/document/output guidance updated for the third table operation. thermoSweep/equilibrate behaviour unchanged and not re-reviewed beyond regression. Later (2026-10-24) review covers only native fault classification at the run boundary: NATIVE_UNAVAILABLE, UNSUPPORTED_RUNTIME and validated worker fault records with recovery text. 2026-11-04 adds fixed-bath thermalConductance/bathTemperature to reactorHistory, both pressure/volume models, native Wall readback, independent energy/kinetics and inert analytic heating/cooling, guidance/discovery/Studio/authoring/workflow-resume acceptance. No general reactor networks or spatial flow.",
         "review": [
-          "verification/2026-10-16-cantera-completion.md"
+          "verification/2026-10-16-cantera-completion.md",
+          "verification/2026-10-24-cantera-allocation.md",
+          "verification/2026-11-04-cantera-completion.md"
         ],
         "notApplicable": {
           "native-inspection": "Batch route; results are inspected through published CSV/summary panels, not a live native reactor.",

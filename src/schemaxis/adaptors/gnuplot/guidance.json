@@ -3,12 +3,14 @@
   "operations": {
     "plot": {
       "status": "reviewed",
-      "explanation": "Create a scientific plot from captured numeric CSV columns, explicit units, named series and linear/log10 axis ranges. Publish SVG, PNG, source capture and an editable trusted script. Optional symmetric y uncertainty draws measured intervals. Independent SVG coordinate and decoded PNG pixel checks compare actual native output with captured values. Fixed styles and connected samples only; no arbitrary commands, expressions, fits or unit conversion.",
+      "explanation": "Create a scientific plot from captured numeric CSV columns, explicit units, named series and linear/log10 axis ranges. Publish SVG, PNG, source capture and an editable trusted script. Optional symmetric y uncertainty draws measured intervals. Independent SVG coordinate and decoded PNG pixel checks compare actual native output with captured values. Fixed styles and connected samples only; no arbitrary commands, expressions, fits or unit conversion. A series may instead declare bounds {lower, upper}: three numeric columns (central, lower, upper) in the y-axis unit draw a shaded piecewise-linear envelope behind the central curve. The envelope connects ASSERTED bounds supplied by the data; it computes no quantile, distribution, confidence level, simultaneous coverage, reliability or model validity, and the straight interpolation between rows is display only.",
       "pitfalls": [
         "Replace the absolute CSV placeholder and match the exact declared header order.",
         "Choose increasing x values, explicit inclusive ranges and matching column/axis units.",
         "For log10, every sample and uncertainty endpoint must be positive.",
-        "Overlapping series may obscure one another and fail independent pixel identification; choose distinguishable data/colours."
+        "Overlapping series may obscure one another and fail independent pixel identification; choose distinguishable data/colours.",
+        "Use bounds for a lower/upper range that is not symmetric about the central value; use error for a symmetric absolute interval and neither for plain points. A series cannot declare both.",
+        "An envelope needs every row finite with lower < central-or-equal <= upper, strictly increasing x, linear axes, a single series and at least 24 pixels of height at each row, with an observable interior and exterior away from the tick-bearing plot borders (otherwise PLOT_BAND_UNVERIFIABLE before Gnuplot starts); nothing is clipped, sorted or imputed, so fix the data or the axis ranges."
       ],
       "examples": [
         {
@@ -18,6 +20,10 @@
         {
           "reference": "examples/schemaxis/gnuplot-logarithmic.json",
           "purpose": "Positive log10 samples with uncertainty intervals."
+        },
+        {
+          "reference": "examples/schemaxis/gnuplot-band.json",
+          "purpose": "Shaded asserted lower/upper range around a central curve."
         }
       ],
       "sources": [
@@ -31,7 +37,7 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A scientific plot document maps numeric CSV columns with declared units to connected samples and optional symmetric y error bars. Both SVG and PNG are published and independently inspected. No fitting or unit conversion is implicit.",
+          "explanation": "A scientific plot document maps numeric CSV columns with declared units to connected samples and optional symmetric y error bars or an asserted lower/upper range envelope. Both SVG and PNG are published and independently inspected. No fitting or unit conversion is implicit.",
           "sources": [
             "docs/gnuplot.md",
             "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
@@ -63,7 +69,7 @@
         },
         "/properties/source": {
           "status": "reviewed",
-          "explanation": "Absolute path to a regular local .csv file, at most 1 MiB. Replace the starter placeholder. Exact header order must match columns; every cell must be a finite ASCII number without whitespace. Source bytes are captured and hashed before execution; changing bytes invalidates reuse.",
+          "explanation": "Absolute path to a regular local .csv file, at most 1 MiB. Replace the starter placeholder. Exact header order must match columns; every cell must be a finite ASCII number without whitespace. Source bytes are captured and hashed before execution; changing bytes invalidates reuse. Inside a workflow it may instead be an $artifact reference to a verified producer publication of kind table or file (for example an Apache Arrow publishCSV artifact); the same closed CSV parsing is applied to its captured bytes before Gnuplot starts, and the column units are asserted by this document, not carried by the CSV.",
           "sources": [
             "docs/gnuplot.md",
             "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
@@ -103,7 +109,7 @@
         },
         "/properties/series": {
           "status": "reviewed",
-          "explanation": "Ordered 1\u20134 connected numeric series. Every label and colour must be distinct. Each series maps an increasing x column and a y column, with optional absolute symmetric y uncertainty. Multiple series may share columns.",
+          "explanation": "Ordered 1\u20134 connected numeric series. Every label and colour must be distinct. Each series maps an increasing x column and a y column, with optional absolute symmetric y uncertainty. Multiple series may share columns. A series chooses one interval meaning: none (points), error (symmetric absolute error bars at each row) or bounds (an asserted lower/upper range envelope).",
           "sources": [
             "docs/gnuplot.md",
             "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
@@ -135,7 +141,7 @@
         },
         "/properties/series/items/properties/y": {
           "status": "reviewed",
-          "explanation": "Name of the declared column supplying vertical central values. All samples and optional uncertainty endpoints must fit yAxis.range and remain positive on log10 axes. Unit must equal yAxis.unit.",
+          "explanation": "Name of the declared column supplying vertical central values. All samples and optional uncertainty endpoints must fit yAxis.range and remain positive on log10 axes. Unit must equal yAxis.unit. With bounds it is the central curve that lies within the envelope.",
           "sources": [
             "docs/gnuplot.md",
             "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
@@ -143,7 +149,7 @@
         },
         "/properties/series/items/properties/error": {
           "status": "reviewed",
-          "explanation": "Optional name of the column supplying nonnegative absolute symmetric y uncertainty, in yAxis.unit. A value dy draws endpoints y-dy and y+dy; omission draws only connected samples. This is an asserted interval, not a confidence level or fitted uncertainty.",
+          "explanation": "Optional name of the column supplying nonnegative absolute symmetric y uncertainty, in yAxis.unit. A value dy draws endpoints y-dy and y+dy; omission draws only connected samples. This is an asserted interval, not a confidence level or fitted uncertainty. Mutually exclusive with bounds.",
           "sources": [
             "docs/gnuplot.md",
             "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
@@ -274,6 +280,31 @@
             "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
           ],
           "defaultMeaning": "Omission selects 600 pixels."
+        },
+        "/properties/series/items/properties/bounds": {
+          "status": "reviewed",
+          "explanation": "Optional asserted lower/upper range for this series, in yAxis.unit, as two distinct declared columns. Draws a fixed 20 percent opacity shaded polygon through (x, lower) and (x, upper) joined by straight segments, behind the central y curve. Choose it over error when the interval is asymmetric or is a reported range (for example an observed minimum and maximum). It is not computed from data: no quantile, confidence level, coverage, reliability or model validity is implied, and the shading between rows is display interpolation. Requires linear axes and a plot with this single series, finite values with lower < upper and lower <= y <= upper in every row, and all bounds inside the explicit y range; nothing is clipped, sorted or filled in. Mutually exclusive with error.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ],
+          "defaultMeaning": "Omission draws no envelope."
+        },
+        "/properties/series/items/properties/bounds/properties/lower": {
+          "status": "reviewed",
+          "explanation": "Name of the declared numeric column holding the asserted lower bound of each row, in yAxis.unit. It must differ from the y and upper columns, and be strictly below upper and at most the central value in every row.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
+        },
+        "/properties/series/items/properties/bounds/properties/upper": {
+          "status": "reviewed",
+          "explanation": "Name of the declared numeric column holding the asserted upper bound of each row, in yAxis.unit. It must differ from the y and lower columns, and be strictly above lower and at least the central value in every row.",
+          "sources": [
+            "docs/gnuplot.md",
+            "https://gnuplot.sourceforge.net/docs_6.0/loc8145.html"
+          ]
         }
       }
     }

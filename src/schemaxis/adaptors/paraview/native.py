@@ -8,6 +8,8 @@ from schemaxis.bindings import native_value
 from schemaxis.core.faults import Fault, SchemaxisError
 from schemaxis.errors import fail
 from schemaxis.pipeline import digest
+from .reader_choices import is_deferred, resolve_selection
+from . import block_choices
 from .selection_query import guard_native_value
 
 
@@ -206,6 +208,14 @@ class ParaViewBackend:
         record = self.records[id(proxy)]
         for key, value in changes.items():
             binding = declaration['options'][key]
+            if binding.get('readerSelection') and is_deferred(value):
+                proxy.UpdatePipelineInformation()
+                value = resolve_selection(value, list(getattr(proxy, binding['path'][0]).Available), record['node'] + '.' + key)
+            if binding.get('blockSelection') and block_choices.is_deferred(value):
+                source = getattr(proxy, declaration['inputs']['input']['native'])
+                source.UpdatePipeline()
+                value = block_choices.resolve_blocks(value, block_choices.leaves(source.GetDataInformation().GetHierarchy()),
+                                                     record['node'] + '.' + key)
             if key == 'normal' and sum(v * v for v in value) == 0:
                 fail('INVALID_NORMAL', 'normal cannot be zero', record['node'])
             if key in ('field', 'vectors') and value[0] not in ('POINTS', 'CELLS'):

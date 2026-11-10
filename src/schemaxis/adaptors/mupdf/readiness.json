@@ -8,7 +8,7 @@
         "assumptions": "Unencrypted local PDF, passive effective CropBox View rendering, native content-order text; POSIX resource caps and MuPDF 1.28.5.",
         "constraints": "Input <=16 MiB/128 whole-document pages; <=16 distinct selected pages,36–300dpi, quarter turns; <=4096 each raster dimension,16,777,216 combined pixels. No authored scripts, passwords, URLs, crop or PDF editing. Native-repaired/malformed PDFs are rejected. Text <=1048576 characters/page and4194304 combined. PNG density tags and native resolution readback match requested DPI.",
         "inspection": "Inspect ordered page PNG/text and review-summary metadata; PNG RGB pixels compare with fresh native source reopening PNM and text. Literal fixture oracle independently qualifies geometry/colours/order/Unicode example.",
-        "recovery": "INVALID_PDF_SOURCE needs an absolute bounded regular PDF. INVALID_PDF_PAGES needs unique page numbers; PDF_PAGE_RANGE means the native document has fewer pages. ENCRYPTED_PDF needs an authorized unencrypted copy. PDF_PIXEL_LIMIT needs lower density/fewer pages. UNSUPPORTED_RUNTIME needs MuPDF 1.28.5. Retained logs/result explain process faults."
+        "recovery": "INVALID_PDF_SOURCE needs an absolute bounded regular PDF. INVALID_PDF_PAGES needs unique page numbers; PDF_PAGE_RANGE means the native document has fewer pages. PDF_GEOMETRY_INVALID names a selected page whose source MediaBox/CropBox/Rotate/UserUnit is malformed; repair or re-export that PDF. ENCRYPTED_PDF needs an authorized unencrypted copy. PDF_PIXEL_LIMIT needs lower density/fewer pages. UNSUPPORTED_RUNTIME needs MuPDF 1.28.5. Retained logs/result explain process faults."
       },
       "examples": [
         {
@@ -28,7 +28,8 @@
         }
       ],
       "conformance": [
-        "tests/unit/test_mupdf.py"
+        "tests/unit/test_mupdf.py",
+        "tests/unit/test_mupdf_allocation.py"
       ],
       "acceptance": [
         "tools/qualify_mupdf.py"
@@ -242,9 +243,10 @@
         ]
       },
       "completion": {
-        "scope": "Initial passive PDF review route, complete fields, publications and lifecycle.",
+        "scope": "Initial passive PDF review route, complete fields, publications and lifecycle. Allocation: live-run preflight refuses malformed source page geometry (odd /Rotate, non-positive /UserUnit, missing or empty MediaBox, CropBox not overlapping MediaBox) with PDF_GEOMETRY_INVALID instead of a generic verification failure or a silent US Letter substitution.",
         "review": [
-          "verification/2026-10-17-mupdf-completion.md"
+          "verification/2026-10-17-mupdf-completion.md",
+          "verification/2026-10-24-mupdf-allocation.md"
         ],
         "notApplicable": {
           "native-inspection": "No interactive native-inspection hook; batch page metadata is a publication.",

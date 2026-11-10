@@ -109,7 +109,7 @@ python3 -m schemaxis schema --version schemaxis.freecad.assembly/1 --authored
 python3 -m schemaxis schema --provider aseprite --operation pixel
 python3 -m schemaxis schema --section workflow --authored
 python3 -m schemaxis schema --section operation-execution
-python3 -m schemaxis schema --expand examples/schemaxis/showcase.json
+python3 -m schemaxis schema --expand examples/schemaxis/primitives.json
 ```
 
 `--all` defaults to the authored umbrella. Other exports default to expanded/literal

@@ -1,0 +1,148 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "prepare",
+      "document": {
+        "version": "schemaxis.apachearrow/1",
+        "operation": "prepareTable",
+        "source": "/replace/with/measurements.csv",
+        "columns": [
+          {
+            "name": "id",
+            "type": "int64",
+            "nullable": false
+          },
+          {
+            "name": "small",
+            "type": "int32",
+            "nullable": false
+          },
+          {
+            "name": "reading",
+            "type": "float64",
+            "nullable": true
+          },
+          {
+            "name": "enabled",
+            "type": "bool",
+            "nullable": true
+          },
+          {
+            "name": "label",
+            "type": "utf8",
+            "nullable": true
+          },
+          {
+            "name": "observed",
+            "type": "timestamp_us_utc",
+            "nullable": true
+          }
+        ],
+        "where": [
+          {
+            "column": "small",
+            "test": "ne",
+            "value": "1"
+          }
+        ],
+        "select": [
+          {
+            "column": "id",
+            "name": "sample_id"
+          },
+          {
+            "column": "small",
+            "name": "batch",
+            "cast": "int64"
+          },
+          {
+            "column": "reading",
+            "name": "value"
+          },
+          {
+            "column": "enabled",
+            "name": "active"
+          },
+          {
+            "column": "label",
+            "name": "name",
+            "fillNull": "unlabelled"
+          },
+          {
+            "column": "observed",
+            "name": "seen_at"
+          }
+        ],
+        "publishCSV": true
+      }
+    },
+    {
+      "id": "consume",
+      "document": {
+        "version": "schemaxis.apachearrow/1",
+        "operation": "prepareTable",
+        "source": {
+          "$artifact": "prepare",
+          "index": 2
+        },
+        "columns": [
+          {
+            "name": "sample_id",
+            "type": "int64",
+            "nullable": false
+          },
+          {
+            "name": "batch",
+            "type": "int64",
+            "nullable": false
+          },
+          {
+            "name": "value",
+            "type": "float64",
+            "nullable": true
+          },
+          {
+            "name": "active",
+            "type": "bool",
+            "nullable": true
+          },
+          {
+            "name": "name",
+            "type": "utf8",
+            "nullable": false
+          },
+          {
+            "name": "seen_at",
+            "type": "timestamp_us_utc",
+            "nullable": true
+          }
+        ],
+        "where": [
+          {
+            "column": "active",
+            "test": "isValid"
+          }
+        ],
+        "select": [
+          {
+            "column": "sample_id",
+            "name": "id"
+          },
+          {
+            "column": "name",
+            "name": "label"
+          },
+          {
+            "column": "value",
+            "name": "reading"
+          },
+          {
+            "column": "seen_at",
+            "name": "seen_at"
+          }
+        ]
+      }
+    }
+  ]
+}

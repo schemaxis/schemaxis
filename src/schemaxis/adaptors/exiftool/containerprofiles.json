@@ -1,0 +1,449 @@
+{
+ "schema": 1,
+ "basis": "Container facts are labelled P (final primary text), P-draft (public MPEG drafts w23813 and w18310 with COR1), S (ExifTool 13.55 source) and N (native 13.55 observation on hand-built fixtures). Nothing here claims pixel identity, authenticity, privacy, MWG conformance or exhaustive ExifTool coverage.",
+ "families": [
+  "exif",
+  "xmp",
+  "iptc"
+ ],
+ "containers": {
+  "tiff": {
+   "locator": "tiff",
+   "signatures": [
+    "49492a00",
+    "4d4d002a"
+   ],
+   "suffixes": [
+    ".tif",
+    ".tiff"
+   ],
+   "maxBytes": 268435456,
+   "slots": {
+    "exif": "IFD0 ExifIFD GPS InteropIFD",
+    "xmp": "IFD0 tag 0x02BC",
+    "iptc": "IFD0 tag 0x83BB or Photoshop resource 0x0404 of tag 0x8649"
+   },
+   "protected": [
+    "byteOrder",
+    "every IFD entry value except pointer and slot tags",
+    "every strip, tile and JPEG-interchange extent by index, length and bytes",
+    "InteropIFD"
+   ],
+   "allowedChanges": [
+    "planned IFD0, ExifIFD and GPS targets",
+    "tag 0x02BC",
+    "tag 0x83BB",
+    "closed native side effects of the container"
+   ],
+   "nativeSideEffects": [
+    "extent offset tag values (StripOffsets, TileOffsets) change because the writer relocates image data"
+   ],
+   "destinations": {
+    "exif": true,
+    "xmp": true,
+    "iptc": true
+   },
+   "removal": {
+    "categories": [
+     "location",
+     "captureTime",
+     "descriptive",
+     "rights",
+     "deviceIdentity"
+    ],
+    "recipes": {
+     "location": "named keys and -GPS:all=",
+     "xmp": "-XMP:all= (slot delete)",
+     "iptc": "-IPTC:all= (slot delete)",
+     "others": "named keys from the trusted listing of the capture"
+    },
+    "forbiddenArguments": [
+     "-EXIF:all=",
+     "-IFD0:all=",
+     "-all="
+    ],
+    "thumbnails": {
+     "supported": false,
+     "reason": "an IFD1 in a TIFF is a page"
+    }
+   },
+   "minimise": {
+    "supported": false,
+    "code": "MINIMISE_UNSUPPORTED_CONTAINER",
+    "reason": "IFD0 is the image description"
+   },
+   "timeLocationWrite": true,
+   "refusalCodes": [
+    "TIFF_BIG_UNSUPPORTED",
+    "TIFF_LAYOUT_OVERLAP",
+    "TIFF_IMAGE_EXTENT_INVALID",
+    "TIFF_IFD_BUDGET",
+    "TIFF_TYPE_UNSUPPORTED",
+    "TIFF_UNKNOWN_IFD_POINTER",
+    "TIFF_UNKNOWN_OFFSET_SUSPECT",
+    "TIFF_OFFSET_TAG_UNSUPPORTED",
+    "TIFF_DUPLICATE_METADATA_TAG",
+    "INVALID_EXIF_STRUCTURE",
+    "RAW_FORMAT_UNSUPPORTED",
+    "IPTC_RESOURCE_TAIL_UNSUPPORTED",
+    "TIFF_PHOTOSHOP_IPTC_CARRIER_UNSUPPORTED",
+    "TIFF_IPTC_DIGEST_UNSUPPORTED"
+   ],
+   "limitations": [
+    "tiffUnknownTagSemanticsNotInterpreted",
+    "tiffRecognisedTagSetConservative",
+    "bigTiffUnsupported",
+    "makerRawFormatsUnsupported",
+    "photoshopResourceTailOpaque",
+    "tiffPhotoshopIptcCarrierWriteUnsupported",
+    "tiffIptcDigestNotRefreshable"
+   ]
+  },
+  "dng": {
+   "locator": "tiff",
+   "signatures": [
+    "49492a00",
+    "4d4d002a"
+   ],
+   "detect": "IFD0 tag 0xC612 (DNGVersion); never by suffix",
+   "suffixes": [
+    ".dng"
+   ],
+   "maxBytes": 268435456,
+   "slots": {
+    "exif": "IFD0 ExifIFD GPS InteropIFD",
+    "xmp": "IFD0 tag 0x02BC",
+    "iptc": "IFD0 tag 0x83BB or Photoshop resource 0x0404 of tag 0x8649"
+   },
+   "protected": [
+    "byteOrder",
+    "every tag of every DNG image IFD except pointer and slot tags (colour, calibration, opcode, level and crop tags included)",
+    "DNGPrivateData byte for byte",
+    "MakerNote byte for byte",
+    "raw and preview extents by index, length and bytes"
+   ],
+   "allowedChanges": [
+    "planned IFD0, ExifIFD and GPS targets",
+    "tag 0x02BC",
+    "tag 0x83BB",
+    "closed native side effects of the container"
+   ],
+   "nativeSideEffects": [
+    "extent offset tag values (StripOffsets, TileOffsets) change because the writer relocates image data"
+   ],
+   "destinations": {
+    "exif": true,
+    "xmp": true,
+    "iptc": true
+   },
+   "removal": {
+    "categories": [
+     "location",
+     "captureTime",
+     "descriptive",
+     "rights",
+     "deviceIdentity"
+    ],
+    "recipes": {
+     "deviceIdentity": "named serial-number keys only; MakerNote and DNGPrivateData are never deleted"
+    },
+    "forbiddenArguments": [
+     "-EXIF:all=",
+     "-IFD0:all=",
+     "-all="
+    ],
+    "thumbnails": {
+     "supported": false,
+     "reason": "preview IFDs are protected image data"
+    }
+   },
+   "minimise": {
+    "supported": false,
+    "code": "MINIMISE_UNSUPPORTED_CONTAINER",
+    "reason": "IFD0 is the image description"
+   },
+   "timeLocationWrite": true,
+   "refusalCodes": [
+    "TIFF_BIG_UNSUPPORTED",
+    "TIFF_LAYOUT_OVERLAP",
+    "TIFF_IMAGE_EXTENT_INVALID",
+    "TIFF_IFD_BUDGET",
+    "TIFF_TYPE_UNSUPPORTED",
+    "TIFF_UNKNOWN_IFD_POINTER",
+    "TIFF_UNKNOWN_OFFSET_SUSPECT",
+    "TIFF_OFFSET_TAG_UNSUPPORTED",
+    "RAW_FORMAT_UNSUPPORTED",
+    "IPTC_RESOURCE_TAIL_UNSUPPORTED",
+    "TIFF_PHOTOSHOP_IPTC_CARRIER_UNSUPPORTED",
+    "TIFF_IPTC_DIGEST_UNSUPPORTED"
+   ],
+   "limitations": [
+    "tiffUnknownTagSemanticsNotInterpreted",
+    "tiffRecognisedTagSetConservative",
+    "makerNoteMayIdentifyDevice",
+    "rawImageDigestNotRecomputed",
+    "photoshopResourceTailOpaque",
+    "tiffPhotoshopIptcCarrierWriteUnsupported",
+    "tiffIptcDigestNotRefreshable"
+   ]
+  },
+  "png": {
+   "locator": "png",
+   "signatures": [
+    "89504e470d0a1a0a"
+   ],
+   "suffixes": [
+    ".png"
+   ],
+   "maxBytes": 67108864,
+   "slots": {
+    "exif": "eXIf chunk",
+    "xmp": "iTXt chunk XML:com.adobe.xmp",
+    "iptc": null
+   },
+   "protected": [
+    "every critical chunk in order (IDAT per chunk)",
+    "every ancillary chunk that is not a metadata slot or text chunk, whole and in order",
+    "text chunks other than XMP unless a removal category selects them by keyword"
+   ],
+   "allowedChanges": [
+    "insert, replace or remove eXIf before the first IDAT",
+    "insert, replace or remove the XMP iTXt before the first IDAT"
+   ],
+   "nativeSideEffects": [
+    "exifMandatoryYCbCrPositioning"
+   ],
+   "destinations": {
+    "exif": true,
+    "xmp": true,
+    "iptc": false
+   },
+   "removal": {
+    "categories": [
+     "location",
+     "captureTime",
+     "descriptive",
+     "rights",
+     "deviceIdentity"
+    ],
+    "recipes": {
+     "exif": "category removals: named keys from the trusted listing of the capture; minimise (AM-19): -EXIF:all= (the E2 closed reset, only when the Exif block holds more than the kept rendering values) and then the exact keep-set write-back as numeric assignments, for example -IFD0:Orientation#=6, with the capture's -ExifByteOrder=",
+     "xmp": "-XMP:all=",
+     "text": "PNG:<Keyword> keys the locator reports as tEXt, zTXt or iTXt"
+    },
+    "forbiddenArguments": [
+     "-PNG:all=",
+     "-all="
+    ]
+   },
+   "minimise": {
+    "supported": true,
+    "rule": "AM-17 semantics with the AM-19 method: the Exif block is reset with -EXIF:all= (only when it holds more than the kept values), the XMP block with -XMP:all= and every PNG text chunk by its PNG:<Keyword> key, never -all= or -PNG:all=; the independently read E2 keep-set (Exif Orientation, YCbCrPositioning, ColorSpace, InteropIndex) is written back with numeric assignments such as -IFD0:Orientation#=6 and the capture's -ExifByteOrder=; refused with MINIMISE_RENDERING_UNPRESERVED when a keep-set value cannot be kept faithfully; the closed residual proof, the native closed diff and the byte-level protection of gamma, colour profile and image data stay authoritative",
+    "keep": [
+     "EXIF:Orientation",
+     "EXIF:YCbCrPositioning",
+     "EXIF:ColorSpace"
+    ],
+    "residuals": [
+     "pngModificationTimeKept"
+    ]
+   },
+   "timeLocationWrite": true,
+   "refusalCodes": [
+    "PNG_CRC_INVALID",
+    "PNG_TRAILING_BYTES",
+    "PNG_METADATA_AFTER_IDAT",
+    "PNG_LEGACY_RAW_PROFILE",
+    "PNG_DUPLICATE_CHUNK",
+    "PNG_CHUNK_ORDER_INVALID",
+    "XMP_BOUND"
+   ],
+   "limitations": [
+    "pngLegacyRawProfileReadOnly",
+    "iptcNotAvailableInContainer"
+   ]
+  },
+  "webp": {
+   "locator": "riff",
+   "signatures": [
+    "52494646"
+   ],
+   "detect": "RIFF header with WEBP form type at byte 8",
+   "suffixes": [
+    ".webp"
+   ],
+   "maxBytes": 67108864,
+   "slots": {
+    "exif": "EXIF chunk",
+    "xmp": "XMP chunk",
+    "iptc": null
+   },
+   "protected": [
+    "VP8X canvas and the I, L and A flags",
+    "ICCP, ANIM, every ANMF, ALPH, VP8, VP8L and unknown chunks, padding bytes included, in order"
+   ],
+   "allowedChanges": [
+    "EXIF and XMP chunk insert, replace or remove after the image data",
+    "VP8X E and X flags",
+    "VP8X creation or removal only as predicted and proved by the AM-16R rules",
+    "RIFF size"
+   ],
+   "nativeSideEffects": [
+    "vp8xOutcomePredictedAndProved",
+    "exifMandatoryYCbCrPositioning"
+   ],
+   "destinations": {
+    "exif": true,
+    "xmp": true,
+    "iptc": false
+   },
+   "removal": {
+    "categories": [
+     "location",
+     "captureTime",
+     "descriptive",
+     "rights",
+     "deviceIdentity"
+    ],
+    "recipes": {
+     "exif": "category removals: named keys from the trusted listing of the capture; minimise (AM-19): -EXIF:all= (the E2 closed reset, only when the Exif block holds more than the kept rendering values) and then the exact keep-set write-back as numeric assignments, for example -IFD0:Orientation#=6, with the capture's -ExifByteOrder=",
+     "xmp": "-XMP:all="
+    },
+    "forbiddenArguments": [
+     "-all=",
+     "ICC profile deletion"
+    ],
+    "vp8x": {
+     "rule": "AM-16R",
+     "refusalCode": "WEBP_METADATA_REMOVAL_LAYOUT_UNSUPPORTED",
+     "afterWriteCodes": [
+      "WEBP_LAYOUT_INVALID_AFTER_WRITE",
+      "WEBP_FLAGS_INCONSISTENT",
+      "PRESERVATION_MISMATCH"
+     ]
+    }
+   },
+   "minimise": {
+    "supported": true,
+    "rule": "AM-17 semantics with the AM-19 method: the Exif block is reset with -EXIF:all= (only when it holds more than the kept values) and the XMP block with -XMP:all=, never -all=; the independently read E2 keep-set (Exif Orientation, YCbCrPositioning, ColorSpace, InteropIndex) is written back with numeric assignments such as -IFD0:YCbCrPositioning#=2 and the capture's -ExifByteOrder=; refused with MINIMISE_RENDERING_UNPRESERVED when a keep-set value cannot be kept faithfully; the closed residual proof, the native closed diff, the AM-16R layout proof and the byte-level protection of ICC, alpha, animation and image data stay authoritative",
+    "keep": [
+     "EXIF:Orientation",
+     "EXIF:YCbCrPositioning",
+     "EXIF:ColorSpace"
+    ],
+    "residuals": [
+     "webpVp8xRemovedWhenNoChunkNeedsIt"
+    ]
+   },
+   "timeLocationWrite": true,
+   "refusalCodes": [
+    "RIFF_SIZE_MISMATCH",
+    "RIFF_TRAILING_BYTES",
+    "RIFF_PADDING_INVALID",
+    "WEBP_EXIF_PREFIX_UNSUPPORTED",
+    "WEBP_DUPLICATE_METADATA_CHUNK",
+    "WEBP_CANVAS_MISMATCH",
+    "WEBP_LAYOUT_UNSUPPORTED",
+    "WEBP_BITSTREAM_HEADER_SHORT",
+    "WEBP_METADATA_REMOVAL_LAYOUT_UNSUPPORTED",
+    "WEBP_LAYOUT_INVALID_AFTER_WRITE",
+    "WEBP_FLAGS_INCONSISTENT"
+   ],
+   "limitations": [
+    "iptcNotAvailableInContainer",
+    "rf64Unsupported"
+   ]
+  },
+  "heif": {
+   "locator": "isobmff",
+   "signatures": [
+    "ftyp"
+   ],
+   "detect": "ftyp box at byte 4 with brand heic, heix, mif1 or avif",
+   "suffixes": [
+    ".heic",
+    ".heif",
+    ".avif"
+   ],
+   "maxBytes": 67108864,
+   "slots": {
+    "exif": "Exif item linked to the primary image by iref cdsc",
+    "xmp": "mime item application/rdf+xml linked by iref cdsc",
+    "iptc": null
+   },
+   "protected": [
+    "ftyp, hdlr and pitm",
+    "whole infe box and reassembled payload of every item that is not a primary-image metadata slot",
+    "iprp (ipco and ipma)",
+    "every iref entry except cdsc entries from slot items",
+    "other meta children and top-level boxes other than ftyp, meta, mdat, free and skip"
+   ],
+   "allowedChanges": [
+    "slot item payloads with their iinf, iloc and cdsc entries",
+    "iloc offsets of every item (relocation)",
+    "mdat size and position",
+    "free and skip boxes"
+   ],
+   "nativeSideEffects": [
+    "QuickTime:MediaDataSize",
+    "QuickTime:MediaDataOffset",
+    "exifMandatoryYCbCrPositioning"
+   ],
+   "destinations": {
+    "exif": true,
+    "xmp": true,
+    "iptc": false
+   },
+   "removal": {
+    "categories": [],
+    "unsupportedCode": "HEIF_REMOVAL_UNSUPPORTED",
+    "reason": "native all= leaves Exif and XMP items with extent_length 0, which resolves to the image payload"
+   },
+   "minimise": {
+    "supported": false,
+    "code": "MINIMISE_UNSUPPORTED_CONTAINER",
+    "reason": "removal is unsupported"
+   },
+   "timeLocationWrite": true,
+   "refusalCodes": [
+    "HEIF_BOUND",
+    "HEIF_IMPLIED_EXTENT",
+    "HEIF_EXTENT_OVERLAP",
+    "HEIF_MULTIPLE_METADATA_ITEMS",
+    "HEIF_SHARED_METADATA_ITEM",
+    "HEIF_REFERENCE_INVALID",
+    "HEIF_PROTECTED_ITEM",
+    "HEIF_EXTERNAL_DATA",
+    "HEIF_ITEM_CONSTRUCTION_UNSUPPORTED",
+    "HEIF_EXIF_HEADER_INVALID",
+    "HEIF_REMOVAL_UNSUPPORTED",
+    "HEIF_METADATA_ITEM_CREATION_UNSUPPORTED",
+    "HEIF_EMPTY_METADATA_ITEM"
+   ],
+   "limitations": [
+    "heifSpecDraftOnly",
+    "heifRemovalUnsupported",
+    "heifNativeMetadataCreationNotReproducible",
+    "iptcNotAvailableInContainer"
+   ]
+  }
+ },
+ "unsupported": {
+  "bigtiff": {
+   "code": "TIFF_BIG_UNSUPPORTED",
+   "reason": "BigTIFF is not writable by ExifTool 13.55"
+  },
+  "makerRaw": {
+   "code": "RAW_FORMAT_UNSUPPORTED",
+   "reason": "maker TIFF variants have image and maker structures that cannot be protected generally"
+  },
+  "jpegxl": {
+   "code": "UNSUPPORTED_MEDIA",
+   "reason": "not located"
+  },
+  "gif": {
+   "code": "UNSUPPORTED_MEDIA",
+   "reason": "not located"
+  }
+ }
+}

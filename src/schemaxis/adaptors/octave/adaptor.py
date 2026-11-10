@@ -10,6 +10,7 @@ import shutil
 from schemaxis.artifacts import atomic_json, file_digest
 from schemaxis.core.declarations import validate_arguments
 from schemaxis.core.faults import SchemaxisError
+from dataclasses import replace
 from schemaxis.errors import fail, keys
 from schemaxis.native_command import execute
 from schemaxis.tabular import read_csv, close
@@ -38,6 +39,31 @@ DECLARATIONS={name:{'native':name,'kinds':['table'], 'options':{key:{'value':val
               for name,options in OPTIONS.items()}
 
 
+RECOVERY={
+ 'INVALID_SAMPLING':'Make x strictly increasing and, for fft, uniformly spaced with 4 to 8192 samples in a power of two; keep a smoothing window no larger than the sample count. Then plan again.',
+ 'SINGULAR_FIT':'Provide x values that vary; a straight line cannot be fitted to one abscissa. Then plan again.',
+ 'INVALID_TABLE':'Provide equal-length x and y with at least two finite numbers within +/-1e100, and name existing CSV columns.',
+ 'RESOURCE_LIMIT':'Reduce sample counts or the number of nodes so the run totals at most 100000 intermediate samples.'}
+
+
+def _reference(prepared,sources):
+    """Independent host arithmetic with the stable recovery attached to each fault."""
+    try:return evaluate(prepared,sources)
+    except SchemaxisError as error:
+        found=error.fault
+        if found.recovery or found.code not in RECOVERY:raise
+        raise SchemaxisError(replace(found,recovery=RECOVERY[found.code])) from None
+
+
+def _literal(prepared):
+    """Nodes computable without reading any CSV; file-dependent nodes are checked at run."""
+    known=[];names=set()
+    for node in prepared['nodes']:
+        if node['filter']=='readCSV' or (node['filter'] not in SOURCES and node['inputs']['input'] not in names):continue
+        known.append(node);names.add(node['id'])
+    return {'nodes':known}
+
+
 def plan(document):
     keys(document,('version','nodes','outputs'),'$')
     if document.get('version')!='schemaxis.octave/1':fail('UNSUPPORTED_VERSION','expected schemaxis.octave/1')
@@ -61,6 +87,7 @@ def plan(document):
     outputs=document.get('outputs')
     if not isinstance(outputs,list) or not outputs or any(not isinstance(v,str) or v not in seen for v in outputs) or len(set(outputs))!=len(outputs):
         fail('INVALID_SELECTION','outputs must name distinct declared tables')
+    _reference(_literal({'nodes':prepared}),{})  # data known now must meet the numerical contract now
     return {'version':'schemaxis.octave.plan/1','nodes':prepared,'outputs':list(outputs),'expectedPublications':len(outputs)+1}
 
 
@@ -113,7 +140,7 @@ def run(document,directory,*,executable=None,timeout=300):
             provenance[node['id']]={'file':str(source),'sha256':before}
         atomic_json(directory/'sources.json',provenance)
         sources=_sources(prepared,directory)
-        evaluate(prepared,sources)  # reject invalid sampling/budgets before launching native code
+        _reference(prepared,sources)  # reject invalid sampling/budgets before launching native code
         from .worker import WORKER
         (directory/'worker.m').write_text(WORKER)
         atomic_json(directory/'request.json',{'plan':prepared,'sources':sources})

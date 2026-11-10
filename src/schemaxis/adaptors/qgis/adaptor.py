@@ -11,7 +11,7 @@ import sqlite3
 import stat
 import time
 from schemaxis.core.declarations import validate_arguments
-from schemaxis.core.faults import SchemaxisError
+from schemaxis.core.faults import Fault, SchemaxisError
 from schemaxis.artifacts import atomic_json, file_digest
 from schemaxis.errors import fail, keys
 from schemaxis.dispatch import cancellation_requested
@@ -199,10 +199,23 @@ def run(document,directory,*,executable=None,timeout=300):
         raise error
 
 
+def reject(location,message):
+    """A retained-evidence fault; the code is stable for genuine legacy receipts."""
+    raise SchemaxisError(Fault('VERIFICATION_FAILED',message,location,'verification',recovery=
+        'Do not trust this directory. Restore the complete original output directory from its retained copy, '
+        'or rerun the workflow into a fresh directory; verification never repairs evidence.'))
+
+
 def verify(directory, require_result=True):
     directory=Path(directory).absolute()
     try:
-        def read(name):return json.loads((directory/name).read_text())
+        def read(name):
+            path=directory/name
+            if not path.is_file() or path.is_symlink():reject(name,'retained evidence file is missing or not a regular file')
+            try:value=json.loads(path.read_text())
+            except (ValueError,RecursionError):reject(name,'retained evidence is not valid JSON')
+            if not isinstance(value,dict):reject(name,'retained evidence must be a JSON object')
+            return value
         def check(condition,message):
             if not condition:fail('VERIFICATION_FAILED',message)
         prepared=plan(read('authored.json'));result=read('result.json');receipt=read('verification.json')
@@ -224,7 +237,7 @@ def verify(directory, require_result=True):
         required += [record['retained'] for record in sources.values()]
         for name in required:
             path=directory/name
-            check(path.is_file() and not path.is_symlink(),'required regular file missing: '+name)
+            if not path.is_file() or path.is_symlink():reject(name,'required regular file missing: '+name)
         built=read('built.json');reopened=read('reopened.json')
         check(built['stage']=='build' and reopened['stage']=='reopen' and built['pid']!=reopened['pid'],'missing fresh-process readback')
         check(built['plan']==prepared and reopened['plan']==prepared,'native plan differs')
@@ -243,7 +256,8 @@ def verify(directory, require_result=True):
             w,h,pixels=read_png(directory/'preview.png')
             check((w,h)==(640,480) and len(set(pixels[i:i+4] for i in range(0,len(pixels),4)))>1,'map preview is blank or wrong size')
         return {'verified':True,'artifacts':len(receipt['artifacts']),'features':snap['count'],'crs':snap['crs'],'runtime':reopened['runtime']}
-    except (OSError,ValueError,KeyError,TypeError,sqlite3.Error) as error:fail('VERIFICATION_FAILED','missing or invalid GIS evidence: '+str(error))
+    except (OSError,ValueError,KeyError,TypeError,AttributeError,ArithmeticError,RecursionError,sqlite3.Error) as error:
+        reject('$','missing or invalid GIS evidence: '+type(error).__name__+': '+str(error))
 
 
 # Shared authored-input, analytic-visit and verification boundary.

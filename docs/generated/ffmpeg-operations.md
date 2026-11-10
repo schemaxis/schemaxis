@@ -8,7 +8,33 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[encodeFrames](#encodeframes), [encodeSheet](#encodesheet), [encodeVideo](#encodevideo)
+[encodeAudio](#encodeaudio), [encodeFrames](#encodeframes), [encodeSheet](#encodesheet), [encodeVideo](#encodevideo), [extractAudio](#extractaudio), [muxReview](#muxreview)
+
+## encodeAudio
+
+Publishes one prepared PCM16 WAV (for example SoX or eSpeak NG output) as a shareable AAC-LC .m4a, and refuses to publish unless the result meets two budgets you declare: a maximum file size and a maximum mean absolute waveform error. The file is encoded with FFmpeg's native AAC-LC encoder at the bitrate you choose, then decoded again by a separate native pass at the source rate and channel count; the decoded frame count must equal the source exactly on a timeline that starts at zero under the MP4 edit list, and every interleaved sample is compared with your WAV. The error figure is the integer sum of absolute sample differences divided by the sample count, compared exactly (as a rational number) with your budget, endpoints accepted. It is a waveform number in signed 16-bit sample units: it does not measure or certify listening quality, audibility, speech recognition accuracy or who is speaking. AAC is lossy, so the result is never lossless or high quality, the decoded waveform can clip at full scale, and the budget bounds only the average error (the largest single-sample error is reported). Nothing is resampled, mixed, normalised, trimmed or padded. Publishes audio.m4a and audio-publish-summary.json; the decoded WAV is retained only as internal evidence.
+
+Common mistakes and assumptions:
+
+- maxMeanPCMError is mean absolute error in PCM16 sample units (0 to 65535), not decibels or a quality score; 0 only passes for a bit-exact decode, which AAC does not give except for silence.
+- bitrateKbps is the encoder's target: the native encoder clamps by sample rate (16 kHz mono produced the same file at 96, 128 and 192 kbps) and the size is not monotonic in the request, so the achieved size is reported and maxBytes decides.
+- Only canonical 44-byte PCM16 WAV at 16000, 22050, 44100 or 48000 Hz (mono or stereo, at most 600 s and 32 MiB) is accepted; other rates are UNSUPPORTED_AUDIO because nothing is resampled. Convert with SoX first.
+- A file that exceeds maxBytes or the error budget is refused (DELIVERABLE_NOT_MET) and nothing is published.
+- The source WAV is captured once and is an unauthenticated trust anchor; verification does not re-encode, so it proves the published file decodes within your budgets, not that this tool produced it.
+- In a workflow, file may be a $artifact reference to a file artifact such as eSpeak NG narration (examples/schemaxis/ffmpeg-audio-publish-workflow.json). Its 96 kbit/s, 8 MiB and 2000 sample-unit budgets are illustrative, not a quality preset; nothing there is a listening, recognition or accent check.
+
+Native binding: `ffmpeg`. Output kind: `["video"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `threads` | Native thread budget (integer 1..16), default 1. Match scheduler allocation; it does not change the published audio. | `{"type":"integer","minimum":1,"maximum":16}` | `1` |
+| `file` | Absolute path of one local canonical PCM16 .wav (44-byte header, mono or stereo, 16000, 22050, 44100 or 48000 Hz, at most 600 seconds and 32 MiB), or a workflow reference to an earlier verified file artifact such as SoX or eSpeak NG output. The bytes are captured once and re-checked around the native launches. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `bitrateKbps` | Required AAC encoder target bitrate: 64, 96, 128 or 192 kilobits per second. It is a target, not a measurement: the encoder clamps by sample rate and the achieved size is reported in the summary. | `{"type":"enum","values":[64,96,128,192]}` | **required** |
+| `maxBytes` | Required size budget of audio.m4a in bytes (1 to 33554432). The encoder output is capped just above it, so a larger file is refused (never truncated); a file exactly this size is accepted. | `{"type":"integer","minimum":1,"maximum":33554432}` | **required** |
+| `maxMeanPCMError` | Required waveform error budget: the mean absolute difference between every decoded and source sample, in signed 16-bit sample units (0 to 65535, finite). Compared exactly as a rational number against this decimal, endpoints accepted. It is not a listening, audibility, recognition or identity measure. | `{"type":"number","minimum":0,"maximum":65535}` | **required** |
+
 
 ## encodeFrames
 
@@ -20,6 +46,7 @@ Common mistakes and assumptions:
 - All frames must be 8-bit RGB or RGBA, non-interlaced PNGs of identical size; palette, greyscale and 16-bit PNGs are rejected.
 - H.264 needs even width and height; use FFV1 or re-render at an even size.
 - Transparent areas are composited onto black, and no audio track is written.
+- Verifying this publication, standalone or at the end of a run, decodes it again with a trusted FFmpeg and ffprobe beside it, taken from the executable argument, stored configuration or FFMPEG_EXECUTABLE (INTERPRETER_NOT_FOUND otherwise; PATH and receipt paths are never used). Running resolves the same choice, in the same order, and refuses with INTERPRETER_NOT_FOUND before creating the output directory or starting any native process. The captured copies in the run directory remain the trust anchor: a coherent rewrite of them is not detected against the original paths.
 
 Native binding: `ffmpeg`. Output kind: `["video"]`.
 
@@ -42,6 +69,7 @@ Common mistakes and assumptions:
 - Every frame duration must be a whole number of video frames: at 25 fps durations must be multiples of 40 ms, otherwise UNSUPPORTED_TIMING.
 - Metadata order is playback order; tags in the metadata do not select or reorder frames.
 - All rectangles must have the same size, and the sheet's pixel size must match the metadata width and height.
+- Verifying this publication, standalone or at the end of a run, decodes it again with a trusted FFmpeg and ffprobe beside it, taken from the executable argument, stored configuration or FFMPEG_EXECUTABLE (INTERPRETER_NOT_FOUND otherwise; PATH and receipt paths are never used). Running resolves the same choice, in the same order, and refuses with INTERPRETER_NOT_FOUND before creating the output directory or starting any native process. The captured copies in the run directory remain the trust anchor: a coherent rewrite of them is not detected against the original paths.
 
 Native binding: `ffmpeg`. Output kind: `["video"]`.
 
@@ -64,7 +92,9 @@ Common mistakes and assumptions:
 
 - Output fps changes playback speed; it never samples or interpolates frames.
 - The entire source must fit the bounds even if the selected range is short.
+- A truncated or corrupt source that FFmpeg reports errors for is INVALID_RESOURCE, not a shorter clip; re-export it. FFV1 level 1 has no checksums, so silent payload corruption cannot be detected.
 - Only silent progressive single-stream MP4/H264 yuv420p or MKV/FFV1 bgr0; no rotation or non-square pixels.
+- Verifying this publication, standalone or at the end of a run, decodes it again with a trusted FFmpeg and ffprobe beside it, taken from the executable argument, stored configuration or FFMPEG_EXECUTABLE (INTERPRETER_NOT_FOUND otherwise; PATH and receipt paths are never used). Running resolves the same choice, in the same order, and refuses with INTERPRETER_NOT_FOUND before creating the output directory or starting any native process. The captured copies in the run directory remain the trust anchor: a coherent rewrite of them is not detected against the original paths.
 
 Native binding: `ffmpeg`. Output kind: `["video"]`.
 
@@ -73,8 +103,62 @@ Inputs: none.
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
 | `fps` | Output frames per second (integer 1..120), default 25. Every selected source frame becomes one output frame; lowering fps slows playback. Set source fps to preserve speed; no interpolation or frame dropping. | `{"type":"integer","minimum":1,"maximum":120}` | `25` |
-| `codec` | Output codec, default h264: delivery MP4 uses lossy YUV420 and requires even dimensions; ffv1 produces Matroska and preserves decoded source RGB exactly. Earlier H264 source loss cannot be recovered. | `{"type":"enum","values":["h264","ffv1"]}` | `"h264"` |
+| `codec` | Output codec, default h264: delivery MP4 uses lossy YUV420 and requires even dimensions; ffv1 produces Matroska and preserves decoded source RGB exactly. Earlier H264 source loss cannot be recovered. H.264 output declares BT.601 limited-range colour (smpte170m/tv), which the native probe must confirm; FFV1 stays full-range RGB. | `{"type":"enum","values":["h264","ffv1"]}` | `"h264"` |
 | `threads` | Native encoder/source decoder thread budget (integer 1..16), default 1. Match scheduler allocation; increasing threads does not change frame selection or timing. | `{"type":"integer","minimum":1,"maximum":16}` | `1` |
-| `file` | Required absolute .mp4 or .mkv source path. The file is copied before native use; editing the external source invalidates scheduler reuse. MP4 must be H264 yuv420p, MKV FFV1 bgr0; exactly one silent progressive video stream. Entire source <=600 frames,32 MiB compressed and192 MiB RGB. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `file` | Required absolute .mp4 or .mkv source path. The file is copied before native use; editing the external source invalidates scheduler reuse. MP4 must be H264 yuv420p, MKV FFV1 bgr0; exactly one silent progressive video stream. Entire source <=600 frames,32 MiB compressed and192 MiB RGB. The bytes must actually be the container the extension names (a Matroska file renamed .mp4 is UNSUPPORTED_VIDEO; empty, too short for a container signature, or non-Matroska/MP4 bytes are INVALID_RESOURCE), checked before FFmpeg starts; a source over the frame or size limits is RESOURCE_LIMIT. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
 | `startFrame` | Zero-based first decoded presentation-frame index, included in the output. Omit for 0, the first presented frame after native MP4 edit-list interpretation. Must be less than endFrame; units are frames, not seconds. | `{"type":"integer","minimum":0,"maximum":599}` | `0` |
 | `endFrame` | Required zero-based exclusive end index: startFrame 1/endFrame 4 selects indices 1,2,3. Must exceed startFrame and fit the full source frame count; units are frames, not seconds. | `{"type":"integer","minimum":1,"maximum":600}` | **required** |
+
+
+## extractAudio
+
+Turns the speech or soundtrack of one phone or camera recording (an MP4 or M4A file with AAC audio, optionally with one H.264 video track) into a canonical PCM16 WAV that SoX, FLAC and whisper.cpp accept. You name the file and the zero-based global stream index of its audio track; nothing is chosen for you. The WAV keeps the recording's own sample rate and channel count (no resampling or mixing), the frame count is counted from the decoded audio frames rather than assumed from the container, and an audio-summary.json records the codec, stream index, decoded geometry and duration. AAC is lossy: the WAV is what FFmpeg's decoder produces, not the uncompressed recording that was encoded, and the result is a machine draft whose recognition accuracy and human review are never certified. Verification decodes the captured compressed bytes again with a trusted FFmpeg and compares every PCM byte with the published WAV. Limits: one AAC-LC stream, mono or stereo, 8-96 kHz, at most 600 seconds, 64 MiB of compressed input and a 32 MiB WAV; extra audio, subtitle, data or cover-art streams, chapters, fragmented or externally referenced MP4 and other codecs are refused.
+
+Common mistakes and assumptions:
+
+- streamIndex is the global stream index (ffprobe's index), not the audio-only position: in a video file with the video first the audio is usually index 1. A wrong index is INVALID_ARGUMENT naming the audio stream index.
+- Only AAC-LC (mp4a) in MP4/M4A is accepted. HE-AAC, ALAC, MP3, Opus, AC-3, surround, 7350 Hz or above 96 kHz are UNSUPPORTED_AUDIO; extra audio, subtitle, timed-text, data, cover-art or chapter tracks are refused rather than ignored.
+- The decoded frame count follows the container edit list (encoder priming and padding) as applied by FFmpeg; it is counted from the decoded audio frames, so it is neither packets x 1024 nor the container duration.
+- The WAV is a lossy decode: do not treat it as the original uncompressed recording, and do not treat transcripts made from it as verified. Rate and channels are not changed here; use SoX conform for a 16 kHz mono speech WAV.
+- Truncated, damaged or non-MP4 files are refused (INVALID_RESOURCE) before or by the decoder and nothing partial is published; a source over 64 MiB, 600 seconds or 32 MiB of WAV is RESOURCE_LIMIT. A runtime failure (a loader or allocation error, or output that FFmpeg did not produce) is RUNNER_FAILED, not INVALID_RESOURCE: source validity was not established, so inspect the runtime and retry.
+- Verification needs a trusted FFmpeg with ffprobe beside it from the executable argument, stored configuration or FFMPEG_EXECUTABLE; PATH and receipt paths are never used. The captured file in the run directory is an unauthenticated trust anchor: a coherent rewrite of capture and evidence is not detected, and no encoder history or recording authenticity is claimed.
+- The bounded ffprobe pass reads at most 4 MiB of probe output, 17600 packets and 17500 decoded frames. A file with very large metadata tags (for example a multi-megabyte lyrics tag) or an unusually long edit-list lead-in is refused as RESOURCE_LIMIT, never truncated and never blamed on the source; remove the tags (re-mux without metadata) or shorten the file. The limits cover 960-sample AAC-LC frames within a 32 MiB WAV, but this is not exhaustive AAC-LC or MP4 coverage.
+
+Native binding: `ffmpeg`. Output kind: `["video"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `threads` | Native decode/probe thread budget (integer 1..16), default 1. Match scheduler allocation; it does not change the published audio. | `{"type":"integer","minimum":1,"maximum":16}` | `1` |
+| `file` | Absolute path of one local .mp4 or .m4a file with AAC-LC audio (mono or stereo, 8000-96000 Hz, at most 600 seconds and 64 MiB), or a workflow reference to an earlier verified file artifact. The bytes are captured once and re-checked; the path is not read again. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `streamIndex` | Required zero-based global stream index (0 to 15, as ffprobe numbers streams) of the AAC audio stream to extract. It is never inferred: pick the index of the audio track, which is 0 for an M4A voice note and usually 1 in a video file whose video track comes first. | `{"type":"integer","minimum":0,"maximum":15}` | **required** |
+
+
+## muxReview
+
+Combines one captured silent FFV1 Matroska video, one canonical PCM16 WAV and one strict UTF-8 SubRip (SRT) file into a single review movie, review.mkv, with exactly three streams: FFV1 video, PCM16 audio and a selectable SubRip caption track. Video and audio are stream-copied, so nothing is re-encoded, trimmed, padded or resampled; captions are soft, never burned in. Choose it to hand a reviewer or a publishing step one reusable file from an encodeVideo/encodeFrames result, a SoX speech WAV and whisper.cpp captions (the encodeVideo handoff is run natively, and one four-job SoX and whisper.cpp chain was run once natively on a single clip; that is one limited proof, not a corpus). The captions are a machine draft unless you declare otherwise: neither recognition accuracy nor human review is ever certified.
+
+Common mistakes and assumptions:
+
+- Audio and video must differ in duration by at most one video frame period (exact rational arithmetic); otherwise MEDIA_DURATION_MISMATCH. Trim or pad the audio with SoX or select the matching video range; this operation never does.
+- Every caption must end within the video duration (CAPTIONS_OUT_OF_RANGE); captions are never clipped or retimed.
+- Captions must be strict plain-text SRT: contiguous indices from 1, HH:MM:SS,mmm timings that are positive, monotonic and non-overlapping, no markup (< > { } \), no control, bidirectional or invisible characters, no leading or trailing spaces on a line, at most 1000 cues of 4 lines and 500 characters.
+- Audio must be canonical PCM16 WAV (fmt then data chunk only, mono or stereo, 8000-96000 Hz, up to 32 MiB). LIST/fact chunks, float, 8-bit, extensible and compressed audio are UNSUPPORTED_AUDIO; AAC and MP3 are not supported.
+- The video must be a silent single-stream Matroska/FFV1 bgr0 file such as an encodeVideo or encodeFrames FFV1 result; MP4/H.264 and files with audio or subtitle streams are UNSUPPORTED_VIDEO (the existing operations still refuse extra streams).
+- Verifying a muxReview publication decodes the published file again, so it needs a trusted FFmpeg with ffprobe beside it from the executable argument, stored configuration or FFMPEG_EXECUTABLE (INTERPRETER_NOT_FOUND otherwise); a bare schemaxis verify has no executable flag. Receipt paths and PATH are never used; running resolves the same choice (executable argument or --ffmpeg, stored configuration, then FFMPEG_EXECUTABLE) and refuses with INTERPRETER_NOT_FOUND before creating the output directory or starting any native process, then passes that choice to its own verification.
+- Verification judges the captured sources (the trust anchor, held once; the original authored paths are not resolved again) and requires the fresh decode to reproduce the retained facts by exact type, and the published file to start video and audio at 0 s, to carry exactly the captured frames at index/fps (millisecond rounding allowed) and to carry PCM packets on the cumulative sample clock with no gap or overlap; a later first caption is allowed. It verifies timeline consistency, not speech accuracy, and does not authenticate a coherent rewrite of the captures against the original paths.
+- A failed or cancelled run removes review.mkv on a best-effort basis; only a succeeded, verified result is a verified publication.
+- The default captionStatus machineDraft says the text came from a recogniser. declaredHumanReviewed is only your declaration; it is recorded, never verified, and no recognition accuracy is certified.
+
+Native binding: `ffmpeg`. Output kind: `["video"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `threads` | Native copy/readback thread budget (integer 1..16), default 1. Match scheduler allocation; it does not change the published bytes. | `{"type":"integer","minimum":1,"maximum":16}` | `1` |
+| `video` | Required absolute .mkv path of a silent single-stream Matroska/FFV1 bgr0 video (for example an encodeVideo or encodeFrames FFV1 result via $artifact). Copied before native use; at most 600 frames, 32 MiB, 4096 px per side, constant integer fps 1..120. Audio, subtitles, MP4 and H.264 are UNSUPPORTED_VIDEO; its frames are decoded and must match the published stream exactly. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `audio` | Required absolute .wav path of canonical PCM16 audio (mono or stereo, 8000-96000 Hz, up to 32 MiB, fmt then data chunk only), for example a SoX speech WAV (one SoX chain has been run natively on a single clip) or assembled narration. Its duration must be within one video frame period of the video; it is copied unchanged, never trimmed, padded or resampled, and its decoded samples must equal the source bytes. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `captions` | Required absolute .srt path of strict UTF-8 plain-text SubRip, for example whisper.cpp captions.srt (one whisper.cpp chain has been run natively on a single clip). Cues must be contiguous from index 1, monotonic, positive, non-overlapping, inside the video duration and free of markup/control/bidi characters; at most 1000 cues, 256 KiB. Extracted cue text and millisecond timings must equal the source exactly. The cue text is not checked for accuracy. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `captionStatus` | Declared status of the caption text: machineDraft (default; unreviewed recogniser output) or declaredHumanReviewed (you state a person reviewed it). Recorded in the receipt and result either way; it is a declaration, never verified, and recognition accuracy is never certified. | `{"type":"enum","values":["machineDraft","declaredHumanReviewed"]}` | `"machineDraft"` |

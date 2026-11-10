@@ -6,7 +6,26 @@ from schemaxis.core.faults import SchemaxisError, Fault
 from schemaxis.adaptors.paraview.job import plan, schedule, identities, atomic_json
 from schemaxis.pipeline import RuntimeClosure, evaluate
 from schemaxis.adaptors.paraview.native import ParaViewBackend, geometry, measurement
-from schemaxis.adaptors.paraview.publication import Renderer, style, camera_values
+from schemaxis.adaptors.paraview.publication import Renderer, style, camera_values, scene_bounds, observed_slice_plane
+from schemaxis.artifact_names import OutputSequence, VERSION as NAMING_VERSION
+from schemaxis.adaptors.paraview.output_names import image_properties
+
+
+def runtime_identity():
+    """Self-reported ParaView release, build and platform; never fails the run."""
+    try:
+        import platform
+        from paraview import servermanager
+        from paraview.simple import GetParaViewSourceVersion
+        manager = servermanager.vtkSMProxyManager
+        version = '.'.join(str(part()) for part in (manager.GetVersionMajor, manager.GetVersionMinor,
+                                                    manager.GetVersionPatch))
+        return {'application': 'paraview', 'version': version, 'build': GetParaViewSourceVersion(),
+                'platform': {'system': platform.system(), 'machine': platform.machine(),
+                             'python': platform.python_version()},
+                'source': 'paraview.servermanager.vtkSMProxyManager'}
+    except Exception as error:
+        return {'application': 'paraview', 'fault': type(error).__name__ + ': ' + str(error)}
 
 
 def execute(document, directory):
@@ -22,13 +41,17 @@ def execute(document, directory):
         fail('UNSUPPORTED_EXECUTION', 'symmetric Python execution is not supported')
     if rank_count != int(os.environ.get('SCHEMAXIS_EXPECTED_RANKS', '1')):
         fail('MPI_SIZE_MISMATCH', 'native MPI size differs from allocation', actual=rank_count)
+    if rank_count > 1 and any(scene.get('stateBundle') for scene in scenes):
+        fail('UNSUPPORTED_STATE_BUNDLE', 'editable state bundles are saved only by serial pvbatch')
+    sequence = OutputSequence(os.environ.get('SCHEMAXIS_OUTPUT_RUN_ROOT', directory))
     backend = ParaViewBackend()
     active = RuntimeClosure(master, backend)
     renderer = None
     current_scene = None
     receipt = {'status': 'incomplete', 'verified': False, 'planDigest': master.to_dict()['digest'],
-               'planVersion': master.to_dict()['version'], 'renderTimeVersion': 1,
-               'executionMode': 'MPI pvbatch' if rank_count > 1 else 'serial pvbatch', 'ranks': rank_count, 'states': [], 'artifacts': [], 'events': []}
+               'planVersion': master.to_dict()['version'], 'renderTimeVersion': 1, 'backgroundVersion': 1, 'cameraFramingVersion': 1,
+               'executionMode': 'MPI pvbatch' if rank_count > 1 else 'serial pvbatch', 'ranks': rank_count, 'states': [], 'artifacts': [], 'events': [],
+               'runtimeIdentity': runtime_identity(), 'artifactNamingVersion': NAMING_VERSION}
 
     if rank_count > 1:
         receipt['distributedPublicationVersion'] = 1
@@ -43,7 +66,7 @@ def execute(document, directory):
 
     try:
         save()
-        for state_index, (scene, visit) in enumerate(schedule(master, scenes)):
+        for scene, visit in schedule(master, scenes):
             if current_scene != scene['id']:
                 if renderer:
                     renderer.clear()
@@ -57,15 +80,22 @@ def execute(document, directory):
             receipt['states'].append(state)
             save()
             expected = iter(identities(scene, visit))
-            prefix = f'{state_index:06d}-{scene["id"]}'
-            for index, node in enumerate(scene['geometry']):
-                artifact = geometry(backend, active.handles[node], directory / f'{prefix}-geometry-{index}')
+            if scene.get('stateBundle'):
+                # Pin reader inputs before any publication, so the image and the bundle consume one copy.
+                from .handback_native import capture_inputs
+                bundle = sequence.path(directory, {'kind': 'stateBundle', 'scene': scene['id'], 'time': visit['time']})
+                state['inputRebinding'] = capture_inputs(active, master, scene, visit, state, bundle)
+                save()
+            for node in scene['geometry']:
+                path = sequence.path(directory, {'kind': 'geometry', 'scene': scene['id'], 'node': node, 'time': visit['time']})
+                artifact = geometry(backend, active.handles[node], path)
                 record(artifact, next(expected))
-            for index, output in enumerate(scene['measurements']):
-                artifact = measurement(backend, active.handles[output['node']],
-                                       directory / f'{prefix}-measurement-{index}', output['association'])
+            for output in scene['measurements']:
+                path = sequence.path(directory, {'kind': 'table', 'scene': scene['id'], 'node': output['node'],
+                                                 'association': output['association'], 'time': visit['time']})
+                artifact = measurement(backend, active.handles[output['node']], path, output['association'])
                 record(artifact, next(expected))
-            for index, output in enumerate(scene.get('exports', [])):
+            for output in scene.get('exports', []):
                 from .writers import publish
                 def export_sample(source, association, field, index, component, block):
                     value = backend.sample(active.handles[source], association, field, index, component, block)
@@ -73,20 +103,18 @@ def execute(document, directory):
                                              'index': index, 'component': component, 'block': block, 'value': value})
                     return value
                 settings = {**output, 'options': evaluate(output['options'], visit['axes'], state['observations'], visit['time'], output['id'], export_sample)}
+                export_path = sequence.path(directory, {'kind': 'export', 'scene': scene['id'],
+                                                        'name': output['id'], 'time': visit['time']})
                 artifact = publish(backend, active.handles[output['node']], master.declarations[output['writer']],
-                                   settings, directory / f'{prefix}-export-{index}', visit['time'], master.declarations,
-                                   {key:active.handles[node] for key,node in output.get('resources',{}).items()})
+                                   settings, directory / export_path.name[:6], visit['time'], master.declarations,
+                                   {key:active.handles[node] for key,node in output.get('resources',{}).items()},
+                                   basename=export_path.name)
                 record(artifact, next(expected))
             if scene['images'] or scene['gltf']:
                 if renderer is None:
                     renderer = Renderer(backend)
-                bounds_list = [state['observations'][k]['bounds'] for k in scene['visible']
-                               if state['observations'][k]['points'] > 0]
-                if not bounds_list:
-                    from schemaxis.errors import fail
-                    fail('EMPTY_SCENE', 'no visible nonempty data')
-                bounds = [min(b[i] for b in bounds_list) if i % 2 == 0 else max(b[i] for b in bounds_list)
-                          for i in range(6)]
+                text = set(scene.get('text', ()))
+                bounds = scene_bounds(scene, state['observations'])
                 for appearance_index, appearance in enumerate(scene['appearances']):
                     def sample(source, association, field, index, component, block):
                         value = backend.sample(active.handles[source], association, field, index, component, block)
@@ -95,26 +123,43 @@ def execute(document, directory):
                         return value
                     def resolved(value):
                         return evaluate(value, visit['axes'], state['observations'], visit['time'], scene['id'], sample)
-                    effective_appearance = {k: style(resolved(v), scene['id'] + '.' + k) for k, v in appearance.items()}
-                    observed = renderer.prepare(active.handles, effective_appearance, time=visit['time'])
+                    effective_appearance = {k: style(resolved(v), scene['id'] + '.' + k, text=k in text)
+                                            for k, v in appearance.items()}
+                    observed = renderer.prepare(active.handles, effective_appearance, time=visit['time'], text=text)
+                    plane = None
+                    if len(scene['visible']) == 1:
+                        proxy = active.handles[next(iter(scene['visible']))]
+                        plane = observed_slice_plane(proxy)
+                    cuts = [(node, observed_slice_plane(active.handles[node])) for node, settings in effective_appearance.items()
+                            if node not in text and settings.get('opacity', 1) > 0]
+                    slice_planes = [cut for _, cut in cuts if cut is not None]
+                    naming_plane = slice_planes[0] if len(slice_planes) == 1 else None
+                    properties = image_properties(scene, effective_appearance, naming_plane, visit['time'], appearance_index)
+                    if naming_plane is not None:
+                        properties['model'] = 'on' if any(cut is None for _, cut in cuts) else 'off'
                     if scene['gltf']:
-                        path = directory / f'{prefix}-appearance-{appearance_index}.gltf'
+                        path = sequence.path(directory, {**properties, 'kind': 'scene'}, '.gltf')
                         record(renderer.gltf(path, bounds), next(expected))
                     for writer in scene['images']:
                         for camera_index, camera in enumerate(writer['cameras']):
-                            path = directory / f'{prefix}-appearance-{appearance_index}-{writer["id"]}-{camera_index}.png'
+                            fields = {**properties, 'view': camera_index}
+                            if len(scene['images']) > 1:
+                                fields['writer'] = writer['id']
+                            path = sequence.path(directory, fields, '.png')
                             effective_camera = camera_values(resolved(camera), writer['id'])
                             artifact = renderer.write(path, writer, effective_camera, bounds)
-                            if len(scene['visible']) == 1:
-                                proxy = active.handles[next(iter(scene['visible']))]
-                                if (proxy.SMProxy.GetXMLName() == 'Cut' and not bool(proxy.Crinkleslice)
-                                        and proxy.SliceType.SMProxy.GetXMLName() == 'Plane'):
-                                    artifact['slicePlane'] = {'origin': list(proxy.SliceType.Origin),
-                                                              'normal': list(proxy.SliceType.Normal)}
+                            if plane is not None:
+                                artifact['slicePlane'] = plane
                             artifact['appearance'] = observed
                             artifact['effectiveCamera'] = effective_camera
+                            artifact['effectiveBackground'] = {k: writer[k] for k in ('background', 'transparentBackground')}
                             artifact['effectiveAppearance'] = effective_appearance
                             record(artifact, next(expected))
+            if scene.get('stateBundle'):
+                from .handback_native import save_bundle
+                image = receipt['artifacts'][-1]
+                record(save_bundle(backend, renderer, active, master, scene, visit, state, image,
+                                   bundle, receipt['runtimeIdentity']), next(expected))
             state['timings']['publicationSeconds'] = clock.monotonic()-publication_started
         if renderer:
             renderer.close()

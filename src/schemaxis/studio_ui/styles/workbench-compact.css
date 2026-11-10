@@ -1,0 +1,894 @@
+/* Compact Workbench layout: one row of tabs and actions, one row of views,
+   and controls that fold away so the input keeps the height. Loaded last. */
+
+/* Window tabs share their row with the active Workbench's actions. The
+   toolbar belongs to its window and is drawn up into the tab row; the tabs
+   scroll in the width that is left. On narrow windows it is its own row. */
+.tab-row {
+  flex: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.tab-row .tabs {
+  margin-right: var(--window-tools-w, 0px);
+  border-bottom: 0;
+  scrollbar-width: thin;
+}
+
+.wb-toolbar {
+  position: absolute;
+  top: calc(-1px - var(--tabs-h));
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  height: var(--tabs-h);
+  padding: 0 var(--sp-3);
+}
+
+.wb-toolbar .button {
+  min-height: 26px;
+  padding: 2px var(--sp-3);
+  font-size: var(--fs-sm);
+}
+
+.wb-toolbar .badge {
+  margin-right: var(--sp-1);
+  cursor: pointer;
+}
+
+@media (max-width: 1150px) {
+  .wb-toolbar {
+    position: static;
+    flex: none;
+    flex-wrap: wrap;
+    height: auto;
+    padding: var(--sp-1) var(--sp-3);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    justify-content: flex-end;
+  }
+}
+
+.topbar-actions .button .icon {
+  margin-right: var(--sp-1);
+}
+
+/* Help and explanation text has its own colour, apart from values and labels. */
+.wb-help,
+.operation-field-description,
+.operation-field-help,
+.library-summary,
+.sx-fill-help {
+  color: var(--help);
+}
+
+/* Segmented choice: sidebar contents, selection mode, settings screens. */
+.wb-segmented {
+  display: inline-flex;
+  flex: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.wb-segmented button {
+  padding: 3px var(--sp-3);
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.wb-segmented button:last-child {
+  border-right: 0;
+}
+
+.wb-segmented button:hover {
+  background: var(--surface-3);
+}
+
+.wb-segmented button[aria-checked='true'],
+.wb-segmented button[aria-current='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* View row: sidebar switch, views, draft state, controls switch. */
+.wb-view-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.wb-view-bar .wb-tabs {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.wb-view-bar .wb-tabs button {
+  flex: none;
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.wb-view-bar > .button {
+  flex: none;
+}
+
+.wb-view-state {
+  display: flex;
+  overflow: hidden;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.wb-view-state .wb-help {
+  flex: none;
+  color: var(--text-3);
+}
+
+.wb-view-state .wb-diagnostic-state {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.wb-controls-toggle[aria-pressed='true'],
+.wb-sidebar-toggle[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.wb-sidebar-icon {
+  display: block;
+  width: 16px;
+  height: 13px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  box-shadow: inset 5px 0 0 currentColor;
+}
+
+/* Sidebar */
+.wb-layout {
+  border-top: 0;
+  grid-template-columns: minmax(200px, 250px) minmax(300px, 1fr) minmax(230px, 290px);
+}
+
+.wb-left {
+  padding: var(--sp-2) var(--sp-3) var(--sp-4);
+}
+
+.wb-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.wb-comprehension {
+  padding: 0;
+  border: 0;
+  margin-bottom: var(--sp-4);
+}
+
+.wb-comprehension > summary {
+  font-size: var(--fs-sm);
+}
+
+.wb-comprehension details > summary {
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.wb-comprehension .operation-file-tools {
+  margin-block: var(--sp-2);
+}
+
+.wb-comprehension-list {
+  max-height: none;
+}
+
+.wb-left:not(:has(.wb-sections[hidden])) .wb-comprehension-list {
+  max-height: 40vh;
+}
+
+/* Authoring controls: the Add row, an optional tray, one row of editing tools. */
+.wb-authoring-tools {
+  max-height: 40%;
+}
+
+.library-bar {
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.library-add,
+.library-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.library-tray {
+  padding-top: var(--sp-1);
+  border-top: 1px dashed var(--border);
+}
+
+.library-bar .button {
+  min-height: 26px;
+  padding: 2px var(--sp-2);
+  font-size: var(--fs-xs);
+}
+
+.library-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-left: auto;
+}
+
+.library-more::after {
+  content: '▸';
+}
+
+.library-more[aria-expanded='true']::after {
+  content: '▾';
+}
+
+.wb-editor-tools {
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.wb-editor-tools .button {
+  min-height: 24px;
+  padding: 1px var(--sp-2);
+  font-size: var(--fs-xs);
+}
+
+.wb-editor-tools .input,
+.wb-editor-tools select {
+  min-height: 24px;
+  padding-block: 1px;
+  font-size: var(--fs-xs);
+}
+
+/* Hierarchical lists: two narrow buttons left of the label. */
+summary[data-disclosure] {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 2px 0;
+}
+
+.tree-buttons {
+  display: inline-flex;
+  flex: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.tree-toggle,
+.tree-subtree {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  min-width: 0;
+  min-height: 0;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tree-subtree {
+  width: 22px;
+  border-left: 1px solid var(--border);
+  letter-spacing: -3px;
+  padding-right: 3px;
+}
+
+.tree-toggle:hover,
+.tree-subtree:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tree-toggle::before {
+  content: '▶';
+}
+
+.tree-toggle[aria-expanded='true']::before {
+  content: '▼';
+}
+
+.tree-subtree::after {
+  content: '▶▶';
+}
+
+details[open] > summary .tree-subtree::after {
+  content: '▼▼';
+}
+
+/* Right panel switch, case data and name chips */
+.wb-right-modes {
+  display: flex;
+  margin-bottom: var(--sp-3);
+}
+
+.wb-right-modes button {
+  flex: 1;
+}
+
+.wb-right details > summary {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.wb-case-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.wb-case-heading .wb-section-title {
+  margin: 0;
+}
+
+.wb-case-data .input {
+  width: 100%;
+  margin-block: var(--sp-2);
+}
+
+.wb-case-names,
+.reader-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: var(--sp-1) 0 var(--sp-2);
+}
+
+.wb-case-name {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.wb-case-name:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.wb-case-name[aria-pressed='true'] {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
+
+/* Settings window */
+.dialog-header {
+  cursor: move;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.dialog-backdrop.moved {
+  background: transparent;
+  pointer-events: none;
+}
+
+.dialog-backdrop.moved .dialog {
+  pointer-events: auto;
+}
+
+.dialog.operation-dialog {
+  max-height: 86vh;
+}
+
+.dialog-backdrop:has(.operation-dialog),
+.dialog-backdrop:has(.file-dialog) {
+  padding-top: 6vh;
+}
+
+.operation-steps {
+  align-self: flex-start;
+}
+
+.operation-steps button {
+  padding: 5px var(--sp-4);
+  font-size: var(--fs-sm);
+}
+
+.operation-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.operation-wizard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.operation-identity .operation-field {
+  display: grid;
+  grid-template-columns: max-content minmax(160px, 320px) 1fr;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+.operation-identity .operation-field-description {
+  margin: 0;
+}
+
+.operation-identity .operation-field-help {
+  grid-column: 1 / -1;
+}
+
+.operation-final {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.operation-final-field {
+  display: grid;
+  gap: 2px;
+}
+
+.operation-final-field .input {
+  width: 100%;
+}
+
+.operation-error:empty {
+  display: none;
+}
+
+.reader-preview .operation-file-tools {
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.reader-preview .wb-help {
+  margin: 0;
+}
+
+/* Reader selection: entry list */
+.reader-selection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  align-items: flex-start;
+}
+
+.reader-named {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: 100%;
+}
+
+.reader-entries {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.reader-entries > .wb-help {
+  margin: 0;
+  padding: var(--sp-2);
+}
+
+.reader-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 3px var(--sp-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.reader-entry:last-child {
+  border-bottom: 0;
+}
+
+.reader-entry[aria-current='true'] {
+  background: var(--accent-soft);
+}
+
+.reader-entry code {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.reader-entry-warning {
+  color: var(--warn);
+  font-size: var(--fs-xs);
+}
+
+.reader-add {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+.reader-selection .reader-add .input {
+  width: auto;
+}
+
+.reader-selection .reader-add input {
+  flex: 1;
+  min-width: 0;
+}
+
+.reader-named > .wb-help {
+  margin: 0;
+}
+
+.reader-available .operation-file-tools {
+  margin-block: var(--sp-2);
+}
+
+/* Open-file window */
+.operation-file-browser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.operation-file-crumbs {
+  margin: 0;
+}
+
+.operation-file-panes {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: var(--sp-3);
+  min-height: 0;
+}
+
+.operation-file-places {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: var(--sp-2);
+  border-right: 1px solid var(--border);
+}
+
+.operation-file-places strong {
+  margin-top: var(--sp-2);
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.operation-file-place,
+.operation-file-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 3px var(--sp-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.operation-file-place:hover,
+.operation-file-entry:hover {
+  background: var(--surface-3);
+}
+
+.operation-file-place[aria-current='true'],
+.operation-file-entry[aria-selected='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.operation-file-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.operation-file-list {
+  height: 300px;
+  max-height: 42vh;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  align-items: stretch;
+}
+
+.operation-file-name {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Fill window: movable by its heading. */
+.sx-fill-heading,
+.drag-handle {
+  cursor: move;
+  user-select: none;
+}
+
+.sx-fill-heading {
+  margin: calc(var(--sp-3) * -1) calc(var(--sp-3) * -1) var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.reader-choices {
+  max-height: 180px;
+  overflow: auto;
+}
+
+.operation-step > .button {
+  align-self: flex-start;
+}
+
+.operation-control:has(> input.input) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.operation-control:has(> input.input) > input.input {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.operation-file-tools label {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.operation-file-tools input[type='checkbox'] {
+  flex: none;
+  min-width: 0;
+}
+
+/* Settings window: screens and case data share the top row. */
+.operation-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0;
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.operation-case-tools {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+.reader-preview > .wb-help {
+  margin: 0;
+}
+
+/* Reference material inside the settings window reads as help. */
+.operation-about > summary,
+.operation-about,
+.operation-reference,
+.operation-concept-help {
+  color: var(--help);
+}
+
+.operation-about > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Expert mode keeps the settings and folds the help behind each ?. */
+.expert:not(.help-open) .operation-intro,
+.expert:not(.help-open) .operation-about,
+.expert .operation-field:not(.help-open) > .operation-field-description,
+.expert .operation-field:not(.help-open) > .operation-native {
+  display: none;
+}
+
+/* Name selection: mode, loading and the names themselves stay in view. */
+.reader-head,
+.reader-available-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+}
+
+.reader-load {
+  display: flex;
+  gap: var(--sp-1);
+}
+
+.reader-available {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  width: 100%;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.reader-available > .wb-help {
+  margin: 0;
+}
+
+.reader-available-head .input {
+  flex: 1;
+  min-width: 120px;
+  width: auto;
+}
+
+.reader-summary {
+  margin: 0;
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+.wb-case-name:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+
+/* Start: one card per application, each with New, Open and its recent work. */
+.start-apps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-4);
+}
+
+.start-app {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+}
+
+.start-app-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.start-app-head .title {
+  font-weight: 600;
+}
+
+.start-app-head .subtitle {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.start-app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.start-app h4 {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.start-app .list {
+  margin: 0 calc(var(--sp-2) * -1);
+  max-height: 260px;
+  overflow: auto;
+}
+
+.start-app .list-item {
+  padding-block: var(--sp-1);
+}
+
+.start-app .list-item .subtitle {
+  overflow-wrap: anywhere;
+}
+
+.start-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.wb-save-group {
+  display: inline-flex;
+}
+
+.wb-save-group .button:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.wb-save-group .button:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  padding-inline: 6px;
+}

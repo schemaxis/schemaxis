@@ -1,0 +1,160 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "recognizePage": {
+      "status": "reviewed",
+      "explanation": "Recognize the text of one scanned-page PNG with Tesseract 5.5.3 and a pinned English LSTM model, then publish a checked machine draft: page text, every word's box in source pixels with the recogniser's uncalibrated confidence, and a summary that binds the exact image, model, settings and runtime. Use it when a page exists only as pixels, for example a scan or a rendered PDF page; MuPDF text extraction does not read pixels. Choose pageSegmentation to match the layout, optionally declare a dpi and the MuPDF origin. The native TSV is re-read by an independent strict reader and the text must agree with it, but nothing here shows that the text is what the page says: a person must review it. Handwriting, other languages, multipage files, columns and tables, and any claim of accuracy or accessibility are outside this route.",
+      "pitfalls": [
+        "Confidence is the recogniser's own 0-100 score, not accuracy or a probability.",
+        "A successful run proves consistency with the recorded native run, not truth.",
+        "The image identifies pixels only; page identity comes only from a matching declared origin."
+      ],
+      "sources": [
+        "docs/tesseract.md"
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.tesseract/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "A request to recognize the text of one local scanned-page PNG with a pinned English model: choose the image, the model file and its SHA-256, and how the page is laid out. The result is a machine draft (text, word boxes, confidence, summary) for a person to review; it is not certified text and does not identify the page.",
+          "sources": [
+            "docs/tesseract.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Required document contract schemaxis.tesseract/1. It names the authored JSON model, independently of the configured Tesseract release.",
+          "sources": [
+            "docs/tesseract.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select recognizePage to recognize one page image. No other operation or native command is accepted; Tesseract options cannot be authored.",
+          "sources": [
+            "docs/tesseract.md"
+          ]
+        },
+        "/properties/image": {
+          "status": "reviewed",
+          "explanation": "The scanned page as an object: an absolute local PNG path and an optional SHA-256 pin. In a workflow this path can be the image artifact of an earlier verified step, for example a rendered PDF page. Only the pixels are read; the route cannot know which document or page they came from unless an origin is declared.",
+          "sources": [
+            "docs/tesseract.md"
+          ]
+        },
+        "/properties/image/properties/path": {
+          "status": "reviewed",
+          "explanation": "Required absolute local .png regular file, captured once before recognition. It must be opaque 8-bit RGB, non-interlaced, at most 16MiB, 4096 pixels per side and 4,194,304 pixels (about 2048 by 2048). That OCR pixel budget is smaller than the MuPDF render limit, so a full Letter or A4 page rendered at 300 dpi (roughly 8.4 to 8.7 million pixels) is refused with IMAGE_RESOURCE_LIMIT; render the full page at about 200 dpi or less, or crop it. Alpha, palette, grey, 16-bit, interlaced and animated PNGs are refused with UNSUPPORTED_IMAGE rather than flattened. Relative paths, parent references and URLs are rejected.",
+          "sources": [
+            "docs/tesseract.md"
+          ],
+          "fileExtensions": [
+            ".png"
+          ],
+          "pitfalls": [
+            "A screenshot or export with an alpha channel is refused; re-export as opaque RGB."
+          ]
+        },
+        "/properties/image/properties/sha256": {
+          "status": "reviewed",
+          "explanation": "Optional lowercase SHA-256 of the exact PNG file bytes. When present, a different file stops the run with IMAGE_HASH_MISMATCH. Omit it only when the image is a fresh workflow artifact whose producer is already verified.",
+          "sources": [
+            "docs/tesseract.md"
+          ],
+          "defaultMeaning": "No pin: the captured bytes are hashed and recorded but not compared with an expected value."
+        },
+        "/properties/model": {
+          "status": "reviewed",
+          "explanation": "The recognition model as an object: an absolute local English traineddata path and its required SHA-256. The file is streamed into the run, hashed before and after, and the run uses that retained copy; no global tessdata directory, TESSDATA_PREFIX or download is involved.",
+          "sources": [
+            "docs/tesseract.md"
+          ]
+        },
+        "/properties/model/properties/path": {
+          "status": "reviewed",
+          "explanation": "Required absolute local .traineddata regular file of at most 64MiB, expected to contain an English LSTM model (for example a fast or best English model). The route always runs it as language eng, but nothing verifies that the file really is English: the SHA-256 pin identifies the bytes, not their language, so a non-English model renamed or pinned as this file would run and be recorded as eng. A file that Tesseract cannot load as an LSTM model fails with MODEL_UNUSABLE.",
+          "sources": [
+            "docs/tesseract.md"
+          ],
+          "fileExtensions": [
+            ".traineddata"
+          ]
+        },
+        "/properties/model/properties/sha256": {
+          "status": "reviewed",
+          "explanation": "Required lowercase SHA-256 of the model file. It is the model's identity in plans, receipts and reuse: a different file gives MODEL_HASH_MISMATCH, so a result always names the model that produced it. Record where you obtained the model separately; the route does not.",
+          "sources": [
+            "docs/tesseract.md"
+          ]
+        },
+        "/properties/origin": {
+          "status": "reviewed",
+          "explanation": "Optional declaration of where the page image came from. It currently supports a MuPDF review summary: the route checks that the declared page entry has the same width, height and RGB-pixel SHA-256 as the image, then records the PDF digest and page number. Without it the result states the origin is unknown. It does not re-verify the MuPDF run.",
+          "sources": [
+            "docs/tesseract.md"
+          ],
+          "defaultMeaning": "Omitted: pixel-only input; no page, document or capture identity is recorded."
+        },
+        "/properties/origin/properties/kind": {
+          "status": "reviewed",
+          "explanation": "Required when origin is present: mupdf-review, meaning the summary is a review-summary.json published by the MuPDF review route. No other producer kind is accepted.",
+          "sources": [
+            "docs/tesseract.md"
+          ]
+        },
+        "/properties/origin/properties/summary": {
+          "status": "reviewed",
+          "explanation": "Absolute local .json path of the MuPDF review-summary.json for the run that rendered this image. In a workflow, select it as an artifact of the MuPDF step (the last artifact). It is captured and bound to the pixels by digest; a summary for different pixels gives ORIGIN_MISMATCH.",
+          "sources": [
+            "docs/tesseract.md"
+          ],
+          "fileExtensions": [
+            ".json"
+          ]
+        },
+        "/properties/origin/properties/page": {
+          "status": "reviewed",
+          "explanation": "Required when origin is present: the one-based PDF page number whose summary entry describes the image. It is the page number in the PDF, not the position of the page within the MuPDF output.",
+          "sources": [
+            "docs/tesseract.md"
+          ],
+          "pitfalls": [
+            "If MuPDF rendered pages [2] the image is PDF page 2, so declare page 2, not 1."
+          ]
+        },
+        "/properties/language": {
+          "status": "reviewed",
+          "explanation": "Recognition language. Only eng (English) is offered, passed to Tesseract as -l eng; omitting it means eng. The name selects the model file by name only; the route does not check that the pinned model is English. Other languages, mixed-language and script detection are outside this route.",
+          "sources": [
+            "docs/tesseract.md"
+          ],
+          "defaultMeaning": "eng"
+        },
+        "/properties/pageSegmentation": {
+          "status": "reviewed",
+          "explanation": "How Tesseract should treat the page layout. uniform-block assumes a single block of text lines (--psm 6); single-line assumes exactly one line (--psm 7). Neither is a layout analysis: a mismatched choice can return no words or wrong text, and the wrong text is published like any other draft. On the qualification fixture, single-line on a two-line page returned no words and the run failed with OCR_NO_TEXT instead of publishing an empty draft; that was observed on one fixture and does not mean a wrong choice is always caught.",
+          "sources": [
+            "docs/tesseract.md"
+          ],
+          "defaultMeaning": "uniform-block",
+          "pitfalls": [
+            "Headings, columns, tables, mixed text sizes, sparse labels and rotated text are not handled by either choice.",
+            "OCR_NO_TEXT is not a reliable detector of a wrong segmentation choice: a wrong choice can also produce plausible-looking wrong words."
+          ]
+        },
+        "/properties/dpi": {
+          "status": "reviewed",
+          "explanation": "Optional declared scan density in dots per inch (70-2400) passed to Tesseract as --dpi. Omit it to use the density stored in the PNG, or Tesseract's own estimate when there is none. Schemaxis does not resample the file, but Tesseract may use the declared density in its size and layout heuristics, so declaring a density the page does not have can change recognition. It is unrelated to the pixel budget: the image must still fit in 4,194,304 pixels, whatever density is declared, so dpi cannot make a large page acceptable.",
+          "sources": [
+            "docs/tesseract.md"
+          ],
+          "units": "dots per inch",
+          "defaultMeaning": "Omitted: the PNG's density or the native estimate is used; the plan records which."
+        }
+      }
+    }
+  }
+}

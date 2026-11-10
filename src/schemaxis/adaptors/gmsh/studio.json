@@ -767,6 +767,590 @@
           ]
         }
       ]
+    },
+    {
+      "id": "cylinder-mesh-starter",
+      "title": "Cylindrical specimen",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Replace the document with an editable cylinder mesh. Dimensions are millimetres; inspect measured volume and cap-area loss.",
+      "fields": {},
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "cylinder",
+                  "options": {
+                    "origin": [
+                      2,
+                      -1,
+                      3
+                    ],
+                    "axis": "z",
+                    "radius": 3,
+                    "height": 8
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 0.6,
+                    "volumeName": "part",
+                    "boundaryName": "wall",
+                    "volumeTolerance": 0.02,
+                    "faceGroups": [
+                      {
+                        "name": "start",
+                        "axis": "z",
+                        "coordinate": 3,
+                        "areaTolerance": 0.02
+                      },
+                      {
+                        "name": "end",
+                        "axis": "z",
+                        "coordinate": 11,
+                        "areaTolerance": 0.02
+                      }
+                    ]
+                  }
+                }
+              ],
+              "output": "mesh"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "hollow-cylinder-mesh-starter",
+      "title": "Hollow sleeve with HXT",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Replace the document with an editable hollowCylinder mesh. Dimensions are millimetres; inspect measured volume and cap-area loss.",
+      "fields": {},
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "hollowCylinder",
+                  "options": {
+                    "origin": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "axis": "x",
+                    "radius": 4,
+                    "innerRadius": 2,
+                    "height": 8
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 0.6,
+                    "volumeName": "part",
+                    "boundaryName": "wall",
+                    "volumeTolerance": 0.02,
+                    "faceGroups": [
+                      {
+                        "name": "start",
+                        "axis": "x",
+                        "coordinate": 0,
+                        "areaTolerance": 0.02
+                      },
+                      {
+                        "name": "end",
+                        "axis": "x",
+                        "coordinate": 8,
+                        "areaTolerance": 0.02
+                      }
+                    ],
+                    "algorithm": "hxt",
+                    "optimise": false
+                  }
+                }
+              ],
+              "output": "mesh"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "sphere-mesh-starter",
+      "title": "Spherical specimen",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Replace the document with an editable sphere mesh. Dimensions are millimetres; inspect measured volume and cap-area loss.",
+      "fields": {},
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "sphere",
+                  "options": {
+                    "centre": [
+                      1,
+                      2,
+                      3
+                    ],
+                    "radius": 3
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 0.6,
+                    "volumeName": "part",
+                    "boundaryName": "wall",
+                    "volumeTolerance": 0.02
+                  }
+                }
+              ],
+              "output": "mesh"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "meshing-method",
+      "title": "HXT tetrahedral method",
+      "category": "quality",
+      "icon": "layers",
+      "description": "Select HXT and enable the standard optimisation option. Inspect measured quality; no quality guarantee is inferred.",
+      "fields": {},
+      "inserts": [
+        {
+          "at": "/nodes/1/options",
+          "merge": {
+            "algorithm": "hxt",
+            "optimise": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "named-sleeve-starter",
+      "title": "Fully named sleeve",
+      "category": "groups",
+      "icon": "layers",
+      "description": "Replace the document with a sleeve whose two caps, bore and outer wall are all named, with an empty remainder.",
+      "fields": {},
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "hollowCylinder",
+                  "options": {
+                    "origin": [
+                      1,
+                      2,
+                      3
+                    ],
+                    "axis": "x",
+                    "radius": 4,
+                    "innerRadius": 2,
+                    "height": 8
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 0.7,
+                    "volumeName": "sleeve",
+                    "boundaryName": "unassigned",
+                    "volumeTolerance": 0.02,
+                    "faceGroups": [
+                      {
+                        "name": "start",
+                        "axis": "x",
+                        "coordinate": 1,
+                        "areaTolerance": 0.02
+                      },
+                      {
+                        "name": "end",
+                        "axis": "x",
+                        "coordinate": 9,
+                        "areaTolerance": 0.02
+                      }
+                    ],
+                    "cylinderGroups": [
+                      {
+                        "name": "bore",
+                        "axis": "x",
+                        "centre": [
+                          1,
+                          2,
+                          3
+                        ],
+                        "radius": 2,
+                        "side": "inner"
+                      },
+                      {
+                        "name": "outer",
+                        "axis": "x",
+                        "centre": [
+                          1,
+                          2,
+                          3
+                        ],
+                        "radius": 4,
+                        "side": "outer"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "output": "mesh"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "bore-local-sizing-starter",
+      "title": "Sleeve with finer bore",
+      "category": "sizing",
+      "icon": "layers",
+      "description": "Fully named sleeve with a finer element size and transition distance near the bore wall.",
+      "fields": {
+        "size": {
+          "label": "Bore element size",
+          "type": "number",
+          "required": true,
+          "default": 0.4,
+          "minimum": 0.001,
+          "maximum": 0.7
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "hollowCylinder",
+                  "options": {
+                    "origin": [
+                      1,
+                      2,
+                      3
+                    ],
+                    "axis": "x",
+                    "radius": 4,
+                    "innerRadius": 2,
+                    "height": 8
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 0.7,
+                    "volumeName": "sleeve",
+                    "boundaryName": "unassigned",
+                    "volumeTolerance": 0.02,
+                    "faceGroups": [
+                      {
+                        "name": "start",
+                        "axis": "x",
+                        "coordinate": 1,
+                        "areaTolerance": 0.02
+                      },
+                      {
+                        "name": "end",
+                        "axis": "x",
+                        "coordinate": 9,
+                        "areaTolerance": 0.02
+                      }
+                    ],
+                    "cylinderGroups": [
+                      {
+                        "name": "bore",
+                        "axis": "x",
+                        "centre": [
+                          1,
+                          2,
+                          3
+                        ],
+                        "radius": 2,
+                        "side": "inner"
+                      },
+                      {
+                        "name": "outer",
+                        "axis": "x",
+                        "centre": [
+                          1,
+                          2,
+                          3
+                        ],
+                        "radius": 4,
+                        "side": "outer"
+                      }
+                    ],
+                    "nearBoundaries": [
+                      {
+                        "boundary": "bore",
+                        "size": {
+                          "$fill": "size"
+                        },
+                        "distance": 1.5
+                      }
+                    ]
+                  }
+                }
+              ],
+              "output": "mesh"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "bore-roundness-starter",
+      "title": "Bore roundness requirement",
+      "category": "quality",
+      "icon": "layers",
+      "description": "Refine a fully named sleeve until the bore's chord deviation (largest gap between the true cylinder and its flat facets, mm) is within the limit.",
+      "fields": {
+        "deviation": {
+          "label": "Maximum chord deviation (mm)",
+          "type": "number",
+          "required": true,
+          "default": 0.05,
+          "minimum": 1e-06
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "hollowCylinder",
+                  "options": {
+                    "origin": [
+                      1,
+                      2,
+                      3
+                    ],
+                    "axis": "x",
+                    "radius": 4,
+                    "innerRadius": 2,
+                    "height": 8
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 1.6,
+                    "volumeName": "sleeve",
+                    "boundaryName": "unassigned",
+                    "volumeTolerance": 0.02,
+                    "faceGroups": [
+                      {
+                        "name": "start",
+                        "axis": "x",
+                        "coordinate": 1,
+                        "areaTolerance": 0.02
+                      },
+                      {
+                        "name": "end",
+                        "axis": "x",
+                        "coordinate": 9,
+                        "areaTolerance": 0.02
+                      }
+                    ],
+                    "cylinderGroups": [
+                      {
+                        "name": "bore",
+                        "axis": "x",
+                        "centre": [
+                          1,
+                          2,
+                          3
+                        ],
+                        "radius": 2,
+                        "side": "inner"
+                      },
+                      {
+                        "name": "outer",
+                        "axis": "x",
+                        "centre": [
+                          1,
+                          2,
+                          3
+                        ],
+                        "radius": 4,
+                        "side": "outer"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "output": "mesh",
+              "refinement": {
+                "maxIterations": 6,
+                "reductionFactor": 0.7,
+                "minimumSize": 0.4,
+                "maxTetrahedra": 60000,
+                "requirements": {
+                  "boundaryMaximumChordDeviation": [
+                    {
+                      "boundary": "bore",
+                      "maximum": {
+                        "$fill": "deviation"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "bore-step-starter",
+      "title": "Name a bore in a STEP solid",
+      "category": "geometry",
+      "icon": "layers",
+      "description": "Mesh a STEP solid with one named bore (inner cylinder along z). Read cadSurfaces in mesh-summary.json of a first run to find the real axis, centre and radius.",
+      "fields": {
+        "step": {
+          "label": "STEP solid",
+          "type": "path",
+          "required": true,
+          "default": "/data/part.step",
+          "extensions": [
+            "step",
+            "stp"
+          ]
+        },
+        "radius": {
+          "label": "Bore radius (mm)",
+          "type": "number",
+          "required": true,
+          "default": 4,
+          "minimum": 0.001
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.gmsh/1",
+              "units": "mm",
+              "nodes": [
+                {
+                  "id": "solid",
+                  "filter": "readSTEP",
+                  "options": {
+                    "file": {
+                      "$fill": "step"
+                    }
+                  }
+                },
+                {
+                  "id": "mesh",
+                  "filter": "tetrahedral",
+                  "inputs": {
+                    "input": "solid"
+                  },
+                  "options": {
+                    "size": 3,
+                    "volumeName": "part",
+                    "boundaryName": "free",
+                    "volumeTolerance": 0.02,
+                    "cylinderGroups": [
+                      {
+                        "name": "bore",
+                        "axis": "z",
+                        "centre": [
+                          0,
+                          0,
+                          0
+                        ],
+                        "radius": {
+                          "$fill": "radius"
+                        },
+                        "side": "inner"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "output": "mesh"
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Requires a valid single-solid STEP file with a z-axis bore of this radius at the stated axis point; edit the centre after the first run."
     }
   ],
   "templates": [
@@ -825,6 +1409,75 @@
           "minimum": 0.001
         }
       }
+    },
+    {
+      "id": "cylinder-mesh",
+      "title": "Cylindrical specimen",
+      "description": "Editable cylinder solid with verified curved-boundary discretisation and analytic volume checks.",
+      "file": "templates/cylinder-mesh.json",
+      "fields": {}
+    },
+    {
+      "id": "hollow-cylinder-mesh",
+      "title": "Hollow sleeve with HXT",
+      "description": "Editable hollowCylinder solid with verified curved-boundary discretisation and analytic volume checks.",
+      "file": "templates/hollow-cylinder-mesh.json",
+      "fields": {}
+    },
+    {
+      "id": "sphere-mesh",
+      "title": "Spherical specimen",
+      "description": "Editable sphere solid with verified curved-boundary discretisation and analytic volume checks.",
+      "file": "templates/sphere-mesh.json",
+      "fields": {}
+    },
+    {
+      "id": "named-sleeve-mesh",
+      "title": "Fully named sleeve",
+      "description": "Sleeve with named caps, bore and outer wall, independently verified side, area and chord deviation.",
+      "file": "templates/named-sleeve-mesh.json",
+      "fields": {}
+    },
+    {
+      "id": "bore-roundness-mesh",
+      "title": "Bore roundness refinement",
+      "description": "Named sleeve refined until the bore's chord deviation meets a limit.",
+      "file": "templates/bore-roundness-mesh.json",
+      "fields": {
+        "deviation": {
+          "label": "Maximum chord deviation (mm)",
+          "type": "number",
+          "required": true,
+          "default": 0.05,
+          "minimum": 1e-06
+        }
+      }
+    },
+    {
+      "id": "bore-step-mesh",
+      "title": "STEP part with a named bore",
+      "description": "Import a single STEP solid and name one z-axis bore wall.",
+      "file": "studio/templates/bore-step-mesh.json",
+      "fields": {
+        "step": {
+          "label": "STEP solid",
+          "type": "path",
+          "required": true,
+          "default": "/data/part.step",
+          "extensions": [
+            "step",
+            "stp"
+          ]
+        },
+        "radius": {
+          "label": "Bore radius (mm)",
+          "type": "number",
+          "required": true,
+          "default": 4,
+          "minimum": 0.001
+        }
+      },
+      "requires": "Requires a single-solid STEP file with a z-axis bore at the origin axis point; edit centre and radius from cadSurfaces."
     }
   ],
   "viewers": [

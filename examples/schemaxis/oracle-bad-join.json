@@ -1,0 +1,32 @@
+{
+  "version": "schemaxis.oracle/1",
+  "operation": "report",
+  "connection": {"profile": "free_local"},
+  "tables": [
+    {
+      "name": "customers",
+      "columns": [
+        {"name": "id", "type": "number", "precision": 10, "scale": 0},
+        {"name": "region", "type": "varchar2", "length": 12, "nullable": true}
+      ],
+      "primaryKey": ["id"]
+    },
+    {
+      "name": "orders",
+      "columns": [
+        {"name": "id", "type": "number", "precision": 10, "scale": 0},
+        {"name": "customer_id", "type": "number", "precision": 10, "scale": 0, "nullable": true}
+      ],
+      "primaryKey": ["id"]
+    }
+  ],
+  "report": {
+    "selects": [
+      {
+        "from": {"table": "orders", "alias": "o"},
+        "joins": [{"type": "inner", "table": "customers", "alias": "c", "on": [{"left": "o.customer_id", "right": "c.region"}]}],
+        "columns": [{"name": "id", "operand": {"column": "o.id"}}]
+      }
+    ]
+  }
+}

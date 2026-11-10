@@ -89,7 +89,8 @@ class StudioCases:
         if bundle['digest'] != prepared['template']['digest']:
             fail('STALE_TEMPLATE', 'template changed while preparing the case; inspect it again', '$.path')
         prepared['outputs'] = bundle['template']['outputs']
-        workers = prepared['run'].get('workers')
+        defaults = self.app.settings.read()['values'] if hasattr(self.app, 'settings') else {}
+        workers = prepared['run'].get('workers', prepared['document'].get('execution', {}).get('maxWorkers', defaults.get('execution.workers')))
         if workers is not None:
             prepared['document'].setdefault('execution', {})['maxWorkers'] = workers
             prepared['digest'] = storage.digest(prepared['document'])
@@ -199,8 +200,10 @@ class StudioCases:
             if token.is_set():
                 fail('RUNNER_CANCELLED', 'case was cancelled before execution')
             directory.parent.mkdir(parents=True, exist_ok=True)
-            workflow.execute(prepared['document'], directory, locations=locations)
-            verification = workflow.verify(directory)
+            from .module_runtime import runtime
+            with runtime(prepared['document']):
+                workflow.execute(prepared['document'], directory, locations=locations)
+                verification = workflow.verify(directory)
             if verification.get('verified') is not True:
                 fail('VERIFICATION_FAILED', 'workflow verifier did not establish success', str(directory))
             storage.atomic(directory / 'case.json', storage.encoded(request['values']), exclusive=True)

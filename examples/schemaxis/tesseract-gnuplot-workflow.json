@@ -1,0 +1,75 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "chart",
+      "document": {
+        "version": "schemaxis.gnuplot/1",
+        "operation": "plot",
+        "title": "NORTH 4096",
+        "source": "/replace/with/calibration.csv",
+        "columns": [
+          {
+            "name": "time",
+            "unit": "s"
+          },
+          {
+            "name": "reading",
+            "unit": "V"
+          },
+          {
+            "name": "uncertainty",
+            "unit": "V"
+          }
+        ],
+        "series": [
+          {
+            "label": "Measured",
+            "x": "time",
+            "y": "reading",
+            "error": "uncertainty",
+            "colour": "red"
+          }
+        ],
+        "xAxis": {
+          "label": "Time",
+          "unit": "s",
+          "range": [
+            0,
+            2
+          ],
+          "scale": "linear"
+        },
+        "yAxis": {
+          "label": "Reading",
+          "unit": "V",
+          "range": [
+            0,
+            4
+          ],
+          "scale": "linear"
+        },
+        "width": 800,
+        "height": 600
+      }
+    },
+    {
+      "id": "ocr",
+      "document": {
+        "version": "schemaxis.tesseract/1",
+        "operation": "recognizePage",
+        "image": {
+          "path": {
+            "$artifact": "chart",
+            "index": 1
+          }
+        },
+        "model": {
+          "path": "/replace/with/eng.traineddata",
+          "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+        },
+        "dpi": 150
+      }
+    }
+  ]
+}

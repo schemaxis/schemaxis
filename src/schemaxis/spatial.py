@@ -82,6 +82,18 @@ def orbit(bounds, count, elevation, aspect, padding, parallel, distanceScale):
                    aspect,padding,parallel,distanceScale) for i in range(count)]
 
 
+
+def bounds_from_extents(extents):
+    return check({'min': list(extents[::2]), 'max': list(extents[1::2])})
+
+
+def bounds_point(bounds, x, y, z):
+    check(bounds)
+    mid = centre(bounds)
+    return [bounds['min'][i] if token == 'min' else bounds['max'][i] if token == 'max' else mid[i]
+            for i, token in enumerate((x, y, z))]
+
+
 def register(registry):
     required = lambda spec: {**spec, 'required': True}
     box = {'bounds': required(BOUNDS)}
@@ -93,6 +105,8 @@ def register(registry):
     registry.register('directionVector', {'direction': required(DIRECTION_ARGUMENT),
         'length': {'type':'number','minimum':0,'default':1}}, VECTOR,
         lambda direction,length: [length*x for x in resolve_direction(direction).vector])
+    registry.register('boundsFromExtents', {'extents': required({'type': 'array', 'items': NUMBER, 'minItems': 6, 'maxItems': 6})}, BOUNDS, bounds_from_extents)
+    registry.register('boundsPoint', {**box, **{axis: {'type': 'enum', 'values': ['min', 'mid', 'max'], 'default': 'mid'} for axis in 'xyz'}}, VECTOR, bounds_point)
     registry.register('boundsCentre3D',box,VECTOR,centre)
     registry.register('boundsSize',box,VECTOR,extent)
     registry.register('boundsExtend',{**box,**margins},BOUNDS,extend)

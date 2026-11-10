@@ -95,6 +95,167 @@
               "filter",
               "options"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "fromTypedRows"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "kind": {
+                          "enum": [
+                            "text",
+                            "number"
+                          ]
+                        },
+                        "nullable": {
+                          "type": "boolean",
+                          "default": false
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name",
+                        "kind"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 64
+                  },
+                  "nullToken": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16,
+                    "default": "\\N"
+                  },
+                  "rows": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              null
+                            ]
+                          },
+                          {
+                            "type": "number",
+                            "minimum": -1e+100,
+                            "maximum": 1e+100
+                          },
+                          {
+                            "type": "string",
+                            "maxLength": 1024
+                          }
+                        ]
+                      },
+                      "minItems": 1,
+                      "maxItems": 64
+                    },
+                    "minItems": 1,
+                    "maxItems": 10000
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "columns",
+                  "rows"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+              },
+              "filter": {
+                "const": "readTypedCSV"
+              },
+              "options": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "kind": {
+                          "enum": [
+                            "text",
+                            "number"
+                          ]
+                        },
+                        "nullable": {
+                          "type": "boolean",
+                          "default": false
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name",
+                        "kind"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 64
+                  },
+                  "nullToken": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16,
+                    "default": "\\N"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "file",
+                  "columns"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "filter",
+              "options"
+            ]
           }
         ]
       }

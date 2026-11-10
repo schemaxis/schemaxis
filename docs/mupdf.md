@@ -47,6 +47,15 @@ inherited rotation, normalized native crop bounds and observed RGB dimensions.
 Raw PDF boxes use PDF coordinates; normalized bounds use MuPDF's top-left view
 coordinates. No authored crop, box override or original-document edit is offered.
 
+Before rendering, a new run checks the selected pages' raw geometry. MuPDF rounds an
+odd `/Rotate`, scales by the magnitude of a negative `/UserUnit` and silently
+substitutes US Letter for a missing or empty `/MediaBox` or a `/CropBox` that does
+not overlap it; none of that is a faithful page, so each is refused as
+`PDF_GEOMETRY_INVALID` at the affected `$.pages[N]` position. `/Rotate` must be a
+multiple of 90, `/UserUnit` positive and at most 75000. Reversed box corners and
+partial CropBox overlap are legal. Offline `verify` of previously retained evidence
+does not apply this source policy, so earlier genuine results keep verifying.
+
 `dpi` is pixels per inch, from 36 to 300; omission selects 72. At ordinary
 `UserUnit=1`, 72dpi maps one PDF point to one pixel. Additional `rotation` is
 **clockwise**, one of 0/90/180/270 degrees, default 0, applied after the native crop
@@ -130,6 +139,9 @@ schema capture and verification use the framework store automatically.
   interface is exposed.
 - `PDF_TEXT_LIMIT`: select fewer pages or a smaller source text payload.
 - `PDF_REPAIRED`: supply a structurally intact PDF; native repair is unsupported.
+- `PDF_GEOMETRY_INVALID`: the named selected page has a malformed `/Rotate`,
+  `/UserUnit`, `/MediaBox` or `/CropBox`; repair or re-export that PDF (it is not an
+  evidence fault, so do not edit retained hashes).
 - `PDF_PAGE_LIMIT` / `PDF_GEOMETRY_LIMIT` / `PDF_PIXEL_LIMIT`: choose a smaller
   source, fewer pages or lower density, according to the stated bounds.
 - `UNSUPPORTED_RUNTIME` / `INTERPRETER_NOT_FOUND`: configure the exact qualified

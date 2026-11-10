@@ -1,0 +1,249 @@
+{
+  "version": "schemaxis.studio-adaptor/2",
+  "categories": [
+    {
+      "id": "thermal",
+      "title": "Solid thermal conduction"
+    }
+  ],
+  "viewers": [
+    "table",
+    "text"
+  ],
+  "templates": [
+    {
+      "id": "baseline",
+      "title": "Steady thermal slab",
+      "description": "Evaluate temperature, heat loss and heater temperature through solid material layers with fixed temperature, prescribed outward heat flux or convection ends. Independent conservation checks and optional sampled limits gate publication.",
+      "requires": "Stable ElmerSolver 26.2 series from 26.2.1 release; serial constant-property solid conduction. All temperatures use kelvin.",
+      "document": {
+        "version": "schemaxis.elmer/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "wall",
+            "thickness_m": 0.2,
+            "conductivity_W_mK": 10,
+            "cells": 8
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 400
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        }
+      }
+    },
+    {
+      "id": "composite",
+      "title": "Composite insulation wall",
+      "description": "Evaluate temperature, heat loss and heater temperature through solid material layers with fixed temperature, prescribed outward heat flux or convection ends. Independent conservation checks and optional sampled limits gate publication.",
+      "requires": "Stable ElmerSolver 26.2 series from 26.2.1 release; serial constant-property solid conduction. All temperatures use kelvin.",
+      "document": {
+        "version": "schemaxis.elmer/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "facing",
+            "thickness_m": 0.1,
+            "conductivity_W_mK": 10,
+            "cells": 10
+          },
+          {
+            "name": "insulation",
+            "thickness_m": 0.1,
+            "conductivity_W_mK": 1,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 400
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        },
+        "limits": {
+          "maximumField": 400.0000001,
+          "maxAbsFlux": 910
+        }
+      }
+    },
+    {
+      "id": "source",
+      "title": "Volumetric solid heater",
+      "description": "Evaluate temperature, heat loss and heater temperature through solid material layers with fixed temperature, prescribed outward heat flux or convection ends. Independent conservation checks and optional sampled limits gate publication.",
+      "requires": "Stable ElmerSolver 26.2 series from 26.2.1 release; serial constant-property solid conduction. All temperatures use kelvin.",
+      "document": {
+        "version": "schemaxis.elmer/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "heater",
+            "thickness_m": 1,
+            "conductivity_W_mK": 1,
+            "heatGeneration_W_m3": 100,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 300
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        },
+        "area_m2": 0.5,
+        "limits": {
+          "maximumField": 312.5000001
+        }
+      }
+    },
+    {
+      "id": "convection",
+      "title": "Heat input and convection",
+      "description": "Evaluate temperature, heat loss and heater temperature through solid material layers with fixed temperature, prescribed outward heat flux or convection ends. Independent conservation checks and optional sampled limits gate publication.",
+      "requires": "Stable ElmerSolver 26.2 series from 26.2.1 release; serial constant-property solid conduction. All temperatures use kelvin.",
+      "document": {
+        "version": "schemaxis.elmer/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "wall",
+            "thickness_m": 0.1,
+            "conductivity_W_mK": 10,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "flux",
+          "value": -1000
+        },
+        "right": {
+          "kind": "convection",
+          "coefficient": 100,
+          "ambient": 300
+        }
+      }
+    },
+    {
+      "id": "two-convection",
+      "title": "Two-film thermal resistance",
+      "description": "Evaluate temperature, heat loss and heater temperature through solid material layers with fixed temperature, prescribed outward heat flux or convection ends. Independent conservation checks and optional sampled limits gate publication.",
+      "requires": "Stable ElmerSolver 26.2 series from 26.2.1 release; serial constant-property solid conduction. All temperatures use kelvin.",
+      "document": {
+        "version": "schemaxis.elmer/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "wall",
+            "thickness_m": 0.2,
+            "conductivity_W_mK": 10,
+            "cells": 8
+          }
+        ],
+        "left": {
+          "kind": "convection",
+          "coefficient": 100,
+          "ambient": 400
+        },
+        "right": {
+          "kind": "convection",
+          "coefficient": 100,
+          "ambient": 300
+        }
+      }
+    }
+  ],
+  "snippets": [
+    {
+      "id": "material-conductivity",
+      "title": "Wall conductivity",
+      "category": "thermal",
+      "description": "Change the first solid layer conductivity in W/(m K). Lower conductivity increases thermal resistance.",
+      "baseDocument": {
+        "version": "schemaxis.elmer/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "wall",
+            "thickness_m": 0.2,
+            "conductivity_W_mK": 10,
+            "cells": 8
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 400
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        }
+      },
+      "fields": {
+        "k": {
+          "label": "Conductivity (W/(m K))",
+          "type": "number",
+          "required": true,
+          "default": 5,
+          "minimum": 1e-05,
+          "maximum": 100000000.0
+        }
+      },
+      "inserts": [
+        {
+          "at": "/layers/0/conductivity_W_mK",
+          "values": [
+            {
+              "$fill": "k"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "outward-convection",
+      "title": "Right convection film",
+      "category": "thermal",
+      "description": "Set ambient temperature and film coefficient on the right; outward heat loss is h*(T-ambient).",
+      "baseDocument": {
+        "version": "schemaxis.elmer/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "wall",
+            "thickness_m": 0.2,
+            "conductivity_W_mK": 10,
+            "cells": 8
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 400
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        }
+      },
+      "inserts": [
+        {
+          "at": "/right",
+          "values": [
+            {
+              "kind": "convection",
+              "coefficient": 100,
+              "ambient": 300
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

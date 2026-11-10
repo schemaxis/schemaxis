@@ -376,6 +376,7 @@ def _mark_verification_failed(directory, error, key='verificationFault'):
 def execute(document, directory, route, native_run, native_verify, native_plan, *, timeout=300,
             workflow=False, resume=False, **options):
     from .configuration import location_context
+    from .artifact_names import run_scope
     from .core.faults import SchemaxisError
     from .dispatch import execution_deadline
     locations = {}
@@ -396,7 +397,7 @@ def execute(document, directory, route, native_run, native_verify, native_plan, 
     # An invalid budget is reported by the adaptor's own validation, preserving
     # its established fault code; only a valid budget opens a deadline scope.
     valid = type(timeout) in (int, float) and math.isfinite(timeout) and timeout > 0
-    with location_context(locations):
+    with location_context(locations), run_scope(directory):
         if not valid:
             return _execute(document, directory, route, native_run, native_verify, native_plan,
                             timeout=timeout, workflow=workflow, resume=resume, **options)
@@ -491,6 +492,8 @@ def is_common(directory):
     try:
         result = json.loads(path.read_text())
         return isinstance(result, dict) and result.get('protocol') == PROTOCOL
+    except RecursionError:
+        fail('VERIFICATION_FAILED', 'retained result JSON nesting exceeds the host reader limit', str(path))
     except (OSError, ValueError):
         return False
 

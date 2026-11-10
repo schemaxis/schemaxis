@@ -1,0 +1,45 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "transcribe",
+      "document": {
+        "version": "schemaxis.whispercpp/1",
+        "operation": "transcribe",
+        "audio": {
+          "path": "/replace/with/speech-16khz-mono.wav"
+        },
+        "model": {
+          "path": "/replace/with/ggml-base.en.bin",
+          "sha256": "a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002"
+        },
+        "language": "en"
+      }
+    },
+    {
+      "id": "report",
+      "document": {
+        "version": "schemaxis.pandoc/1",
+        "operation": "report",
+        "title": "Transcript (machine draft)",
+        "sections": [
+          {
+            "heading": "Transcript",
+            "level": 1,
+            "content": [
+              {
+                "kind": "transcript",
+                "segments": {
+                  "path": {
+                    "$artifact": "transcribe",
+                    "index": 0
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

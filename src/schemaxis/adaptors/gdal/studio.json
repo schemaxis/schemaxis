@@ -150,6 +150,131 @@
         "source": "/replace/with/temperature.tif"
       },
       "requires": "Configure an isolated Python interpreter with GDAL 3.13.3; select a supported bounded local source raster."
+    },
+    {
+      "id": "zonal",
+      "title": "Summarise elevation zones",
+      "description": "Edit the named pixel rectangles and missing policy; statistics, coverage and a typed CSV for Calc are published.",
+      "document": {
+        "version": "schemaxis.gdal/1",
+        "operation": "zonalSummary",
+        "source": {
+          "$fill": "source"
+        },
+        "epsg": 3857,
+        "units": "m",
+        "nodata": -9999,
+        "zones": [
+          {
+            "id": "007",
+            "x": 1,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          },
+          {
+            "id": "=1+2",
+            "x": 2,
+            "y": 1,
+            "width": 1,
+            "height": 1
+          },
+          {
+            "id": "north",
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 1
+          },
+          {
+            "id": "south",
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 2
+          }
+        ],
+        "missing": "exclude",
+        "lossPolicy": "strict"
+      },
+      "fields": {
+        "source": {
+          "label": "Source GeoTIFF",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "tif",
+            "tiff"
+          ],
+          "acceptsKinds": [
+            "image"
+          ],
+          "description": "Choose a supported north-up single-band uncompressed GeoTIFF whose CRS, units and nodata match this starter; zones are counted in its pixel grid."
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/elevation.tif"
+      },
+      "requires": "Configure an isolated Python interpreter with GDAL 3.13.3; select a supported bounded local source raster."
+    },
+    {
+      "id": "zonal-temperature",
+      "title": "Summarise temperature zones",
+      "description": "Float32 Kelvin zones on an EPSG:4326 grid; refuse missing pixels instead of excluding them.",
+      "document": {
+        "version": "schemaxis.gdal/1",
+        "operation": "zonalSummary",
+        "source": {
+          "$fill": "source"
+        },
+        "epsg": 4326,
+        "units": "K",
+        "nodata": -9999,
+        "zones": [
+          {
+            "id": "cold",
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 2
+          },
+          {
+            "id": "warm",
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          },
+          {
+            "id": "row",
+            "x": 0,
+            "y": 4,
+            "width": 6,
+            "height": 1
+          }
+        ],
+        "missing": "refuse",
+        "lossPolicy": "strict"
+      },
+      "fields": {
+        "source": {
+          "label": "Source GeoTIFF",
+          "type": "path",
+          "required": true,
+          "extensions": [
+            "tif",
+            "tiff"
+          ],
+          "acceptsKinds": [
+            "image"
+          ],
+          "description": "Choose a supported north-up single-band uncompressed GeoTIFF whose CRS, units and nodata match this starter; zones are counted in its pixel grid."
+        }
+      },
+      "testValues": {
+        "source": "/replace/with/temperature.tif"
+      },
+      "requires": "Configure an isolated Python interpreter with GDAL 3.13.3; select a supported bounded local source raster."
     }
   ],
   "viewers": [

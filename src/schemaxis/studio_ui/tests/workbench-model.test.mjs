@@ -77,3 +77,43 @@ test('a merged value branch does not replace the field title or explanation', ()
   assert.equal(field.schema.description, 'Glyph scale factor.');
   assert.equal(field.schema['x-studio-guide'].address, '/properties/scale');
 });
+
+
+test('task-specific negative guards hide absent controls and retain invalid authored values for repair', () => {
+  const taskSchema = {type:'object', properties:{operation:{enum:['read','write']}, source:{type:'string'}, destination:{type:'string'}},
+    oneOf:[{properties:{operation:{const:'read'}}, not:{title:'Task fields',anyOf:[{required:['destination'],'x-studio-guide':{status:'reference'}}]}},
+      {properties:{operation:{const:'write'}}, not:{anyOf:[{required:['source']}]}}]};
+  assert.deepEqual(fieldsAt(taskSchema, {operation:'read'}, '').map(field => field.name), ['operation','source']);
+  assert.deepEqual(fieldsAt(taskSchema, {operation:'write'}, '').map(field => field.name), ['operation','destination']);
+  assert.ok(fieldsAt(taskSchema, {operation:'read',destination:'wrong'}, '').some(field => field.name === 'destination'));
+  assert.equal(fieldsAt(taskSchema, {}, '').length, 3);
+  const jointlyForbidden = {type:'object',properties:{a:{},b:{}},not:{required:['a','b']}};
+  assert.equal(fieldsAt(jointlyForbidden, {}, '').length, 2);
+});
+
+
+test('ambiguous task unions retain controls allowed by an unrestricted alternative', () => {
+  const guarded = {properties:{operation:{const:'read'}},not:{required:['destination']}};
+  for (const free of [{properties:{operation:{const:'write'}}}, {}, {properties:{operation:{const:'read'}}}]) {
+    const root={type:'object',properties:{operation:{type:'string'},destination:{type:'string'}},anyOf:[guarded,free]};
+    for (const doc of [{},{operation:{$document:'/definitions/task'}}]) {
+      assert.ok(fieldsAt(root,doc,'').some(field => field.name==='destination'));
+    }
+    if (!free.properties || free.properties.operation.const==='read') {
+      assert.ok(fieldsAt(root,{operation:'read'},'').some(field => field.name==='destination'));
+    }
+  }
+});
+
+
+test('nested task guards require a resolved outer alternative', () => {
+  const root={type:'object',properties:{operation:{enum:['read','write']},format:{enum:['text','binary']},destination:{type:'string'}},anyOf:[
+    {properties:{operation:{const:'read'}},anyOf:[
+      {properties:{format:{const:'text'}},not:{required:['destination']}},
+      {properties:{format:{const:'binary'}}}]},
+    {properties:{operation:{const:'write'}}}]};
+  for (const document of [{format:'text'},{operation:{$document:'/definitions/task'},format:'text'},{operation:'write',format:'text'}]) {
+    assert.ok(fieldsAt(root,document,'').some(field=>field.name==='destination'));
+  }
+  assert.equal(fieldsAt(root,{operation:'read',format:'text'},'').some(field=>field.name==='destination'),false);
+});

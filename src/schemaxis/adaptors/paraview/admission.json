@@ -1,0 +1,184 @@
+{
+  "protocol": "schemaxis.file-admission/1",
+  "routes": {
+    "schemaxis/1": {
+      "operations": {
+        "evidence": [
+          {
+            "reference": "verification/2026-09-16-catalogue.json",
+            "rows": "/nativeQualification/fixtures/*",
+            "operationPointers": [
+              "/fixture/nodes/*/filter"
+            ]
+          },
+          {
+            "reference": "verification/2026-09-16-catalogue-expansion.json",
+            "rows": "/writerQualification/results/*",
+            "operationPointers": [
+              "/operation"
+            ]
+          },
+          {
+            "reference": "verification/2026-09-16-catalogue-expansion.json",
+            "rows": "/filterQualification/results/*",
+            "operationPointers": [
+              "/fixture/nodes/*/filter"
+            ]
+          },
+          {
+            "reference": "verification/2026-09-16-catalogue-expansion.json",
+            "rows": "/examples/*",
+            "success": "succeeded",
+            "examplesByName": {
+              "writers-01": "examples/schemaxis/paraview-writers.json",
+              "output-ports-01": "examples/schemaxis/paraview-output-ports.json",
+              "specialised-01": "examples/schemaxis/paraview-specialised-data.json",
+              "native-times-03": "examples/schemaxis/paraview-native-times.json",
+              "resources-03": "examples/schemaxis/paraview-resources.json",
+              "textures-01": "examples/schemaxis/paraview-textures.json",
+              "installed-validated-writer-resources": "examples/schemaxis/paraview-writer-resources.json"
+            }
+          },
+          {
+            "reference": "verification/2026-10-30-paraview-closed-inputs.json",
+            "rows": "/cases/*",
+            "operationPointers": [
+              "/document/nodes/*/filter",
+              "/document/scenes/*/exports/*/writer",
+              "/document/scenes/*/exports/*/readback/operation"
+            ]
+          }
+        ],
+        "qualifiedExamples": [
+          {
+            "reference": "src/schemaxis/adaptors/paraview/qualification.json",
+            "receipt": "/routes/schemaxis~11/cases/0/verified",
+            "example": "examples/schemaxis/paraview-admission.json"
+          }
+        ],
+        "reviewedClaims": [
+          {
+            "reference": "verification/2026-09-24-schemaxis-rename.json",
+            "receipt": "/nativeParaView/verification/verified",
+            "operation": "sphere",
+            "scope": "The retained serial native smoke record explicitly describes one sphere geometry and PNG publication; this maps that named curated operation only."
+          }
+        ]
+      },
+      "operationSelectors": [
+        "/nodes/*/filter",
+        "/scenes/*/exports/*/writer",
+        "/scenes/*/exports/*/readback/operation"
+      ],
+      "fileSlots": [
+        {
+          "pointer": "/nodes/*/options/FileName",
+          "suffixes": [
+            ".png"
+          ],
+          "maxBytes": 33554432,
+          "contentPolicy": "native",
+          "when": {
+            "/nodes/*/filter": "pvResourceImageTexture"
+          }
+        },
+        {
+          "pointer": "/nodes/*/options/FileName",
+          "suffixes": [
+            ".png"
+          ],
+          "maxBytes": 33554432,
+          "contentPolicy": "native",
+          "when": {
+            "/nodes/*/filter": "pvResourceTexture"
+          }
+        },
+        {
+          "pointer": "/nodes/*/options/FileNames/*",
+          "suffixes": [
+            ".png"
+          ],
+          "maxBytes": 33554432,
+          "contentPolicy": "native",
+          "when": {
+            "/nodes/*/filter": "pvPNGSeriesReader"
+          }
+        },
+        {
+          "pointer": "/nodes/*/options/FileName/*",
+          "suffixes": [
+            ".vtr"
+          ],
+          "maxBytes": 33554432,
+          "when": {
+            "/nodes/*/filter": "pvXMLRectilinearGridReader"
+          },
+          "contentPolicy": "hook",
+          "contentHook": "schemaxis.adaptors.paraview.captured_xml:validate_leaf",
+          "contentOptions": {
+            "vtk_type": "RectilinearGrid"
+          }
+        },
+        {
+          "pointer": "/nodes/*/options/FileName/*",
+          "suffixes": [
+            ".vts"
+          ],
+          "maxBytes": 33554432,
+          "when": {
+            "/nodes/*/filter": "pvXMLStructuredGridReader"
+          },
+          "contentPolicy": "hook",
+          "contentHook": "schemaxis.adaptors.paraview.captured_xml:validate_leaf",
+          "contentOptions": {
+            "vtk_type": "StructuredGrid"
+          }
+        },
+        {
+          "pointer": "/nodes/*/options/FileName/*",
+          "suffixes": [
+            ".vtt"
+          ],
+          "maxBytes": 33554432,
+          "when": {
+            "/nodes/*/filter": "pvXMLTableReader"
+          },
+          "contentPolicy": "hook",
+          "contentHook": "schemaxis.adaptors.paraview.captured_xml:validate_leaf",
+          "contentOptions": {
+            "vtk_type": "Table"
+          }
+        }
+      ],
+      "forbiddenPointers": [
+        "/axes",
+        "/definitions",
+        "/dimensions",
+        "/views",
+        "/settings",
+        "/scenes/*/exports/*/options/TextureFileName"
+      ],
+      "qualification": [
+        "verification/2026-09-16-catalogue.json",
+        "verification/2026-09-16-catalogue-expansion.json",
+        "src/schemaxis/adaptors/paraview/qualification.json",
+        "verification/2026-09-24-schemaxis-rename.json",
+        "verification/2026-10-30-paraview-closed-inputs.json"
+      ],
+      "scope": "Serial operations selected from passed native fixture/writer records, with the canonical graph and scene schemas; generated discovery is not native qualification.",
+      "limitations": [
+        "Only operations named by passed checked-in native records are admitted; failed or merely generated catalogue entries remain visible as unqualified.",
+        "Captured PNG texture/image reader slots are explicit; unresolved external reader families and authored execution overrides remain refused.",
+        "OBJ TextureFileName can carry an auxiliary texture reference; that option is refused until its file-access semantics have a qualified closed contract.",
+        "Axes, definitions, dimensions, views and settings metadata sections are refused in this literal graph profile; qualification of their expansion and indirect file closure is separate.",
+        "XML rectilinear-grid, structured-grid and table readers accept only one-piece self-contained inline ASCII numeric captures under the pinned byte grammar; external references, companion files and binary/appended encodings are refused before native parsing.",
+        "GenericIOMultiBlockReader is qualified only as managed writer readback. Authored reader nodes and caller-supplied readback filenames are refused; the writer supplies its own declared output path."
+      ],
+      "operationContexts": {
+        "pvGenericIOMultiBlockReader": [
+          "/scenes/*/exports/*/readback/operation"
+        ]
+      }
+    }
+  }
+}

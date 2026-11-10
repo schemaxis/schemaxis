@@ -6,7 +6,10 @@
       "const": "schemaxis.imagej/1"
     },
     "operation": {
-      "const": "analyzeParticles"
+      "enum": [
+        "analyzeParticles",
+        "measureRegions"
+      ]
     },
     "image": {
       "type": "string",
@@ -88,14 +91,310 @@
       "type": "number",
       "minimum": 0,
       "maximum": 1e+30
+    },
+    "frames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "image": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 4096
+          },
+          "timeSeconds": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000.0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "image",
+          "timeSeconds"
+        ]
+      },
+      "minItems": 2,
+      "maxItems": 8
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2047
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2047
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2048
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2048
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "x",
+          "y",
+          "width",
+          "height"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 16
     }
   },
   "additionalProperties": false,
   "required": [
     "version",
-    "operation",
-    "image",
-    "calibration",
-    "threshold"
+    "operation"
+  ],
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.imagej/1"
+        },
+        "operation": {
+          "const": "analyzeParticles"
+        },
+        "image": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 4096
+        },
+        "calibration": {
+          "type": "object",
+          "properties": {
+            "pixelWidth": {
+              "type": "number",
+              "minimum": 1e-06,
+              "maximum": 1000000.0
+            },
+            "pixelHeight": {
+              "type": "number",
+              "minimum": 1e-06,
+              "maximum": 1000000.0
+            },
+            "unit": {
+              "enum": [
+                "nm",
+                "um",
+                "mm",
+                "cm",
+                "m"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "pixelWidth",
+            "pixelHeight",
+            "unit"
+          ]
+        },
+        "threshold": {
+          "type": "object",
+          "properties": {
+            "lower": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "upper": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "lower",
+            "upper"
+          ]
+        },
+        "connectivity": {
+          "enum": [
+            "eight",
+            "four"
+          ],
+          "default": "eight"
+        },
+        "includeHoles": {
+          "type": "boolean",
+          "default": false
+        },
+        "excludeEdges": {
+          "type": "boolean",
+          "default": false
+        },
+        "minimumArea": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1e+30,
+          "default": 0
+        },
+        "maximumArea": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1e+30
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "image",
+        "calibration",
+        "threshold"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "schemaxis.imagej/1"
+        },
+        "operation": {
+          "const": "measureRegions"
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "image": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 4096
+              },
+              "timeSeconds": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000000.0
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "image",
+              "timeSeconds"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 8
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "x": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2047
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2047
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2048
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2048
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "x",
+              "y",
+              "width",
+              "height"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "calibration": {
+          "type": "object",
+          "properties": {
+            "pixelWidth": {
+              "type": "number",
+              "minimum": 1e-06,
+              "maximum": 1000000.0
+            },
+            "pixelHeight": {
+              "type": "number",
+              "minimum": 1e-06,
+              "maximum": 1000000.0
+            },
+            "unit": {
+              "enum": [
+                "nm",
+                "um",
+                "mm",
+                "cm",
+                "m"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "pixelWidth",
+            "pixelHeight",
+            "unit"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "operation",
+        "frames",
+        "regions",
+        "calibration"
+      ]
+    }
   ]
 }

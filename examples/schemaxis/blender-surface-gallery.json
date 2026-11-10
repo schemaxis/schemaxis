@@ -1,0 +1,262 @@
+{
+  "version": "schemaxis.blender/1",
+  "nodes": [
+    {
+      "id": "fallback",
+      "filter": "material"
+    },
+    {
+      "id": "resin",
+      "filter": "uvSphere",
+      "inputs": {
+        "material": "fallback"
+      },
+      "options": {
+        "radius": 0.7,
+        "segments": 32,
+        "rings": 16,
+        "smoothShading": true,
+        "centre": [
+          -1.8,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "fabric",
+      "filter": "uvSphere",
+      "inputs": {
+        "material": "fallback"
+      },
+      "options": {
+        "radius": 0.7,
+        "segments": 32,
+        "rings": 16,
+        "smoothShading": true,
+        "centre": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "glass",
+      "filter": "uvSphere",
+      "inputs": {
+        "material": "fallback"
+      },
+      "options": {
+        "radius": 0.7,
+        "segments": 32,
+        "rings": 16,
+        "smoothShading": true,
+        "centre": [
+          1.8,
+          0,
+          0
+        ]
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "surface-gallery",
+      "visible": [
+        "resin",
+        "fabric",
+        "glass",
+        "label"
+      ],
+      "production": {
+        "objects": [
+          {
+            "id": "label",
+            "kind": "text",
+            "body": "Resin   Fabric   Glass",
+            "size": 0.18,
+            "align": "CENTER",
+            "location": [
+              0,
+              0,
+              0.95
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              0
+            ],
+            "material": "labelMaterial"
+          }
+        ],
+        "surfaceMaterials": [
+          {
+            "id": "resinMaterial",
+            "baseColour": {
+              "kind": "constant",
+              "value": [
+                0.55,
+                0.22,
+                0.11
+              ]
+            },
+            "roughness": {
+              "kind": "constant",
+              "value": 0.22
+            },
+            "subsurface": {
+              "kind": "skin",
+              "weight": {
+                "kind": "constant",
+                "value": 0.8
+              },
+              "distance": 0.08
+            },
+            "coat": {
+              "weight": {
+                "kind": "constant",
+                "value": 0.25
+              }
+            }
+          },
+          {
+            "id": "fabricMaterial",
+            "baseColour": {
+              "kind": "constant",
+              "value": [
+                0.02,
+                0.04,
+                0.12
+              ]
+            },
+            "roughness": {
+              "kind": "constant",
+              "value": 0.8
+            },
+            "sheen": {
+              "weight": {
+                "kind": "constant",
+                "value": 1
+              },
+              "roughness": {
+                "kind": "constant",
+                "value": 0.6
+              },
+              "tint": {
+                "kind": "constant",
+                "value": [
+                  0.2,
+                  0.3,
+                  0.8
+                ]
+              }
+            }
+          },
+          {
+            "id": "glassMaterial",
+            "baseColour": {
+              "kind": "constant",
+              "value": [
+                0.9,
+                0.97,
+                1
+              ]
+            },
+            "roughness": {
+              "kind": "constant",
+              "value": 0.02
+            },
+            "ior": {
+              "kind": "constant",
+              "value": 1.5
+            },
+            "transmission": {
+              "kind": "constant",
+              "value": 1
+            }
+          },
+          {
+            "id": "labelMaterial",
+            "baseColour": {
+              "kind": "constant",
+              "value": [
+                0.01,
+                0.01,
+                0.01
+              ]
+            },
+            "emission": {
+              "colour": {
+                "kind": "constant",
+                "value": [
+                  0.4,
+                  0.4,
+                  0.4
+                ]
+              },
+              "strength": {
+                "kind": "constant",
+                "value": 0.5
+              }
+            }
+          }
+        ],
+        "materialBindings": [
+          {
+            "object": "resin",
+            "material": "resinMaterial"
+          },
+          {
+            "object": "fabric",
+            "material": "fabricMaterial"
+          },
+          {
+            "object": "glass",
+            "material": "glassMaterial"
+          }
+        ]
+      },
+      "render": {
+        "samples": 64,
+        "threads": 2,
+        "worldStrength": 1,
+        "worldColour": [
+          0.8,
+          0.8,
+          0.8
+        ],
+        "lightEnergy": 800
+      },
+      "images": [
+        {
+          "id": "view",
+          "size": [
+            480,
+            240
+          ],
+          "cameras": [
+            {
+              "direction": [
+                0,
+                -1,
+                0.2
+              ],
+              "up": [
+                0,
+                0,
+                1
+              ],
+              "focalPoint": [
+                0,
+                0,
+                0.15
+              ],
+              "scale": 6.5
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

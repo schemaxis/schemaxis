@@ -8,8 +8,10 @@ const RANK = {user: 0, dev: 1, admin: 2};
 const GROUPS = [
   {title: 'Appearance', prefix: ['role', 'theme']},
   {title: 'Editor', prefix: ['editor.']},
+  {title: 'Files and help', prefix: ['files.', 'help.']},
   {title: 'Outputs', prefix: ['output.']},
   {title: 'Execution', prefix: ['execution.']},
+  {title: 'Notifications', prefix: ['notifications.']},
 ];
 
 function control(ctx, key, spec, value, editable) {
@@ -31,6 +33,7 @@ function control(ctx, key, spec, value, editable) {
       onChange: (event) => save(spec.type === 'integer' ? Number(event.target.value) : event.target.value)});
   }
   return h('div', {class: 'field'}, h('label', {}, spec.label), input,
+    spec.description ? h('div', {class: 'hint'}, spec.description) : null,
     editable ? null : h('div', {class: 'hint'}, `Managed by the ${spec.scope} role.`));
 }
 
@@ -71,7 +74,14 @@ export const settingsWindow = {
             const spec = settings.specification[key];
             return control(ctx, key, spec, settings.values[key], RANK[role] >= RANK[spec.scope]);
           }),
-          group.title === 'Outputs' ? namingPreview(settings) : null,
+          group.title === 'Outputs' ? h('div', {}, h('label', {}, 'Naming preset ',
+            h('select', {class: 'select', 'aria-label': 'Output naming preset', onChange: event => {
+              if (event.target.value) setSetting(ctx, {'output.namingPattern': event.target.value});
+            }}, h('option', {value: ''}, 'Choose a preset…'),
+              h('option', {value: '{index}-{operation}-{output}{ext}'}, 'Indexed output'),
+              h('option', {value: '{index}-{operation}-{output}-{param:pressure}{ext}'}, 'Key and value (edit parameter name above)'),
+              h('option', {value: '{operation}-{output}-{axis:x}{ext}'}, 'Sweep value (edit axis name above)'))),
+            namingPreview(settings)) : null,
           group.title === 'Appearance' ? h('p', {class: 'hint muted'},
             'Roles change which windows are shown. They are not access control: this Studio runs locally for '
             + 'one person.') : null);

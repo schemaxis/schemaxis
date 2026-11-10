@@ -34,7 +34,20 @@ def serialize(visibility, proxies=None):
         if name in proxies:
             prop=ET.SubElement(props,'Property',{'name':'Proxy','type':'App::PropertyPythonObject'})
             ET.SubElement(prop,'Python',{'value':PROXY_STATE,'encoded':'yes','module':PROXY_MODULE,'class':proxies[name]})
+    # Native GUI restore reads this record even when no camera was authored.
+    ET.SubElement(root,'Camera',{'settings':''})
     return ET.tostring(root,encoding='utf-8',xml_declaration=True)
+
+
+def valid_header(root):
+    """Accept current native-format output and the earlier visibility-only form."""
+    if root.tag!='Document' or root.attrib!={'SchemaVersion':'1'}:
+        return False
+    children=[child.tag for child in root]
+    if children==['ViewProviderData']:
+        return True
+    return (children==['ViewProviderData','Camera'] and root[1].attrib=={'settings':''}
+            and not len(root[1]) and not (root[1].text or '').strip())
 
 
 def persist(path,visibility,proxies=None):
@@ -60,7 +73,7 @@ def verify(path,visibility,proxies=None):
     from .document_xml import read_member, parse_xml
     with ZipFile(path) as archive:
         root=parse_xml(read_member(archive,'GuiDocument.xml',1024*1024),'GuiDocument.xml')
-    if root.tag!='Document' or root.attrib!={'SchemaVersion':'1'} or len(root)!=1 or root[0].tag!='ViewProviderData':
+    if not valid_header(root):
         raise ValueError('GUI state document differs')
     data=root[0]
     if data.attrib!={'Count':str(len(visibility))} or len(data)!=len(visibility):

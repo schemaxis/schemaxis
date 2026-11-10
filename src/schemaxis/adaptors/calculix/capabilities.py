@@ -1,15 +1,28 @@
 # Copyright (C) 2026 David L F Gaden
-"""Domain intent, physical scope and measured acceptance for elastic beams."""
+"""Physical member intent; bounded breadth remains distinct from general FEA."""
+import json
+from pathlib import Path
+
+
 def catalogue():
-    return {'groups':{'elasticity':{'label':'Elastic cantilevers','purpose':'Assess a bounded rectangular cantilever against explicit serviceability limits.','domain':'mechanics'}},
-            'requirements':['Stable CalculiX 2.23 CLI; SI metres, newtons and pascals throughout.',
-                            'Slenderness 20..40, section aspect 0.5..2, isotropic Poisson ratio 0..0.35 and small deformation/strain.',
-                            'Separate axial and transverse refinement, force/moment balance and independent beam-theory checks must pass.'],
-            'references':['docs/calculix.md','src/schemaxis/adaptors/calculix/readiness.json'],
-            'operations':{'cantileverBeam':{'groups':['elasticity'],'purpose':'Derive a quadratic solid mesh from beam/material/load intent, solve and independently assess deflection, equilibrium and interior normal stress.',
-                'keywords':['cantilever','elastic','mesh convergence','deflection','reaction','stress'],
-                'semantics':['A fully fixed clamp at x = 0 and consistent quadratic end-face shear loading model a rectangular elastic cantilever.',
-                             'Native area-mean tip displacement, actual root reactions and Gauss stress samples are measured; requirements can reject otherwise numerically valid solves.',
-                             'A fresh native process reopens the exact retained editable fine deck. No general imported deck or surface/root peak-stress certification.'],
-                'examples':[{'reference':'examples/schemaxis/calculix-beam.json','purpose':'Steel beam with deflection and interior sampled stress limits.'},
-                            {'reference':'examples/schemaxis/calculix-beam-material.json','purpose':'Change elastic stiffness and measure the resulting compliance.'}]}}}
+    return {
+        'application':{'label':'CalculiX','purpose':'Assess linear elastic rectangular members under six signed end resultants with independent physical checks.',
+                       'keywords':['structural mechanics','finite element','FEA','elasticity','axial','bending','torsion','serviceability']},
+        'groups':{'elasticity':{'label':'Elastic members','purpose':'Assess small-deformation rectangular structural members against explicit measurements.','domain':'mechanics'}},
+        'requirements':['Stable CalculiX2.23 CLI; SI metres, newtons, pascals and radians.',
+                        'Slenderness20..40, section aspect0.5..2, isotropic Poisson ratio0..0.35 and small deformation/strain.',
+                        'Independent displacement/twist, interior normal/torsion stress, separate refinement and force/moment equilibrium checks must pass.'],
+        'references':['docs/calculix.md','src/schemaxis/adaptors/calculix/readiness.json'],
+        'searchCases':json.loads(Path(__file__).with_name('search-cases.json').read_text()),
+        'operations':{'cantileverBeam':{
+            'groups':['elasticity'],
+            'purpose':'Assess combined axial, biaxial bending and torsion end resultants in a rectangular elastic member; derive quadratic meshes and measure serviceability, sampled stress and equilibrium.',
+            'keywords':['cantilever','axial','tension','compression','bending','torsion','torque','end resultants','end couple','displacement','twist','reaction','stress','serviceability','mesh convergence'],
+            'semantics':['Six global end resultants map to consistent quadratic face tractions; end couples are distributed force systems, not rotational solid-node constraints.',
+                         'Choose a fully clamped face, or pure-axial sliding support allowing Poisson contraction. Every active translation and twist is independently checked, including cancelling loads.',
+                         'Interior normal stress and antisymmetric torsion shear are compared against axial/Euler-Bernoulli/Prandtl theory. Native von Mises samples are measurements, not peak stress or yield certification.',
+                         'Fresh processes reopen the exact retained editable deck; arbitrary imported decks, nonrectangular sections and general FEA remain unsupported.'],
+            'examples':[{'reference':'examples/schemaxis/calculix-combined.json','purpose':'Combined six-resultant member with translation, twist and sampled equivalent-stress limits.'},
+                        {'reference':'examples/schemaxis/calculix-axial-slide.json','purpose':'Compress a pure-axial member while allowing transverse Poisson contraction.'},
+                        {'reference':'examples/schemaxis/calculix-torsion-wide.json','purpose':'Twist a nonsquare rectangular section and verify its warping-sensitive compliance.'},
+                        {'reference':'examples/schemaxis/calculix-beam.json','purpose':'Legacy vertical bending baseline.'}]}}}

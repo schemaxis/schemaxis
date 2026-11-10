@@ -1,7 +1,7 @@
 # Mechanical parts with FreeCAD sketches and features
 
 Start with a constrained sketch, give it thickness with a Pad, then remove material
-with a second sketch and a through-all Pocket. The published FCStd contains a real
+with another sketch and a finite-depth or through-all Pocket. The published FCStd contains a real
 PartDesign Body and editable feature history. Named dimensions can drive the sketch
 and Pad, so a changed thickness keeps the hole through the whole part.
 
@@ -39,11 +39,15 @@ schemaxis run examples/schemaxis/freecad-part-design.json \
 schemaxis verify evidence/mechanical-part
 ```
 
+The [general history guide](freecad-histories.md) extends this introductory
+example to multiple Bodies, subsequent Pads, arbitrary typed sketches, frames,
+native planar-face attachments, turned features, patterns, dress-ups and lofts.
+
 ## Choosing a modelling route
 
 | Intent | Declaration | Native result |
 | --- | --- | --- |
-| A mechanical part with an editable sketch and feature history | `body`, owned `rectangle`/`circle`, `pad`, then `pocket` | PartDesign Body containing Sketcher sketches, first Pad and through-all Pockets |
+| A mechanical part with an editable sketch and feature history | `body`, owned `rectangle`/`circle`, `pad`, then `pocket` | PartDesign Body containing Sketcher sketches, first Pad and finite-depth or through-all Pockets |
 | Construct or combine separate solids | Primitives, unowned profiles, `extrude`/`revolve`/`loft`, booleans | Linked Part features; see [CAD workflows](cad-and-mesh-workflows.md) |
 | Reuse a dimension after native reopening | `parameters` and node-local `drive` | Typed native length properties and explicit expression relationships; see [parameters](freecad-parameters.md) |
 
@@ -53,8 +57,9 @@ Pad requires its Body and an earlier profile in that Body. Each Pocket takes the
 current solid tip as `base` and a fresh profile in the same Body. Select the final
 Pad or Pocket as `output`; the saved Body's Tip points to that feature.
 
-This first slice supports one Body and one initial Pad followed by a linear chain
-of Pockets. No second Pad, branch, reused profile or cross-Body link is inferred.
+This introductory example uses one Body, a first Pad and a linear Pocket chain.
+The current route also supports explicit subsequent Pads and separate Bodies;
+branches, reused profiles and implicit cross-Body links are refused.
 Owned profiles/features cannot feed Part booleans or sweeps; use the separate Part
 route for those models. A Body with no features or an unused owned sketch can be
 retained while authoring if another unowned solid is the output. An empty Body is
@@ -62,18 +67,24 @@ never accepted as a solid, and adding an unused sketch does not replace the Tip.
 
 ## Dimensions and geometry
 
-All lengths are millimetres. Body sketches attach to that Body's origin XY plane
-with zero offset. The Body itself stays at the world origin. The Pad grows along
-+Z. A Pocket uses native **Through all**, one side, reversed relative to its XY
-sketch normal so it removes material along +Z. These modes are fixed by the bounded
-contract; a fixed-depth cut with the same current shape does not satisfy it.
+All lengths are millimetres. This example attaches Body sketches to the origin
+XY plane with zero offset. The route also accepts explicit frames and checked
+planar-face attachments; see the history guide. The Body itself stays at the
+world origin, and the example Pad grows along +Z. A Pocket uses one side, reversed relative to its XY sketch normal so it removes
+material along +Z from the origin XY face. Choose `extent: "throughAll"` (the
+default) for native **Through all**, with no `length`. Choose `extent: "length"`
+with an explicit positive `length` in mm, at most 100000, or `drive.length` for
+native **Length**. There is no default finite depth. The saved extent and finite
+depth are verified separately from geometry: a same-current-shape cut with different
+intent does not satisfy the declaration.
 
 Rectangles are centred and fully constrained by named `width` and `height`
 constraints plus centring expressions. Circles are centred by default. An explicit
 `centre: [x, y]` creates signed `centreX` and `centreY` constraints, in local sketch
 coordinates, each within ±100000 mm. Zero and negative coordinates are allowed.
 The native constraints can be edited after reopening; coordinate drivers are not
-yet exposed. Width, height and radius can use `drive`, as can Pad `length`.
+yet exposed. Width, height and radius can use `drive`, as can Pad `length` and finite-depth
+Pocket `length`. `throughAll` refuses a literal or driven length.
 
 Parameter bounds establish a supported range of affine lengths, not a guarantee
 that every combination is geometrically valid. A hole outside the stock, excessive
@@ -110,3 +121,46 @@ same-current-shape fixed-depth Pocket is rejected and then distinguished by a
 thicker stock edit. Corrupted files, altered ownership, attachment, constraints,
 Body placement and feature semantics are negative cases. This qualifies the
 bounded workflow, not arbitrary Sketcher geometry or all FreeCAD features.
+
+## Blind pockets and counterbores
+
+[The counterbore example](../examples/schemaxis/freecad-counterbore.json) makes an
+80 × 50 × 12 mm plate with a 6 mm diameter through bore at (15, 10) mm and a
+12 mm diameter counterbore 4 mm deep from the origin XY face. The first Pocket
+uses `throughAll`; the second uses `length`, driven by `counterboreDepth`. Both
+sketches have the same centre. The radius and stock thickness also remain native
+drivers. [The variant](../examples/schemaxis/freecad-counterbore-variant.json)
+changes all three dimensions to 20 mm stock, 8 mm depth and 8 mm recess radius.
+[The blind-pocket example](../examples/schemaxis/freecad-blind-pocket.json)
+omits the small through bore and leaves an 8 mm floor above the 4 mm cavity.
+Studio offers **Through bore with a counterbore** with an editable depth control.
+
+A finite depth does **not** guarantee a blind cavity. These sketches start at
+Z = 0 and cut towards +Z; the cavity opens on the origin XY face. A length equal
+to or greater than the stock thickness cuts through. When stock later becomes
+thicker than that length, the finite cut leaves material above its floor, while
+`throughAll` keeps cutting through. Native parameter bounds ensure positive
+lengths, not a relationship between cut depth and stock or a manufacturing safety
+margin. Choose bounds and geometry that reflect your intended stock family.
+
+Use a distinct unused profile for each cut and continue from the current tip.
+A counterbore must overlap and remove material from that tip; a second cut wholly
+inside an existing void fails `INVALID_GEOMETRY`. `INVALID_POCKET_EXTENT` means
+supply `length` or `drive.length` with `extent: "length"`, or remove that depth
+for `throughAll`. [The invalid example](../examples/schemaxis/freecad-counterbore-invalid.json)
+demonstrates the conflicting intent. Fix the declaration, then rerun into a fresh
+evidence directory. The feature chain, ownership, constraints, STEP/STL handoff
+and batch-only restrictions above apply to both extents.
+
+The counterbore volume is `80*50*t - pi*3^2*t - pi*(R^2-3^2)*min(d,t)` mm³.
+`tools/qualify_freecad_finite_pocket.py` adds independent surface area, bounds,
+centre of mass, point membership and cylindrical-face oracles; checks depth,
+stock and radius edits at their bounds; edits both unbound centres directly;
+saves and freshly reopens the native document and STEP; and rejects changed
+saved extent, depth, property type, expression, direction and base links even
+with refreshed artifact hashes. Its thicker-stock control distinguishes finite
+and through-all cuts that initially have the same shape. These are geometric
+checks, not machining, fit, tolerance or structural certification.
+
+See [the capability-family map](freecad-capabilities.md) for the supported product
+workflows and the substantial upstream workbenches still excluded.

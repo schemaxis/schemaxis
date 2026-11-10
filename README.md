@@ -1,5 +1,9 @@
 # Schemaxis
 
+Managed CLI runs and Studio cases support [packaged application modules](docs/application-modules.md),
+including per-app container dispatch, offline archives and reviewed cache cleanup.
+Modules require qualified image manifests; no public image catalogue is bundled.
+
 **Declared, repeatable pipelines across engineering and creative desktop
 applications, for people and AI agents, with retained evidence used to check
 each result.**
@@ -98,25 +102,49 @@ For interactive work, Schemaxis Studio runs locally in your browser:
 schemaxis console --workspace .schemaxis/studio --web
 ```
 
+## MCP for agents
+
+Launch a local stdio MCP server with an owned session workspace:
+
+```bash
+schemaxis mcp --workspace .schemaxis/agent-session
+```
+
+Agents can discover tools, capture plans, poll jobs and read verification
+evidence through the same execution service. The default profile admits the
+reviewed file-free SymPy exact-root route and bounded compositions of that route;
+native execution requires its separately configured runtime. Other authored
+routes are refused until reviewed. Input admission is not an OS sandbox.
+
+Modern and legacy MCP Python clients and the OpenAI Agents SDK passed local
+list/call/host-plan checks; Claude Agent SDK passed connection and tool discovery.
+No model requests were made. A separate follow-up through both MCP modes and the
+OpenAI wrapper executed and freshly verified real local SymPy jobs. See the
+[agent quickstart](docs/agent-quickstart.md), [MCP guide](docs/mcp.md) and
+[exact SDK versions and limits](verification/2026-10-29-mcp-clients.md).
+
 ## Applications
 
 | Area | Applications |
 | --- | --- |
 | CFD and data post-processing | ParaView (serial and MPI pvbatch, OpenFOAM-format cases) |
-| CAD, meshing and structures | FreeCAD, Gmsh, CalculiX, meshio (bounded VTU/VTK interchange), OpenSCAD (dimensioned plates and spacers) |
-| Numerical analysis | GNU Octave, R, Cantera, ngspice |
+| CAD, meshing and structures | FreeCAD (editable through-all and finite-depth machining), Gmsh, CalculiX, OpenSees (planar elastic trusses), meshio (bounded triangle/tetra/hexahedral VTU/VTK interchange), OpenSCAD (dimensioned plates and spacers) |
+| Solid heat and scalar conduction | Elmer (layered steady solid heat), GetDP (layered steady heat/current) |
+| Numerical analysis | GNU Octave, R, Cantera (thermodynamics, equilibrium and closed reactors with optional fixed-bath thermal exchange), ngspice |
 | PCB inspection | KiCad |
 | Fabrication | PrusaSlicer |
-| Scientific imaging | ImageJ, ImageMagick (bounded PNG preparation and comparison sheets) |
+| Scientific imaging | ImageJ, ImageMagick (bounded PNG preparation and comparison sheets), WebP (exact RGBA lossless assets, opaque lossy assets with checked error and byte budgets, and static WebP-to-PNG decoding) |
 | Spreadsheets | LibreOffice Calc (ODS and XLSX) |
-| Reports | Pandoc (structured reports to HTML and DOCX) |
+| Reports | Pandoc (structured reports, verified PNG artifact handoffs and timed transcripts to HTML/DOCX, with optional checked EPUB 3 publication), EPUBCheck (fresh standards checks of captured EPUBs) |
 | Data and plots | SQLite (typed relational summaries), Apache Arrow (typed nullable CSV to verified Parquet), Gnuplot (CSV plots with checked geometry) |
 | PDF assembly and review | QPDF (selected pages, order, repeats and quarter turns), MuPDF (ordered page images, text and geometry) |
 | 3D, games and pixel art | Blender, Godot, Aseprite |
-| Diagrams, video and media | Inkscape, FFmpeg, Shotcut, Adobe Premiere Pro (experimental, read-only) |
+| Diagrams, video and media | Inkscape, FFmpeg (verified video, captioned review movies, AAC-to-WAV extraction and bounded WAV-to-AAC publication), Shotcut, Adobe Premiere Pro (experimental, read-only) |
 | Directed graph layout | Graphviz (checked DOT/SVG layout) |
-| Audio | SoX (PCM16 excerpts, gain, fades and concatenation) |
+| Audio | SoX (PCM16 edits, measured peak headroom and speech-ready mono 16 kHz preparation), FLAC (lossless recording archives with optional declared title, artist and description labels, and PCM16 handoffs), whisper.cpp (draft transcripts and captions with optional declared text corrections, cue deletion, cue timing edits and bounded word-preserving line layout), eSpeak NG (offline synthetic draft narration with US English, British English, French and Spanish voice choices) |
+| Publication bundles | Info-ZIP (selected publication files in a stored ZIP with an independently checked byte inventory) |
 | Geospatial | QGIS, GDAL (checked raster windows and nearest grid resizing) |
+| Photo metadata | ExifTool (typed read, audit and comparison of JPEG, TIFF, DNG, PNG, WebP, HEIF and XMP sidecar metadata; new copies with edited or removed metadata (JPEG, TIFF, DNG, PNG, WebP and the existing items of HEIF files) or minimised JPEG, PNG and WebP metadata, corrected capture times, declared positions or positions interpolated on GPX tracks and typed metadata copied from a photo or an XMP sidecar onto new copies, in every one of those containers, portable XMP sidecars exported, and photo names planned and exact foldered copies organised, each proved by independent readback or recomputation; originals are never modified) |
 
 Each adaptor declares its bounded scope, so it is explicit about what it does
 *not* do. Run `schemaxis discover` for the details, or see the
@@ -169,3 +197,17 @@ See [Distribution boundary](docs/distribution.md).
 [TRADEMARKS.md](TRADEMARKS.md). ParaView, Blender, FreeCAD and the other
 application names are trademarks of their respective owners. Their use here
 does not imply endorsement.
+
+## Independent artifact viewer
+
+Run `schemaxis-viewer /path/to/results` (or
+`PYTHONPATH=src python3 -m schemaxis_viewer` from this checkout) to browse local
+files and folders as galleries, animated sequences, XYZ stacks and registered
+3D image planes. It also previews STL/OBJ meshes, browser-supported media,
+CSV/TSV tables and searchable text. The viewer has no Schemaxis runtime imports
+or third-party dependencies. Studio embeds the same viewer in Results and
+automatically loads completed Case Runner output. Open/Add folder actions,
+subfolder controls, type filters, relative-path navigation, recent collections,
+bulk preview selection and light/dark/system themes work in both entry points.
+See the [viewer guide](docs/artifact-viewer.md)
+for supported formats, metadata and preview limits.

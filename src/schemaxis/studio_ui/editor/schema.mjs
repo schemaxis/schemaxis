@@ -12,7 +12,7 @@ import {documentValue} from './json-parse.mjs';
 import {completionsAt} from './schema-complete.mjs';
 import {hoverAt} from './schema-hover.mjs';
 
-export {schemasAt, isMarkerInstance, contextFor} from './schema-core.mjs';
+export {schemasAt, isMarkerInstance, contextFor, excludedFields} from './schema-core.mjs';
 export {validate} from './schema-validate.mjs';
 export {completionsAt, skeleton} from './schema-complete.mjs';
 export {hoverAt} from './schema-hover.mjs';

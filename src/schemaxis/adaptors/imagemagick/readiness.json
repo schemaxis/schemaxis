@@ -6,9 +6,9 @@
       "context": {
         "purpose": "Prepare exact PNG details and indexed contact sheets from bounded captured raster images.",
         "assumptions": "Declared or explicitly assumed sRGB encoded samples; no colour transformation. Top-left integer pixel coordinates.",
-        "constraints": "1\u20138 RGB/RGBA8 non-interlaced PNGs; 8MiB each; 1048576 aggregate input pixels and aggregate publication pixels including sheet, 4096 per side. No ICC, APNG, compressed text, palettes, 16-bit, arbitrary options or delegates.",
+        "constraints": "1–8 RGB/RGBA8 non-interlaced PNGs; 8MiB each; 1048576 aggregate input pixels and aggregate publication pixels including sheet, 4096 per side. No ICC, APNG, compressed text, palettes, 16-bit, arbitrary options or delegates.",
         "inspection": "Inspect image-NN.png, optional sheet.png and raster-summary.json. Summary contains IDs, dimensions, colour assumptions, pixel hashes and sheet index/positions; no visual labels.",
-        "recovery": "INVALID_RASTER_SOURCE: absolute regular local PNG. INVALID_RASTER_PNG: unsupported chunk/format or corrupt/budgeted data. RASTER_COLOUR_REQUIRED: tag as sRGB or explicitly assume-srgb. RASTER_CROP_OUTSIDE: fit crop within source. RASTER_PIXEL_BUDGET: reduce crop, scale or sheet. INVALID_RASTER_ALPHA: omit unused background. INTERPRETER_NOT_FOUND: configure ImageMagick 7."
+        "recovery": "INVALID_RASTER_SOURCE: absolute regular local PNG. INVALID_RASTER_PNG: corrupt, truncated or structurally invalid PNG; re-capture it from its producer. UNSUPPORTED_RASTER_PNG: intact but outside the RGB/RGBA8 subset (palette, 16-bit, interlaced, ICC, tRNS, animation, other chunks, oversize); re-export deliberately. RASTER_COLOUR_REQUIRED: tag as sRGB or explicitly assume-srgb. RASTER_CROP_OUTSIDE: fit crop within source. RASTER_PIXEL_BUDGET: reduce crop, scale or sheet. INVALID_RASTER_ALPHA: omit unused background. INTERPRETER_NOT_FOUND: configure ImageMagick 7."
       },
       "examples": [
         {
@@ -291,9 +291,10 @@
         ]
       },
       "completion": {
-        "scope": "Initial exact PNG preparation route and every nested image/crop/sheet field, native policy/runner, independent all-pixel oracle and workflow reuse.",
+        "scope": "Initial exact PNG preparation route and every nested image/crop/sheet field, native policy/runner, independent all-pixel oracle and workflow reuse. 2026-10-24: source PNG malformed versus unsupported fault taxonomy (host-only).",
         "review": [
-          "verification/2026-10-17-imagemagick-completion.md"
+          "verification/2026-10-17-imagemagick-completion.md",
+          "verification/2026-10-24-imagemagick-allocation.md"
         ],
         "notApplicable": {
           "native-inspection": "No interactive native inspection; verified PNGs and index metadata are ordinary publications.",

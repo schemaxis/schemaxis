@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Schemaxis mechanism literal settings",
+  "$defs": {
+    "json": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "boolean",
+            "number",
+            "string"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/json"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/json"
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.freecad.mechanism/1"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "durationSeconds": {
+      "type": "number",
+      "minimum": 0.01,
+      "maximum": 3600,
+      "default": 1
+    },
+    "intervals": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 240,
+      "default": 12
+    },
+    "framesPerSecond": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 120,
+      "default": 24
+    },
+    "motions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "joint": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "rotation",
+              "translation"
+            ]
+          },
+          "end": {
+            "type": "number",
+            "minimum": -1000,
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "joint",
+          "kind",
+          "end"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 31
+    },
+    "definitions": {
+      "$ref": "#/$defs/json"
+    },
+    "dimensions": {
+      "$ref": "#/$defs/json"
+    },
+    "settings": {
+      "$ref": "#/$defs/json"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "source",
+    "motions"
+  ]
+}

@@ -54,26 +54,27 @@ test('filename-only foam, native block selection, pipeline browsing, duplicate, 
     await add(session,'filters','Add Filter','extractBlock');
     assert.equal(await session.evaluate(`document.querySelector('[aria-label="extractBlock.id"]').value`),'extractBlock1');
     assert.equal(await session.evaluate(`document.querySelector('[aria-label="extractBlock.inputs.input"]').value`),'foam1');
-    try {await session.wait(`document.querySelector('[aria-label="Extract walls"]')`,'native walls block',90000);}
-    catch (error) {throw Error(await session.evaluate(`document.querySelector('.block-picker')?.textContent`) || error.message);}
+    await button(session,'.operation-form .reader-selection','Ask the application');
+    try {await session.wait(`[...document.querySelectorAll('.operation-form .reader-choices .wb-case-name')].find(b=>b.textContent==='walls')`,'native walls block',90000);}
+    catch (error) {throw Error(await session.evaluate(`document.querySelector('.operation-form .reader-selection')?.textContent`) || error.message);}
     await button(session,'.pipeline-reference-control','Browse pipeline…');
     await session.wait('document.querySelector(".pipeline-picker-list")','pipeline chooser');
     assert.match(await session.evaluate(`document.querySelector('.pipeline-picker-list').textContent`),/foam1/);
     await button(session,'.dialog-backdrop:last-child .dialog-footer','Use selection');
-    await session.evaluate(`document.querySelector('[aria-label="Extract walls"]').click()`);
+    await session.evaluate(`[...document.querySelectorAll('.operation-form .reader-choices .wb-case-name')].find(b=>b.textContent==='walls').click()`);
     await session.screenshot('/tmp/schemaxis-native-block-picker.png');
     await button(session,'.dialog-footer','Add operation');
     await session.wait(`${source}.nodes.length===2`,'extract block inserted');
-    assert.deepEqual((await session.evaluate(source)).nodes[1].options.selectors,['/Root/boundary/walls']);
+    assert.deepEqual((await session.evaluate(source)).nodes[1].options.selectors,['//walls']);
     const validation=await session.evaluate(`window.studio.api.post('/api/validate',{provider:'paraview',source:window.studio.windows.active().window.editor.getValue()})`);
     assert.deepEqual(validation.diagnostics,[]);
     await select(session,1);
     await session.wait(`document.querySelector('[aria-label="/nodes/1/inputs/input"]')`,'input Properties');
     assert.equal(await session.evaluate(`document.querySelector('[aria-label="/nodes/1/inputs/input"] option[value="extractBlock1"]')`),null);
-    await button(session,'.wb-properties','Choose blocks…');
-    await session.wait(`document.querySelector('[aria-label="Extract internalMesh"]')`,'existing filter block choices',90000);
-    await session.evaluate(`document.querySelector('[aria-label="Extract internalMesh"]').click()`);
-    await button(session,'.dialog-footer','Use selected blocks');
+    await button(session,'.wb-properties .reader-selection','Ask the application');
+    await session.wait(`[...document.querySelectorAll('.wb-properties .reader-choices .wb-case-name')].find(b=>b.textContent==='internalMesh')`,'existing filter block choices',90000);
+    await session.evaluate(`[...document.querySelectorAll('.wb-properties .reader-choices .wb-case-name')].find(b=>b.textContent==='internalMesh').click()`);
+    await button(session,'.wb-properties','Apply selection');
     await session.wait(`${source}.nodes[1].options.selectors.length===2`,'Properties block edit');
     await undo(session);await session.wait(`${source}.nodes[1].options.selectors.length===1`,'undo block edit');
     await select(session,1);

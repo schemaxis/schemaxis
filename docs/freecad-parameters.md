@@ -38,6 +38,7 @@ does not infer persistent relationships from resolved numbers.
 | `rectangle` | `width`, `height` | Named Sketcher constraints |
 | `circle` | `radius` | Named Sketcher constraint |
 | `pad` | `length` | `Length` |
+| `pocket` with `extent: "length"` | `length` | `Length` |
 
 A binding evaluates `offset + sum(coefficient × parameter)`. Coefficients are
 dimensionless; parameter values, bounds and offsets are millimetres. For example,
@@ -114,7 +115,9 @@ the normal `schemaxis plan`, `run` and `verify` commands. The
 This increment supports batch parts and finite variants. Native drivers are
 explicitly rejected by live sessions (`UNSUPPORTED_LIVE_INPUT`) and by the scalar
 `designStudy` route (`UNSUPPORTED_PARAMETER_STUDY`). The [mechanical-part workflow](freecad-part-design.md) combines these drivers with
-constrained sketches, a Body, first Pad and through-all Pockets. Angular parameters, nonlinear expressions, feature-to-feature
+constrained sketches, a Body, first Pad and finite-depth or through-all Pockets.
+Finite depth may use a persistent length driver; it is blind only while stock
+remains thicker than that depth. Angular parameters, nonlinear expressions, feature-to-feature
 references and assembly constraints are outside this increment. Existing
 assembly and import/export capabilities remain documented separately.
 
@@ -130,3 +133,7 @@ plate expectations are `V = (4000 − 9π)t` and
 The qualification also rejects saved-file alterations that preserve current
 geometry but remove or alter declared intent. This is bounded qualification,
 not an exhaustive claim for FreeCAD or all permitted geometric combinations.
+
+For native engineering tables, mixed-unit inputs and formula chaining, see
+[Spreadsheet dimensions](freecad-spreadsheets.md). Choose one storage contract
+per document; the original VarSet input remains unchanged.

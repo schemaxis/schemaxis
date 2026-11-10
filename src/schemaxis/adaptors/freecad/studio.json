@@ -45,6 +45,26 @@
       "id": "io",
       "title": "Import & export",
       "icon": "file"
+    },
+    {
+      "id": "drawing",
+      "title": "Technical drawings",
+      "icon": "file-code"
+    },
+    {
+      "id": "analysis",
+      "title": "Solid elasticity",
+      "icon": "gear"
+    },
+    {
+      "id": "mechanism",
+      "title": "Prescribed mechanisms",
+      "icon": "flow"
+    },
+    {
+      "id": "cam",
+      "title": "Checked milling",
+      "icon": "gear"
     }
   ],
   "baseDocument": {
@@ -97,6 +117,22 @@
   },
   "templates": [
     {
+      "id": "parametric-enclosure",
+      "title": "Editable enclosure and ventilated lid",
+      "description": "Wall/floor/height dimensions drive cavity, attached mounting bosses and bores; a second Body retains the slotted lid. Export the selected enclosure tip with checked STEP/STL.",
+      "file": "studio/templates/parametric-enclosure.json",
+      "fields": {
+        "wall": {
+          "label": "Wall thickness (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 2,
+          "maximum": 3.5,
+          "default": 3
+        }
+      }
+    },
+    {
       "id": "mechanical-part",
       "title": "Sketch, Pad and through-hole",
       "description": "Make an editable PartDesign Body from constrained sketches, a Pad and a through-all Pocket. Named dimensions persist in batch FCStd output.",
@@ -109,6 +145,22 @@
           "minimum": 2,
           "maximum": 50,
           "default": 5
+        }
+      }
+    },
+    {
+      "id": "counterbore",
+      "title": "Through bore with a counterbore",
+      "description": "Make an editable stepped hole with a through bore and a finite-depth recess from the origin XY face. Depth, stock thickness and recess radius remain native drivers.",
+      "file": "studio/templates/counterbore.json",
+      "fields": {
+        "depth": {
+          "label": "Counterbore depth (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 2,
+          "maximum": 8,
+          "default": 4
         }
       }
     },
@@ -253,6 +305,300 @@
           "minimum": 2,
           "maximum": 10,
           "default": 5
+        }
+      }
+    },
+    {
+      "id": "technical-drawing",
+      "title": "Checked technical drawing",
+      "description": "Create editable orthographic/isometric views, measured dimensions and SVG/PDF from a supplier solid. Source facts must match its drawing.",
+      "file": "studio/templates/technical-drawing.json",
+      "fields": {
+        "title": {
+          "label": "Drawing title",
+          "type": "string",
+          "required": true,
+          "default": "Supplier bracket - checked mechanical drawing"
+        }
+      }
+    },
+    {
+      "id": "enclosure-elasticity",
+      "title": "Enclosure rim-pressure elasticity",
+      "description": "Checked single-solid CAD \u2192 native editable material, tetrahedral mesh, geometric supports/pressure and CalculiX results with independent equilibrium and energy checks. Demonstration support/load assumptions require engineering review. Default source is the maintained generated enclosure fixture; replacing it also requires matching the source expectations.",
+      "file": "studio/templates/enclosure-elasticity.json",
+      "fields": {
+        "sourceFile": {
+          "label": "Housing STEP file",
+          "type": "path",
+          "required": true,
+          "default": "tests/fixtures/freecad-analysis/enclosure.step",
+          "extensions": [
+            "step",
+            "stp",
+            "FCStd"
+          ]
+        },
+        "meshSize": {
+          "label": "Maximum mesh size (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.01,
+          "default": 2
+        }
+      }
+    },
+    {
+      "id": "drilling",
+      "title": "Editable fastening grid and counterbores",
+      "description": "A constrained grid controls four native Hole locations; named pitch, drill diameter and head depth remain editable.",
+      "file": "studio/templates/drilling.json",
+      "fields": {
+        "diameter": {
+          "label": "Drill diameter (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 2,
+          "maximum": 4,
+          "default": 3
+        }
+      }
+    },
+    {
+      "id": "shell-enclosure",
+      "title": "Uniform-wall drilled enclosure",
+      "description": "A single native thickness dimension controls walls, floor and lid; attached bosses and a native fastening grid/Hole follow the editable history.",
+      "file": "studio/templates/shell-enclosure.json",
+      "fields": {
+        "wall": {
+          "label": "Uniform wall/floor/lid thickness (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 2,
+          "maximum": 3.5,
+          "default": 3
+        }
+      }
+    },
+    {
+      "id": "flanged-elbow",
+      "title": "Editable hollow flanged elbow",
+      "description": "Drive bend radius and wall thickness through native sweeps, face-centred flanges and machined bores.",
+      "file": "studio/templates/flanged-elbow.json",
+      "fields": {
+        "bendRadius": {
+          "label": "Centreline bend radius (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 8,
+          "maximum": 15,
+          "default": 10
+        },
+        "wall": {
+          "label": "Tube wall thickness (mm)",
+          "type": "number",
+          "required": true,
+          "minimum": 0.5,
+          "maximum": 1.5,
+          "default": 1
+        }
+      }
+    },
+    {
+      "id": "prescribed-mechanism",
+      "title": "Prescribed assembly motion",
+      "description": "Animate a verified assembly hinge or slider and inspect independently checked native motion samples.",
+      "file": "studio/templates/prescribed-mechanism.json",
+      "fields": {
+        "source": {
+          "label": "Verified assembly model.FCStd",
+          "type": "string",
+          "required": true,
+          "default": "tests/fixtures/freecad-mechanism-source/model.FCStd"
+        },
+        "joint": {
+          "label": "Authored fixed joint ID",
+          "type": "string",
+          "required": true,
+          "default": "hinge"
+        },
+        "kind": {
+          "label": "Motion kind",
+          "type": "enum",
+          "default": "rotation",
+          "values": [
+            "rotation",
+            "translation"
+          ]
+        },
+        "end": {
+          "label": "Signed endpoint (degrees or mm)",
+          "type": "number",
+          "default": 90,
+          "minimum": -360,
+          "maximum": 360
+        },
+        "duration": {
+          "label": "Duration (seconds)",
+          "type": "number",
+          "default": 2,
+          "minimum": 0.01,
+          "maximum": 3600
+        }
+      }
+    },
+    {
+      "id": "checked-milling",
+      "title": "Face and finish a millable enclosure",
+      "description": "Create an editable native Job, cutter and checked LinuxCNC program for the explicit R2-cavity example. Supply its exact source solid; review stock, floor, tool reach and feeds.",
+      "file": "studio/templates/checked-milling.json",
+      "fields": {
+        "source": {
+          "label": "Millable enclosure STEP",
+          "type": "string",
+          "required": true,
+          "default": "examples/schemaxis/freecad-cam-enclosure.step"
+        }
+      }
+    },
+    {
+      "id": "drafted-enclosure",
+      "title": "Moulded enclosure with release draft",
+      "description": "Taper four native side walls about the outline plane, then form uniform walls, mounting bosses and bores. A separate lid retains its editable history.",
+      "file": "studio/templates/drafted-enclosure.json",
+      "fields": {}
+    },
+    {
+      "id": "spreadsheet-enclosure",
+      "title": "Spreadsheet-driven enclosure",
+      "description": "Keep mixed-unit input cells and calculated width/height in a native engineering table that drives editable Body walls.",
+      "file": "studio/templates/spreadsheet-enclosure.json",
+      "fields": {}
+    },
+    {
+      "id": "mesh-bracket",
+      "title": "Prepare an STL bracket for machining",
+      "description": "Admit closed STL with explicit units and winding, make a faceted solid, refine planar faces and retain a native drilling cut.",
+      "file": "studio/templates/mesh-bracket.json",
+      "fields": {
+        "meshFile": {
+          "type": "path",
+          "default": "examples/schemaxis/freecad-mesh-bracket.stl",
+          "description": "Existing closed STL file. The default is the repository bracket fixture; choose your retained mesh before running.",
+          "label": "Closed STL file",
+          "required": true,
+          "extensions": [
+            "stl"
+          ]
+        }
+      }
+    },
+    {
+      "id": "draft-profile-bracket",
+      "title": "Editable Draft polygon bracket",
+      "description": "Retain a concave L outline as an editable Draft Wire, extrude it and drill a native Part cut. Edit Points or Placement after opening the FCStd.",
+      "file": "studio/templates/draft-profile-bracket.json",
+      "fields": {}
+    },
+    {
+      "id": "body-stock",
+      "title": "Machine imported stock in a Body",
+      "description": "Keep a checked STL and linked refinement, seed a native Body and continue its history with a cylindrical Pocket. Source coordinates are Body-local.",
+      "file": "studio/templates/body-stock.json",
+      "fields": {
+        "meshFile": {
+          "type": "path",
+          "default": "examples/schemaxis/freecad-mesh-bracket.stl",
+          "description": "Closed STL in millimetres. The default bracket has a base from z0 to5mm and a bore centre at[21,10]. Position the profile for a different stock.",
+          "label": "Closed STL stock",
+          "required": true,
+          "extensions": [
+            "stl"
+          ]
+        },
+        "boreRadius": {
+          "type": "number",
+          "label": "Bore radius (mm)",
+          "required": true,
+          "default": 2.5,
+          "minimum": 0.1,
+          "maximum": 4
+        }
+      }
+    },
+    {
+      "id": "named-drilling",
+      "title": "Drill concentric bores with named cutters",
+      "description": "Use two flat endmills at one source centre with distinct depths and return planes; retain native controllers, source-bound hole targets and independently checked LinuxCNC removal. The supplied counterbore fixture fixes the independent target facts.",
+      "file": "studio/templates/named-drilling.json",
+      "fields": {
+        "source": {
+          "label": "Counterbore fixture STEP",
+          "type": "string",
+          "required": true,
+          "default": "examples/schemaxis/freecad-cam-counterbore.step"
+        }
+      }
+    },
+    {
+      "id": "physical-drilling",
+      "title": "Drill with a complete reduced-shank profile",
+      "description": "Retain a pointed native cutter, actual smaller noncutting shank and stepped holder. Check ordered stock and physical clearance through every expanded motion. The supplied conical blind-hole fixture fixes independent geometry.",
+      "file": "studio/templates/physical-drilling.json",
+      "fields": {
+        "source": {
+          "label": "Pointed-hole fixture STEP",
+          "type": "path",
+          "required": true,
+          "default": "examples/schemaxis/freecad-cam-pointed.step",
+          "extensions": [
+            "step",
+            "stp"
+          ]
+        }
+      }
+    },
+    {
+      "id": "placed-body",
+      "title": "Place an editable Body",
+      "description": "An asymmetric drilled plate with an independent local profile frame and an explicit Body-to-world layout. Part exports use that layout; sourced assembly instances use Body-local geometry.",
+      "file": "studio/templates/placed-body.json",
+      "fields": {
+        "thickness": {
+          "type": "number",
+          "label": "Plate thickness (mm)",
+          "required": true,
+          "default": 7,
+          "minimum": 5,
+          "maximum": 11,
+          "description": "Native plate length along the profile normal; the through bore follows the editable solid history."
+        },
+        "bodyX": {
+          "type": "number",
+          "label": "Body world X (mm)",
+          "required": true,
+          "default": 7,
+          "minimum": -100000,
+          "maximum": 100000,
+          "description": "World X position of the Body-local origin; moves the complete part export without changing local profiles or assembly mounts."
+        },
+        "bodyY": {
+          "type": "number",
+          "label": "Body world Y (mm)",
+          "required": true,
+          "default": -11,
+          "minimum": -100000,
+          "maximum": 100000,
+          "description": "World Y position of the Body-local origin; moves the complete part export without changing local profiles or assembly mounts."
+        },
+        "bodyZ": {
+          "type": "number",
+          "label": "Body world Z (mm)",
+          "required": true,
+          "default": 13,
+          "minimum": -100000,
+          "maximum": 100000,
+          "description": "World Z position of the Body-local origin; moves the complete part export without changing local profiles or assembly mounts."
         }
       }
     }
@@ -3124,7 +3470,7 @@
           ]
         },
         "volume": {
-          "label": "Expected volume (mm³)",
+          "label": "Expected volume (mm\u00b3)",
           "type": "number",
           "required": true,
           "minimum": 0.001,
@@ -3218,6 +3564,81 @@
           -0.24354243542435425,
           5
         ]
+      }
+    },
+    {
+      "id": "add-body-seed",
+      "title": "Seed an empty Body",
+      "category": "partdesign",
+      "description": "Start an empty Body from an earlier external solid. Add it before any sketch or feature in that Body.",
+      "fields": {
+        "id": {
+          "label": "Seed ID",
+          "type": "id",
+          "required": true,
+          "default": "seed"
+        },
+        "body": {
+          "label": "Empty Body ID",
+          "type": "string",
+          "required": true,
+          "default": "part"
+        },
+        "source": {
+          "label": "Earlier external solid ID",
+          "type": "string",
+          "required": true,
+          "default": "casting"
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "filter": "bodySeed",
+              "inputs": {
+                "body": {
+                  "$fill": "body"
+                },
+                "source": {
+                  "$fill": "source"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/output",
+          "values": [
+            {
+              "$fill": "id"
+            }
+          ]
+        }
+      ],
+      "requires": "An empty Body and an earlier checked solid source. Start from Machine imported stock in a Body for a complete example.",
+      "baseDocument": {
+        "version": "schemaxis.freecad/1",
+        "nodes": [
+          {
+            "id": "casting",
+            "filter": "importMesh",
+            "options": {
+              "file": "examples/schemaxis/freecad-mesh-bracket.stl",
+              "units": "mm",
+              "refine": true
+            }
+          },
+          {
+            "id": "part",
+            "filter": "body"
+          }
+        ],
+        "output": "casting"
       }
     }
   ],

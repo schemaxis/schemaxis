@@ -33,12 +33,14 @@ export function comprehensionEntries(documentValue) {
   return entries;
 }
 
-export function createComprehension(editor, onReveal = (pointer) => editor.revealPointer(pointer)) {
+export function createComprehension(editor, onReveal = (pointer) => editor.revealPointer(pointer), onEditForm = null) {
   let selected = '';
   const list = h('div', {class: 'wb-comprehension-list'});
   const state = h('p', {class: 'wb-help', role: 'status'});
   const duplicate = h('button', {class: 'button small', type: 'button', disabled: true, onClick: () => edit(false)}, 'Duplicate');
   const remove = h('button', {class: 'button small', type: 'button', disabled: true, onClick: () => edit(true)}, 'Delete');
+  const form = onEditForm ? h('button', {class: 'button small', type: 'button', disabled: true, dataset: {action: 'edit-form'},
+    title: 'Reopen the settings window for the selected node', onClick: () => onEditForm(selected)}, 'Edit…') : null;
   async function edit(deleting) {
     const before = editor.getValue();
     let result;
@@ -58,28 +60,39 @@ export function createComprehension(editor, onReveal = (pointer) => editor.revea
   }
   const element = h('details', {class: 'wb-comprehension', open: true},
     h('summary', {}, 'Pipeline'),
+    h('p', {class: 'wb-help'}, 'Follows your cursor. Click a node for its source and Properties; double-click to edit it in its settings window.'),
     h('details', {}, h('summary', {}, 'How to read the pipeline'),
     h('p', {class: 'wb-help'}, 'Operations and their data connections. Each node creates a named result. Click a node to select its Properties and reveal its source. Numbers are array indices, starting at 0.'),
     h('p', {class: 'wb-help'}, '$observe reads a result measurement; path selects its nested value. $document reads a value from this document. $value evaluates a declared function with args.')), state,
-    h('div', {class: 'operation-file-tools'}, duplicate, remove), list);
+    h('div', {class: 'operation-file-tools'}, form, duplicate, remove), list);
   function update() {
     let value;
     try { value = editor.getDocument(); }
     catch { state.textContent = 'Incomplete source — showing the last readable reference.'; return; }
     const entries = comprehensionEntries(value);
     duplicate.disabled = remove.disabled = !entries.some(item => item.pointer === selected);
+    if (form) form.disabled = duplicate.disabled;
     state.textContent = entries.length ? `${entries.length} nodes · current draft` : 'No nodes in this document yet.';
     mount(list, entries.map((item) => h('button', {class: 'wb-outline-item', dataset: {pointer: item.pointer},
-      'aria-current': String(item.pointer === selected), onClick: () => { selected = item.pointer; update(); onReveal(item.pointer); }},
+      'aria-current': String(item.pointer === selected), onClick: () => { selected = item.pointer; update(); onReveal(item.pointer); },
+      onDblclick: () => onEditForm?.(item.pointer)},
       h('span', {}, h('strong', {}, item.label), h('small', {}, item.detail || 'No inputs or scalar options declared.')))));
   }
+  const track = () => { if (document.activeElement === editor.textarea) api.select(editor.getCursor().pointer); };
+  document.addEventListener('selectionchange', track);
+  editor.textarea.addEventListener('keyup', track);
+  editor.textarea.addEventListener('click', track);
   const unsubscribe = editor.onChange(update);
   update();
-  return {element, dispose: unsubscribe, refresh: update, select(pointer) {
-    selected = pointer;
+  const api = {element, dispose() { unsubscribe(); document.removeEventListener('selectionchange', track);
+    editor.textarea.removeEventListener('keyup', track); editor.textarea.removeEventListener('click', track); }, refresh: update, select(pointer) {
+    selected = pointer.match(/^(.*\/nodes\/\d+)(?:\/|$)/)?.[1] || pointer;
+    pointer = selected;
     duplicate.disabled = remove.disabled = !list.querySelector(`[data-pointer="${CSS.escape(pointer)}"]`);
+    if (form) form.disabled = duplicate.disabled;
     list.querySelectorAll('button').forEach(button => button.setAttribute('aria-current', String(button.dataset.pointer === pointer)));
   }};
+  return api;
 }
 
 export function formattingControls(editor) {

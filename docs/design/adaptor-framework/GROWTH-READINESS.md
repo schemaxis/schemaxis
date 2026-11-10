@@ -64,7 +64,8 @@ explain the preceding milestones.
 
 ## Next adaptor procedure
 
-1. Select one useful bounded workflow from the [candidate backlog](../adaptor-candidates.md).
+1. Select one useful bounded workflow using the [current workflow roadmap](../workflow-candidates-2026-10.md)
+   and the [historical candidate context](../adaptor-candidates.md).
    Confirm public APIs, current upstream release, available runtime and acceptance
    fixtures. Keep candidate, implemented and qualified states distinct.
 2. Generate and review the appropriate node/document scaffold. Complete the guide,

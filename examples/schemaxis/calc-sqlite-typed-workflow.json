@@ -1,0 +1,107 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "summary",
+      "document": {
+        "version": "schemaxis.sqlite/1",
+        "operation": "summarise",
+        "tables": [
+          {
+            "name": "regions",
+            "source": "/replace/with/sqlite-regions.json",
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "label",
+                "type": "TEXT",
+                "nullable": true
+              }
+            ],
+            "primaryKey": "id"
+          },
+          {
+            "name": "lines",
+            "source": "/replace/with/sqlite-lines.json",
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "region",
+                "type": "INTEGER",
+                "nullable": true
+              },
+              {
+                "name": "amount",
+                "type": "INTEGER",
+                "nullable": true
+              }
+            ],
+            "primaryKey": "id",
+            "foreignKeys": [
+              {
+                "column": "region",
+                "table": "regions",
+                "target": "id"
+              }
+            ]
+          }
+        ],
+        "from": "lines",
+        "join": {
+          "table": "regions",
+          "local": "region",
+          "remote": "id"
+        },
+        "where": {
+          "column": "lines.id",
+          "minimum": 1
+        },
+        "groupBy": [
+          "regions.label"
+        ],
+        "sum": "lines.amount"
+      }
+    },
+    {
+      "id": "typed",
+      "document": {
+        "version": "schemaxis.calc/1",
+        "nodes": [
+          {
+            "id": "regions",
+            "filter": "readTypedCSV",
+            "options": {
+              "file": {
+                "$artifact": "summary",
+                "index": 2
+              },
+              "nullToken": "\\N",
+              "columns": [
+                {
+                  "name": "g0",
+                  "kind": "text",
+                  "nullable": true
+                },
+                {
+                  "name": "row_count",
+                  "kind": "number"
+                },
+                {
+                  "name": "total",
+                  "kind": "number",
+                  "nullable": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

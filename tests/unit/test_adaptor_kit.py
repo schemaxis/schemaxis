@@ -233,5 +233,34 @@ assert not attempts, attempts
         self.assertEqual(result.returncode, 0, result.stderr)
 
 
+class NativeRuntimeContextTests(unittest.TestCase):
+    def test_caller_runtime_reaches_verification_and_integrity_without_leaking(self):
+        from schemaxis.adaptor_conformance import _native_worker
+        from schemaxis.configuration import locations
+        trusted = {'ffmpeg': '/trusted/operator/ffmpeg'}
+        request = {'action': 'case', 'document': {'version': 'schemaxis.ffmpeg/1'},
+                   'run': '/unused/run', 'locations': trusted, 'timeout': 5,
+                   'documentDigest': 'fixture', 'case': {'id': 'case', 'scope': 'fixture', 'checks': []}}
+        observations = []
+        def verify(*args):
+            observations.append(locations()['ffmpeg'])
+            return {'verified': True, 'runtime': 'trusted native fixture'}
+        def integrity_check(*args):
+            observations.append(locations()['ffmpeg'])
+            return []
+        with patch('schemaxis.configuration.load', return_value={'locations': {}}), \
+                patch('schemaxis.adaptor_conformance.registry.run'), \
+                patch('schemaxis.adaptor_conformance.registry.verify', side_effect=verify), \
+                patch('schemaxis.adaptor_conformance.assertions', return_value=[]), \
+                patch('schemaxis.adaptor_conformance.integrity', side_effect=integrity_check):
+            self.assertTrue(_native_worker(request)['verified'])
+            self.assertEqual(observations, [trusted['ffmpeg'], trusted['ffmpeg']])
+            self.assertNotEqual(locations().get('ffmpeg'), trusted['ffmpeg'])
+            with patch('schemaxis.adaptor_conformance.registry.verify', side_effect=RuntimeError('failed native check')):
+                with self.assertRaisesRegex(RuntimeError, 'failed native check'):
+                    _native_worker(request)
+            self.assertNotEqual(locations().get('ffmpeg'), trusted['ffmpeg'])
+
+
 if __name__ == '__main__':
     unittest.main()

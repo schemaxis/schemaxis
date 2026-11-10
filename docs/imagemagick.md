@@ -69,8 +69,10 @@ physical pixel resolution, text and timestamps are not retained in publications.
 sRGB gAMA+cHRM pair must declare the samples. `assume-srgb` additionally accepts
 untagged input, recording that authored assumption in the summary. Neither option
 converts colour or establishes a missing profile's original meaning. Output PNGs
-are untagged RGBA8; the summary explicitly carries their sRGB interpretation.
-Use `assume-srgb` explicitly when chaining these PNGs into another raster recipe.
+are untagged RGBA8 encoded-sRGB samples. This guide and the route's readiness data
+state that interpretation; `raster-summary.json` records each source's observed
+colour declaration and the authored policy, not a separate output tag. Use
+`assume-srgb` explicitly when chaining these PNGs into another raster recipe.
 
 `alpha` defaults to `preserve`, retaining **all** RGBA samples, including RGB
 beneath zero alpha. RGB inputs receive alpha 255. `flatten` replaces alpha with
@@ -131,8 +133,17 @@ Qualification covers that lossless subset; it does not certify arbitrary images,
 colour appearance, colour management, typography or unsupported PNG modes.
 
 `INVALID_RASTER_SOURCE` means choose an absolute regular local PNG within the byte
-budget. `INVALID_RASTER_PNG` reports a corrupt or unsupported PNG and explains the
-chunk/mode; re-export a supported PNG deliberately. `RASTER_COLOUR_REQUIRED`
+budget. `INVALID_RASTER_PNG` means the PNG is corrupt, truncated or violates the
+PNG chunk structure: re-capture or re-export it from its producer. It is never
+used for a merely unsupported file. `UNSUPPORTED_RASTER_PNG` means the chunk
+structure is intact but the file is outside the supported subset (palette,
+greyscale, 16-bit, interlaced, ICC, tRNS, animation, other chunks, a non-standard
+or lone gAMA/cHRM, oversize dimensions or text): re-export it deliberately as a
+non-interlaced 8-bit RGB/RGBA PNG; nothing is converted for you. Corruption is
+reported first; pixel data of an unsupported file is not inflated. Both faults
+locate the authored `$.images[N].source` and carry `observed.category`,
+`observed.feature`, `observed.reason` and a `recovery` string. Published-output
+checks in `verify` remain `VERIFICATION_FAILED`. `RASTER_COLOUR_REQUIRED`
 requires explicit sRGB provenance or authored `assume-srgb`. `RASTER_CROP_OUTSIDE`
 requires a crop inside the source. `RASTER_PIXEL_BUDGET` requires fewer or smaller
 images, crops, scale or sheet. `INVALID_RASTER_ID` requires distinct ASCII IDs.

@@ -1,5 +1,5 @@
 # Copyright (C) 2026 David L F Gaden
-"""Bounded Body / first Pad / through-all Pocket ownership, host-safe."""
+"""Bounded Body / first Pad / finite-depth/through-all Pocket ownership, host-safe."""
 from schemaxis.errors import fail
 
 ROLES = {'X_Axis':'App::Line','Y_Axis':'App::Line','Z_Axis':'App::Line',
@@ -9,14 +9,18 @@ FEATURES = {'body','pad','pocket'}
 
 def declarations(declaration, length):
     body=declaration('PartDesign::Body',{});body['kinds']=['body']
+    from .history import FRAME
+    body['options']['frame']={'value':FRAME}
     pad=declaration('PartDesign::Pad',{'length':{**length,'default':10}},('body','profile'))
     pad['inputs']['body']['kind']='body';pad['inputs']['profile']['kind']='profile'
-    pocket=declaration('PartDesign::Pocket',{'extent':{'type':'enum','values':['throughAll'],'default':'throughAll'}},('base','profile'))
+    pocket=declaration('PartDesign::Pocket',{'extent':{'type':'enum','values':['throughAll','length'],'default':'throughAll'},'length':{**length,'required':False}},('base','profile'))
     pocket['inputs']['profile']['kind']='profile'
     return {'body':body,'pad':pad,'pocket':pocket}
 
 
 def prepare(prepared):
+    from .history import active,prepare as prepare_history
+    if active(prepared):return prepare_history(prepared)
     nodes=prepared['nodes'];lookup={n['id']:n for n in nodes}
     bodies=[n['id'] for n in nodes if n['filter']=='body']
     if len(bodies)>1:fail('UNSUPPORTED_BODY','This increment supports one PartDesign Body per document')
@@ -33,6 +37,11 @@ def prepare(prepared):
             if owners.get(profile)!=owner:fail('INVALID_BODY_OWNERSHIP','Pad profile must belong to its declared Body',identity)
             owners[identity]=owner;members.append(identity);used.add(profile);tip=identity
         elif kind=='pocket':
+            if node['options']['extent']=='length':
+                if 'length' not in node['options']:
+                    fail('INVALID_POCKET_EXTENT','For extent length, provide a positive length in mm or drive.length',identity+'.options.length')
+            elif 'length' in node['options']:
+                fail('INVALID_POCKET_EXTENT','Use extent length with length or drive.length; throughAll has no finite length',identity+'.options.length')
             base,profile=inputs['base'],inputs['profile'];owner=owners.get(base)
             if not owner or base!=tip or lookup[base]['filter'] not in ('pad','pocket'):
                 fail('INVALID_BODY_HISTORY','Pocket must continue the current Pad or Pocket tip',identity)
@@ -63,6 +72,9 @@ def expected_links(prepared):
 
 
 def verify_auxiliaries(prepared, auxiliaries):
+    if prepared['partDesign'].get('generation')==2:
+        from .history import verify_auxiliaries as verify
+        return verify(prepared,auxiliaries)
     expected={'container':'App::Origin',**ROLES}
     if not isinstance(auxiliaries,dict) or set(auxiliaries)!=set(expected):
         fail('VERIFICATION_FAILED','Body origin role membership differs')
@@ -79,6 +91,9 @@ IDENTITY = [1.,0.,0.,0.,0.,1.,0.,0.,0.,0.,1.,0.,0.,0.,0.,1.]
 
 
 def verify_observation(prepared, observed, *, visibility=True, saved=False):
+    if prepared['partDesign'].get('generation')==2:
+        from .history import verify_observation as verify
+        return verify(prepared,observed,visibility=visibility,saved=saved)
     import math
     wanted={'body','auxiliaries','profiles','features','expressions'}|({'visibility'} if visibility else set())
     if not isinstance(observed,dict) or set(observed)!=wanted:
@@ -101,9 +116,9 @@ def verify_observation(prepared, observed, *, visibility=True, saved=False):
         else:
             features[node['id']]={'owner':body_name,'profile':[mapped[node['inputs']['profile']],[]],
                 'baseFeature':None if kind=='pad' else mapped[node['inputs']['base']],
-                'type':'Length' if kind=='pad' else 'ThroughAll','sideType':'One side',
+                'type':'Length' if kind=='pad' or node['options']['extent']=='length' else 'ThroughAll','sideType':'One side',
                 'reversed':kind=='pocket','alongSketchNormal':True,'customVector':False,'refine':True}
-            if kind=='pad':features[node['id']]['length']=node['options']['length']
+            if kind=='pad' or node['options']['extent']=='length':features[node['id']]['length']=node['options']['length']
     if not isinstance(observed['profiles'],dict) or set(observed['profiles'])!=set(profiles):
         fail('VERIFICATION_FAILED','Body sketch membership differs')
     lookup={n['id']:n for n in prepared['nodes']}
@@ -129,7 +144,7 @@ def verify_observation(prepared, observed, *, visibility=True, saved=False):
         if observed['visibility']!={name:name in visible for name in expected_names}:
             fail('VERIFICATION_FAILED','PartDesign scene visibility differs')
 
-CONSTRAINT_TYPES={1:'Coincident',2:'Horizontal',3:'Vertical',6:'Distance',7:'DistanceX',8:'DistanceY',11:'Radius'}
+CONSTRAINT_TYPES={4:'Parallel',5:'Tangent',9:'Angle',10:'Perpendicular',12:'Equal',17:'Block',18:'Diameter',1:'Coincident',2:'Horizontal',3:'Vertical',6:'Distance',7:'DistanceX',8:'DistanceY',11:'Radius'}
 
 
 def constraint_definitions(node):
@@ -138,6 +153,19 @@ def constraint_definitions(node):
         return {'name':name,'type':kind,'value':value,'first':first,'firstPos':first_pos,
                 'second':second,'secondPos':second_pos,'third':-2000,'thirdPos':0}
     options=node['options']
+    if node['filter']=='arcPath':
+        from .sweep import path_constraints
+        return path_constraints(options)
+    from .drilling import PROFILES as drilling_profiles,constraints as drilling_constraints
+    if node['filter'] in drilling_profiles:return drilling_constraints(node['filter'],options)
+    if node['filter']=='slot':
+        from .slot import constraints
+        return constraints(options)
+    if node['filter']=='sketch':
+        from .sketch import definitions
+        return definitions(node)
+    if node['filter']=='polygon':
+        return [c('Block',i,name='fixed_'+str(i)) for i in range(len(options['points']))]
     if node['filter']=='circle':
         if 'centre' in options:
             result=[c('DistanceX',0,options['centre'][0],'centreX',3),c('DistanceY',0,options['centre'][1],'centreY',3)]

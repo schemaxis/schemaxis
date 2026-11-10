@@ -5,6 +5,7 @@ Native imports remain inside execution functions. Publication owns filenames and
 one selected timestep; writer-controlled file series cannot escape the schedule.
 """
 import copy
+from contextlib import contextmanager
 import hashlib
 import math
 from pathlib import Path
@@ -12,6 +13,7 @@ from schemaxis.errors import fail, keys
 from schemaxis.bindings import validate_options
 from schemaxis.pipeline import name, markers
 from schemaxis.camera import staged_values
+from .export_integrity import require_finite, require_finite_points, require_finite_fields, require_finite_text
 
 SERIES_PROPERTIES = {'WriteTimeSteps', 'WriteAllTimeSteps', 'Writetimestepsasfileseries',
                      'Writealltimestepsasfileseries', 'WriteSeriesMetaFile',
@@ -184,14 +186,20 @@ def validate_exports(master, values, location):
     return result
 
 
-def checked_update(backend, proxy, time, location):
+@contextmanager
+def native_errors(location):
     from vtkmodules.vtkCommonCore import vtkOutputWindow
     errors=[]
     window=vtkOutputWindow.GetInstance()
     observer=window.AddObserver('ErrorEvent',lambda *args: errors.append(True))
-    try: backend.pv.UpdatePipeline(time=time,proxy=proxy)
+    try: yield
     finally: window.RemoveObserver(observer)
     if errors: fail('NATIVE_PIPELINE_ERROR','native writer/reader reported an error; inspect retained stderr',location)
+
+
+def checked_update(backend, proxy, time, location):
+    with native_errors(location):
+        backend.pv.UpdatePipeline(time=time,proxy=proxy)
 
 
 def preserve_field_data(writer, options):
@@ -208,7 +216,31 @@ def preserve_field_data(writer, options):
             algorithm.SetWriteTimeValue(False)
 
 
-def surface_triangles(data):
+
+def select_readback_arrays(reader, location):
+    """Enable the automatic reader's advertised point/cell fields for comparison.
+
+    CGNS readers initially disable solution arrays. An explicitly authored
+    readback keeps its own options; every comparison remains unchanged.
+    """
+    with native_errors(location):
+        reader.UpdatePipelineInformation()
+        properties = set(reader.ListProperties())
+        for aliases in (('PointArrayStatus', 'PointArrays'), ('CellArrayStatus', 'CellArrays')):
+            key = next((name for name in aliases if name in properties), None)
+            if key is None:
+                continue
+            prop = reader.GetProperty(key)
+            if prop is None or not hasattr(prop, 'Available'):
+                continue
+            available = list(prop.Available)
+            prop.SetData(available)
+            if set(prop.GetData()) != set(available):
+                fail('NATIVE_VALUE_MISMATCH', 'automatic readback did not enable its advertised arrays',
+                     location, property=key, expected=available, actual=prop.GetData())
+
+
+def surface_triangles(data, readback=False):
     """Canonical surface triangles preserve geometry across point-ID changes."""
     from vtkmodules.vtkFiltersGeometry import vtkGeometryFilter, vtkCompositeDataGeometryFilter
     from vtkmodules.vtkFiltersCore import vtkTriangleFilter
@@ -217,6 +249,7 @@ def surface_triangles(data):
     triangulate=vtkTriangleFilter();triangulate.SetInputConnection(surface.GetOutputPort());triangulate.Update()
     mesh=triangulate.GetOutput()
     if not mesh.GetNumberOfCells(): fail('EMPTY_GEOMETRY','surface comparison requires nonempty geometry')
+    require_finite_points(mesh,readback=readback)
     records=[]
     for index in range(mesh.GetNumberOfCells()):
         cell=mesh.GetCell(index)
@@ -240,7 +273,7 @@ def compare_data(before, after, comparison, tolerance):
     if comparison=='semantic':
         return compare_semantic(before,after,tolerance)
     if comparison=='geometry':
-        left,right=surface_triangles(before),surface_triangles(after)
+        left,right=surface_triangles(before),surface_triangles(after,readback=True)
         if not numbers_equal(left,right,tolerance):
             fail('VERIFICATION_FAILED','surface geometry changed beyond the accepted tolerance',
                  inputCells=len(left),outputCells=len(right),tolerance=tolerance)
@@ -253,6 +286,7 @@ def compare_data(before, after, comparison, tolerance):
                 or a.GetNumberOfComponents()!=b.GetNumberOfComponents()
                 or a.GetNumberOfTuples()!=b.GetNumberOfTuples()):
             fail('VERIFICATION_FAILED','image dimensions or components changed')
+        require_finite(a,'Point Data'); require_finite(b,'Point Data',readback=True)
         maximum=0.0
         for i in range(a.GetNumberOfTuples()):
             x,y=a.GetTuple(i),b.GetTuple(i)
@@ -262,10 +296,10 @@ def compare_data(before, after, comparison, tolerance):
     fail('INVALID_VERIFICATION','comparison needs a format-specific verifier')
 
 
-def publish(backend, proxy, declaration, settings, directory, time, declarations, resources=None):
+def publish(backend, proxy, declaration, settings, directory, time, declarations, resources=None, *, basename=None):
     from .native import configure_binding
     directory=Path(directory);directory.mkdir(exist_ok=False)
-    path=directory/('data.'+settings['extension'])
+    path=directory/((basename or 'data')+'.'+settings['extension'])
     before=backend.fetch(proxy)
     writer=reader=None
     options=validate_options(declaration,settings['options'],settings['id'])
@@ -296,11 +330,18 @@ def publish(backend, proxy, declaration, settings, directory, time, declarations
             check_ioss_global_ids(before,steps,settings['id'],offset=bool(options.get('OffsetGlobalIds')))
             apply_ioss_single_step(writer,steps,time,settings['id'])
         checked_update(backend,writer,time,settings['id'])
+        csv_settings = effective_csv_settings(writer) if settings['comparison']=='table' else None
+        # Native writers can finalize file bytes when their last proxy reference
+        # is released. Reopen and compare the completed file, then hash it.
+        with native_errors(settings['id']+'.finalize'):
+            domain = prop = None
+            backend.pv.Delete(writer)
+            writer = None
         if not path.is_file() and declaration['native']=='EnSightWriter':
-            path = directory / 'data.0.case'
+            path = path.with_suffix('.0.case')
         if not path.is_file(): fail('MISSING_ARTIFACT','writer did not produce its declared output',str(path))
         if settings['comparison']=='table':
-            verification=verify_csv(before,path,effective_csv_settings(writer),settings['tolerance'])
+            verification=verify_csv(before,path,csv_settings,settings['tolerance'])
         elif declaration['native']=='JSONImageWriter':
             verification=verify_json_image(before,path,settings['tolerance'],options)
         elif declaration['native']=='HoudiniWriter':
@@ -323,8 +364,14 @@ def publish(backend, proxy, declaration, settings, directory, time, declarations
                 if reader is None:fail('UNAVAILABLE_READER','configure a readback reader for this format',str(path))
                 if before.IsA('vtkUniformGridAMR') and 'DefaultNumberOfLevels' in reader.ListProperties():
                     reader.DefaultNumberOfLevels=before.GetNumberOfLevels()
+                select_readback_arrays(reader,settings['id']+'.readback')
                 checked_update(backend,reader,time,settings['id']+'.readback')
             verification=compare_data(before,backend.fetch(reader),settings['comparison'],settings['tolerance'])
+        if reader is not None:
+            with native_errors(settings['id']+'.readback-finalize'):
+                if id(reader) in backend.records: backend.delete(reader)
+                else: backend.pv.Delete(reader)
+                reader = None
         files=[p for p in sorted(directory.rglob('*')) if p.is_file()]
         if any(not p.resolve().is_relative_to(directory.resolve()) for p in files):
             fail('INVALID_ARTIFACT','writer produced a file outside its output directory',str(directory))
@@ -446,6 +493,7 @@ def verify_csv(data, path, effective, tolerance):
     verified=[]
     for index in range(arrays.GetNumberOfArrays()):
         array=arrays.GetAbstractArray(index);name=array.GetName()
+        require_finite(array,association)
         for component in range(array.GetNumberOfComponents()):
             candidates=[name] if array.GetNumberOfComponents()==1 else [name+':'+str(component),name+'_'+str(component)]
             header=next((h for h in candidates if h in headers),None)
@@ -454,6 +502,7 @@ def verify_csv(data, path, effective, tolerance):
             for row,values_row in enumerate(values):
                 expected=array.GetValue(row*array.GetNumberOfComponents()+component) if array.GetDataType()==13 else array.GetComponent(row,component)
                 actual=values_row[col]
+                if not isinstance(expected,str): require_finite_text(actual,row,header)
                 if isinstance(expected,str): equal=actual==expected
                 else:
                     try: equal=numbers_equal(expected,float(actual),tolerance)
@@ -501,6 +550,14 @@ def compare_semantic(before, after, tolerance):
             arrays=data.GetPointData() if association=='point' else data.GetCellData()
             names.update(arrays.GetArrayName(i) for i in range(arrays.GetNumberOfArrays()))
         return names
+    for d in old: require_finite_fields(d)
+    compared={'Point Data':field_names(old,'point'),'Cell Data':field_names(old,'cell')}
+    for d in new:  # readback-only arrays are not compared, so only the input's arrays and the coordinates matter
+        require_finite_points(d,readback=True)
+        for association,arrays in (('Point Data',d.GetPointData()),('Cell Data',d.GetCellData())):
+            for index in range(arrays.GetNumberOfArrays()):
+                if arrays.GetArrayName(index) in compared[association]:
+                    require_finite(arrays.GetAbstractArray(index),association,readback=True)
     def records(datasets, association, fields):
         records=[]
         for data in datasets:

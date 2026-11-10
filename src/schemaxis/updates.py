@@ -10,11 +10,23 @@ from .adaptors.registry import ADAPTORS, adaptor_files, adaptor_source
 
 
 def version(value):
-    """Compare exact stable versions, accepting upstream v and -stable wrappers."""
-    match = re.fullmatch(r'v?(\d+(?:\.\d+){0,3})(?:-stable)?', value)
+    """Compare bounded stable release numbers, including canonical .postN releases."""
+    match = re.fullmatch(r'v?(\d+(?:\.\d+){0,3})(?:\.post([0-9]+))?(?:-stable)?', value)
     if not match: raise ValueError('not an exact stable release: ' + str(value))
-    return tuple(map(int, match[1].split('.'))) + (0,) * (4-len(match[1].split('.')))
+    release = tuple(map(int, match[1].split('.')))
+    # A base release precedes even .post0; later release components dominate posts.
+    post = 0 if match[2] is None else int(match[2]) + 1
+    return release + (0,) * (4-len(release)) + (post,)
 
+
+
+def _pypi_non_final(value):
+    """Identify non-final PyPI keys without silently discarding unsupported finals."""
+    match = re.fullmatch(
+        r'v?(?:[0-9]+!)?[0-9]+(?:\.[0-9]+)*(?P<pre>(?:a|b|rc)[0-9]+)?'
+        r'(?:\.post[0-9]+)?(?P<dev>\.dev[0-9]+)?(?P<local>\+[a-z0-9]+(?:\.[a-z0-9]+)*)?',
+        value, re.IGNORECASE)
+    return bool(match and any(match[name] for name in ('pre', 'dev', 'local')))
 
 def fetch(url):
     request = Request(url, headers={'User-Agent': 'Schemaxis-release-monitor', 'Accept': 'application/json, text/html;q=0.9, */*;q=0.8'})
@@ -38,6 +50,25 @@ def latest(source, reader=fetch):
         if not isinstance(tags, list) or any(not isinstance(item, dict) for item in tags):
             raise ValueError('tag endpoint must return an array of objects')
         candidates = [item['name'] for item in tags]
+    elif kind == 'pypi':
+        project = json.loads(payload)
+        if not isinstance(project, dict) or not isinstance(project.get('releases'), dict):
+            raise ValueError('PyPI project endpoint must return a releases object')
+        candidates = []
+        for release, artifacts in project['releases'].items():
+            if not isinstance(artifacts, list) or any(not isinstance(item, dict) for item in artifacts):
+                raise ValueError('PyPI release files must be an array of objects')
+            if any(not isinstance(item.get('yanked'), bool) for item in artifacts):
+                raise ValueError('PyPI file yanked state must be boolean')
+            # Empty/withdrawn releases are not proposed as new absorption targets.
+            if any(not item['yanked'] for item in artifacts):
+                try:
+                    version(release)
+                except ValueError:
+                    if _pypi_non_final(release):
+                        continue
+                    raise ValueError('unsupported stable PyPI release identifier: ' + release)
+                candidates.append(release)
     elif kind == 'pattern':
         candidates = re.findall(source['pattern'], payload)
     else: raise ValueError('unsupported release source: ' + kind)

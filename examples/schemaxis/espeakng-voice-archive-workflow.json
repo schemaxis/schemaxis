@@ -1,0 +1,37 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "narration",
+      "document": {
+        "version": "schemaxis.espeakng/1",
+        "operation": "narrate",
+        "voice": "fr-fr",
+        "text": "Bienvenue à la visite de l'usine. Veuillez porter vos lunettes de protection et rester derrière la ligne jaune."
+      }
+    },
+    {
+      "id": "speech",
+      "document": {
+        "version": "schemaxis.sox/1",
+        "operation": "conform",
+        "source": {
+          "$artifact": "narration",
+          "index": 0
+        },
+        "channelPolicy": "average"
+      }
+    },
+    {
+      "id": "archive",
+      "document": {
+        "version": "schemaxis.flac/1",
+        "operation": "encodeLossless",
+        "source": {
+          "$artifact": "speech",
+          "index": 0
+        }
+      }
+    }
+  ]
+}

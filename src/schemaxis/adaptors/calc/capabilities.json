@@ -1,20 +1,118 @@
 {
+  "application": {
+    "label": "LibreOffice Calc",
+    "purpose": "Turn bounded numeric or typed labelled tables into editable ODS and XLSX workbooks with checked summary formulas, a verified CSV handoff and optional named cell requirements.",
+    "keywords": [
+      "LibreOffice Calc",
+      "spreadsheet",
+      "workbook",
+      "ODS",
+      "XLSX",
+      "labelled table",
+      "measurement log",
+      "CSV"
+    ]
+  },
   "requirements": [
     "Use the route delivery context for units, data losses, inspection, runtime scope and recovery.",
     "A declared operation is not a claim of native qualification; consult scoped source-bound receipts.",
-    "Optional named bounds and weighted reconciliation test independently verified native cells in both formats; authors declare units and absolute tolerances."
+    "Optional named bounds and weighted reconciliation test independently verified native cells in both formats; authors declare units and absolute tolerances.",
+    "Typed tables declare every column as text or number with explicit nullable choices; blanks are explicit nulls and empty text is rejected.",
+    "Typed CSV imports use an exact declared header, a reserved null token and quoted-or-bare cells; no types, dates, units or currency are inferred."
   ],
   "references": [
     "docs/calc.md",
     "docs/numerical-analysis.md",
-    "docs/generated/calc-operations.md"
+    "docs/generated/calc-operations.md",
+    "docs/generated/calc.schema.json"
   ],
   "operations": {
     "fromRows": {
-      "purpose": "Create a numeric workbook from explicit rectangular rows and named columns, with independently checked summary formulas."
+      "purpose": "Create a numeric workbook from explicit rectangular rows and named columns, with independently checked summary formulas.",
+      "keywords": [
+        "numeric table",
+        "rows and columns",
+        "summary statistics",
+        "sum",
+        "mean",
+        "standard deviation"
+      ]
     },
     "readCSV": {
-      "purpose": "Read a bounded numeric CSV table and publish recalculated ODS/XLSX and a numeric CSV round trip."
+      "purpose": "Read a bounded numeric CSV table and publish recalculated ODS/XLSX and a numeric CSV round trip.",
+      "keywords": [
+        "numeric CSV",
+        "import CSV",
+        "summary statistics",
+        "captured file"
+      ],
+      "related": [
+        "fromRows",
+        "readTypedCSV"
+      ]
+    },
+    "fromTypedRows": {
+      "purpose": "Create an editable workbook from declared text and number columns so part or sample IDs, notes and optional measurements stay together, with blanks for missing values and exact text such as leading zeros.",
+      "keywords": [
+        "labelled table",
+        "part ID",
+        "sample ID",
+        "inventory",
+        "inventory workbook",
+        "notes",
+        "missing measurements",
+        "blank cells",
+        "leading zeros",
+        "typed rows",
+        "measurement log",
+        "Unicode text"
+      ],
+      "groups": [],
+      "related": [
+        "fromRows",
+        "readTypedCSV"
+      ],
+      "semantics": [
+        "Text columns keep exact characters and never enter arithmetic; number columns are finite binary64 values summarised with COUNT, SUM, AVERAGE, MIN, MAX, sample STDEV and MISSING that ignore blanks.",
+        "Null means a blank cell. Blank, zero and text are distinct; empty text is rejected. Formula-looking text stays literal in every published format."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/calc-typed-parts.json",
+          "purpose": "Keep part IDs with leading zeros, formula-looking notes and a missing measurement together."
+        },
+        {
+          "reference": "examples/schemaxis/calc-typed-parts-variant.json",
+          "purpose": "Change one measurement and one ID to see the recalculated summaries and distinct verified outputs."
+        }
+      ]
+    },
+    "readTypedCSV": {
+      "purpose": "Read a captured typed CSV with an exact declared header, text or number columns and a reserved null token, then publish the same editable workbook and a verified typed CSV handoff.",
+      "keywords": [
+        "typed CSV",
+        "null token",
+        "captured CSV",
+        "declared columns",
+        "identifier column",
+        "Arrow CSV",
+        "missing values",
+        "labelled table"
+      ],
+      "related": [
+        "fromTypedRows",
+        "readCSV"
+      ],
+      "semantics": [
+        "The file is captured byte for byte; a changed file, header, column kind or null token is a different input.",
+        "The token \\N is the default and cannot also be present text. Quoted and bare tokens both mean null, as in the Arrow adaptor source dialect."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/calc-typed-csv.json",
+          "purpose": "Import a quoted typed CSV with leading-zero IDs and missing measurements."
+        }
+      ]
     }
   }
 }

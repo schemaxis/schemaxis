@@ -125,15 +125,24 @@ def inspect(mesh):
                 for tag in sorted(areas)]}
 
 
-def verify_face_groups(data, selectors):
-    """Classify every boundary triangle from coordinates, without native face IDs."""
+def verify_face_groups(data, selectors, cylinders=()):
+    """Classify every boundary triangle from coordinates, without native face IDs.
+
+    Planes take precedence; a triangle on no plane is a wall of the one cylinder
+    group whose radius it matches with axial extent, and anything else is remainder.
+    """
+    from . import cylinders as walls, groups
     for dim, physical, vertices in data['cells']:
         if dim != 2:
             continue
-        matches = [i+3 for i,g in enumerate(selectors)
-                   if all(abs(data['nodes'][n]['xyz'.index(g['axis'])]-g['coordinate']) <= g['tolerance'] for n in vertices)]
+        points = [data['nodes'][n] for n in vertices]
+        matches = [groups.plane_tag(i) for i,g in enumerate(selectors)
+                   if all(abs(p['xyz'.index(g['axis'])]-g['coordinate']) <= g['tolerance'] for p in points)]
         check(len(matches) <= 1, 'boundary triangle matches overlapping face selectors')
-        check(physical == (matches[0] if matches else 2), 'physical face tag differs from authored plane selector')
+        wall = walls.classify(points, matches, cylinders)
+        expected = matches[0] if matches else groups.REMAINDER_TAG if wall is None else groups.plane_tag(len(selectors)+wall)
+        check(physical == expected, 'physical face tag differs from authored plane or cylinder selector; one possible cause is a flat face inscribed in a selected cylinder, which needs a finer mesh' if cylinders
+              else 'physical face tag differs from authored plane selector')
 
 
 def write_vtu(path, mesh, dimension):

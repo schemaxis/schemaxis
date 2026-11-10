@@ -3,18 +3,27 @@
   "operations": {
     "convert": {
       "status": "reviewed",
-      "explanation": "Convert captured triangle/tetra meshes between ASCII VTU and legacyVTK 4.2 while checking coordinate units, ordered topology and point/cell arrays independently. Use for mesh interchange where preserving field associations matters.",
+      "explanation": "Convert captured triangle, tetrahedral and eight-node hexahedral meshes between ASCII VTU and legacy VTK 4.2, checking units, ordered connectivity and scalar/vector arrays independently. Useful for CAE volume interchange and post-processing handoffs.",
       "sources": [
         "docs/meshio.md#contract-and-units"
       ],
       "pitfalls": [
         "Only coordinates change units; scalar/vector array units are not inferred.",
-        "Strict subset refuses binary/compressed payloads and unsupported metadata instead of silently losing them."
+        "Strict subset refuses binary/compressed payloads and unsupported metadata instead of silently losing them.",
+        "Hexahedra follow VTK type 12 node order. Positive Jacobians at eight corners, centre and eight Gauss points are a bounded geometry check, not proof of global positivity or mesh quality."
       ],
       "examples": [
         {
           "reference": "examples/schemaxis/meshio-convert.json",
           "purpose": "Mixed-cell millimetre VTU to metre VTK."
+        },
+        {
+          "reference": "examples/schemaxis/meshio-hex-convert.json",
+          "purpose": "Affine hexahedron plus tetra/triangle: mm to m, 24 mm cubed hex volume."
+        },
+        {
+          "reference": "examples/schemaxis/meshio-hex-variant.json",
+          "purpose": "Warped hex: cm to mm, independent 25.5 mm cubed trilinear volume."
         }
       ]
     }
@@ -45,7 +54,7 @@
         },
         "/properties/source": {
           "status": "reviewed",
-          "explanation": "Required absolute local .vtu/.vtk regular file, matching sourceFormat, at most 16 MiB. No symlinks, devices or remote fetching. Bytes are captured and hashed; same-path changes invalidate reuse.",
+          "explanation": "Required absolute local .vtu/.vtk regular file, matching sourceFormat, at most 16 MiB. No symlinks, devices or remote fetching. Bytes are captured and hashed; same-path changes invalidate reuse. Supported cells are linear triangle, tetra and VTK-order eight-node hexahedron; export high-order/voxel/wedge/pyramid cells through an explicit separate preparation step.",
           "sources": [
             "docs/meshio.md#contract-and-units"
           ],

@@ -1,0 +1,80 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "validate": {
+      "status": "reviewed",
+      "explanation": "Check one finished EPUB publication with the official W3C EPUBCheck tool before it is handed over. The host first checks that the file is a safe, bounded ZIP, then the trusted checker examines the captured bytes against the EPUB standard. The result is accepted only when EPUBCheck reports no fatal, error or warning messages; the JSON assessment and a short summary are then published, and a fresh second check of the held bytes must agree. Choose it as an independent standards check after a conversion (for example a Pandoc EPUB); it does not edit, repair, render or certify the book.",
+      "sources": [
+        "docs/epubcheck.md#what-the-fields-mean",
+        "docs/epubcheck.md#verification-contract"
+      ],
+      "pitfalls": [
+        "A rejected publication publishes nothing: the run fails with EPUBCHECK_REJECTED and the findings stay in rejected-assessment.json in the run directory. Warnings reject too, because the policy is zero fatal, error and warning messages.",
+        "Only the default EPUB profile runs; you cannot choose dictionary, EDUPUB, index or preview profiles, downgrade a message severity or add checker flags.",
+        "Zero findings is a scoped result from one EPUBCheck release, not proof of correct rendering on a reading system, accessibility or legal compliance.",
+        "Verification needs the same trusted launcher (SCHEMAXIS_EPUBCHECK, a stored epubcheck location, or --epubcheck for run); it can never succeed without it."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/epubcheck-baseline.json",
+          "purpose": "Check a tiny valid EPUB 3 publication and publish the accepted assessment."
+        },
+        {
+          "reference": "examples/schemaxis/epubcheck-variant.json",
+          "purpose": "Check an eight-file EPUB 3 with two chapters, a stylesheet and an image."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
+    }
+  },
+  "routes": {
+    "schemaxis.epubcheck/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Describe one EPUBCheck publication check: the named .epub is captured as immutable evidence, container-preflighted, checked by the trusted EPUBCheck and checked again freshly at verification. The output is the native JSON assessment and a JSON summary, published only when the checker finds nothing at fatal, error or warning level.",
+          "pitfalls": [
+            "Do not author Java, JAR paths, checker flags, profiles, plugins or message severities: this contract has none."
+          ],
+          "sources": [
+            "docs/epubcheck.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the EPUBCheck document contract. This identifies the authored structure, not the installed EPUBCheck release (5.4 is observed and checked at run time).",
+          "pitfalls": [
+            "Use schemaxis.epubcheck/1."
+          ],
+          "sources": [
+            "docs/epubcheck.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose validate, the only operation: check one EPUB and publish its assessment only if it is clean.",
+          "pitfalls": [
+            "Repair, conversion, rendering and accessibility certification are outside this contract."
+          ],
+          "sources": [
+            "docs/epubcheck.md#what-the-fields-mean"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose one absolute local .epub file of at most 32 MiB, 2000 members and 64 MiB uncompressed. A verified file artifact from an earlier step, such as the EPUB published by a Pandoc report (artifact index 3 of that run), can be bound here. Its bytes are captured before checking and decide scheduler reuse.",
+          "pitfalls": [
+            "The file must be a ZIP EPUB; unzipped EPUB folders and single OPF or XHTML files are not accepted. URLs, relative paths, symlinks and non-regular files are refused.",
+            "Encrypted members, symbolic links in the archive, unsafe or duplicate member names, non-ASCII names without the ZIP UTF-8 flag, XML entity declarations, DOCTYPE SYSTEM identifiers outside the EPUBCheck local DTD catalogue and XML members that are not UTF-8 or byte-order-marked UTF-16 are refused before the checker starts. That includes XML the package declares under any file name (container rootfiles and manifest items with an XML media type) and any member carrying DOCTYPE or ENTITY text. The checker runs with its fixed offline property, which is not an operating-system network boundary; the property does not cover jar: or file: identifiers, which the host refuses."
+          ],
+          "sources": [
+            "docs/epubcheck.md#supported-subset-and-refusals"
+          ],
+          "fileExtensions": [
+            ".epub"
+          ]
+        }
+      }
+    }
+  }
+}

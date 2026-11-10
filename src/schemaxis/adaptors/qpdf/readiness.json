@@ -7,7 +7,7 @@
         "purpose": "Build a new PDF from selected pages of named captured PDFs in a declared order, with repeated pages and relative clockwise quarter-turn rotation. Every output page is verified against its captured source page by fresh QPDF and MuPDF observation. Use it to assemble review packets and handouts from unencrypted, annotation-free PDFs.",
         "assumptions": "Unencrypted, structurally intact local PDFs on POSIX with QPDF 12.4.2 and MuPDF 1.28.5; selected pages inside the declared page and resource envelope.",
         "constraints": "<=4 sources of <=16 MiB (32 MiB together) and <=500 pages each; <=200 output pages; one-based physical page numbers; physical page side <=8192 points including UserUnit; 36 dpi verification raster <=4096 pixels per side and 16,777,216 pixels over all output pages, repeats included; quarter turns only. Forms, signatures, layers, tagged structure, annotations, page actions and page transparency groups refuse. No authored scripts, passwords, URLs or page labels.",
-        "inspection": "Inspect assembly-summary.json for per-page source, rotation, geometry, raster digest and text size; verification reopens the captured sources and the published PDF with QPDF and MuPDF. The literal fixture oracle independently checks sizes, quadrant colours and text.",
+        "inspection": "Inspect assembly-summary.json for the captured byte count and SHA-256 of each source and per-page source, rotation, geometry, raster digest and text size; verification reopens the captured sources and the published PDF with QPDF and MuPDF. The literal fixture oracle independently checks sizes, quadrant colours and text.",
         "recovery": "INVALID_PDF_SOURCE needs an absolute bounded regular PDF; INVALID_PDF_PAGES names an undeclared source; ENCRYPTED_PDF needs an authorized unencrypted copy; PDF_REPAIRED means QPDF raised warnings while reading (INVALID_PDF_SOURCE also covers a PDF QPDF cannot read without recovery); PDF_PAGE_FEATURE_UNSUPPORTED, PDF_CATALOGUE_UNSUPPORTED, PDF_FEATURE_UNSUPPORTED and PDF_ANNOTATIONS_UNSUPPORTED name the refused feature; PDF_PIXEL_LIMIT needs fewer or smaller pages; INTERPRETER_NOT_FOUND and UNSUPPORTED_RUNTIME need QPDF 12.4.2 (--qpdf) and MuPDF 1.28.5 (--mupdf). Retained logs and result.json explain process faults."
       },
       "examples": [
@@ -111,7 +111,7 @@
             "losses": [
               "A bounded appearance, text and geometry record at 36 dpi; not a copy of page content."
             ],
-            "scope": "Per-page source identity, rotation, geometry, raster digest and text size, regenerated and compared by verification."
+            "scope": "Captured source byte count and SHA-256, per-page source identity, rotation, geometry, raster digest and text size, regenerated and compared by verification; earlier summary/1 runs verify in their earlier shape."
           }
         ],
         "inspection": [
@@ -328,9 +328,10 @@
         ]
       },
       "completion": {
-        "scope": "Initial bounded PDF page-assembly route, fields, publications and lifecycle.",
+        "scope": "Initial bounded PDF page-assembly route, fields, publications and lifecycle; 2026-10-24 allocation: assembly summary/2 binds each source's captured byte count and SHA-256, legacy summary/1 runs still verify (host-verified only; no native requalification).",
         "review": [
-          "verification/2026-10-17-qpdf-completion.md"
+          "verification/2026-10-17-qpdf-completion.md",
+          "verification/2026-10-24-qpdf-allocation.md"
         ],
         "notApplicable": {
           "native-inspection": "No interactive native-inspection hook; the per-page summary is a publication.",

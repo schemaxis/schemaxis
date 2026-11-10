@@ -1,0 +1,121 @@
+{
+  "version": "schemaxis.freecad/1",
+  "nodes": [
+    {
+      "id": "casting",
+      "filter": "importSTEP",
+      "options": {
+        "file": "examples/schemaxis/freecad-import-step-bracket.step",
+        "units": "inch",
+        "orientation": {
+          "z": "+Y",
+          "x": "+X"
+        },
+        "placement": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "clocking": 0
+        },
+        "expect": {
+          "volume": {
+            "value": 10840.0,
+            "relativeTolerance": 1e-06
+          },
+          "centreOfMass": {
+            "value": [
+              -0.808118,
+              -0.243542,
+              5.0
+            ],
+            "tolerance": 0.01
+          },
+          "bounds": {
+            "value": [
+              -20,
+              20,
+              -15,
+              15,
+              0,
+              10
+            ],
+            "tolerance": 0.01
+          },
+          "points": {
+            "inside": [
+              [
+                0,
+                0,
+                5
+              ],
+              [
+                15,
+                -6,
+                5
+              ]
+            ],
+            "outside": [
+              [
+                -9,
+                -6,
+                5
+              ],
+              [
+                15,
+                6,
+                5
+              ]
+            ],
+            "guard": 0.5
+          }
+        },
+        "refine": true
+      }
+    },
+    {
+      "id": "part",
+      "filter": "body"
+    },
+    {
+      "id": "seed",
+      "filter": "bodySeed",
+      "inputs": {
+        "body": "part",
+        "source": "casting"
+      }
+    },
+    {
+      "id": "bore",
+      "filter": "circle",
+      "options": {
+        "radius": 1,
+        "centre": [
+          10,
+          -8
+        ],
+        "origin": [
+          0,
+          0,
+          10
+        ]
+      },
+      "inputs": {
+        "body": "part"
+      }
+    },
+    {
+      "id": "cut",
+      "filter": "pocket",
+      "options": {
+        "direction": "backward"
+      },
+      "inputs": {
+        "base": "seed",
+        "profile": "bore"
+      }
+    }
+  ],
+  "output": "cut"
+}

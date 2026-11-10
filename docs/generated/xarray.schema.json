@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.xarray/1"
+    },
+    "operation": {
+      "const": "reduceProfile"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "variable": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "unit"
+      ]
+    },
+    "coordinates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "unit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "range": {
+            "type": "object",
+            "properties": {
+              "minimum": {
+                "type": "number",
+                "minimum": -1e+100,
+                "maximum": 1e+100
+              },
+              "maximum": {
+                "type": "number",
+                "minimum": -1e+100,
+                "maximum": 1e+100
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "minimum",
+              "maximum"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "unit"
+        ]
+      },
+      "minItems": 2,
+      "maxItems": 4
+    },
+    "retain": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "missing": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": -1e+100,
+          "maximum": 1e+100
+        },
+        "policy": {
+          "enum": [
+            "skip",
+            "propagate",
+            "refuse"
+          ]
+        },
+        "minimumValid": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 262144
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "policy"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "source",
+    "variable",
+    "coordinates",
+    "retain",
+    "missing"
+  ]
+}

@@ -6,13 +6,15 @@
   "executables": [
     "ccx"
   ],
-  "execution": "Bounded isotropic elastic cantilevers with independent equilibrium, mesh convergence and interior stress assessment",
+  "execution": "Six-resultant rectangular elastic members with independent axial, biaxial bending, torsion, equilibrium and refinement checks",
   "keywords": [
     "cantilever",
     "FEA",
     "elasticity",
     "deflection",
     "stress",
+    "torsion",
+    "axial",
     "mesh convergence",
     "CalculiX"
   ],
@@ -36,7 +38,12 @@
       "poissonRatio": 0.3
     },
     "load": {
-      "tipForceZ_N": -100
+      "tipForceX_N": 1000,
+      "tipForceY_N": 20,
+      "tipForceZ_N": -30,
+      "tipMomentX_Nm": 1,
+      "tipMomentY_Nm": 2,
+      "tipMomentZ_Nm": -1
     },
     "mesh": {
       "lengthCells": 12,
@@ -44,14 +51,19 @@
     },
     "requirements": [
       {
-        "name": "tip_serviceability",
-        "quantity": "absTipDeflection_m",
-        "maximum": 0.0008
+        "name": "translation_serviceability",
+        "quantity": "tipAreaMeanTranslation_m",
+        "maximum": 0.0004
       },
       {
-        "name": "interior_samples",
-        "quantity": "maxInteriorSampleNormalStress_Pa",
-        "maximum": 20000000.0
+        "name": "torsional_serviceability",
+        "quantity": "absTipTwist_rad",
+        "maximum": 0.00025
+      },
+      {
+        "name": "interior_sample_equivalent",
+        "quantity": "maxInteriorSampleVonMises_Pa",
+        "maximum": 15000000.0
       }
     ]
   },

@@ -27,6 +27,28 @@ ROOT=Path(__file__).resolve().parents[1]
 SVG='{http://www.w3.org/2000/svg}'
 
 
+def decode_png(data):
+    """Development-only stdlib decoder (8-bit RGB/RGBA, all five filters), independent of the production reader."""
+    assert data[:8]==b'\x89PNG\r\n\x1a\n';pos=8;idat=b'';width=height=channels=0
+    while pos<len(data):
+        n=struct.unpack('>I',data[pos:pos+4])[0];kind=data[pos+4:pos+8];body=data[pos+8:pos+8+n];pos+=12+n
+        if kind==b'IHDR':
+            width,height,depth,colour=struct.unpack('>IIBB',body[:10]);assert depth==8 and colour in (2,6);channels=3 if colour==2 else 4
+        elif kind==b'IDAT':idat+=body
+    raw=zlib.decompress(idat);stride=width*channels;rows=[];prev=bytearray(stride);at=0
+    for _ in range(height):
+        mode=raw[at];line=bytearray(raw[at+1:at+1+stride]);at+=1+stride
+        for i in range(stride):
+            a=line[i-channels] if i>=channels else 0;b=prev[i];c=prev[i-channels] if i>=channels else 0
+            if mode==1:line[i]=(line[i]+a)&255
+            elif mode==2:line[i]=(line[i]+b)&255
+            elif mode==3:line[i]=(line[i]+(a+b)//2)&255
+            elif mode==4:
+                q=a+b-c;pa,pb,pc=abs(q-a),abs(q-b),abs(q-c);line[i]=(line[i]+(a if pa<=pb and pa<=pc else b if pb<=pc else c))&255
+        rows.append([tuple(line[x:x+3]) for x in range(0,stride,channels)]);prev=line
+    return width,height,rows
+
+
 def refused(action,code='VERIFICATION_FAILED'):
     try: action()
     except SchemaxisError as error:
@@ -60,13 +82,24 @@ def literal(directory,expected,uncertainty):
     tokens=[(op,float(x),float(y)) for op,x,y in re.findall(r'([ML])\s*([-0-9.]+),([-0-9.]+)',path)]
     for x,lo,hi in uncertainty:
         assert any(b[0]=='L' and max(abs(a[1]-x),abs(a[2]-lo),abs(b[1]-x),abs(b[2]-hi))<=.06 for a,b in zip(tokens,tokens[1:])),(x,lo,hi,path)
-    from schemaxis.adaptors.gnuplot.inspection import pixels
-    width,height,image=pixels((directory/'plot.png').read_bytes());assert (width,height)==(800,600)
+    width,height,image=decode_png((directory/'plot.png').read_bytes());assert (width,height)==(800,600)
     # These sample-centre pixels are literal independent observations, separate
     # from host-authored plot-summary.json and the producer's numeric mappings.
     for x,y in expected:
         assert any(image[yy][xx]==(214,39,40) for yy in range(round(y)-2,round(y)+3) for xx in range(round(x)-2,round(x)+3)),(x,y)
     return {'nativeSVGPoints':points,'literalExpected':expected,'literalErrorEndpoints':uncertainty,'pngDimensions':[width,height],'pngLiteralSampleColours':True}
+
+
+def literal_band(directory,polygon,interior,exterior):
+    """Native envelope vertices and a few literal PNG pixels, worked out from the fixed margins."""
+    root=ET.fromstring((directory/'plot.svg').read_bytes());group=next(g for g in root.iter(SVG+'g') if g.get('id')=='gnuplot_plot_1')
+    shapes=list(group.iter(SVG+'polygon'));assert len(shapes)==2 and shapes[1].get('fill-opacity').strip()=='0.200000'
+    points=[tuple(map(float,v.split(','))) for v in shapes[1].get('points').split()]
+    assert len(points)==len(polygon) and all(abs(a-c)<=.06 and abs(b-d)<=.06 for (a,b),(c,d) in zip(points,polygon)),(points,polygon)
+    width,height,image=decode_png((directory/'plot.png').read_bytes())
+    for x,y in interior: assert all(abs(a-b)<=3 for a,b in zip(image[y][x],(247,212,212))),(x,y,image[y][x])
+    for x,y in exterior: assert image[y][x]==(255,255,255),(x,y,image[y][x])
+    return {'nativePolygon':points,'literalPolygon':polygon,'interior':interior,'exterior':exterior}
 
 
 def white_png(width,height):
@@ -166,6 +199,8 @@ def main():
         assert adaptor.read(baseline,'authored.json')['series']==[{'label':'Measured','x':'time','y':'reading','error':'uncertainty','colour':'red'}]
         report['literalLinear']=literal(baseline,[[120,375],[440,270],[760,165]],[[120,401.25,348.75],[440,322.5,217.5],[760,191.25,138.75]])
         report['literalLog']=literal(directory/'kit/logarithmic',[[120,340],[440,200],[760,102.144]],[[120,353.567,328.915],[440,213.567,188.915],[760,115.711,91.059]])
+        report['literalBand']=literal_band(directory/'kit/range-envelope',[(120,410),(440,256),(760,340),(760,200),(440,130),(120,270)],[(200,330),(600,200)],[(200,400),(600,130)])
+        report['literalChangedBand']=literal_band(directory/'kit/changed-range-envelope',[(120,452),(440,256),(760,340),(760,116),(440,130),(120,270)],[(200,390),(600,140)],[(200,430),(600,100)])
         report['negative']=negative(baseline)
         _,_,entry=route_materials(adaptor.VERSION);document=case_document(entry,entry['development']['cases'][0],ROOT)
         bad=copy.deepcopy(document);bad['xAxis']['range']=[1,100];bad['xAxis']['scale']='log10';bad['yAxis']['range']=[1,1000];bad['yAxis']['scale']='log10';bad['source']=str(ROOT/'examples/schemaxis/fixtures/gnuplot/log-invalid.csv')

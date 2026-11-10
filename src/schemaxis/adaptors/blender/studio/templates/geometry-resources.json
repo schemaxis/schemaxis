@@ -1,0 +1,154 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "prepareOnly": true,
+  "visible": [
+    "consumer"
+  ],
+  "production": {
+    "objects": [
+      {
+        "id": "prototype",
+        "kind": "mesh",
+        "vertices": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            2,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2
+          ]
+        ],
+        "location": [
+          10,
+          3,
+          0
+        ],
+        "collection": "parts"
+      },
+      {
+        "id": "consumer",
+        "kind": "mesh",
+        "vertices": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2
+          ]
+        ],
+        "location": [
+          4,
+          1,
+          0
+        ]
+      }
+    ],
+    "collections": [
+      {
+        "id": "parts"
+      }
+    ],
+    "geometryResources": [
+      {
+        "id": "referencePart",
+        "kind": "object",
+        "object": "prototype"
+      }
+    ],
+    "geometryGraphs": [
+      {
+        "id": "copy",
+        "nodes": [
+          {
+            "id": "source",
+            "kind": "objectInfo",
+            "values": {
+              "object": "referencePart",
+              "asInstance": false
+            },
+            "properties": {
+              "space": "RELATIVE"
+            }
+          },
+          {
+            "id": "realise",
+            "kind": "realiseInstances"
+          },
+          {
+            "id": "out",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "source",
+              "socket": "geometry"
+            },
+            "to": {
+              "node": "realise",
+              "socket": "geometry"
+            }
+          },
+          {
+            "from": {
+              "node": "realise",
+              "socket": "geometry"
+            },
+            "to": {
+              "node": "out",
+              "socket": "geometry"
+            }
+          }
+        ]
+      }
+    ],
+    "geometryBindings": [
+      {
+        "object": "consumer",
+        "graph": "copy"
+      }
+    ],
+    "units": "millimetres",
+    "exports": [
+      {
+        "id": "resource-copy",
+        "format": "glb",
+        "objects": [
+          "consumer"
+        ]
+      }
+    ]
+  }
+}

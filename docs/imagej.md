@@ -7,16 +7,26 @@ table in declared physical units (`particles.csv`) plus a provenance summary
 [R](r.md) analysis. Typical uses are counting and sizing blobs, grains, pores,
 colonies or cells after a fixed intensity threshold.
 
+The same route also offers `measureRegions`: apply one named rectangle list to
+a short labelled series of captured grayscale frames and publish per-frame,
+per-region measurements ([Measure regions](#measure-regions)).
+
 Complete the [authoritative checklist](adaptor-completion.md) for any later
 operation or field change. The completion review is
-[2026-10-16](../verification/2026-10-16-imagej-completion.md).
+[2026-10-16](../verification/2026-10-16-imagej-completion.md); the
+`measureRegions` addition is reviewed in
+[2026-10-26](../verification/2026-10-26-imagej-regions.md); the earlier
+[2026-10-25](../verification/2026-10-25-imagej-regions.md) note is kept as history and
+predates the region timeout/cancellation lifecycle, fractional-mean fixtures,
+non-unit-area handoff and the stricter duplicate-source and budget checks.
 
 ## Runtime
 
 The runtime is **ImageJ 1.x**, the `ij.jar` core distributed by
 [imagej.net](https://imagej.net/ij/download.html). Version 1.54t, the latest
 release on 2026-10-16, is the qualified runtime. Other 1.54 releases are
-accepted but unqualified. The adaptor runs a fixed, trusted Java source
+accepted but unqualified. `analyzeParticles` was qualified on OpenJDK 21 (2026-10-16 records, kept
+as history); `measureRegions` was run natively on OpenJDK 25.0.4.1 on 2026-10-26. The adaptor runs a fixed, trusted Java source
 program with the JDK
 [source-file launcher](https://openjdk.org/jeps/330):
 
@@ -124,7 +134,16 @@ for decimal input. A window that contains no whole pixel count fails with
 The declared calibration replaces whatever the file stores. ImageJ's decoded
 state is still read back so that unsupported content is rejected: density
 calibration (for example signed 16-bit TIFFs), inverted lookup tables or more
-than one plane. The origin is the top-left corner of the image, with x to the
+than one plane. A TIFF whose ImageJ-authored description declares a stack
+(`images` above 1) or a density calibration (`vunit` with a calibration function
+`cf` and its `c0`/`c1` coefficients, or optical density) is rejected before any
+native launch as `UNSUPPORTED_IMAGE` at `$.image`, with tag 270 and the offending
+key in the fault; descriptions that do not begin with `ImageJ` and other ImageJ
+keys such as `unit`, `spacing`, `min` or `max` are accepted and the declared
+calibration still replaces them. The description reader follows ImageJ 1.54t's
+plain `key=value`, `key: value` and `key value` lines only. A description pointing
+outside the file or lacking its NUL terminator is `INVALID_IMAGE`.
+The origin is the top-left corner of the image, with x to the
 right and y downward. Pixel `(i, j)` has its centre at
 `((i+0.5)*pixelWidth, (j+0.5)*pixelHeight)`. Rectangular pixels are supported.
 
@@ -226,13 +245,103 @@ PYTHONPATH=src python3 tools/qualify_imagej.py --output-directory evidence/image
 preserved. An R analysis can consume the same numeric CSV later. That route is
 not a qualified handoff here.
 
+## Measure regions
+
+A lab researcher who measures the same areas in successive microscope or
+materials images should not redraw them by hand, and a bare table of numbers
+loses which frame and calibration each came from. `measureRegions` takes 2-8
+captured planes (`frames`, each with a unique `id`, an `image` and a
+`timeSeconds`), 1-16 named rectangles (`regions`) and a declared `calibration`.
+
+```json
+{"version": "schemaxis.imagej/1", "operation": "measureRegions",
+ "frames": [{"id": "T0", "image": "/data/t0.pgm", "timeSeconds": 0},
+            {"id": "T1", "image": "/data/t1.pgm", "timeSeconds": 30}],
+ "regions": [{"id": "core", "x": 2, "y": 1, "width": 4, "height": 3}],
+ "calibration": {"pixelWidth": 0.5, "pixelHeight": 2, "unit": "um"}}
+```
+
+- **Frames.** Binary PGM or uncompressed baseline TIFF, 8 or 16-bit unsigned, all
+  with the same width, height and bit depth; each file used once. Duplicates are found by
+  file identity (device and inode) before anything is read, so a repeated path, a `./`
+  alias or a hard link is refused as `DUPLICATE_FRAME_SOURCE`, while two distinct files with
+  identical pixels (an unchanged scene) are accepted. Each plane stays within the
+  single-image limits and the series within 4194304 pixels and 32 MiB; the byte total is
+  decided from `fstat` sizes before any frame is read, and the pixel and visit totals from
+  bounded headers before any frame is decoded.
+  IDs are one letter then up to 31 letters, digits, underscores or hyphens, and
+  unique. Times are finite declared seconds from 0 to 1e9 since an origin you choose
+  and **strictly increase** in frame order; they are never read from the files.
+- **Regions.** Zero-based top-left integer `x`, `y`, `width`, `height`; right and
+  bottom are exclusive and every pixel inside counts once. A rectangle must lie
+  fully inside every frame (refused, never clipped). Rectangles may overlap or nest:
+  each is an independent measurement, not a partition. Nothing moves, interpolates,
+  registers or tracks between frames, and there is no threshold. The work is bounded
+  to 16777216 frame-pixel visits.
+- **Calibration.** Declared pixel size and nm/um/mm/cm/m replace any calibration in
+  the files and are read back from ImageJ. Intensities remain raw stored values;
+  calibration scales only area (pixel count x `pixelWidth` x `pixelHeight`).
+
+Outputs: `region-measurements.csv` (generic file artifact: `frame`, `region`,
+`timeSeconds`, `pixelCount`, `area_<unit>2`, `meanIntensity`, `minimumIntensity`,
+`maximumIntensity`; frame-major, in declared order) and
+`region-measurements.json` (frame hashes and times, regions, calibration,
+conventions, every record). The captured frames, series specification and native
+tables are retained. No sum or centroid and **no review overlay image** is
+produced: a rendered overlay would not be independently verifiable here, so none
+is claimed, and the ROIs are not exported as an editable ImageJ ROI set.
+
+The fixed Java program uses `ImagePlus`/`ImageStack` (slice label = frame ID),
+`Roi` (name = region ID), `ImageProcessor.setRoi` with
+`ImageStatistics.getStatistics`, and in a fresh process `ImagePlus.setRoi` with
+`ImagePlus.getStatistics`. No RoiManager, macro or plugin is used.
+
+Verification enumerates every pixel of every rectangle in every captured frame
+without ImageJ and requires native count, minimum and maximum to match exactly,
+mean to match the exact fraction (and area and calibrated geometry) within 1e-12
+relative, row identity and order, labels, rectangle names, calibration, source
+hashes and publications. Refreshing hashes cannot hide a changed measurement.
+Faults retain a code and location. Most evidence checks name the retained file or field
+(for example `reopen-readback.txt/region.1`, `series.spec` or `region-measurements.csv`);
+some runtime-identity faults use the root, and frame-decode faults may use the authored frame location.
+
+Two recorded fields are handled explicitly. The `jarSha256` in `runtime.json` is
+cross-checked against the digest of the jar the native process itself loaded and
+reported. This checks consistency between retained observations; it is not a publisher checksum
+or protection against a coordinated rewrite of all those records. The stored-file calibration ImageJ read before the declared calibration
+replaced it is checked against ImageJ's uncalibrated default only for files that carry no
+resolution or description tags, and otherwise only for agreement between the two native
+stages; it is an ImageJ observation, not an independent decode. Native stdout/stderr logs are
+bound by their receipt digest only: no result is read from them, and a refreshed receipt
+would hide an edit to them.
+
+Fractional means: `examples/schemaxis/fixtures/imagej/series/frac8-t*.pgm` and
+`frac16-t*.tif` (9x6, original formulas in the fixtures README) make most rectangle
+sums non-multiples of the pixel count, for example a 3-pixel rectangle summing to
+368 (mean 368/3 = 122.666...); the exact Fraction is compared with ImageJ's double
+mean within 1e-12 relative. `examples/schemaxis/imagej-regions-fractional-to-calc.json`
+uses 0.5 x 1.5 um pixels (0.75 um^2), so every workbook `area_um2` differs from
+`pixelCount` and is checked as count x 0.75. The integer-mean example below is kept
+as the original control, where a 0.5 x 2 um pixel makes area equal count by construction.
+
+Calc handoff: `examples/schemaxis/imagej-regions-to-calc.json` passes the CSV
+(artifact index 0) to Calc `readTypedCSV` with `frame` and `region` as text
+columns and the rest as numbers. Calc's typed reader needs two present values per
+numeric column and has its own table and summary limits; these are Calc's
+contract, not ImageJ's. No R or Pandoc handoff is claimed.
+
+Regions fault codes: `DUPLICATE_FRAME_ID`, `DUPLICATE_REGION_ID`,
+`INVALID_IDENTIFIER`, `NON_INCREASING_TIME`, `DUPLICATE_FRAME_SOURCE`,
+`REGION_OUT_OF_BOUNDS`, `SERIES_MISMATCH` and `RESOURCE_LIMIT` (aggregate
+budgets), all raised before ImageJ is launched.
+
 ## Faults
 
 | Code | Cause and recovery |
 | --- | --- |
 | `INVALID_RESOURCE` | `image` is relative, contains control characters, is a link or is not a regular file. Use an absolute path to a regular file. |
 | `RESOURCE_NOT_FOUND` | The image cannot be opened. Check the path and permissions. |
-| `INVALID_IMAGE` / `UNSUPPORTED_IMAGE` | Malformed, compressed, colour, multi-plane, signed or tagged-beyond-baseline files. Convert to a plain grayscale PGM or uncompressed TIFF. |
+| `INVALID_IMAGE` / `UNSUPPORTED_IMAGE` | Malformed, compressed, colour, multi-plane, signed or tagged-beyond-baseline files, including ImageJ stack or density-calibration descriptions. Convert to a plain grayscale PGM or re-save one uncompressed plane without the calibration function. |
 | `RESOURCE_LIMIT` | The image or particle count exceeds the bounds. Crop or tighten the threshold or size window. |
 | `INVALID_THRESHOLD` | `lower > upper`, `upper` above the bit depth, or a window that covers the whole range. |
 | `UNSUPPORTED_OPTION` | `four` connectivity without `includeHoles`. |
@@ -247,8 +356,10 @@ Image validation happens before ImageJ starts. A failed attempt keeps
 
 ## Limits
 
-- One grayscale plane per run. No colour, stacks, hyperstacks, time series,
-  regions of interest or batches of images.
+- `analyzeParticles`: one grayscale plane per run. No colour, stacks or
+  hyperstacks. `measureRegions` takes 2-8 separately captured planes and
+  rectangles only: no colour, stacks, tracking, registration, non-rectangular
+  selections, overlays or macros.
 - Manual threshold only. No perimeter, circularity, ellipse, Feret or other
   shape descriptors.
 - Pixel-count area and pixel-centre centroids are discrete measurements. They
@@ -273,5 +384,8 @@ Public API references:
 [Calibration](https://imagej.net/ij/developer/api/ij/ij/measure/Calibration.html),
 [ImageStatistics](https://imagej.net/ij/developer/api/ij/ij/process/ImageStatistics.html),
 [PGM_Reader](https://imagej.net/ij/developer/api/ij/ij/plugin/PGM_Reader.html),
-[Opener](https://imagej.net/ij/developer/api/ij/ij/io/Opener.html) and the
+[Opener](https://imagej.net/ij/developer/api/ij/ij/io/Opener.html),
+[ImageStack](https://imagej.net/ij/developer/api/ij/ij/ImageStack.html),
+[ImagePlus](https://imagej.net/ij/developer/api/ij/ij/ImagePlus.html),
+[Roi](https://imagej.net/ij/developer/api/ij/ij/gui/Roi.html) and the
 [Analyze menu guide](https://imagej.net/ij/docs/menus/analyze.html).

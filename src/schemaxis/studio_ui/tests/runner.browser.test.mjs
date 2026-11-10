@@ -52,10 +52,10 @@ for (const theme of ['light', 'dark']) {
         await session.wait(`document.querySelector('.runner .window-header > .badge')?.textContent === 'Verified'
           || document.querySelector('.runner-fault')`, 'native case completed', 80000);
         assert.equal(await session.evaluate(`document.querySelector('.runner-fault')?.textContent || ''`), '');
-        await session.wait(`document.querySelector('.runner-viewer .vw-table-scroll')
-          || document.querySelector('.runner-viewer .vw[data-state="ready"]')
-          || document.querySelector('.runner-viewer canvas')`, 'output viewer');
-        assert.equal(await session.evaluate(`document.querySelectorAll('.runner-output').length`), 4);
+        await session.wait(`document.querySelector('.runner-output-browser .results-frame')
+          ?.contentWindow?.artifactViewer?.items.some(item => item.kind === 'table')`, 'shared results viewer');
+        assert.ok(await session.evaluate(`document.querySelector('.runner-output-browser .results-frame')
+          .contentDocument.querySelectorAll('.card').length >= 4`));
         if (shots) {
           await session.evaluate(`window.studio.store.set({panelOpen: false});
             document.querySelectorAll('.toast').forEach(element => element.remove());

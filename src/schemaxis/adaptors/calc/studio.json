@@ -44,6 +44,11 @@
       "id": "studies",
       "title": "Study tables",
       "icon": "layers"
+    },
+    {
+      "id": "typed",
+      "title": "Labelled tables",
+      "icon": "layers"
     }
   ],
   "snippets": [
@@ -448,6 +453,221 @@
         }
       ],
       "complexity": "composite"
+    },
+    {
+      "id": "typed-parts",
+      "title": "Labelled parts table",
+      "category": "typed",
+      "icon": "layers",
+      "description": "Replace the numeric input with a labelled table: text part IDs, optional measurements and literal notes, with null for missing values.",
+      "fields": {
+        "name": {
+          "label": "name",
+          "type": "id",
+          "default": "parts",
+          "required": true
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.calc/1",
+              "nodes": [
+                {
+                  "id": {
+                    "$fill": "name"
+                  },
+                  "filter": "fromTypedRows",
+                  "options": {
+                    "columns": [
+                      {
+                        "name": "Part ID",
+                        "kind": "text"
+                      },
+                      {
+                        "name": "Mass (g)",
+                        "kind": "number",
+                        "nullable": true
+                      },
+                      {
+                        "name": "Note",
+                        "kind": "text",
+                        "nullable": true
+                      }
+                    ],
+                    "rows": [
+                      [
+                        "00123",
+                        12.5,
+                        "=1+2"
+                      ],
+                      [
+                        "00124",
+                        null,
+                        null
+                      ],
+                      [
+                        "@part-7",
+                        0,
+                        "-02"
+                      ]
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite"
+    },
+    {
+      "id": "typed-csv-workbook",
+      "title": "Workbook from typed CSV",
+      "category": "typed",
+      "icon": "layers",
+      "description": "Replace the numeric input with a captured typed CSV and its declared columns; \\N marks a missing cell.",
+      "fields": {
+        "file": {
+          "label": "Typed CSV",
+          "type": "path",
+          "required": true,
+          "default": "/data/parts.csv",
+          "extensions": [
+            "csv"
+          ]
+        },
+        "columns": {
+          "label": "Declared columns",
+          "type": "json",
+          "required": true,
+          "default": [
+            {
+              "name": "Part ID",
+              "kind": "text"
+            },
+            {
+              "name": "Mass (g)",
+              "kind": "number",
+              "nullable": true
+            },
+            {
+              "name": "Note",
+              "kind": "text",
+              "nullable": true
+            }
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "",
+          "values": [
+            {
+              "version": "schemaxis.calc/1",
+              "nodes": [
+                {
+                  "id": "data",
+                  "filter": "readTypedCSV",
+                  "options": {
+                    "file": {
+                      "$fill": "file"
+                    },
+                    "columns": {
+                      "$fill": "columns"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "complexity": "composite",
+      "requires": "Requires a UTF-8 CSV whose header equals the declared column names exactly."
+    },
+    {
+      "id": "append-typed-record",
+      "title": "Append one labelled record",
+      "category": "typed",
+      "icon": "layers",
+      "description": "Add a record with one cell per declared column to a typed table: a string for text, a number for numbers and null for a missing value.",
+      "fields": {
+        "append-typed-record": {
+          "label": "Append one labelled record",
+          "type": "json",
+          "required": true,
+          "default": [
+            "00130",
+            11.25,
+            null,
+            100.5
+          ]
+        }
+      },
+      "inserts": [
+        {
+          "at": "/nodes/0/options/rows/-",
+          "values": [
+            {
+              "$fill": "append-typed-record"
+            }
+          ]
+        }
+      ],
+      "baseDocument": {
+        "version": "schemaxis.calc/1",
+        "nodes": [
+          {
+            "id": "parts",
+            "filter": "fromTypedRows",
+            "options": {
+              "columns": [
+                {
+                  "name": "Part ID",
+                  "kind": "text"
+                },
+                {
+                  "name": "Mass (g)",
+                  "kind": "number",
+                  "nullable": true
+                },
+                {
+                  "name": "Note",
+                  "kind": "text",
+                  "nullable": true
+                },
+                {
+                  "name": "Length (mm)",
+                  "kind": "number"
+                }
+              ],
+              "rows": [
+                [
+                  "00123",
+                  12.5,
+                  "=1+2",
+                  100.25
+                ],
+                [
+                  "00124",
+                  null,
+                  null,
+                  99.5
+                ],
+                [
+                  "@part-7",
+                  0,
+                  "-02",
+                  101.0
+                ]
+              ]
+            }
+          }
+        ]
+      }
     }
   ],
   "templates": [
@@ -502,6 +722,28 @@
           ]
         }
       }
+    },
+    {
+      "id": "typed-parts-workbook",
+      "title": "Labelled parts workbook",
+      "file": "templates/typed-parts.json",
+      "description": "Part IDs, a note and a missing measurement kept together with verified workbook and typed CSV outputs.",
+      "fields": {}
+    },
+    {
+      "id": "typed-csv-template",
+      "title": "Typed CSV workbook",
+      "file": "studio/templates/typed-csv.json",
+      "description": "Publish verified XLSX, ODS and a typed CSV handoff from a captured typed CSV with the declared columns.",
+      "fields": {
+        "data": {
+          "label": "Typed CSV",
+          "type": "path",
+          "required": true,
+          "default": "/data/parts.csv"
+        }
+      },
+      "requires": "Requires a UTF-8 CSV whose header equals the declared column names exactly."
     }
   ],
   "viewers": [

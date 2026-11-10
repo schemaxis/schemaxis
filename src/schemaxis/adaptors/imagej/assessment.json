@@ -1,0 +1,48 @@
+{
+  "version": "schemaxis.adaptor-assessment/1",
+  "rubric": "schemaxis.strength-rubric/1",
+  "assessmentVersion": "2026-10-26.1",
+  "assessedOn": "2026-10-26",
+  "assessor": "Schemaxis editorial assessment",
+  "provider": "imagej",
+  "providerVersion": "schemaxis.imagej/1",
+  "routes": [
+    "schemaxis.imagej/1"
+  ],
+  "sourceFingerprint": "sha256:7534311f67d695549809d833dde1da6ecb2576d35d7305d430a2d539d48089e6",
+  "coverage": {
+    "percent": 5,
+    "status": "subjective",
+    "scope": {
+      "kind": "whole-application",
+      "description": "Whole imagej application/library breadth across useful functional families.",
+      "denominator": "Image import/processing, filtering, segmentation, measurement, colour/stacks, ROI management, plugins and scientific visualisation."
+    },
+    "rationale": "The existing particle pipeline now also supports repeated named rectangular regions across declared grayscale frames. Both remain bounded measurement workflows; general image processing, segmentation, plugins and scientific visualisation are absent, so the coarse whole-application estimate remains 5%.",
+    "confidence": "medium"
+  },
+  "abstraction": {
+    "percent": 80,
+    "status": "subjective",
+    "scope": {
+      "kind": "declared-workflows",
+      "description": "Calibrated grayscale threshold-particle measurements or repeated named rectangular-region measurements across labelled frames, with explicit frame times and a typed workbook handoff.",
+      "denominator": "User intent and domain decisions within the named supported workflows, including declared inputs, composition and useful outputs; excluded application features do not enter this score."
+    },
+    "rationale": "Calibration, threshold/connectivity, particle-size intent and named frame/region/time decisions hide Java and ImageJ measurement plumbing. Users still define rectangular regions and measurement assumptions; the existing 80% estimate is retained within this measurement family.",
+    "confidence": "medium"
+  },
+  "evidence": [
+    "src/schemaxis/adaptors/imagej/adaptor.json",
+    "src/schemaxis/adaptors/imagej/readiness.json",
+    "docs/imagej.md",
+    "verification/2026-10-24-imagej-allocation.md",
+    "verification/2026-10-26-imagej-regions.md"
+  ],
+  "limitations": [
+    "Closed bounded grayscale TIFF/PGM inputs. Repeated regions have explicit rectangles, frame times and common calibration; this is not object tracking, registration, segmentation, ROI-set import, colour processing or Fiji/plugin automation.",
+    "Pixel values, counts and geometric calibration are checked within the declared rectangle workflow. Authored calibration/time and biological meaning are not independently established by those checks; observed jar hashes establish consistency rather than publisher authenticity.",
+    "Frame dimensions/depth, aggregate pixel/byte/visit budgets and source alias constraints are enforced. Fractional means and nonunit calibrated areas remain numeric observations, with no uncertainty or acquisition-quality certificate.",
+    "Subjective source-contract assessment, not an exhaustive native API measurement. Verification confidence, runtime availability and source-bound qualification remain separate."
+  ]
+}

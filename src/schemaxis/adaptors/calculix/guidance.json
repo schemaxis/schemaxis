@@ -3,26 +3,24 @@
   "operations": {
     "cantileverBeam": {
       "status": "reviewed",
-      "explanation": "Analyses a straight rectangular cantilever in linear static elasticity: the x = 0 end is fully clamped and a vertical (z) force acts on the free end. Schemaxis generates CalculiX C3D20R quadratic solid meshes at three resolutions, solves them, and checks tip deflection against Euler-Bernoulli theory, support reactions against the load, and interior bending stress. It publishes the fine editable deck beam.inp, interior-stress.csv (Gauss-point stresses in Pa for 0.3 <= x/L <= 0.7) and beam-assessment.json. Choose it for quick stiffness/serviceability checks of slender beams; it is not a general FEA tool.",
+      "explanation": "Assess a rectangular structural member under six signed end resultants: axial force, biaxial bending forces, end torque and biaxial bending couples. Inputs describe physical intent and serviceability, while Schemaxis generates quadratic solid meshes and independently checks axial/Euler-Bernoulli/Prandtl theory, support equilibrium, separate refinement and exact saved-deck readback. Clamped members permit combined loads; axialSlide permits only axial loads while allowing Poisson contraction. Outputs are beam.inp, interior-stress.csv and beam-assessment.json. Choose this for bounded linear elastic stiffness and sampled-stress studies.",
       "sources": [
-        "src/schemaxis/adaptors/calculix/capabilities.py",
-        "src/schemaxis/adaptors/calculix/adaptor.py:24-84",
         "docs/calculix.md"
       ],
       "pitfalls": [
-        "Geometry must be slender (length / larger section side 20 to 40, width/height 0.5 to 2) and the predicted tip deflection at most 1% of the length; otherwise planning fails with INVALID_BEAM.",
-        "Only linear elasticity: no yield, plasticity, buckling, contact, dynamics or temperature effects are modelled.",
-        "The stress output excludes the clamp and the loaded end, so it is not the peak stress of the beam; do not use it for yield or fatigue checks.",
-        "A correctly solved beam can still fail its declared requirements (PERFORMANCE_NOT_MET); its results are retained but not published to later steps."
+        "Only one straight solid rectangular section family; no arbitrary meshes/decks, nonlinearity, buckling, thermal, modal, contact or failure analysis.",
+        "Interior sampled stress excludes the clamp/loaded end and does not bound peak stress or certify yielding.",
+        "Cancelling forces/couples can yield almost zero translation with nonzero stress; absolute-contribution scales preserve numerical checks.",
+        "A numerically valid solve can fail explicit serviceability requirements."
       ],
       "examples": [
         {
-          "reference": "examples/schemaxis/calculix-beam.json",
-          "purpose": "Steel beam with deflection and interior sampled stress limits."
+          "reference": "examples/schemaxis/calculix-combined.json",
+          "purpose": "All six resultants with measured translation, twist and sampled von Mises limits."
         },
         {
-          "reference": "examples/schemaxis/calculix-beam-material.json",
-          "purpose": "Change elastic stiffness and measure the resulting compliance."
+          "reference": "examples/schemaxis/calculix-axial-slide.json",
+          "purpose": "Pure axial compression with transverse contraction."
         }
       ]
     }
@@ -32,47 +30,9 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A CalculiX cantilever study: a rectangular beam, an isotropic linear elastic material, one end force and an optional mesh and requirements, all in SI units (m, N, Pa). Schemaxis derives the mesh, solves it and accepts the result only if refinement, equilibrium and beam-theory checks pass.",
+          "explanation": "A rectangular isotropic linear elastic member study in SI units. Declare dimensions, material, six optional signed end resultants, a support, mesh controls and measured serviceability limits. Schemaxis derives meshes, checks independent axial/bending/torsion theory and equilibrium, then publishes a checked editable deck, interior stress table and assessment. Unspecified load components are zero; at least one resultant must be nonzero.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
-          ],
-          "pitfalls": [
-            "The study covers one clamped rectangular cantilever only; other geometries, supports or load cases cannot be expressed."
-          ],
-          "examples": [
-            {
-              "version": "schemaxis.calculix/1",
-              "operation": "cantileverBeam",
-              "beam": {
-                "length_m": 0.4,
-                "width_m": 0.02,
-                "height_m": 0.02
-              },
-              "material": {
-                "youngsModulus_Pa": 210000000000.0,
-                "poissonRatio": 0.3
-              },
-              "load": {
-                "tipForceZ_N": -100
-              },
-              "mesh": {
-                "lengthCells": 12,
-                "sectionCells": 2
-              },
-              "requirements": [
-                {
-                  "name": "tip_serviceability",
-                  "quantity": "absTipAreaMeanUz_m",
-                  "maximum": 0.0008
-                },
-                {
-                  "name": "interior_samples",
-                  "quantity": "maxInteriorSampleNormalStress_Pa",
-                  "maximum": 20000000.0
-                }
-              ]
-            }
+            "docs/calculix.md"
           ]
         },
         "/properties/version": {
@@ -88,68 +48,41 @@
         },
         "/properties/operation": {
           "status": "reviewed",
-          "explanation": "The only analysis offered: cantileverBeam, a slender isotropic elastic beam fully fixed at x = 0 and loaded in global z on its opposite end face.",
+          "explanation": "cantileverBeam generates and assesses the supported rectangular structural-member family. The retained operation name includes pure axial members and combined biaxial bending/torsion. It covers one clamped support or pure-axial sliding support; it does not accept arbitrary solver decks.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
-          ],
-          "examples": [
-            "cantileverBeam"
+            "docs/calculix.md"
           ]
         },
         "/properties/beam": {
           "status": "reviewed",
-          "explanation": "Beam geometry in metres. The beam runs along positive x from the clamp (x = 0) to the loaded end; the rectangular section is centred on y = z = 0 with width along y and height along z. The slenderness and section-shape limits keep the beam within the range where the beam-theory comparison is valid.",
+          "explanation": "Straight solid rectangular geometry in metres. The member spans x=0 to x=length; its section is centred on y=z=0. Width is along y and height along z. Only rectangular solid sections are supported; changing either dimension also changes axial and torsional stiffness.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
-          ],
-          "pitfalls": [
-            "Planning rejects length / max(width, height) outside 20 to 40 or width / height outside 0.5 to 2; adjust the dimensions rather than the mesh."
-          ],
-          "examples": [
-            {
-              "length_m": 0.4,
-              "width_m": 0.02,
-              "height_m": 0.02
-            }
+            "docs/calculix.md"
           ]
         },
         "/properties/beam/properties/length_m": {
           "status": "reviewed",
-          "explanation": "Distance from the clamped end to the loaded end along positive x, 0.001 to 10 m. Tip deflection grows with the cube of the length; length divided by the larger section side must lie between 20 and 40.",
+          "explanation": "Distance between supported and loaded faces along positive x, in metres. For fixed section and loads, bending-force deflection grows as length cubed, bending-couple deflection as length squared, axial extension and torsional twist as length. Slenderness length/max(width,height) must stay between 20 and 40.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+            "docs/calculix.md"
           ],
-          "examples": [
-            0.4
-          ],
-          "units": "Metres"
+          "units": "m"
         },
         "/properties/beam/properties/width_m": {
           "status": "reviewed",
-          "explanation": "Section width along y, 0.00001 to 1 m. Bending stiffness is proportional to width, so doubling it halves the deflection; width / height must lie between 0.5 and 2.",
+          "explanation": "Full rectangle size along y, in metres. This dimension enters axial area linearly, bending stiffness for a y force cubically, bending stiffness for a z force linearly, and the rectangular torsion constant. Width/height must remain 0.5..2.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+            "docs/calculix.md"
           ],
-          "examples": [
-            0.02
-          ],
-          "units": "Metres"
+          "units": "m"
         },
         "/properties/beam/properties/height_m": {
           "status": "reviewed",
-          "explanation": "Section depth along z, the bending direction, 0.00001 to 1 m. Stiffness scales with height cubed and interior bending stress with 1/height squared. This is physical geometry, not mesh resolution.",
+          "explanation": "Full rectangle size along z, in metres. Bending stiffness for a z force scales with height cubed; height also changes axial area and torsional compliance. This is the full height, not the half-distance from centre to surface.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+            "docs/calculix.md"
           ],
-          "examples": [
-            0.02
-          ],
-          "units": "Metres"
+          "units": "m"
         },
         "/properties/material": {
           "status": "reviewed",
@@ -167,7 +100,7 @@
         },
         "/properties/material/properties/youngsModulus_Pa": {
           "status": "reviewed",
-          "explanation": "Young's modulus E, 1e6 to 1e12 Pa (for example 2.1e11 for steel, 7e10 for aluminium). Doubling E halves the tip deflection for a given force but leaves the bending stress unchanged.",
+          "explanation": "Young's modulus E in Pa, 1e6..1e12; examples are 2.1e11 for steel and 7e10 for aluminium. Doubling E at fixed Poisson ratio halves axial/bending translations and torsional twist under the same prescribed resultants, while interior stress remains load-controlled. This declares elasticity, not yield strength.",
           "sources": [
             "docs/calculix.md",
             "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
@@ -182,47 +115,30 @@
         },
         "/properties/material/properties/poissonRatio": {
           "status": "reviewed",
-          "explanation": "Poisson's ratio, dimensionless, 0 to 0.35 (0.3 is typical for steel). It has little effect on slender-beam deflection but changes the three-dimensional stress state near the clamp, which beam theory does not capture.",
+          "explanation": "Dimensionless isotropic lateral contraction ratio, 0..0.35. Together with E it sets shear modulus G=E/[2(1+nu)], so it affects torsional twist directly. A clamped end inhibits local contraction; axialSlide permits it for pure axial loads. No material yielding or buckling model is supplied.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
-          ],
-          "examples": [
-            0.3
-          ],
-          "units": "Dimensionless"
+            "docs/calculix.md"
+          ]
         },
         "/properties/load": {
           "status": "reviewed",
-          "explanation": "The single external load: a total force along global z spread uniformly over the free end face (x = length). Internally it is distributed to the quadratic face nodes with the consistent weights (corner nodes -1/12, mid-side nodes +1/3 of each face's share); these negative corner values are a property of the element and do not represent reverse loading.",
+          "explanation": "Six global end-face resultants, with omitted components defaulting to zero: forces in N and moments in N m. Transverse forces, axial force and end couples can be superposed for clamped members. Right-hand-rule moments are distributed consistent face tractions; solid nodes have no rotational degrees of freedom. Equal/opposite contributions may cancel tip translation but still produce stress. At least one force or moment/length must reach 0.01 N.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
-          ],
-          "examples": [
-            {
-              "tipForceZ_N": -100
-            }
+            "docs/calculix.md"
           ]
         },
         "/properties/load/properties/tipForceZ_N": {
           "status": "reviewed",
-          "explanation": "Total end force along global z in newtons; its magnitude must be between 0.01 and 1e8. Positive values bend the beam up (+z), negative values down. Deflection and stress scale linearly with it.",
+          "explanation": "Transverse end force along z: positive force bends towards positive z, about the y axis. Units are N; omission means zero. Force and end-moment contributions add according to their signed directions; each nonzero active translation is checked against an absolute-contribution theory scale.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
+            "docs/calculix.md"
           ],
-          "pitfalls": [
-            "Planning rejects loads whose predicted tip deflection exceeds 1% of the length or whose root bending strain (stress/E) exceeds 0.001; reduce the force or stiffen the beam."
-          ],
-          "examples": [
-            -100
-          ],
-          "units": "Newtons"
+          "units": "N",
+          "defaultMeaning": "No force in this direction."
         },
         "/properties/mesh": {
           "status": "reviewed",
-          "explanation": "Resolution of the base C3D20R (20-node quadratic brick) mesh. Each run also solves a mesh with twice the axial cells and a fine mesh with twice the cells in every direction; each refinement must change the area-mean tip deflection by at most 1% of the theory value, and the fine result must be within 3% of theory.",
+          "explanation": "Base resolution of the quadratic 20-node brick mesh. The second mesh doubles axial cells and the fine mesh doubles all directions. Every active translation and twist must change by at most 1% of its absolute-contribution theory scale on each independent refinement; fine responses must agree within 3% of theory.",
           "sources": [
             "docs/calculix.md",
             "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
@@ -237,7 +153,7 @@
         },
         "/properties/mesh/properties/lengthCells": {
           "status": "reviewed",
-          "explanation": "Number of base-mesh elements along the beam length, 12 to 24. The axially refined and fine meshes use twice this number. The element length divided by the smallest section cell must not exceed 10.",
+          "explanation": "Number of base mesh elements along the beam length, 12 to 24. The axially refined and fine meshes use twice this number. The element length divided by the smallest section cell must not exceed 10.",
           "sources": [
             "docs/calculix.md",
             "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
@@ -252,7 +168,7 @@
         },
         "/properties/mesh/properties/sectionCells": {
           "status": "reviewed",
-          "explanation": "Number of base-mesh elements across each of the width and height, 2 or 3. The fine mesh doubles this in both directions, exposing any error from too coarse a section.",
+          "explanation": "Number of base mesh elements across each of the width and height, 2 or 3. The fine mesh doubles this in both directions, exposing any error from too coarse a section.",
           "sources": [
             "docs/calculix.md",
             "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
@@ -264,21 +180,10 @@
         },
         "/properties/requirements": {
           "status": "reviewed",
-          "explanation": "Optional list of up to 16 named upper limits on measured results (tip deflection or interior stress). A numerically valid solve can still fail these serviceability limits; the run then fails with PERFORMANCE_NOT_MET, keeps the measurements and signed margins, and is not used by later workflow steps.",
+          "explanation": "Up to 16 uniquely named upper limits on actual native measurements. Translation components/magnitude, torsional twist and interior sampled normal/von Mises stress are available. Omission means no user limit, while independent numerical acceptance still applies. An unmet limit retains measured margins but blocks publication and workflow reuse.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
-          ],
-          "examples": [
-            [
-              {
-                "name": "tip_serviceability",
-                "quantity": "absTipAreaMeanUz_m",
-                "maximum": 0.0008
-              }
-            ]
-          ],
-          "defaultMeaning": "Schemaxis default: [] (no serviceability limits)."
+            "docs/calculix.md"
+          ]
         },
         "/properties/requirements/items": {
           "status": "reviewed",
@@ -308,31 +213,70 @@
         },
         "/properties/requirements/items/properties/quantity": {
           "status": "reviewed",
-          "explanation": "absTipAreaMeanUz_m: absolute z displacement of the loaded end face, averaged over its area (not the largest nodal value), in metres. maxInteriorSampleNormalStress_Pa: largest absolute axial normal stress Sxx at fine-mesh Gauss points with 0.3 <= x/L <= 0.7, in pascals.",
+          "explanation": "Choose absTipAreaMeanUx_m, absTipAreaMeanUy_m or absTipAreaMeanUz_m for absolute area-mean component translation, tipAreaMeanTranslation_m for that mean vector magnitude, absTipTwist_rad for the absolute area-moment torsional rotation, maxInteriorSampleNormalStress_Pa for absolute Sxx, or maxInteriorSampleVonMises_Pa for the equivalent stress of actual interior Gauss samples. Samples lie in 0.3<=x/L<=0.7; neither stress quantity bounds peak/root/surface stress or proves yield/fatigue safety.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
-          ],
-          "pitfalls": [
-            "The stress quantity excludes the clamp region where the real peak stress occurs; it is not a yield or fatigue check."
-          ],
-          "examples": [
-            "absTipAreaMeanUz_m"
+            "docs/calculix.md"
           ]
         },
         "/properties/requirements/items/properties/maximum": {
           "status": "reviewed",
-          "explanation": "Upper limit, 0 to 1e12, in the units of the chosen quantity: metres for absTipAreaMeanUz_m, pascals for maxInteriorSampleNormalStress_Pa. Equality passes; the report gives the signed margin (maximum minus measured).",
+          "explanation": "Nonnegative inclusive upper bound in the chosen quantity's units: m for translation, rad for twist and Pa for sampled stress. For example 0.0004 m or 0.00025 rad. A measured value above the bound causes PERFORMANCE_NOT_MET; the adaptor never adjusts this limit automatically.",
           "sources": [
-            "docs/calculix.md",
-            "src/schemaxis/adaptors/calculix/adaptor.py:24-84"
-          ],
-          "pitfalls": [
-            "A negative margin fails the run; stiffen the beam (E, section), reduce the force or revise the limit, then run again in a fresh directory."
-          ],
-          "examples": [
-            0.0008
+            "docs/calculix.md"
           ]
+        },
+        "/properties/load/properties/tipForceX_N": {
+          "status": "reviewed",
+          "explanation": "Axial end force: positive tension extends the member and negative compression shortens it. Compression does not establish buckling stability. Units are N; omission means zero. Force and end-moment contributions add according to their signed directions; each nonzero active translation is checked against an absolute-contribution theory scale.",
+          "sources": [
+            "docs/calculix.md"
+          ],
+          "units": "N",
+          "defaultMeaning": "No force in this direction."
+        },
+        "/properties/load/properties/tipForceY_N": {
+          "status": "reviewed",
+          "explanation": "Transverse end force along y: positive force bends towards positive y, about the z axis. Units are N; omission means zero. Force and end-moment contributions add according to their signed directions; each nonzero active translation is checked against an absolute-contribution theory scale.",
+          "sources": [
+            "docs/calculix.md"
+          ],
+          "units": "N",
+          "defaultMeaning": "No force in this direction."
+        },
+        "/properties/load/properties/tipMomentX_Nm": {
+          "status": "reviewed",
+          "explanation": "End torque about positive x by the right-hand rule: positive torque rotates the positive-y edge towards positive z. Its measured area-moment twist is compared with rectangular Saint-Venant torsion theory. Units are N m; omission means zero. The moment acts about the centre of the loaded face and is realised by distributed nodal forces.",
+          "sources": [
+            "docs/calculix.md"
+          ],
+          "units": "N m",
+          "defaultMeaning": "No end couple about this axis."
+        },
+        "/properties/load/properties/tipMomentY_Nm": {
+          "status": "reviewed",
+          "explanation": "End bending couple about positive y: positive moment bends the loaded face towards negative z. It contributes -My*L^2/(2*E*Iy) to tip z translation. Units are N m; omission means zero. The moment acts about the centre of the loaded face and is realised by distributed nodal forces.",
+          "sources": [
+            "docs/calculix.md"
+          ],
+          "units": "N m",
+          "defaultMeaning": "No end couple about this axis."
+        },
+        "/properties/load/properties/tipMomentZ_Nm": {
+          "status": "reviewed",
+          "explanation": "End bending couple about positive z: positive moment bends the loaded face towards positive y. It contributes Mz*L^2/(2*E*Iz) to tip y translation. Units are N m; omission means zero. The moment acts about the centre of the loaded face and is realised by distributed nodal forces.",
+          "sources": [
+            "docs/calculix.md"
+          ],
+          "units": "N m",
+          "defaultMeaning": "No end couple about this axis."
+        },
+        "/properties/support": {
+          "status": "reviewed",
+          "explanation": "clamped (default) fixes all translations of the x=0 face and accepts all six resultants. axialSlide fixes axial translation there and restrains transverse motion only along the section symmetry lines, permitting uniform Poisson contraction. axialSlide accepts only a nonzero axial force; it is not a simply-supported bending or arbitrary roller model.",
+          "sources": [
+            "docs/calculix.md"
+          ],
+          "defaultMeaning": "Use the fully clamped face."
         }
       }
     }

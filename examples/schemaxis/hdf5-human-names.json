@@ -1,0 +1,31 @@
+{
+  "version": "schemaxis.hdf5/1",
+  "operation": "createFile",
+  "file": {"name": "lab-notebook.h5"},
+  "objects": [
+    {"path": "/Experiment 1", "kind": "group", "attributes": [{"name": "Operator (initials)", "value": "D. G."}]},
+    {"path": "/Experiment 1/Zeit (s)", "type": {"class": "float", "bits": 64}, "shape": [4], "data": {"source": "linspace", "start": 0, "stop": 1.5}, "units": "s", "scale": "Zeit"},
+    {"path": "/Experiment 1/Temperature (°C)", "type": {"class": "float", "bits": 32}, "shape": [4, 2], "data": {"source": "values", "values": [20.5, 21, 22.25, 23, 24.5, 25, 26.75, 27]},
+     "units": "°C", "dimensions": [{"axis": 0, "label": "time", "scales": ["/Experiment 1/Zeit (s)"]}],
+     "storage": {"chunks": [2, 2], "compression": "gzip", "level": 4, "shuffle": true}},
+    {"path": "/Kanal[2] = Druck", "type": {"class": "float", "bits": 64}, "shape": [3], "data": {"source": "values", "values": [1.5, 2.5, 3.5]}, "units": "kPa"},
+    {"path": "/μm", "type": {"class": "int", "bits": 32}, "shape": [3], "data": {"source": "values", "values": [1, 2, 3]}, "units": "μm"},
+    {"path": "/.calibration", "type": {"class": "float", "bits": 64}, "shape": [2], "data": {"source": "values", "values": [0.5, -1.25]}},
+    {"path": "/Run #2, \"warm\" & <dry>", "kind": "group"},
+    {"path": "/Run #2, \"warm\" & <dry>/Messwerte", "type": {"class": "compound", "fields": [{"name": "Zeit (s)", "type": {"class": "float", "bits": 64}}, {"name": "Druck, kPa", "type": {"class": "float", "bits": 32}}]},
+     "shape": [2], "data": {"source": "values", "values": [[0, 101.25], [0.5, 101.5]]}},
+    {"path": "/Run #2, \"warm\" & <dry>/peak ratio", "type": {"class": "float", "bits": 64}, "shape": [], "data": {"source": "values", "values": [0.875]}},
+    {"path": "/Index", "type": {"class": "reference"}, "shape": [2], "data": {"source": "references", "targets": [{"path": "/Experiment 1/Temperature (°C)"}, {"path": "/μm"}]}},
+    {"path": "/Hot spot", "type": {"class": "reference", "reference": "region"}, "shape": [1], "data": {"source": "references",
+     "targets": [{"path": "/Experiment 1/Temperature (°C)", "selection": {"kind": "hyperslab", "start": [2, 0], "count": [2, 2]}}]}}
+  ],
+  "links": [
+    {"path": "/Latest temperature", "kind": "soft", "target": "/Experiment 1/Temperature (°C)"},
+    {"path": "/Run #2, \"warm\" & <dry>/μm alias", "kind": "hard", "target": "/μm"}
+  ],
+  "extracts": [
+    {"id": "temperature", "dataset": "/Experiment 1/Temperature (°C)", "columns": ["left, °C", "right \"°C\""]},
+    {"id": "channel", "dataset": "/Kanal[2] = Druck", "selection": {"kind": "slices", "slices": [{"start": 1}]}, "format": "json"},
+    {"id": "readings", "dataset": "/Run #2, \"warm\" & <dry>/Messwerte", "fields": ["Druck, kPa", "Zeit (s)"]}
+  ]
+}

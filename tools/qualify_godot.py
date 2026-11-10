@@ -71,6 +71,20 @@ def qualify(executable, directory, timeout=60, preview=False):
             raise AssertionError('Altered evidence accepted: '+label)
         finally:
             atomic_json(receipt_path, original)
+    # The new animatedSprite3D shape from the committed development-kit fixtures: fresh reopen literals,
+    # then the saved project's main scene autoplaying headless at a fixed 1 ms tick (samples read, never set).
+    from qualify_godot_animation import check_autoplay, check_fixtures
+    check_fixtures()
+    animated = json.loads((examples/'godot-animated-sprite.json').read_text())
+    animated['nodes'][0]['options'].update(file=str(examples/'sprite-animation-fixture.png'), metadata=str(examples/'sprite-animation-fixture.json'))
+    results['animatedSprite'] = run(animated, directory/'animated-sprite', executable, timeout)
+    saved = json.loads((directory/'animated-sprite/reopened.json').read_text())['scene']['nodes']['hero']['animation']
+    # Godot stores durations as 32-bit floats, hence the explicit tolerance.
+    if (not all(math.isclose(f['duration'], seconds, rel_tol=1e-5) for f, seconds in zip(saved['frames'], (0.1, 0.25, 0.4)))
+            or len(saved['frames']) != 3 or saved['loopMode'] != 1
+            or [f['rect'] for f in saved['frames']] != [[0.0, 0.0, 8.0, 8.0], [8.0, 0.0, 8.0, 8.0], [16.0, 0.0, 8.0, 8.0]]):
+        raise AssertionError('Independent animated sprite durations/rectangles/loop check failed')
+    autoplay = check_autoplay(executable, directory/'animated-sprite', directory/'animated-sprite-autoplay', (100, 250, 400), True, 'pulse', timeout)
     # The project can run its actual main scene with the trusted orbit script.
     import subprocess
     with (directory/'playback.log').open('w') as log:
@@ -79,9 +93,9 @@ def qualify(executable, directory, timeout=60, preview=False):
     if result.returncode or 'ERROR:' in (directory/'playback.log').read_text():
         raise AssertionError('Main-scene playback failed; see playback.log')
     summary = {'verified': True, 'runtime': results['primitives']['runtime'], 'results': results,
-               'rejectedTampering': rejected, 'mainScenePlayback': True,
+               'rejectedTampering': rejected, 'mainScenePlayback': True, 'animatedSpriteAutoplay': autoplay,
                'graphicalPreview': preview,
-               'limits': 'CPU construction/reopen/playback; optional Xvfb/Mesa PNG readback. No GUI interaction qualification.'}
+               'limits': 'CPU construction/reopen/playback, headless fixed-tick animated sprite autoplay; optional Xvfb/Mesa PNG readback. No GUI interaction qualification.'}
     atomic_json(directory/'qualification.json', summary)
     return summary
 

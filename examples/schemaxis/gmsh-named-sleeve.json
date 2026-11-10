@@ -1,0 +1,38 @@
+{
+  "version": "schemaxis.gmsh/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "solid",
+      "filter": "hollowCylinder",
+      "options": {
+        "origin": [1, 2, 3],
+        "axis": "x",
+        "radius": {"$document": "/dimensions/outerRadius"},
+        "innerRadius": {"$document": "/dimensions/boreRadius"},
+        "height": 8
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "tetrahedral",
+      "inputs": {"input": "solid"},
+      "options": {
+        "size": 0.7,
+        "volumeName": "sleeve",
+        "boundaryName": "unassigned",
+        "volumeTolerance": 0.02,
+        "faceGroups": [
+          {"name": "start", "axis": "x", "coordinate": 1, "areaTolerance": 0.02},
+          {"name": "end", "axis": "x", "coordinate": 9, "areaTolerance": 0.02}
+        ],
+        "cylinderGroups": [
+          {"name": "bore", "axis": "x", "centre": [1, 2, 3], "radius": {"$document": "/dimensions/boreRadius"}, "side": "inner"},
+          {"name": "outer", "axis": "x", "centre": [1, 2, 3], "radius": {"$document": "/dimensions/outerRadius"}, "side": "outer"}
+        ]
+      }
+    }
+  ],
+  "output": "mesh",
+  "dimensions": {"outerRadius": 4, "boreRadius": 2}
+}

@@ -45,29 +45,56 @@ def extend(declaration, length, vector):
         result[op]['inputs']['profile']['kind']='profile'
     from .part_design import declarations
     result.update(declarations(declaration,length))
+    from .sketch import declaration as sketch_declaration
+    result['sketch']=sketch_declaration(declaration,vector,length)
+    result['slot']=declaration('Sketcher::SketchObject',{'length':positive(20),'radius':positive(3),'plane':{'type':'enum','values':['XY','XZ','YZ'],'default':'XY'},**origin})
+    result['slot']['kinds']=['profile']
+    from .history import declarations as history_declarations, extend_profiles
+    result.update(history_declarations(declaration,length))
+    extend_profiles(result)
     from .step_import import declaration as import_declaration
     result['importSTEP'] = import_declaration(declaration)
+    # Append new catalogue choices so existing schema-address guidance remains
+    # attached to its original operation, including the checked STEP importer.
+    from .draft import declaration as draft_declaration
+    result['bodyDraft']=draft_declaration(declaration)
+    from .mesh_import import declaration as mesh_declaration
+    result['importMesh']=mesh_declaration(declaration)
+    from .drafting import declaration as drafting_declaration
+    result['draftProfile']=drafting_declaration(declaration)
+    from .body_seed import declaration as seed_declaration
+    result['bodySeed']=seed_declaration(declaration)
+    from .helix import declarations as helix_declarations
+    result.update(helix_declarations(declaration))
     return result
 
 
 def extra_objects(prepared):
     """Native objects beyond one N<index> per node: the parametric refine of an import."""
     return {'N'+str(i)+'Refined': 'Part::Refine' for i, node in enumerate(prepared['nodes'])
-            if node['filter'] == 'importSTEP' and node['options']['refine']}
+            if node['filter'] in ('importSTEP','importMesh') and node['options']['refine']}
 
 
 def output_names(prepared):
     """Native object carrying each node's result shape."""
-    return {node['id']: 'N'+str(i)+('Refined' if node['filter'] == 'importSTEP' and node['options']['refine'] else '')
+    return {node['id']: 'N'+str(i)+('Refined' if node['filter'] in ('importSTEP','importMesh') and node['options']['refine'] else '')
             for i, node in enumerate(prepared['nodes'])}
 
 
 def validate(operation, options, identity):
+    from .history import validate as validate_history
+    validate_history(operation,options,identity)
+    if operation=='draftProfile':
+        from .drafting import validate as validate_profile
+        validate_profile(options,identity)
+    if operation=='sketch':
+        from .sketch import validate as validate_sketch
+        validate_sketch(options,identity)
     if operation in ('fillet', 'chamfer'):
         from .selections import validate as validate_selection
         validate_selection(options['edges'], identity+'.edges')
     for field in ('axis','direction'):
-        if field in options and math.hypot(*options[field]) < 1e-12:
+        if field in options and isinstance(options[field],list) and math.hypot(*options[field]) < 1e-12:
             fail('INVALID_AXIS', 'CAD direction must be nonzero', identity)
     if operation == 'torus' and options['minorRadius'] >= options['majorRadius']:
         fail('INVALID_GEOMETRY', 'torus minor radius must be smaller than major radius', identity)

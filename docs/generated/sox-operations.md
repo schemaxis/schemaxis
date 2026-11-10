@@ -8,7 +8,7 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[assemble](#assemble)
+[assemble](#assemble), [conform](#conform), [mix](#mix), [normalise](#normalise)
 
 ## assemble
 
@@ -18,6 +18,7 @@ Common mistakes and assumptions:
 
 - Integer sample frames give exact half-open source selections; linear amplitude gain precedes nonoverlapping fades.
 - Independent PCM reopening checks each processed sample and exact concatenation; source hashes invalidate stale reuse.
+- Output time starts at the first frame of audio.wav. Original recording timestamps do not survive trimming or joining; use the summary's rate, exact duration and half-open source/output segment frames to map transcript times back. Assemble never resamples or changes channels; use the conform operation to prepare the result for speech recognition tools that need 16 kHz mono. Speech recognition itself is outside this adaptor.
 
 Native binding: `sox trim STARTs COUNTs vol GAIN fade t INs COUNTs OUTs; sox --combine concatenate`. Output kind: `["file","text"]`.
 
@@ -26,3 +27,68 @@ Inputs: none.
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
 | `clips` | List one to eight recording excerpts in playback order. Each clip is processed separately before joining, so boundaries remain exact and clips never overlap. Total output may not exceed 262144 frames; the whole-job byte/sample budget also applies. | `{"type":"array","items":{"type":"object","properties":{"source":{"type":"string","minLength":1,"maxLength":4096,"required":true},"startFrame":{"type":"integer","minimum":0,"maximum":262144,"default":0},"frameCount":{"type":"integer","minimum":1,"maximum":262144,"required":true},"gain":{"type":"number","minimum":0,"maximum":4,"default":1},"fadeInFrames":{"type":"integer","minimum":0,"maximum":262144,"default":0},"fadeOutFrames":{"type":"integer","minimum":0,"maximum":262144,"default":0}}},"minItems":1,"maxItems":8}` | **required** |
+
+
+## conform
+
+Prepare one recording for speech recognition: resample a PCM16 mono or stereo WAV (8000–192000 Hz) to 16000 Hz and reduce it to one channel by an explicit channelPolicy (average, left or right). SoX runs a fixed high-quality chain with dither and normalisation disabled, and the host verifies the output: same-rate samples exactly, the independently low-pass-projected source and resampled output at bounded interior instants within a declared limit. The output keeps the recording time axis.
+
+Common mistakes and assumptions:
+
+- Choose channelPolicy deliberately: average of out-of-phase channels is silence (the summary warns), and right is refused for a mono recording.
+- Resampled samples are not claimed bit-exact; only the band below 0.6 of the lower Nyquist (4800 Hz for 16 kHz and above) is compared with the source at bounded interior instants within a declared limit. Higher frequencies, rate-dependent edge margins, very short sources and instants touching native clipping are not compared. Changed passages between sampled windows or below the peak-relative margin can be missed.
+- Resampling can saturate full-scale audio; saturated samples are counted and reported, never corrected. No gain, normalisation, denoising, other rate or trimming is offered; use assemble for excerpts or normalise to set the peak level.
+- Output frames are round-half-up(source frames*16000/rate), so a transcript made from the output uses the original recording timestamps.
+
+Native binding: `sox -D --single-threaded -t wav IN -t wav -e signed-integer -b 16 OUT remix SPEC rate -v 16000`. Output kind: `["file","text"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `source` | Choose the existing absolute local .wav file to conform or normalise: canonical signed PCM16 little-endian, one or two channels, 8000–192000 Hz, at most 32 MiB and 600 seconds. The runner captures its bytes and verifies the capture; the original is not modified and later changes invalidate workflow reuse. A workflow handoff {"$artifact":"earlier","index":0} supplies a verified earlier WAV. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `channelPolicy` | Required choice of how the recording becomes one channel. average mixes each stereo frame as (left+right+1)>>1, without clipping; left copies channel 1; right copies channel 2. A mono recording accepts average or left and refuses right. There is no default because choosing a channel is a decision about the recording. | `{"type":"enum","values":["average","left","right"]}` | **required** |
+
+
+## mix
+
+Overlay a background recording under a narration to produce one PCM16 WAV: each track has an explicit gain and a sample-frame placement, both recordings must already share rate and channels, and durationPolicy says whether the result ends with the later track or with the narration. SoX pads and sums the tracks; the host recomputes every output sample from the captured sources with exact integer arithmetic and refuses any mix that would clip.
+
+Common mistakes and assumptions:
+
+- The mix is a plain sample-wise sum with explicit gains: there is no ducking, loudness matching, crossfade, looping, resampling or channel conversion, and nothing is claimed about intelligibility or listening quality.
+- Clipping is refused, not repaired: lower a gain or the source level. Each gained term and every exact sum must lie within PCM16, including background frames that durationPolicy narration would cut.
+- Output time zero is the first output frame; the narration appears at its offsetFrames, so a transcript of the mix is shifted by that offset relative to the narration recording (the summary states the offsets).
+- Gains are decimals with at most four places; mismatched rate or channels are refused (use conform first); rounding is nearest PCM16 with exact ties either way.
+
+Native binding: `sox ... IN pad OFFSETs 0; sox -m -v GAIN PADDED -v GAIN PADDED OUT [trim 0 FRAMEs]`. Output kind: `["file","text"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `narration` | The narration track: the primary recording, normally the spoken voice. A mono or stereo PCM16 WAV with its own gain and placement on the output timeline. Both tracks must share the sample rate and channel count; nothing is resampled or channel-converted. | `{"type":"object","properties":{"source":{"type":"string","minLength":1,"maxLength":4096,"required":true},"gain":{"type":"number","minimum":0,"maximum":4,"default":1},"offsetFrames":{"type":"integer","minimum":0,"maximum":262144,"default":0}}}` | **required** |
+| `background` | The background track: the second recording, normally music or room tone laid under the narration. A mono or stereo PCM16 WAV with its own gain and placement on the output timeline. Both tracks must share the sample rate and channel count; nothing is resampled or channel-converted. | `{"type":"object","properties":{"source":{"type":"string","minLength":1,"maxLength":4096,"required":true},"gain":{"type":"number","minimum":0,"maximum":4,"default":1},"offsetFrames":{"type":"integer","minimum":0,"maximum":262144,"default":0}}}` | **required** |
+| `durationPolicy` | Required choice of output length. longest ends the output with the later of the two tracks and pads the earlier one with silence; narration ends the output exactly where the narration ends (its offsetFrames plus its frames) and cuts any background beyond it. A background that starts at or after the narration end is refused with AUDIO_SOURCE_BOUNDS under narration. | `{"type":"enum","values":["longest","narration"]}` | **required** |
+
+
+## normalise
+
+Scale one PCM16 mono or stereo WAV (8000–192000 Hz) by a single measured gain so that its largest absolute sample equals an explicit targetPeak, leaving predictable headroom for later recording, publishing or encoding steps without calculating a gain by hand. The host measures the peak over every channel, derives the exact gain targetPeak/peak, refuses silence or a boost above maxGain before SoX starts, and then checks every output sample against the exact rational value.
+
+Common mistakes and assumptions:
+
+- targetPeak is an integer PCM16 sample magnitude from 1 to 32767, not decibels; 32767 is full scale and 29491 is about 90 percent of it. The level is a sample peak: this is not RMS or loudness normalisation, EBU R128, true-peak or inter-sample control, and says nothing about speech quality or perceived volume.
+- maxGain is an explicit ceiling on boost, not a target. A recording that would need more gain is refused with AUDIO_GAIN_LIMIT before SoX starts; the gain is never capped, the target is never lowered and nothing is clipped. A silent recording is refused with AUDIO_SILENT_SOURCE. Attenuation is always allowed.
+- Boosting raises the noise floor, hum and quantisation noise by the same ratio as the signal, and maxGain only protects your policy: it cannot tell signal from noise. A NOISE_FLOOR_AMPLIFIED warning marks every boost.
+- One common gain keeps the balance between channels; nothing is mixed, resampled, trimmed, faded, dithered, limited or compressed, and sample time is preserved (frame f stays at f/rate; the output is a bare 44-byte WAV, so LIST/INFO metadata of the source is not carried over). A peak reached only by a -32768 sample is attenuated, because PCM16 has no +32768.
+
+Native binding: `sox -D --single-threaded -t wav IN -t wav -e signed-integer -b 16 OUT vol GAIN`. Output kind: `["file","text"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `source` | Choose the existing absolute local .wav file to conform or normalise: canonical signed PCM16 little-endian, one or two channels, 8000–192000 Hz, at most 32 MiB and 600 seconds. The runner captures its bytes and verifies the capture; the original is not modified and later changes invalidate workflow reuse. A workflow handoff {"$artifact":"earlier","index":0} supplies a verified earlier WAV. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
+| `targetPeak` | Required absolute PCM16 sample magnitude, an integer from 1 to 32767, that the loudest output sample will have. The host measures the largest absolute sample over every channel and scales by the exact fraction targetPeak/peak. 32767 is full scale; 29491 is about 90 percent of full scale and leaves 3276 sample units of headroom for later steps. | `{"type":"integer","minimum":1,"maximum":32767}` | **required** |
+| `maxGain` | Required finite number from 1 to 16: the largest boost you accept. If targetPeak divided by the measured peak exceeds maxGain, the job is refused with AUDIO_GAIN_LIMIT before SoX starts; the gain is never capped and the target is never lowered. A gain exactly equal to maxGain is accepted, and attenuation is always allowed whatever the value. maxGain is compared as an exact fraction of the parsed JSON number's shortest round-trip decimal: 6.6 is 33/5, not the nearby binary float, with no epsilon. JSON parsing first rounds a literal with more digits than a double holds to that double, so 6.59999999999999999999999 is read as 6.6 and compared as 33/5; the exact digits written beyond a double's precision are not preserved. | `{"type":"number","minimum":1,"maximum":16}` | **required** |

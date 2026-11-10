@@ -289,3 +289,73 @@ test('completion on the 4 MB ParaView schema stays under 50 ms once warm', () =>
     assert.ok(elapsed < 50, `${elapsed.toFixed(1)} ms for ${marked}`);
   }
 });
+
+
+test('task field completion honours singleton prohibitions without hiding conditionally allowed fields', () => {
+  const task = {type:'object',properties:{operation:{enum:['read','write']},source:{type:'string'},destination:{type:'string'}},
+    oneOf:[{properties:{operation:{const:'read'}},not:{anyOf:[{required:['destination']}]}},
+      {properties:{operation:{const:'write'}},not:{anyOf:[{required:['source']}]}}]};
+  assert.deepEqual(labels(complete(task, '{"operation":"read",|}')), ['source']);
+  assert.deepEqual(labels(complete(task, '{"operation":"write",|}')), ['destination']);
+  assert.deepEqual(new Set(labels(complete(task, '{|}'))), new Set(['operation','source','destination']));
+});
+
+
+test('completion preserves controls allowed by ambiguous or unrestricted task alternatives', () => {
+  for (const free of [{properties:{operation:{const:'write'}}}, {}, {properties:{operation:{const:'read'}}}]) {
+    const root={type:'object',properties:{operation:{type:'string'},destination:{type:'string'}},anyOf:[
+      {properties:{operation:{const:'read'}},not:{required:['destination']}},free]};
+    assert.ok(labels(complete(root,'{|}')).includes('destination'));
+    assert.ok(labels(complete(root,'{"operation":{"$document":"/definitions/task"},|}')).includes('destination'));
+  }
+});
+
+
+test('nested task guards require a resolved outer alternative', () => {
+  const root={type:'object',properties:{operation:{enum:['read','write']},format:{enum:['text','binary']},destination:{type:'string'}},anyOf:[
+    {properties:{operation:{const:'read'}},anyOf:[
+      {properties:{format:{const:'text'}},not:{required:['destination']}},
+      {properties:{format:{const:'binary'}}}]},
+    {properties:{operation:{const:'write'}}}]};
+  for (const text of ['{"format":"text",|}','{"operation":{"$document":"/definitions/task"},"format":"text",|}','{"operation":"write","format":"text",|}']) {
+    assert.ok(labels(complete(root,text)).includes('destination'));
+  }
+  assert.equal(labels(complete(root,'{"operation":"read","format":"text",|}')).includes('destination'),false);
+});
+
+
+test('conditional array contains selects only matching item intent', () => {
+  const condition = {anyOf: [
+    {required: ['tool'], properties: {tool: {required: ['holder']}}},
+    {required: ['tools'], properties: {tools: {contains: {anyOf: [
+      {required: ['kind'], properties: {kind: {const: 'pointed'}}}, {required: ['holder']},
+    ]}}}},
+    {required: ['operations'], properties: {operations: {contains: {required: ['depthReference']}}}},
+  ]};
+  const root = {if: condition, then: {required: ['setup']}};
+  for (const value of [{}, {tools: []}, {tool: {kind: 'flat'}},
+    {tools: [{kind: 'flat'}, {kind: 'flat'}]}, {operations: [{operation: 'drill'}]}]) {
+    assert.deepEqual(validate(root, value), [], JSON.stringify(value));
+  }
+  for (const value of [{tool: {holder: {}}}, {tools: [{kind: 'flat'}, {kind: 'pointed'}]},
+    {tools: [{holder: {}}]}, {operations: [{depthReference: 'tip'}]}]) {
+    assert.deepEqual(validate(root, value).map(v => v.message), ['Missing required property "setup"']);
+    assert.deepEqual(validate(root, {...value, setup: {}}), []);
+  }
+});
+
+test('conditional contains respects count bounds and rebased local references', () => {
+  const root = {$defs: {tag: {const: 'selected'}},
+    if: {contains: {$ref: '#/$defs/tag'}, minContains: 2, maxContains: 3}, then: {minItems: 9}};
+  for (const value of [[], ['other'], ['selected'], Array(4).fill('selected')]) {
+    assert.deepEqual(validate(root, value), []);
+  }
+  for (const value of [['selected', 'selected'], ['other', 'selected', 'selected', 'selected']]) {
+    assert.deepEqual(validate(root, value).map(v => v.message), ['Expected at least 9 items']);
+  }
+  root.if = {contains: false, minContains: 0, maxContains: 0};
+  assert.deepEqual(validate(root, ['other']).map(v => v.message), ['Expected at least 9 items']);
+  root.if = {contains: true, minContains: 1, maxContains: 1};
+  assert.deepEqual(validate(root, ['other']).map(v => v.message), ['Expected at least 9 items']);
+  assert.deepEqual(validate(root, ['one', 'two']), []);
+});

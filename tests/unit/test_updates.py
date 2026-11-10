@@ -17,6 +17,65 @@ class UpstreamUpdateTests(unittest.TestCase):
         for bad in ('6.2.0-RC2', '6.1-final', '5.3-alpha', 'weekly-builds', 'n8.0'):
             with self.assertRaises(ValueError): updates.version(bad)
 
+    def test_canonical_post_releases_sort_after_the_base_and_before_the_next_release(self):
+        ordered = ['0.9.0', '0.9.0.post0', '0.9.0.post1', '0.9.0.post12', '0.9.1', '0.10.0']
+        for older, newer in zip(ordered, ordered[1:]):
+            with self.subTest(older=older, newer=newer):
+                self.assertLess(updates.version(older), updates.version(newer))
+        self.assertEqual(updates.version('v0.9.0.post1'), updates.version('0.9.0.post1'))
+        for invalid in ('0.9.0.post', '0.9.0.post-1', '0.9.0.post1.dev2',
+                        '0.9.0rc1', '0.9.0.post1+local', '0.9.0.post1.post2'):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                updates.version(invalid)
+
+    def test_pypi_selects_final_post_releases_with_available_non_yanked_files(self):
+        payload = json.dumps({'info': {'version': '1.0.0rc1'}, 'releases': {
+            '0.9.0': [{'yanked': False}], '0.9.0.post1': [{'yanked': False}],
+            '0.9.0.post2': [{'yanked': True}, {'yanked': False}],
+            '0.9.0.post3': [{'yanked': True}], '0.9.1': [],
+            '0.10.0rc1': [{'yanked': False}], '0.9.0.post4.dev1': [{'yanked': False}],
+            '0.9.0.post5+local': [{'yanked': False}], '1!2.0rc1': [{'yanked': False}],
+        }})
+        self.assertEqual(updates.latest({'kind': 'pypi', 'url': 'unused'}, lambda _: payload), '0.9.0.post2')
+
+    def test_pypi_malformed_or_unavailable_release_data_cannot_claim_current(self):
+        source = {'kind': 'pypi', 'url': 'unused'}
+        for payload in ([], {}, {'releases': []}, {'releases': {'1.0': {}}},
+                        {'releases': {'1.0': [None]}}, {'releases': {'1.0': [{}]}}, {'releases': {'1.0': [{'yanked': 'false'}]}},
+                        {'releases': {'1.0': []}}, {'releases': {'1.0': [{'yanked': True}]}},
+                        {'releases': {'1.0rc1': [{'yanked': False}]}}):
+            with self.subTest(payload=payload), self.assertRaises(ValueError):
+                updates.latest(source, lambda _: json.dumps(payload))
+
+    def test_unsupported_available_pypi_final_cannot_hide_behind_an_absorbed_release(self):
+        policy = json.loads((Path(updates.__file__).parent/'adaptors/ifcopenshell/upstream.json').read_text())
+        policy['absorbedVersion'] = '0.9.0.post1'
+        with tempfile.TemporaryDirectory() as tmp, patch('schemaxis.updates.adaptor_files', return_value=Path(tmp)):
+            (Path(tmp)/'upstream.json').write_text(json.dumps(policy))
+            for unsupported in ('1!0.10.0', '0.10.0.0.1', '1.1post1', 'unknown-final'):
+                payload = json.dumps({'releases': {'0.9.0.post1': [{'yanked': False}],
+                                                  unsupported: [{'yanked': False}]}})
+                with self.subTest(unsupported=unsupported):
+                    result = updates.check('ifcopenshell', lambda _: payload)
+                    self.assertEqual(result['status'], 'check-failed')
+                    self.assertIn('unsupported stable PyPI release', result['reason'])
+                    self.assertNotIn('latestVersion', result)
+
+    def test_registered_post_release_policy_reports_current_behind_and_unabsorbed(self):
+        policy = json.loads((Path(updates.__file__).parent/'adaptors/ifcopenshell/upstream.json').read_text())
+        policy['absorbedVersion'] = '0.9.0.post1'
+        with tempfile.TemporaryDirectory() as tmp, patch('schemaxis.updates.adaptor_files', return_value=Path(tmp)):
+            (Path(tmp)/'upstream.json').write_text(json.dumps(policy))
+            for available, expected in [('0.9.0.post1', 'current'), ('0.9.0', 'source-behind'),
+                                        ('0.9.0.post0', 'source-behind'), ('0.9.0.post2', 'unabsorbed')]:
+                with self.subTest(available=available):
+                    result = updates.check('ifcopenshell', lambda _: json.dumps({'releases': {available: [{'yanked': False}]}}))
+                    self.assertEqual(result['absorbedVersion'], '0.9.0.post1')
+                    self.assertEqual(result['latestVersion'], available)
+                    self.assertEqual(result['status'], expected)
+                    if expected == 'unabsorbed':
+                        self.assertEqual(result['estimate']['change'], 'patch')
+
     def test_gitlab_excludes_release_candidates_and_final_branch_tags(self):
         source = {'kind': 'gitlab-tags', 'url': 'unused'}
         payload = json.dumps([{'name': v} for v in ['v6.2.0-RC2', 'v6.1-final', 'v6.1.1', 'v5.13.3']])

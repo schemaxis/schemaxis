@@ -59,7 +59,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertFalse(result['verified'])
 
     def test_blender_uses_shared_analytics_and_prunes(self):
-        document = json.loads(Path('examples/schemaxis/blender-showcase.json').read_text())
+        document = json.loads(Path('examples/schemaxis/blender-primitives.json').read_text())
         master, selected, result = blender_plan(document)
         self.assertNotIn('unusedPaint', selected.order)
         self.assertEqual(selected.count, 2)
@@ -87,7 +87,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(fault['location'], 'node.option')
 
     def test_material_input_kind_is_checked_before_execution(self):
-        document = json.loads(Path('examples/schemaxis/blender-showcase.json').read_text())
+        document = json.loads(Path('examples/schemaxis/blender-primitives.json').read_text())
         document['nodes'][2]['inputs']['input'] = 'paint'
         with self.assertRaises(SchemaxisError) as caught:
             blender_plan(document)

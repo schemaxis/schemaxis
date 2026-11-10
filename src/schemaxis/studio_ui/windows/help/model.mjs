@@ -7,14 +7,17 @@ export function slug(text) {
 export function searchTopics(entries, query, group = '') {
   const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
   // Prose supports word prefixes, but "place" must not match "replaces".
-  // Keep partial title matches for native identifiers such as pvClip.
+  // Keep partial title matches for native identifiers such as pvClip. A curated
+  // operation lists its declared native names in `nativeTerms`, found only as whole
+  // identifiers: "compareTo" finds the operation that declares it, "compare" does not.
   const proseTerms = terms.map((term) => {
     const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return new RegExp(`(?:^|[^\\p{L}\\p{N}_])${escaped}`, 'u');
   });
   return entries.filter((item) => (!group || item.group === group)
     && terms.every((term, index) => item.title.toLowerCase().includes(term)
-      || proseTerms[index].test(item.search)))
+      || proseTerms[index].test(item.search)
+      || (Array.isArray(item.nativeTerms) && item.nativeTerms.includes(term))))
     .map((item) => ({item, score: terms.reduce((score, term) => score
       + (item.title.toLowerCase() === term ? 10 : item.title.toLowerCase().includes(term) ? 5 : 0), 0)}))
     .sort((a, b) => b.score - a.score || a.item.title.localeCompare(b.item.title))

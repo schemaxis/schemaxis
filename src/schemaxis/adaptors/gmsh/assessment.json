@@ -1,0 +1,48 @@
+{
+  "version": "schemaxis.adaptor-assessment/1",
+  "rubric": "schemaxis.strength-rubric/1",
+  "assessmentVersion": "2026-11-10.1",
+  "assessedOn": "2026-11-10",
+  "assessor": "Schemaxis editorial assessment",
+  "provider": "gmsh",
+  "providerVersion": "schemaxis.gmsh/1",
+  "routes": [
+    "schemaxis.gmsh/1"
+  ],
+  "sourceFingerprint": "sha256:558ad9f10913c628f149998678e172c9025b5dd7e6584a154c79cef7d6332962",
+  "coverage": {
+    "percent": 20,
+    "status": "subjective",
+    "scope": {
+      "kind": "whole-application",
+      "description": "Whole gmsh application/library breadth across useful functional families.",
+      "denominator": "Geometry construction/import, 1D/2D/3D and high-order meshing, physical groups, size fields, optimisation and mesh exchange."
+    },
+    "rationale": "Connected primitive construction (box, cylinder, annular single-solid cut and sphere), STEP, named planar and whole analytic cylindrical boundaries with an independently proven material side, two 3D methods and bounded quality/refinement workflows are useful. Most geometry, standalone surface/high-order/structured meshing, other curved-wall families, multi-domain and post-processing breadth remains outside this integration.",
+    "confidence": "medium"
+  },
+  "abstraction": {
+    "percent": 80,
+    "status": "subjective",
+    "scope": {
+      "kind": "declared-workflows",
+      "description": "One analytic primitive or STEP solid to verified linear tetrahedra with named planar and cylindrical (bore, shaft, sleeve) boundaries, discoverable CAD surfaces, explicit curved-cap error budgets, chord-deviation and quality goals, bounded refinement and adopted STEP inputs.",
+      "denominator": "User intent and domain decisions within the named supported workflows, including declared inputs, composition and useful outputs; excluded application features do not enter this score."
+    },
+    "rationale": "Reusable typed geometric intent and analytic oracles feed one solid/mesh contract. Named walls with a stated material side, an independently measured chord-deviation requirement, a CAD surface inventory for authoring, named-boundary resolution, explicit cap loss budgets, method decisions and measured quality avoid native call ordering while retaining numerical meaning.",
+    "confidence": "medium"
+  },
+  "evidence": [
+    "src/schemaxis/adaptors/gmsh/adaptor.json",
+    "src/schemaxis/adaptors/gmsh/readiness.json",
+    "docs/gmsh.md",
+    "verification/2026-10-24-gmsh-allocation.md",
+    "verification/2026-11-03-gmsh-primitives.md",
+    "verification/2026-11-10-gmsh-cylinders.md",
+    "tools/qualify_gmsh_cylinders.py"
+  ],
+  "limitations": [
+    "One solid/volume; planar and cylinder groups share a limit of twelve; only world-axis analytic cylinders; linear tetrahedra only, bounded node/cell counts; no solver setup or MPI claim.",
+    "Editorial estimate over the capability-family map and current contracts; no exhaustive native API denominator. The recorded sleeve, plate, refinement, adoption and primitive fixtures qualify only those serial cases. Qualification and local availability remain separate axes."
+  ]
+}

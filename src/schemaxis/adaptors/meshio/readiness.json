@@ -4,10 +4,10 @@
     "schemaxis.meshio/1": {
       "guide": "docs/meshio.md",
       "context": {
-        "purpose": "Convert captured ASCII triangle/tetra meshes between VTU and legacy VTK 4.2 with explicit length units, exact ordered topology and preserved scalar/vector point/cell values. Strict subset refuses unsupported data before native mapping.",
-        "assumptions": "Declared source/target length units; positive tetra orientation and nondegenerate triangles; POSIX meshio 5.3.5 isolated Python.",
+        "purpose": "Convert captured ASCII triangle/tetra/hexahedron meshes between VTU and legacy VTK 4.2 with explicit length units, exact ordered topology and preserved scalar/vector point/cell values. Strict subset refuses unsupported data before native mapping.",
+        "assumptions": "Declared source/target length units; positive tetra orientation and nondegenerate triangles; POSIX meshio 5.3.5 isolated Python. Hexahedral Jacobians must exceed the documented relative threshold at 17 samples; sampled positivity is not a global validity proof.",
         "constraints": "16MiB source/32MiB output; 100000 points/cells; 16 scalar/vector arrays per association. No compressed/binary/appended/DTD/metadata/solver formats.",
-        "inspection": "Independent stdlib source/output parsers compare transformed coordinates, ordered connectivity and every field tuple; separate native reopening checks consistency.",
+        "inspection": "Independent stdlib source/output parsers compare transformed coordinates, ordered connectivity and every field tuple; separate native reopening checks consistency. Hexahedral signed volume is integrated using a tensor two-point Gauss rule; all sampled Jacobians also compare at relative 1e-8.",
         "recovery": "INVALID_MESH_SOURCE needs bounded regular matching path; INVALID_MESH_CONTENT needs supported intact ASCII geometry and positive orientation; inspect native logs for runtime failures."
       },
       "examples": [
@@ -25,13 +25,24 @@
           "expect": "invalid",
           "fault": "INVALID_ARGUMENT",
           "schemaValid": false
+        },
+        {
+          "id": "hex-baseline",
+          "reference": "examples/schemaxis/meshio-hex-convert.json"
+        },
+        {
+          "id": "hex-variant",
+          "reference": "examples/schemaxis/meshio-hex-variant.json"
         }
       ],
       "conformance": [
-        "tests/unit/test_meshio.py"
+        "tests/unit/test_meshio.py",
+        "tests/unit/test_meshio_allocation.py",
+        "tests/unit/test_meshio_hexahedron.py"
       ],
       "acceptance": [
-        "tools/qualify_meshio.py"
+        "tools/qualify_meshio.py",
+        "tools/qualify_meshio_hexahedron.py"
       ],
       "profiles": {
         "workflow": {
@@ -54,7 +65,9 @@
           "https://github.com/nschloe/meshio#python-library",
           "https://pypi.org/project/meshio/5.3.5/",
           "https://docs.vtk.org/en/latest/vtk_file_formats/vtkxml_file_format.html",
-          "https://docs.vtk.org/en/latest/vtk_file_formats/vtk_legacy_file_format.html"
+          "https://docs.vtk.org/en/latest/vtk_file_formats/vtk_legacy_file_format.html",
+          "https://raw.githubusercontent.com/Kitware/VTK/master/Common/DataModel/vtkHexahedron.h",
+          "https://raw.githubusercontent.com/nschloe/meshio/v5.3.5/src/meshio/_vtk_common.py"
         ],
         "lifecycle": {
           "timeout": "Single total deadline, shared process-tree runner; POSIX AS 2 GiB / FSIZE 32 MiB / CPU 60 s native caps.",
@@ -69,13 +82,13 @@
             "kind": "geometry",
             "format": "ASCII VTU or legacy VTK 4.2",
             "traits": {
-              "cells": "triangle/tetra",
+              "cells": "triangle/tetra/hexahedron",
               "units": "explicit"
             },
             "losses": [
               "Strict refusal of unsupported sections; no silent omissions."
             ],
-            "scope": "Captured regular source <=16MiB."
+            "scope": "Captured regular source <=16MiB. Hex orientation uses 17 positive sampled Jacobians, not a proof of global positivity; reported volume is signed trilinear volume."
           },
           {
             "id": "mesh-output",
@@ -83,20 +96,20 @@
             "kind": "geometry",
             "format": "ASCII VTU or legacy VTK 4.2",
             "traits": {
-              "cells": "triangle/tetra",
+              "cells": "triangle/tetra/hexahedron",
               "order": "preserved"
             },
             "losses": [
               "Storage dtype/formatting and cell-block boundaries may change; numeric values and flattened order checked.",
               "Coordinate units alone change; field units are not inferred."
             ],
-            "scope": "Verified mesh <=32MiB and labelled summary."
+            "scope": "Verified mesh <=32MiB and labelled summary. Hex orientation uses 17 positive sampled Jacobians, not a proof of global positivity; reported volume is signed trilinear volume."
           }
         ],
         "inspection": [
           {
             "panel": "text",
-            "scope": "Bounds/counts/array names/signed tetra volumes and retained logs.",
+            "scope": "Bounds/counts/array names/signed tetra volumes and retained logs. Sampled hexahedral Jacobian preservation and trilinear signed volumes.",
             "limits": "Use a compatible geometry viewer for visual inspection; no mesh editing panel."
           }
         ],
@@ -205,13 +218,69 @@
                 "relative": 1e-12
               }
             ]
+          },
+          {
+            "id": "hex-affine-mm-to-m",
+            "example": "hex-baseline",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/meshio/hex-affine.vtu"
+            },
+            "scope": "Literal VTK-order eight-node hexahedron with triangle and disconnected positive tetra; scalar/vector fields, nonzero origin and independent signed volume. Affine shear.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/points",
+                "expected": 12,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/hexahedronVolumes/0",
+                "expected": 2.4e-08,
+                "absolute": 0,
+                "relative": 1e-11
+              }
+            ]
+          },
+          {
+            "id": "hex-warped-cm-to-mm",
+            "example": "hex-variant",
+            "edits": [],
+            "resources": {
+              "/source": "examples/schemaxis/fixtures/meshio/hex-warped.vtk"
+            },
+            "scope": "Literal VTK-order eight-node hexahedron with triangle and disconnected positive tetra; scalar/vector fields, nonzero origin and independent signed volume. Held-out trilinear warped top corner.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/points",
+                "expected": 12,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/hexahedronVolumes/0",
+                "expected": 25.5,
+                "absolute": 0,
+                "relative": 1e-11
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Initial closed mesh conversion route, typed fields, independent preservation and lifecycle.",
+        "scope": "Strict linear hexahedral VTU/VTK volume interchange extension: independent parser, VTK node order, bounded sampled Jacobian admission/preservation, exact trilinear volume integration, units/fields, guidance, discovery, Studio, native controls and Gmsh consumer handoff; retained triangle/tetra cases requalified.",
         "review": [
-          "verification/2026-10-17-meshio-completion.md"
+          "verification/2026-10-17-meshio-completion.md",
+          "verification/2026-10-24-meshio-allocation.md",
+          "verification/2026-11-04-meshio-completion.md"
         ],
         "notApplicable": {
           "native-inspection": "Batch summary publication only; no interactive native inspection.",

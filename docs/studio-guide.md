@@ -9,7 +9,11 @@ publication; inspect and validate it before adding a study or another applicatio
 Help searches operation names, option names, descriptions, examples and shared
 `$` syntax. Select a category to narrow the results. Application operation
 references list the declared contract; application guides explain how to combine
-operations. Operation reference expands the full Help topic inside the configuration window.
+operations. Operation reference opens directly in the configuration window. Its
+embedded view omits an introductory paragraph already shown above the form; the
+complete topic remains available in Help. About this operation retains additional
+guidance without repeating the main explanation. Suggest a correction copies the
+guidance context for review without submitting changes.
 
 The `?` beside an operation or field opens its conceptual help: what the value
 means and how it changes the result, units and conventions, what happens when it
@@ -30,7 +34,7 @@ bounds and defaults that validation actually enforces.
 Many fields offer a choice between a literal value and a **Runtime value**
 (`$axis`, `$time`, `$observe`, `$calc`, …) that is computed on each selected visit;
 see the [$ reference](dollar-reference.md). If an explanation is wrong or unclear,
-open **Improve this explanation → Copy help request** and send the copied record
+open **Suggest a correction → Copy help request** and send the copied record
 with your correction; it identifies the adaptor, route and schema address.
 
 - [Getting started](getting-started.md): installation and the first workflow.
@@ -40,6 +44,15 @@ with your correction; it identifies the adaptor, route and schema address.
 - [Workflow authoring](workflow-authoring.md) and [Workflow design](workflow-design.md): connect application stages and expose parameters.
 - [Typed inspection](typed-inspection.md): inspect data before selecting fields or consuming artifacts.
 - [Installation](installation.md) and [Updates](updates.md): application configuration and compatibility.
+
+## Start, open and recent work
+
+**Start** has a card for each authoring application: Workflow Designer, Adaptor
+Workbench and Schema Editor. Each offers **New…**, **Open…** for a saved file
+on disk, and its most recent documents with the file each was saved to.
+**All…** lists every document of that kind in the workspace. Opening a file
+adds it to the workspace; opening it again shows the same document. The number
+of recent items is a setting, and zero hides the lists.
 
 ## Build a ParaView input
 
@@ -268,11 +281,13 @@ upload, copy or create case files. You can also type the path directly. Relative
 reader paths use the directory from which Studio was launched, not the JSON
 file’s folder or the browser’s Downloads folder.
 
-**Browse folders…** provides the in-app fallback, also used automatically when no
-desktop dialog is available. It offers **Back**, **Forward**, **Up**, **Workspace**, **Home** and
-clickable folder breadcrumbs. Type a folder and press Enter, filter names in the
-current folder, show hidden files, or enable **All file types** when a suggested
-extension filter hides a valid input. Escape closes the chooser while preserving
+**Browse…** opens the desktop's own Open window when Studio runs on a desktop.
+Otherwise, or when **Browse with the desktop's Open window** is off in Settings,
+it opens Studio's Open window: places (Home, Workspace, recent folders), **Back**,
+**Forward**, **Up** and clickable folder breadcrumbs. Type a folder and press
+Enter, filter names in the current folder, show hidden files, or enable **All
+file types** when a suggested extension filter hides a valid input. Click a file
+to select it and **Open** (or double-click) to use it. Escape closes it while preserving
 the configuration form. Selecting a file fills the path; it does not execute the
 reader. Very large folders require a more specific path (2,000-entry limit).
 
@@ -287,17 +302,151 @@ under **Schema details**.
 
 Select the reader or composite filter in **Pipeline**, then choose
 **Add Filter → extractBlock**. The name and input are already filled.
-**Blocks to extract** loads the selected input's native hierarchy; tick named
-blocks or patches, such as `internalMesh` or `walls`. Selecting a group includes
-its children. Filter the list by name, or refresh it after external input changes.
-Changing the input clears selections from the old dataset. Studio writes the
-native selector paths for you. **Advanced: selector paths** remains available for
-custom selectors. Existing filters offer **Choose blocks…** in Properties.
+**Blocks to extract** is a list of entries, built the same way as reader
+regions. An entry is a block name such as `internalMesh` (written as the
+selector `//internalMesh`), a regular expression matched against block names,
+or an exclusion, which removes the blocks it matches. A list holding only
+exclusions starts from every block, so removing the stable parts of a case
+leaves the model:
 
-Block inspection evaluates only the chosen input and its upstream dependencies
-in a separate serial worker. It leaves the displayed preview and saved document
-alone, and can work while downstream filters are unfinished. It requires one
-explicit time/parameter state, at most 200 upstream nodes and at most 10,000 block
-entries. Only regions loaded by the reader can appear; expand the reader's
-`regions` setting if a patch is missing. Curated `extractBlock` uses the native
-Hierarchy; advanced native operation variants retain their declared controls.
+```json
+"selectors": [{"exclude": "^(WT_|wheels_|procBoundary|internalMesh$)"}]
+```
+
+The names in the case are listed under the entries, without their `patch/`
+prefix; click one to add it. The line above them reports what the whole list
+selects in this case. Expressions are resolved when the input is loaded, so one
+authored list serves cases whose names vary. An expression that matches nothing
+is an error. A full selector path such as `/Root/boundary/walls` can also be
+typed as an exact entry. Existing filters show the same list in Properties.
+
+**Load names** reads the case headers of the reader in this pipeline.
+**Ask the application** loads the chosen input and its upstream dependencies in
+a separate serial worker and lists the blocks it reports. It leaves the
+displayed preview and saved document alone, and can work while downstream
+filters are unfinished. It requires one explicit time/parameter state, at most
+200 upstream nodes and at most 10,000 block entries. Only regions loaded by the
+reader can be extracted; expand the reader's `regions` setting if a patch is
+missing.
+
+## CFD input authoring controls
+
+Use **Add Input → foam** to choose an OpenFOAM marker with **Browse…**. The
+node is named after the marker file (`coupe_AMI.foam` gives `coupe_AMI`; a
+generic `case.foam` takes its folder's name) until you type a name yourself.
+Relative dataset paths are resolved from Studio's launch directory.
+
+**Save** writes the input to its file, asking where the first time. The file
+name is shown beside the revision. The arrow beside **Save** offers
+**Save as…**, which writes a new file and makes it the one later saves go to,
+and **Open…**. Saving over an existing file asks first.
+
+The settings window for an operation has two screens, named at its top:
+**Settings** and **Final values**. Final values lists whatever Settings left
+open; anything left empty stays a placeholder that the editor offers to fill
+after the operation is added. Enter never closes the window. Drag any window by
+its title bar, and the fill window by its heading, to see the text behind it.
+To reopen the window for a node that already exists, put the cursor in it and
+press **Edit settings…** above the input or in Properties, or double-click it in
+the pipeline guide; **Apply changes** replaces the node as one undoable edit.
+**Load names** sits beside the screen names, with **Live data preview** for a
+reader, and each list of names has its own.
+
+**Expert mode**, in Settings, folds the help text in these windows behind the
+**?** buttons: one at the top for the introduction, one on each setting.
+
+Reader regions and cell arrays are chosen as **All**, which writes
+`{"select":"all"}`, or as **Named entries**. Each entry is an exact name or a
+regular expression; **Add entry**, **Edit** and **Delete** manage the list, and
+Enter adds the entry being typed. Typing only previews what an expression
+would match; nothing joins the list until it is added. Several exact names can be added at once,
+separated by commas. A mixed list is written as, for example,
+`["internalMesh", {"pattern": "^patch/wheels_"}]`. Boundary region names have
+the `patch/` prefix. Expressions are matched when the case is loaded; one that
+matches nothing is an error. With no entries the setting is left out and the
+reader's default applies.
+
+**Load names** reads bounded case headers and never loads a native mesh. It
+reports its limits for binary, collated and multi-region cases. Choosing a file
+loads them automatically. Once loaded, each entry shows what it matches, and
+the names can be clicked to add them. **Ask the application** asks ParaView for
+advertised region/array names without updating mesh data.
+
+The same names stay available while editing. **Case data**, beside
+**Properties** in the right panel, lists the regions, cell arrays and times of
+the open case: click a name to add it to the list under the cursor, or to copy
+it when the cursor is elsewhere. The editor's suggestions offer them wherever
+text is accepted. **Live data**, beside **Run**, loads the selected node and its
+upstream dependencies and displays a bounded 3D snapshot when supported. Neither
+inspection action runs downstream publications or requires unfinished downstream
+nodes to validate. Live inspection still needs usable upstream inputs and one
+selected state; workflow-produced files must exist before they can be inspected.
+Use **Refresh live data** after changing the draft. Inspection preserves the
+input, including unfilled fields. Adding a reader uses header metadata, when
+available, to record its layout and first stored time without launching ParaView.
+
+The workbench's actions sit at the right of the window tabs, and move to their
+own row in a narrow window. **Validate** checks the current draft with the host
+planner. **Preview** creates a planning checkpoint for a complete input. **Run**
+executes and verifies the complete input in the configured application.
+**Adaptor help** opens the selected adaptor/operation reference; the title-bar
+**Help** opens the general Studio guide. The native status explains whether an
+executable is available and how to open Application Setup in Admin mode.
+
+The sidebar's header chooses **Guide** (the pipeline), **Library** (document
+sections, templates and snippets) or **Both**; its close button, and the
+sidebar button left of the view tabs, hide and restore it. The guide follows
+the editor cursor and selects the containing node, including when the cursor is
+deep inside its options. **Edit…**, **Duplicate** and **Delete** operate on
+that node. **Controls**, right of the view tabs, hides the Add and editing rows
+so the input takes the full height. **Snippets & templates** opens the snippet
+categories. These layout choices are remembered.
+
+Section recipe buttons insert on click. Hover/focus shows a temporary preview;
+the click commits one draft edit. Three centre slices create one plane for each
+axis; slice sweeps create arrays of planes across the data volume. **Undo** and
+**Redo** use draft history (Ctrl+Z / Ctrl+Shift+Z). **Undo saved edit** and
+**Redo saved edit** travel through saved workspace revisions.
+
+Every expandable list has two small buttons left of its label. The first opens
+one level, or closes the item and everything below it. The second opens
+everything below a closed item, and closes an open one. The Schema view also has
+expand/collapse-all, expansion depth, search, select-all and copy. **Show
+Problems** on a diagnostic notification opens the bottom panel. Its close button
+dismisses the popup; Problems and Log remain available. Settings can suppress
+popups while retaining that history.
+
+## Vectors and volumes in Variables & expressions
+
+New variable names start empty. Editing a value allows name, group and scope
+changes; explicit references and parameter targets follow the change. Moving a
+sweep between scopes, converting a sweep into an ordinary value, and moving a
+Case Runner parameter outside shared workflow scope require creating and rebinding
+a destination value first; the editor explains these constraints.
+
+A saved vector offers component choices such as `velocity.x`, authored as a
+reference to `/dimensions/velocity/0`. Vector components can themselves contain
+scalar references or expressions. The **volume** value type edits an AABB as
+`{"min":[0,-1,0],"max":[4,1,2]}` with separate minimum/maximum coordinates.
+Use the function value source to derive reusable regions and points:
+
+- `boundsFromExtents` converts native `[xmin,xmax,ymin,ymax,zmin,zmax]` extents,
+  including a runtime `$observe` of a node's `bounds`, to an AABB.
+- `boundsExtend` uses `before` and `after` fractions of the original span.
+  `[0.5,0.5,0.5]` on both sides adds half a span on each side; an `after` of
+  `[2.5,0.5,0.5]` adds an extra two spans in the positive X wake direction.
+- `boundsPoint` chooses `min`, `mid` or `max` independently for each coordinate.
+  `boundsCentre3D`, `boundsSize` and component references provide other points
+  and scalar lengths.
+- `fitCamera` frames a volume using a direction, up axis and image aspect ratio;
+  `orbitCameras` creates a series of views around it.
+
+Model extents, data extents and manually authored areas of interest can all feed
+these helpers. Runtime measurements remain pending until data is available;
+a static preview never invents a runtime bound.
+
+Output settings explain filename tokens and provide presets. Parameter tokens
+include a key and value, while axis tokens provide a sweep value. Explicit output
+filenames take precedence. **Default parallel workers** controls independent Case
+Runner workflow operations, rather than native threads or MPI ranks. Developers
+can edit it; explicit template/workflow worker settings take precedence.

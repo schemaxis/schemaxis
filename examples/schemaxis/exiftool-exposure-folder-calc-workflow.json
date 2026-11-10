@@ -1,0 +1,104 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "exposure",
+      "document": {
+        "version": "schemaxis.exiftool/1",
+        "operation": "inspectMetadata",
+        "media": {
+          "folder": {
+            "path": "/tmp/schemaxis-exiftool-acceptance/exposure-folder",
+            "extensions": [
+              ".jpg"
+            ],
+            "depth": 0,
+            "sidecars": "none"
+          }
+        },
+        "profiles": [
+          "exposure"
+        ]
+      }
+    },
+    {
+      "id": "workbook",
+      "document": {
+        "version": "schemaxis.calc/1",
+        "nodes": [
+          {
+            "id": "exposures",
+            "filter": "readTypedCSV",
+            "options": {
+              "file": {
+                "$artifact": "exposure",
+                "index": 2
+              },
+              "nullToken": "\\N",
+              "columns": [
+                {
+                  "name": "id",
+                  "kind": "text"
+                },
+                {
+                  "name": "exposureTime",
+                  "kind": "number",
+                  "nullable": true
+                },
+                {
+                  "name": "exposureTimeState",
+                  "kind": "text"
+                },
+                {
+                  "name": "fNumber",
+                  "kind": "number",
+                  "nullable": true
+                },
+                {
+                  "name": "fNumberState",
+                  "kind": "text"
+                },
+                {
+                  "name": "isoSpeed",
+                  "kind": "number",
+                  "nullable": true
+                },
+                {
+                  "name": "isoSpeedState",
+                  "kind": "text"
+                },
+                {
+                  "name": "focalLength",
+                  "kind": "number",
+                  "nullable": true
+                },
+                {
+                  "name": "focalLengthState",
+                  "kind": "text"
+                },
+                {
+                  "name": "focalLength35mm",
+                  "kind": "number",
+                  "nullable": true
+                },
+                {
+                  "name": "focalLength35mmState",
+                  "kind": "text"
+                },
+                {
+                  "name": "exposureBias",
+                  "kind": "number",
+                  "nullable": true
+                },
+                {
+                  "name": "exposureBiasState",
+                  "kind": "text"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

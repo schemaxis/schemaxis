@@ -1,0 +1,75 @@
+{
+  "version": "schemaxis.opensees/1",
+  "operation": "trussStatic",
+  "nodes": [
+    {
+      "id": "a",
+      "x_m": 0,
+      "y_m": 0,
+      "fixed": [
+        true,
+        true
+      ]
+    },
+    {
+      "id": "b",
+      "x_m": 2,
+      "y_m": 0,
+      "fixed": [
+        false,
+        true
+      ]
+    },
+    {
+      "id": "c",
+      "x_m": 1,
+      "y_m": 1
+    }
+  ],
+  "members": [
+    {
+      "id": "ab",
+      "a": "a",
+      "b": "missing",
+      "youngsModulus_Pa": 200000000000.0,
+      "area_m2": 0.001
+    },
+    {
+      "id": "ac",
+      "a": "a",
+      "b": "c",
+      "youngsModulus_Pa": 200000000000.0,
+      "area_m2": 0.001
+    },
+    {
+      "id": "bc",
+      "a": "b",
+      "b": "c",
+      "youngsModulus_Pa": 200000000000.0,
+      "area_m2": 0.001
+    }
+  ],
+  "loads": [
+    {
+      "node": "c",
+      "force_N": [
+        0,
+        -1000
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "name": "apex_serviceability",
+      "quantity": "displacement_m",
+      "target": "c",
+      "maximum": 0.0001
+    },
+    {
+      "name": "diagonal_stress",
+      "quantity": "stress_Pa",
+      "target": "ac",
+      "maximum": 10000000.0
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "id": "scientific-image-preview",
+  "size": [
+    32,
+    32
+  ],
+  "cameras": [
+    {
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ],
+      "scale": 2
+    }
+  ],
+  "render": {
+    "threads": 2,
+    "renderer": {
+      "kind": "workbench",
+      "lighting": {
+        "kind": "flat"
+      },
+      "colourSource": {
+        "kind": "texture"
+      },
+      "antiAliasing": "OFF"
+    },
+    "colourManagement": {
+      "view": {
+        "kind": "standard"
+      }
+    }
+  },
+  "production": {
+    "images": [
+      {
+        "id": "fieldImage",
+        "file": "examples/schemaxis/blender-image-preview.png",
+        "colourSpace": "sRGB",
+        "alphaMode": "straight",
+        "pack": true
+      }
+    ],
+    "objects": [
+      {
+        "id": "panel",
+        "kind": "mesh",
+        "vertices": [
+          [
+            -1,
+            -1,
+            0
+          ],
+          [
+            1,
+            -1,
+            0
+          ],
+          [
+            1,
+            1,
+            0
+          ],
+          [
+            -1,
+            1,
+            0
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2,
+            3
+          ]
+        ],
+        "material": "fieldSurface"
+      }
+    ],
+    "materialGraphs": [
+      {
+        "id": "fieldSurface",
+        "viewportColour": [
+          0.2,
+          0.03,
+          0.06
+        ],
+        "displayTexture": {
+          "kind": "image",
+          "image": "fieldImage"
+        },
+        "nodes": [
+          {
+            "id": "constant",
+            "kind": "emission",
+            "values": {
+              "colour": [
+                0.04,
+                0.09,
+                0.25,
+                1
+              ]
+            }
+          },
+          {
+            "id": "finish",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "constant",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "finish",
+              "socket": "surface"
+            }
+          }
+        ]
+      }
+    ],
+    "meshData": [
+      {
+        "object": "panel",
+        "activeUV": "measurement",
+        "renderUV": "print",
+        "attributes": [
+          {
+            "name": "temperature",
+            "kind": "float",
+            "domain": "POINT",
+            "mode": "dense",
+            "values": [
+              12,
+              14,
+              18,
+              16
+            ]
+          }
+        ],
+        "uvMaps": [
+          {
+            "name": "measurement",
+            "method": "coordinates",
+            "coordinates": [
+              [
+                [
+                  0,
+                  0
+                ],
+                [
+                  1,
+                  0
+                ],
+                [
+                  1,
+                  1
+                ],
+                [
+                  0,
+                  1
+                ]
+              ]
+            ]
+          },
+          {
+            "name": "print",
+            "method": "coordinates",
+            "coordinates": [
+              [
+                [
+                  0.5,
+                  0
+                ],
+                [
+                  1.5,
+                  0
+                ],
+                [
+                  1.5,
+                  1
+                ],
+                [
+                  0.5,
+                  1
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

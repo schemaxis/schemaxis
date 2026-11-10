@@ -1,0 +1,164 @@
+{
+ "version": "schemaxis.workflow/1",
+ "operations": [
+  {
+   "id": "store",
+   "document": {
+    "version": "schemaxis.hdf5/1",
+    "operation": "createFile",
+    "file": {
+     "name": "sensor-array.h5"
+    },
+    "inputs": [
+     {
+      "id": "sensors",
+      "path": "/replace/with/numpy-sensors.csv",
+      "format": "csv"
+     }
+    ],
+    "objects": [
+     {
+      "path": "/array/time",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       64
+      ],
+      "data": {
+       "source": "input",
+       "input": "sensors",
+       "column": "time"
+      },
+      "units": "s",
+      "scale": "time"
+     },
+     {
+      "path": "/array/channel",
+      "type": {
+       "class": "uint",
+       "bits": 8
+      },
+      "shape": [
+       4
+      ],
+      "data": {
+       "source": "range",
+       "start": 1,
+       "step": 1
+      },
+      "scale": "channel"
+     },
+     {
+      "path": "/array/voltage",
+      "type": {
+       "class": "float",
+       "bits": 64
+      },
+      "shape": [
+       64,
+       4
+      ],
+      "data": {
+       "source": "input",
+       "input": "sensors",
+       "columns": [
+        "ch1",
+        "ch2",
+        "ch3",
+        "ch4"
+       ]
+      },
+      "units": "mV",
+      "storage": {
+       "chunks": [
+        16,
+        4
+       ],
+       "compression": "gzip",
+       "level": 6,
+       "shuffle": true
+      },
+      "dimensions": [
+       {
+        "axis": 0,
+        "label": "time",
+        "scales": [
+         "/array/time"
+        ]
+       },
+       {
+        "axis": 1,
+        "label": "channel",
+        "scales": [
+         "/array/channel"
+        ]
+       }
+      ]
+     }
+    ],
+    "extracts": [
+     {
+      "id": "channels",
+      "dataset": "/array/voltage",
+      "columns": [
+       "ch1",
+       "ch2",
+       "ch3",
+       "ch4"
+      ],
+      "header": "names"
+     }
+    ]
+   }
+  },
+  {
+   "id": "pca",
+   "document": {
+    "version": "schemaxis.numpy/1",
+    "operation": "principalComponents",
+    "source": {
+     "$artifact": "store",
+     "index": 1
+    },
+    "rowKey": {
+     "name": "time",
+     "unit": "s"
+    },
+    "channels": [
+     {
+      "name": "ch1",
+      "unit": "mV"
+     },
+     {
+      "name": "ch2",
+      "unit": "mV"
+     },
+     {
+      "name": "ch3",
+      "unit": "mV"
+     },
+     {
+      "name": "ch4",
+      "unit": "mV"
+     }
+    ],
+    "scaling": "none",
+    "retention": {
+     "components": 2
+    },
+    "output": "components",
+    "requirements": {
+     "minimumExplainedVariance": 0.9,
+     "reconstructionRMS": [
+      {
+       "channel": "ch1",
+       "maximum": 0.6
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

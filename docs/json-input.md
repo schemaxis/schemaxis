@@ -251,7 +251,7 @@ Alternatively, put a sequence directly in an option:
 ```
 
 Add the same `"sync":"shape"` inside multiple `$analytic` specifications to
-advance them together. See [the synchronized Blender example](../examples/schemaxis/blender-showcase.json).
+advance them together. See [the synchronized Blender example](../examples/schemaxis/blender-primitives.json).
 
 ## 5. Useful value forms
 

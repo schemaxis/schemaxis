@@ -3,6 +3,7 @@
 
 import {h, icon} from '../../lib/dom.mjs';
 import {createJsonEditor} from '../../editor/editor.mjs';
+import {bindVariables} from '../variables/editor.mjs';
 import {sourcePointer} from './locations.mjs';
 import {reportDiagnostics} from '../../editor/settle-server.mjs';
 import {SchemaRegistry} from '../../editor/schema-registry.mjs';
@@ -22,6 +23,7 @@ export function createSourceTab(ctx, model) {
     commonProperties: (pointer, document) => commonProperties(metadata, document, pointer),
     indent: ' '.repeat(ctx.setting('editor.tabSize') || 2), hover: ctx.setting('editor.hover') !== false});
   editor.textarea.setAttribute('aria-label', 'Design source JSON');
+  const variables = bindVariables(ctx, editor);
   const status = h('span', {class: 'muted', 'aria-live': 'polite'});
   const save = h('button', {class: 'button primary small', onClick: apply}, icon('check'), 'Apply source');
   const reload = h('button', {class: 'button small', onClick: () => load(true)}, 'Discard');
@@ -42,7 +44,9 @@ export function createSourceTab(ctx, model) {
     update();
   }}, h('option', {value: 'json'}, 'JSON'), h('option', {value: 'yaml'}, 'YAML'));
   const element = h('div', {class: 'dz-tab-panel dz-source-panel'}, library.bar, library.section,
-    h('div', {class: 'dz-source-toolbar'}, sourceFormat, status, h('span', {class: 'grow'}), validate, reload, save), host);
+    h('div', {class: 'dz-source-toolbar'}, sourceFormat,
+      h('button', {class: 'button small', onClick: () => variables.pick()}, 'Value at cursor…'),
+      status, h('span', {class: 'grow'}), validate, reload, save), host);
   let active = false;
   let baseline = '';
   let shown = null;

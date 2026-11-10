@@ -45,7 +45,7 @@ class SchemaProjectionTests(unittest.TestCase):
         self.assertEqual(schema['properties']['newSetting']['minimum'], 2)
 
     def test_expansion_retains_authored_input_and_removes_conveniences(self):
-        source = json.loads((ROOT/'examples/schemaxis/blender-showcase.json').read_text())
+        source = json.loads((ROOT/'examples/schemaxis/blender-primitives.json').read_text())
         original = copy.deepcopy(source)
         expanded = expand_input(source)
         self.assertEqual(source, original)

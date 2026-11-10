@@ -3,7 +3,7 @@
 import copy
 from dataclasses import replace
 
-from . import authoring
+from . import authoring, captured_inputs
 from .adaptors import registry
 from .adaptor_runtime import workflow_inputs
 from .core.faults import SchemaxisError
@@ -86,10 +86,20 @@ def operation_validator(session, request, provider):
         # References may reach future outputs through workflow definitions. Use
         # the normal resolver rather than just looking for markers in the draft.
         status['deferred'] = bool(list(dependencies(effective))) or connected
+        # Captured inputs wait for nothing: verify each pinned snapshot and the
+        # adaptor reader policy now, without changing the draft. Only consumer
+        # fields count, matching workflow consumption and recheck.
+        captured = bool(list(captured_inputs.consumed(effective)))
+        if captured:
+            captured_inputs.consume(effective, '')
         # Even concrete resolved inputs must keep their authored scope when the
         # Workbench would otherwise copy the operation into a standalone preview.
-        status['requiresWorkflow'] = status['deferred'] or effective != candidate
+        status['requiresWorkflow'] = status['deferred'] or captured or effective != candidate
+        status.pop('message', None)
         if status['deferred']:
             status['message'] = 'Input files and values will be checked after their workflow steps finish.'
+        elif captured:
+            status['message'] = ('Captured inputs match their pinned snapshots. They are consumed only '
+                                 'by the workflow, so run this operation from its workflow.')
 
     return validate, status

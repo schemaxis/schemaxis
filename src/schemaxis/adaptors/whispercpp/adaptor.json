@@ -1,0 +1,165 @@
+{
+  "id": "whispercpp",
+  "version": "schemaxis.whispercpp/1",
+  "adaptor": "schemaxis.adaptors.whispercpp.adaptor",
+  "declarations": "schemaxis.adaptors.whispercpp.adaptor:DECLARATIONS",
+  "runtimeFamily": "1.9.5",
+  "execution": "Bounded offline PCM16 speech transcription with whisper.cpp, strict segment evidence, deterministic SRT/WebVTT and independent verification; separately, host-only human corrections of a retained machine draft with a reviewed timed-text contract and host-only explicit SRT/WebVTT line layout of a pinned timed transcript (no native process)",
+  "executables": [
+    "whisper-cli"
+  ],
+  "keywords": [
+    "speech transcription",
+    "captions",
+    "SRT",
+    "WebVTT",
+    "whisper.cpp",
+    "offline ASR",
+    "SRT subtitles",
+    "delete transcript cue",
+    "remove hallucinated caption",
+    "retime captions",
+    "fix caption timing",
+    "caption line layout",
+    "wrap caption lines"
+  ],
+  "display": {
+    "name": "whisper.cpp",
+    "mark": "Wh",
+    "colour": "#4a6fa5"
+  },
+  "capabilities": "schemaxis.adaptors.whispercpp.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.whispercpp/1",
+    "operation": "transcribe",
+    "audio": {
+      "path": "/replace/with/speech.wav"
+    },
+    "model": {
+      "path": "/replace/with/ggml-model.bin",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "language": "en"
+  },
+  "routes": {
+    "schemaxis.whispercpp/1": {
+      "module": "schemaxis.adaptors.whispercpp.adaptor",
+      "schema": "schemaxis.adaptors.whispercpp.adaptor:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "whispercpp",
+      "acceptedArtifacts": [
+        "file"
+      ],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.whispercpp.adaptor:query",
+        "reusableInputs": "schemaxis.adaptors.whispercpp.adaptor:reusableInputs",
+        "resources": "schemaxis.adaptors.whispercpp.adaptor:resources"
+      }
+    },
+    "schemaxis.whispercpp.correct/1": {
+      "module": "schemaxis.adaptors.whispercpp.corrections",
+      "schema": "schemaxis.adaptors.whispercpp.corrections:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "whispercpp-correct",
+      "referenceName": "whispercpp-correct",
+      "acceptedArtifacts": [
+        "text"
+      ],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.whispercpp.corrections:query",
+        "reusableInputs": "schemaxis.adaptors.whispercpp.corrections:reusableInputs",
+        "resources": "schemaxis.adaptors.whispercpp.corrections:resources"
+      }
+    },
+    "schemaxis.whispercpp.correct/2": {
+      "module": "schemaxis.adaptors.whispercpp.corrections_deletion",
+      "schema": "schemaxis.adaptors.whispercpp.corrections_deletion:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "whispercpp-correct-deletion",
+      "referenceName": "whispercpp-correct-deletion",
+      "acceptedArtifacts": [
+        "text"
+      ],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.whispercpp.corrections_deletion:query",
+        "reusableInputs": "schemaxis.adaptors.whispercpp.corrections_deletion:reusableInputs",
+        "resources": "schemaxis.adaptors.whispercpp.corrections_deletion:resources"
+      }
+    },
+    "schemaxis.whispercpp.correct/3": {
+      "module": "schemaxis.adaptors.whispercpp.corrections_timing",
+      "schema": "schemaxis.adaptors.whispercpp.corrections_timing:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "whispercpp-correct-timing",
+      "referenceName": "whispercpp-correct-timing",
+      "acceptedArtifacts": [
+        "text"
+      ],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.whispercpp.corrections_timing:query",
+        "reusableInputs": "schemaxis.adaptors.whispercpp.corrections_timing:reusableInputs",
+        "resources": "schemaxis.adaptors.whispercpp.corrections_timing:resources"
+      }
+    },
+    "schemaxis.whispercpp.captions/1": {
+      "module": "schemaxis.adaptors.whispercpp.caption_layout",
+      "schema": "schemaxis.adaptors.whispercpp.caption_layout:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "whispercpp-captions",
+      "referenceName": "whispercpp-captions",
+      "acceptedArtifacts": [
+        "text"
+      ],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.whispercpp.caption_layout:query",
+        "reusableInputs": "schemaxis.adaptors.whispercpp.caption_layout:reusableInputs",
+        "resources": "schemaxis.adaptors.whispercpp.caption_layout:resources"
+      }
+    }
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--whispercpp",
+      "dest": "whispercpp",
+      "help": "Absolute whisper.cpp 1.9.5 whisper-cli executable"
+    }
+  ],
+  "sections": {
+    "whispercpp-correct": "schemaxis.adaptors.whispercpp.corrections:schema",
+    "whispercpp-correct-deletion": "schemaxis.adaptors.whispercpp.corrections_deletion:schema",
+    "whispercpp-correct-timing": "schemaxis.adaptors.whispercpp.corrections_timing:schema",
+    "whispercpp-captions": "schemaxis.adaptors.whispercpp.caption_layout:schema"
+  }
+}

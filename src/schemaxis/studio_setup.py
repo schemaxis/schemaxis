@@ -41,7 +41,34 @@ class StudioSetup:
                                  for name, item in sorted(CONSOLE_TYPES.items()) if not item.get('hostOnly')]}
 
     def request(self, request):
-        keys(request, ('action', 'provider', 'location', 'role'), 'setup')
+        keys(request, ('action', 'provider', 'location', 'role', 'module', 'manifest',
+                       'backend', 'allowDownloads', 'keepDownload', 'downloads', 'plan', 'confirmation'), 'setup')
+        action = request.get('action')
+        if action in ('modules', 'registerModule', 'fetchModule', 'moduleSettings', 'cachePlan', 'cacheClear'):
+            from .app_modules import ModuleManager, read_json
+            manager = ModuleManager()
+            if action == 'modules':
+                return manager.inventory()
+            if request.get('role') != 'admin':
+                fail('SETTING_SCOPE', 'application modules are managed in administrator mode')
+            with self.app.job_lock:
+                if self.app.busy:
+                    fail('SESSION_BUSY', 'wait for the current native operation to finish')
+                if action == 'registerModule':
+                    # Only local administrator-selected files, never manifests from a workflow.
+                    return manager.register(read_json(request.get('manifest', '')))
+                if action == 'fetchModule':
+                    if type(request.get('keepDownload', False)) is not bool:
+                        fail('INVALID_REQUEST', 'keepDownload must be a boolean')
+                    return manager.fetch([request.get('module')], keep_download=request.get('keepDownload', False),
+                                         allow_download=manager.settings()['allowDownloads'])
+                if action == 'moduleSettings':
+                    return manager.configure(backend=request.get('backend'), allow_downloads=request.get('allowDownloads'))
+                if action == 'cachePlan':
+                    if type(request.get('downloads', False)) is not bool:
+                        fail('INVALID_REQUEST', 'downloads must be a boolean')
+                    return manager.cleanup_plan([request.get('module')], downloads=request.get('downloads', False))
+                return manager.clear(request.get('plan'), request.get('confirmation'))
         with self.app.job_lock:
             if self.app.busy:
                 fail('SESSION_BUSY', 'wait for the current native operation to finish')

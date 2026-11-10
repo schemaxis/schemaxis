@@ -35,6 +35,12 @@ ParaView adaptor. These aliases contain no application implementation and must
 not be used by new framework code. `schemaxis/1` remains the historical shared graph
 format and ParaView document version; it is retained for saved-input compatibility.
 
+Adaptor-owned [strength assessments](adaptor-assessments.md) provide optional,
+explicitly subjective whole-application breadth and supported-workflow abstraction
+estimates. `schemaxis assessments` aggregates the same registry, counting providers
+and authorable routes separately. Missing, invalid or stale editorial metadata
+does not change executable contracts or native qualification.
+
 ## Add an application
 
 Create this package (include `__init__.py`, even if empty):
@@ -239,7 +245,10 @@ workflow document versions and provider IDs are unchanged. Historical verificati
 receipts retain their original paths and are not rewritten as new evidence.
 
 Release-specific qualification metadata belongs to each app's `upstream.json`;
-see [latest-release maintenance](updates.md). Machine-specific application locations
+see [latest-release maintenance](updates.md). Optional runtime compatibility profiles
+there compare observed application releases with exact, evidenced baselines; see
+[runtime compatibility profiles](updates.md#runtime-compatibility-profiles).
+Machine-specific application locations
 belong in [private configuration](installation.md), never in repository guidance.
 
 For bounded procedures driven by verified output measurements, see

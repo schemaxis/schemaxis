@@ -8,11 +8,11 @@ Constructor options must be constant after document composition.
 
 ## Index
 
-[box](#box), [readSTEP](#readstep), [tetrahedral](#tetrahedral)
+[box](#box), [cylinder](#cylinder), [hollowCylinder](#hollowcylinder), [readSTEP](#readstep), [sphere](#sphere), [tetrahedral](#tetrahedral)
 
 ## box
 
-Creates an axis-aligned rectangular solid with gmsh.model.occ.addBox from a minimum corner and three extents in millimetres, as the solid source for a tetrahedral node. Choose it for test domains, channel sections and mesh-size studies where no CAD file is needed; its exact volume and bounds let verification compare the mesh with analytic values. Use readSTEP for any other shape. The solid is not published by itself; only the tetrahedral node publishes files.
+Creates an axis-aligned rectangular solid with gmsh.model.occ.addBox from a minimum corner and three extents in millimetres, as the solid source for a tetrahedral node. Choose it for test domains, channel sections and mesh-size studies where no CAD file is needed; its exact volume and bounds let verification compare the mesh with analytic values. Use cylinder, hollowCylinder or sphere for those primitives, or readSTEP for other shapes. The solid is not published by itself; only the tetrahedral node publishes files.
 
 Common mistakes and assumptions:
 
@@ -27,6 +27,49 @@ Inputs: none.
 | --- | --- | --- | --- |
 | `origin` | World coordinates [x, y, z] of the box's minimum corner; the box extends from origin to origin + size along each positive axis. Schemaxis passes these as the x, y, z arguments of gmsh.model.occ.addBox. Moving the origin changes the coordinates of every box face, so faceGroups coordinates must move with it. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `size` | Extents [dx, dy, dz] of the box along x, y and z, each positive. These are lengths, not the opposite corner. Verification checks that the CAD volume equals dx·dy·dz and that the mesh bounds equal origin and origin + size. Larger extents at the same element size mean more cells: planning rejects the document with RESOURCE_LIMIT when 6 × Π(extent / smallest element size + 1) exceeds 200000. | `{"type":"array","items":{"type":"number","minimum":0.001,"maximum":100000},"minItems":3,"maxItems":3}` | `[10,10,10]` |
+
+
+## cylinder
+
+Constructs a full right circular cylinder as one solid for tetrahedral meshing. origin is the centre of the starting disk, axis chooses a positive world direction, radius and height are in millimetres. Use this for rods and cylindrical specimens without a CAD file; choose hollowCylinder for a through bore. The host independently checks CAD volume pi*r²*h, analytic bounds and radial containment of every mesh node. The solid is consumed by tetrahedral; it is not separately published. Linear triangles approximate circular caps and the lateral surface. Name the lateral wall with tetrahedral cylinderGroups (side outer, radius equal to this radius, centre equal to origin) to apply loads or constraints by name.
+
+Common mistakes and assumptions:
+
+- A target mesh size is not a geometric-error guarantee; inspect the independently measured volume error.
+- Named circular or annular planar caps require an explicit areaTolerance; the strict default detects their discretisation loss.
+
+Native binding: `gmsh.model.occ.addCylinder`. Output kind: `["solid"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `origin` | Centre of the starting circular or annular cap in world x/y/z millimetres, default [0,0,0]. It is not the bounding-box minimum corner; the opposite cap is height along the selected positive axis. Face-group coordinates are absolute world coordinates. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `axis` | Positive world direction of the cylinder length: x, y or z, default z. This is a unitless direction choice, not an angle or arbitrary vector; radius spans the other two axes. Changing axis also changes the cap planes to select. | `{"type":"enum","values":["x","y","z"]}` | `"z"` |
+| `radius` | Outer radius of the circular cross-section (or ball), in mm, default 5, between 0.001 and 100000. This is half the diameter. For a hollowCylinder it must exceed innerRadius by at least 0.001 mm. Very large solids or small mesh sizes can exceed the bounded work estimate. | `{"type":"number","minimum":0.001,"maximum":100000}` | `5` |
+| `height` | Positive distance between the two cap planes in mm, default 10, between 0.001 and 100000. Length extends along the selected positive axis from origin; this is not an absolute end coordinate. | `{"type":"number","minimum":0.001,"maximum":100000}` | `10` |
+
+
+## hollowCylinder
+
+Constructs a straight annular solid by subtracting a coaxial through cylinder from a larger cylinder, consuming both tools and requiring exactly one resulting volume. Use it for tubes and sleeves without authoring a boolean tree. origin is the starting annulus centre; axis is positive x, y or z. radius is the outer radius, innerRadius the bore radius; their difference must be at least 0.001 mm. Independent verification checks pi*(radius²-innerRadius²)*height, bounds and each node against the outer radius and bore. Both curved walls remain in the remainder boundary group unless you name them with tetrahedral cylinderGroups (bore: side inner at innerRadius; outside: side outer at radius), which also lets the remainder be empty when the caps are named too.
+
+Common mistakes and assumptions:
+
+- A target mesh size is not a geometric-error guarantee; inspect the independently measured volume error.
+- Named circular or annular planar caps require an explicit areaTolerance; the strict default detects their discretisation loss.
+
+Native binding: `gmsh.model.occ.cut`. Output kind: `["solid"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `origin` | Centre of the starting circular or annular cap in world x/y/z millimetres, default [0,0,0]. It is not the bounding-box minimum corner; the opposite cap is height along the selected positive axis. Face-group coordinates are absolute world coordinates. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `axis` | Positive world direction of the cylinder length: x, y or z, default z. This is a unitless direction choice, not an angle or arbitrary vector; radius spans the other two axes. Changing axis also changes the cap planes to select. | `{"type":"enum","values":["x","y","z"]}` | `"z"` |
+| `radius` | Outer radius of the circular cross-section (or ball), in mm, default 5, between 0.001 and 100000. This is half the diameter. For a hollowCylinder it must exceed innerRadius by at least 0.001 mm. Very large solids or small mesh sizes can exceed the bounded work estimate. | `{"type":"number","minimum":0.001,"maximum":100000}` | `5` |
+| `innerRadius` | Radius of the coaxial through bore in mm, default 3, between 0.001 and 100000. It must be at least 0.001 mm smaller than radius; zero is not a bore and requires cylinder instead. The bore spans the complete height and leaves one annular solid. | `{"type":"number","minimum":0.001,"maximum":100000}` | `3` |
+| `height` | Positive distance between the two cap planes in mm, default 10, between 0.001 and 100000. Length extends along the selected positive axis from origin; this is not an absolute end coordinate. | `{"type":"number","minimum":0.001,"maximum":100000}` | `10` |
 
 
 ## readSTEP
@@ -47,15 +90,35 @@ Inputs: none.
 | `file` | Absolute path of a single-file STEP (ISO 10303-21) document containing exactly one solid. The name must end in .step or .stp (any letter case); relative paths fail planning with INVALID_RESOURCE. Before meshing, Schemaxis checks that it is a regular file of at most 16 MiB that begins with "ISO-10303-21;", records its SHA-256 digest and meshes a retained copy (source.step) in the run directory. In a workflow the path can come from an upstream CAD artifact, such as {"$artifact": "cad", "index": 0}. | `{"type":"string","minLength":1,"maxLength":4096}` | **required** |
 
 
+## sphere
+
+Constructs one complete spherical solid from a centre and radius in millimetres for tetrahedral meshing. Use it for spherical specimens and curved-boundary resolution studies. The host independently checks 4*pi*r³/3, analytic bounds and radial containment of every mesh node. It is a full ball, with no polar cuts, shell thickness or planar caps. Linear boundary triangles inscribe an approximation; choose a small enough mesh size to meet volumeTolerance.
+
+Common mistakes and assumptions:
+
+- A sphere has no planar faces; keep its surface in the remainder group.
+
+Native binding: `gmsh.model.occ.addSphere`. Output kind: `["solid"]`.
+
+Inputs: none.
+
+| Option | Meaning | Type / constraints | Default |
+| --- | --- | --- | --- |
+| `centre` | Centre of the complete sphere in world x/y/z millimetres, default [0,0,0]. Bounds are centre minus/plus radius on each axis; this is not the minimum corner. | `{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3}` | `[0,0,0]` |
+| `radius` | Outer radius of the circular cross-section (or ball), in mm, default 5, between 0.001 and 100000. This is half the diameter. For a hollowCylinder it must exceed innerRadius by at least 0.001 mm. Very large solids or small mesh sizes can exceed the bounded work estimate. | `{"type":"number","minimum":0.001,"maximum":100000}` | `5` |
+
+
 ## tetrahedral
 
-Meshes the preceding solid with first-order (4-node) tetrahedra using Gmsh's Delaunay 3D algorithm at a global target size, optionally finer near named boundaries, and assigns one named physical volume plus named planar face groups and a remainder boundary. It publishes result.msh (ASCII MSH 2.2 with names), volume.vtu and boundary.vtu (numeric physicalTag per cell, with quality arrays on the volume) and mesh-summary.json (name and tag map, mm units, counts, CAD and mesh volume, quality distributions). Every mesh is reopened in a fresh Gmsh process and checked independently for positive volumes, a closed boundary, face membership and agreement with the CAD volume. Add the top-level refinement object to refine until measured requirements pass.
+Meshes the preceding solid with first-order (4-node) tetrahedra using the chosen Delaunay or HXT 3D algorithm at a global target size, optionally finer near named boundaries, and assigns one named physical volume plus named planar face groups, named whole analytic cylindrical wall groups (bore wall, hole wall, shaft surface) with a proven material side, and a remainder boundary that may be empty when those groups cover the whole boundary. It publishes result.msh (ASCII MSH 2.2 with names), volume.vtu and boundary.vtu (numeric physicalTag per cell, with quality arrays on the volume) and mesh-summary.json (name and tag map, mm units, counts, CAD and mesh volume, quality distributions). Every mesh is reopened in a fresh Gmsh process and checked independently for positive volumes, a closed boundary, face membership and agreement with the CAD volume; every boundary triangle of a named wall is re-proven from coordinates, with measured chord deviation. Add the top-level refinement object to refine until measured requirements pass.
 
 Common mistakes and assumptions:
 
 - size is a target edge length in mm, not a guarantee of element count, maximum edge length or shape quality.
 - The VTU files carry numeric tags only; keep mesh-summary.json for group names and units.
 - Outputs are bounded to 50000 nodes and 200000 cells, linear elements only, and no boundary conditions are applied.
+- Name a cylindrical wall with cylinderGroups, not faceGroups; only typed analytic world-axis cylinders are selectable (see cadSurfaces in mesh-summary.json).
+- Chord deviation falls roughly with the square of the edge length; a requirement tighter than the cell budget allows ends a refinement study with STUDY_REQUIREMENTS_NOT_MET.
 
 Native binding: `gmsh.model.mesh.generate`. Output kind: `["mesh"]`.
 
@@ -65,9 +128,12 @@ Native binding: `gmsh.model.mesh.generate`. Output kind: `["mesh"]`.
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `size` | Global target edge length of the tetrahedra. Schemaxis passes it to Gmsh as Mesh.MeshSizeMax (and as Mesh.MeshSizeMin when no nearBoundaries rule is smaller) with sizes from CAD points, curvature and boundary extension disabled, and meshes with Gmsh's Delaunay 3D algorithm (Mesh.Algorithm3D = 1). Smaller values give more, smaller tetrahedra (the count grows roughly with the inverse cube of size) and follow curved faces more closely, because curvature-based sizing is off. | `{"type":"number","minimum":0.001,"maximum":100000}` | `3` |
+| `size` | Global target edge length of the tetrahedra. Schemaxis passes it to Gmsh as Mesh.MeshSizeMax (and as Mesh.MeshSizeMin when no nearBoundaries rule is smaller) with sizes from CAD points, curvature and boundary extension disabled, and meshes with the selected Delaunay or HXT 3D algorithm. Smaller values give more, smaller tetrahedra (the count grows roughly with the inverse cube of size) and follow curved faces more closely, because curvature-based sizing is off. | `{"type":"number","minimum":0.001,"maximum":100000}` | `3` |
 | `volumeName` | Name of the physical volume group (tag 1) that contains every tetrahedron of the solid. The name is stored in result.msh and mesh-summary.json; the VTU files carry only the numeric physicalTag 1. Names start with an ASCII letter followed by letters, digits, underscores or hyphens, and must differ from boundaryName and every faceGroups name. | `{"type":"string","minLength":1,"maxLength":64}` | `"domain"` |
 | `boundaryName` | Name of the physical surface group (tag 2) that holds every boundary face not selected by faceGroups, or the entire exterior surface when faceGroups is empty. nearBoundaries and refinement boundary requirements can refer to it. The same naming rules as volumeName apply, and all group names must be distinct. | `{"type":"string","minLength":1,"maxLength":64}` | `"boundary"` |
-| `faceGroups` | Up to 12 named physical surface groups, each holding the whole CAD faces that lie flat on one axis-aligned plane (for example x = 0). Groups receive tags 3, 4, … in list order, and every face not selected goes to boundaryName (tag 2). Use them to name inlets, outlets, fixed or loaded faces for later setup. Each selector must match at least one face, selectors on the same axis must not overlap, and at least one face must remain for the remainder group. | `{"type":"array","maxItems":12,"items":{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":64,"required":true},"axis":{"type":"enum","values":["x","y","z"],"required":true},"coordinate":{"type":"number","minimum":-100000,"maximum":200000,"required":true},"tolerance":{"type":"number","minimum":1e-06,"maximum":0.001,"default":1e-06}}}}` | `[]` |
+| `faceGroups` | Up to 12 named physical surface groups (shared with cylinderGroups), each holding the whole CAD faces that lie flat on one axis-aligned plane (for example x = 0). Groups receive tags 3, 4, … in list order, and every face not selected goes to boundaryName (tag 2). Use them to name inlets, outlets, fixed or loaded faces for later setup. Each selector must match at least one face, selectors on the same axis must not overlap, and at least one face must remain for the remainder group. | `{"type":"array","maxItems":12,"items":{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":64,"required":true},"axis":{"type":"enum","values":["x","y","z"],"required":true},"coordinate":{"type":"number","minimum":-100000,"maximum":200000,"required":true},"tolerance":{"type":"number","minimum":1e-06,"maximum":0.001,"default":1e-06},"areaTolerance":{"type":"number","minimum":1e-10,"maximum":0.02,"default":1e-10}}}}` | `[]` |
+| `cylinderGroups` | Up to 12 named physical wall groups (shared with faceGroups: faceGroups plus cylinderGroups together may not exceed 12), each holding every whole analytic cylindrical CAD face that lies on one cylinder aligned with a world axis. Groups receive tags after the planar groups, in declared order. Use them to name a bore, a shaft or a sleeve's outer wall so loads, constraints or heat flux can be applied by name later. When planar and cylinder groups together name the whole boundary, the remainder group (tag 2) is empty and absent; the mesh then has no unnamed surface. | `{"type":"array","maxItems":12,"items":{"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":64,"required":true},"axis":{"type":"enum","values":["x","y","z"],"required":true},"centre":{"type":"array","items":{"type":"number","minimum":-100000,"maximum":100000},"minItems":3,"maxItems":3,"required":true},"radius":{"type":"number","minimum":0.001,"maximum":100000,"required":true},"side":{"type":"enum","values":["inner","outer"],"required":true},"tolerance":{"type":"number","minimum":1e-06,"maximum":0.001,"default":1e-06},"areaTolerance":{"type":"number","minimum":1e-10,"maximum":0.02,"default":1e-09}}}}` | `[]` |
+| `algorithm` | Three-dimensional tetrahedral generation choice: delaunay (default, Mesh.Algorithm3D=1) or hxt (=10). Both produce first-order tetrahedra and use the same size, boundary and independent verification contracts. This unitless choice changes the meshing method, not the acceptance criteria; compare measured quality instead of assuming one is superior. | `{"type":"enum","values":["delaunay","hxt"]}` | `"delaunay"` |
+| `optimise` | Boolean controlling Gmsh Mesh.Optimize during generation, true by default. It enables Gmsh tetrahedral quality optimisation; false skips that option. It is unitless and does not guarantee a minimum mean ratio. Inspect measured quality or declare refinement requirements. Native readback records the selected value; HXT may also perform algorithm-internal improvement. | `{"type":"boolean"}` | `true` |
 | `nearBoundaries` | Up to 13 rules that request a finer target size close to named boundary groups. For each rule Schemaxis builds a Gmsh Distance field to that group's surfaces and a Threshold field: the size equals the rule's size on the surface, grows linearly to the global size at the rule's distance, and stays at the global size beyond. Rules are combined with a Min field, so the smallest requested size wins where they overlap. The native field settings are read back and verified. | `{"type":"array","maxItems":13,"items":{"type":"object","properties":{"boundary":{"type":"string","minLength":1,"maxLength":64,"required":true},"size":{"type":"number","minimum":0.001,"maximum":100000,"required":true},"distance":{"type":"number","minimum":0.001,"maximum":100000,"required":true}}}}` | `[]` |
 | `volumeTolerance` | Largest allowed relative difference between the total tetrahedral volume and the CAD volume measured by OpenCASCADE: &#124;Vmesh − Vcad&#124; ≤ volumeTolerance × Vcad. Solids bounded only by planar faces, such as a box, are filled exactly by linear tetrahedra, so tiny values such as 1e-6 are appropriate; curved faces are approximated by flat triangles and the error shrinks as size decreases. A mesh outside the tolerance fails verification and is not published. | `{"type":"number","minimum":1e-08,"maximum":0.02}` | `0.01` |

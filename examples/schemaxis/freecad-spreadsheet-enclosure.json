@@ -1,0 +1,107 @@
+{
+  "version": "schemaxis.freecad/1",
+  "spreadsheet": {
+    "inputs": {
+      "width": {
+        "value": 3,
+        "minimum": 2,
+        "maximum": 5,
+        "unit": "cm"
+      },
+      "depth": {
+        "value": 1,
+        "minimum": 0.5,
+        "maximum": 2,
+        "unit": "in"
+      },
+      "wall": {
+        "value": 2,
+        "minimum": 1,
+        "maximum": 3,
+        "unit": "mm"
+      },
+      "height": {
+        "value": 20,
+        "minimum": 10,
+        "maximum": 30,
+        "unit": "mm"
+      }
+    },
+    "formulas": {
+      "rise": {
+        "terms": {
+          "height": 1,
+          "wall": 1
+        }
+      },
+      "span": {
+        "terms": {
+          "width": 1,
+          "wall": 2
+        }
+      }
+    }
+  },
+  "nodes": [
+    {
+      "id": "body",
+      "filter": "body"
+    },
+    {
+      "id": "outline",
+      "filter": "rectangle",
+      "inputs": {
+        "body": "body"
+      },
+      "drive": {
+        "width": {
+          "terms": {
+            "span": 1
+          }
+        },
+        "height": {
+          "terms": {
+            "depth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "stock",
+      "filter": "pad",
+      "inputs": {
+        "body": "body",
+        "profile": "outline"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "rise": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "housing",
+      "filter": "shell",
+      "options": {
+        "openings": [
+          {
+            "face": "top"
+          }
+        ]
+      },
+      "inputs": {
+        "base": "stock"
+      },
+      "drive": {
+        "thickness": {
+          "terms": {
+            "wall": 1
+          }
+        }
+      }
+    }
+  ],
+  "output": "housing"
+}

@@ -1,0 +1,520 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.tesseract/1": {
+      "guide": "docs/tesseract.md",
+      "context": {
+        "purpose": "Recognize the text of one local scanned-page PNG as a machine draft: checked text, word boxes in source pixels with the recogniser's uncalibrated confidence, and an inspectable summary that binds the exact image, model and runtime. It reads pixels only; it does not read a PDF's embedded text, certify what the page says or identify the page.",
+        "assumptions": "One opaque 8-bit RGB non-interlaced PNG without alpha; one local English LSTM traineddata pinned by SHA-256; an explicit page segmentation (uniform-block for a text block, single-line for exactly one line); Tesseract 5.5.3 on POSIX; a person reviews the draft against the image.",
+        "constraints": "PNG <=16MiB, <=4096 px per side and 4,194,304 pixels; model <=64MiB, language eng only; <=5000 words and 100,000 word characters; TSV <=4MiB, text <=1MiB; dpi 70-2400 only as an explicit override; serial CPU, no authored native flags, global tessdata, configuration files, other languages, handwriting, multipage input or layout analysis. Optional origin binds a declared MuPDF review-summary page to the pixels by width, height and RGB SHA-256.",
+        "inspection": "Inspect page.txt (machine draft), words.json (index, block/paragraph/line/word, left/top/width/height box in source pixels, confidence 0-100) and ocr-summary.json (image/model/runtime/settings bindings, counts, confidence range, origin state, review statement). Offline verify re-reads the retained image, model copy, native TSV/text and launchers without launching Tesseract.",
+        "recovery": "INVALID_IMAGE_SOURCE/INVALID_MODEL: select an absolute local regular file. UNSUPPORTED_IMAGE: re-export as opaque non-interlaced RGB8 (alpha is refused, never flattened). IMAGE_RESOURCE_LIMIT: shrink the image. MODEL_HASH_MISMATCH/IMAGE_HASH_MISMATCH: the file differs from its pin. MODEL_UNUSABLE: supply an English LSTM traineddata for this runtime. OCR_NO_TEXT: no words were found; check pageSegmentation (a mismatched choice can return no words, observed on the qualification fixture, or wrong text) or the image. OCR_OUTPUT_INVALID: native files violate the strict TSV/text contract. ORIGIN_MISMATCH: the declared summary page does not describe these pixels. UNSUPPORTED_NATIVE_VERSION needs Tesseract 5.5.3; INTERPRETER_NOT_FOUND needs an absolute executable."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/tesseract-baseline.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/tesseract-variant.json"
+        },
+        {
+          "id": "single-line",
+          "reference": "examples/schemaxis/tesseract-single-line.json"
+        },
+        {
+          "id": "origin",
+          "reference": "examples/schemaxis/tesseract-origin.json"
+        },
+        {
+          "id": "image-relative",
+          "reference": "examples/schemaxis/tesseract-image-relative-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_IMAGE_SOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "hash-invalid",
+          "reference": "examples/schemaxis/tesseract-hash-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_SHA256",
+          "schemaValid": true
+        },
+        {
+          "id": "segmentation-invalid",
+          "reference": "examples/schemaxis/tesseract-segmentation-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "language-invalid",
+          "reference": "examples/schemaxis/tesseract-language-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "dpi-invalid",
+          "reference": "examples/schemaxis/tesseract-dpi-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_tesseract.py",
+        "tests/unit/test_tesseract_native_boundary.py"
+      ],
+      "acceptance": [
+        "tools/qualify_tesseract.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified image artifacts (a MuPDF page PNG or another producer's opaque RGB PNG) are consumed by workflow jobs; image/model/origin digests invalidate reuse. The real handoff run here used gnuplot as the producer; a MuPDF 1.28.5 handoff is unqualified unless run by the qualifier with that runtime.",
+          "references": [
+            "docs/tesseract.md",
+            "tools/qualify_tesseract.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared expressions and finite visits resolve before OCR planning.",
+          "references": [
+            "docs/tesseract.md"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html",
+          "https://tesseract-ocr.github.io/tessdoc/InputFormats.html",
+          "https://github.com/tesseract-ocr/tesseract/releases/tag/5.5.3"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers capture, model copy and hashing, version, loader trace, recognition and verification; CPU 600 s, address space 8GiB, file 16MiB per native process.",
+          "cancellation": "Cancellation and deadline are checked before capture, during model streaming, after native stages and before publication; the shared owned process-tree runner terminates owned native jobs. Incomplete and failed evidence remains inspectable.",
+          "logs": "Authored and effective plans, captured image and model copy with identities, trusted launchers, input bindings, submissions, stdout/stderr, runtime file hashes, native TSV and text, and three publications are retained; failed attempts keep their result.json fault.",
+          "verification": "Offline: strict independent TSV reader (header, page record equals image size, consecutive hierarchy, containment, confidence text), text/TSV agreement under a stated reading-order policy, byte comparison of every publication with a rebuild from that evidence, image/model/runtime/launcher bindings, exact memberships. Never launches Tesseract; a second native run shows readback determinism only and is not independent OCR truth."
+        },
+        "data": [
+          {
+            "id": "page-image",
+            "direction": "input",
+            "kind": "image",
+            "format": "PNG",
+            "traits": {
+              "colour": "8-bit RGB",
+              "alpha": false,
+              "interlace": "none"
+            },
+            "losses": [
+              "Opaque RGB8 only: alpha, palette, grey, 16-bit and interlaced PNGs are refused, never flattened; colour profiles are ignored."
+            ],
+            "scope": "One captured local page raster; pixel identity only, no page identity unless a declared origin matches."
+          },
+          {
+            "id": "model",
+            "direction": "input",
+            "kind": "file",
+            "format": "Tesseract traineddata",
+            "traits": {
+              "language": "eng",
+              "engine": "LSTM"
+            },
+            "losses": [
+              "Pinned by SHA-256 and captured per run; no download, no other language, no global tessdata."
+            ],
+            "scope": "One local regular file <=64MiB."
+          },
+          {
+            "id": "origin-summary",
+            "direction": "input",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "producer": "MuPDF review-summary.json"
+            },
+            "losses": [
+              "Only the declared page entry's width, height and RGB-pixel SHA-256 are checked against the image; the MuPDF run is not re-verified."
+            ],
+            "scope": "Optional declared origin of the page image."
+          },
+          {
+            "id": "ocr-text",
+            "direction": "output",
+            "kind": "text",
+            "format": "UTF-8",
+            "traits": {
+              "status": "machine-draft",
+              "units": null
+            },
+            "losses": [
+              "One local opaque 8-bit RGB PNG page, non-interlaced and without alpha or tRNS, at most 16MiB, 4096 pixels per side and 4,194,304 pixels; no alpha, palette, grey, 16-bit, interlaced, animated, TIFF/JPEG, multipage, PDF or remote input. Colour profiles and gamma are ignored by the recogniser and not applied.",
+              "One explicit English fast-or-best LSTM model supplied as a local regular file pinned by SHA-256 (at most 64MiB, engine mode 1). It is captured into the run and hashed before and after the native run; the SHA-256 pin identifies the bytes, and nothing verifies that the model is actually English; global traineddata, TESSDATA_PREFIX, configuration files and authored native flags are never used.",
+              "Explicit page segmentation only (uniform-block is --psm 6, single-line is --psm 7). A wrong choice for the layout can yield fewer words, no text or wrong text; no automatic layout analysis, orientation detection, columns, tables, handwriting or non-English scripts are offered.",
+              "Native CPU, one thread, fixed output configuration (text and TSV), no dictionary or user words, no whitelist, no hOCR/ALTO/PDF output. Output is Tesseract 5.5.3 observed behaviour on the recorded pixels only.",
+              "Coordinates are whole pixels with a top-left origin in the source image: the page record must equal the image size and every box must lie inside it; right and bottom edges are exclusive. Boxes are the recogniser's own and are not independently segmented.",
+              "Confidence is native decimal text from 0 to 100, uncalibrated. Text is the TSV words in native record order, joined by single spaces and newlines; recognition accuracy, spelling, reading order for complex layouts and content truth are not certified.",
+              "The result identifies pixels, not a page. Origin is retained only when a MuPDF review summary is declared and its page entry matches the image width, height and RGB-pixel SHA-256; the MuPDF run itself is not re-verified here and an image without an origin has no page, document or capture identity."
+            ],
+            "scope": "TSV words joined in native record order; paragraph separators and trailing whitespace are not preserved."
+          },
+          {
+            "id": "word-boxes",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "coordinates": "top-left pixel",
+              "confidence": "native 0-100 uncalibrated"
+            },
+            "losses": [
+              "Boxes are the recogniser's own, not independently segmented; confidence is not accuracy."
+            ],
+            "scope": "Per-word block/paragraph/line/word indices, box and confidence."
+          },
+          {
+            "id": "ocr-summary",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "status": "machine-draft"
+            },
+            "losses": [
+              "Bindings and counts only; no truth, review or identity claim."
+            ],
+            "scope": "Image/model/runtime/settings bindings, counts, origin state and review statement."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "Read the machine-draft page text, word boxes and summary.",
+            "limits": "Draft review only; no overlay, no editing, no accuracy claim."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Edit the image or model path and pin, pageSegmentation, optional dpi or origin; plan fresh and verify. Same-path byte changes invalidate workflow reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Image artifacts from verified producers are consumed through normal workflow jobs; OCR publications are text artifacts. Pandoc OCR-block ingestion is not offered."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared expressions and finite visits resolve before planning."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Captured image, model and optional origin-summary bytes participate in reuse identity."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Shared JSON editing, undo and validation support the closed document."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Shared forms expose image, model, origin, language, segmentation and dpi."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native-inspection hook; the summary is a publication."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial local subprocess only."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "A page is one explicit image, not a temporal dataset."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No live application connection."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "The captured image is retained; no edited image is saved."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Only recognition of one page; no format conversion."
+          }
+        },
+        "cases": [
+          {
+            "id": "two-line-page",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Synthetic 483x228 opaque RGB page drawn with DejaVu Sans Bold (committed fixture): the literal words and their ink positions (measured from the PNG pixels by tools/qualify_tesseract_fixtures.py, first-line and RIVER left edges within 1 px) are known independently of OCR. Scope is this fixture, the pinned eng fast model and Tesseract 5.5.3 only; accuracy is not certified. Baseline.",
+            "checks": [
+              {
+                "file": "page.txt",
+                "format": "text",
+                "expected": "NORTH 4096\nRIVER 1357\n",
+                "pointer": ""
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/wordCount",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/page/width",
+                "expected": 483,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/page/height",
+                "expected": 228,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/0/text",
+                "expected": "NORTH",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/0/box/left",
+                "expected": 45,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/0/box/top",
+                "expected": 50,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/1/text",
+                "expected": "4096",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/1/box/left",
+                "expected": 283,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/1/box/top",
+                "expected": 50,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/2/text",
+                "expected": "RIVER",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/2/box/left",
+                "expected": 45,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/3/text",
+                "expected": "1357",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ocr-summary.json",
+                "format": "json",
+                "pointer": "/review/ocrTruthCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ocr-summary.json",
+                "format": "json",
+                "pointer": "/origin/state",
+                "expected": "unknown",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "changed-word",
+            "example": "variant",
+            "edits": [],
+            "scope": "Synthetic 483x228 opaque RGB page drawn with DejaVu Sans Bold (committed fixture): the literal words and their ink positions (measured from the PNG pixels by tools/qualify_tesseract_fixtures.py, first-line and RIVER left edges within 1 px) are known independently of OCR. Scope is this fixture, the pinned eng fast model and Tesseract 5.5.3 only; accuracy is not certified. One changed word pair (1357 to 2468) must change the text.",
+            "checks": [
+              {
+                "file": "page.txt",
+                "format": "text",
+                "expected": "NORTH 4096\nRIVER 2468\n",
+                "pointer": ""
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/wordCount",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/page/width",
+                "expected": 483,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/page/height",
+                "expected": 228,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/0/text",
+                "expected": "NORTH",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/0/box/left",
+                "expected": 45,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/0/box/top",
+                "expected": 50,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/1/text",
+                "expected": "4096",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/1/box/left",
+                "expected": 283,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/1/box/top",
+                "expected": 50,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/2/text",
+                "expected": "RIVER",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/2/box/left",
+                "expected": 45,
+                "absolute": 1,
+                "relative": 0
+              },
+              {
+                "file": "words.json",
+                "format": "json",
+                "pointer": "/words/3/text",
+                "expected": "2468",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ocr-summary.json",
+                "format": "json",
+                "pointer": "/review/ocrTruthCertified",
+                "expected": false,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "ocr-summary.json",
+                "format": "json",
+                "pointer": "/origin/state",
+                "expected": "unknown",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "New bounded scanned-page OCR route schemaxis.tesseract/1: recognizePage with pinned model, explicit segmentation, strict TSV verification, optional declared MuPDF origin, workflow image-artifact consumption and offline verification.",
+        "review": [
+          "verification/2026-10-25-tesseract-63.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native-inspection hook; the summary is a publication.",
+          "mpi": "Serial local subprocess only.",
+          "time-batches": "A page is one explicit image, not a temporal dataset.",
+          "live-editing": "No live application connection.",
+          "native-save": "The captured image is retained; no edited image is saved.",
+          "conversion": "Only recognition of one page; no format conversion."
+        }
+      }
+    }
+  }
+}

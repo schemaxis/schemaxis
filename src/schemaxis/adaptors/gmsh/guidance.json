@@ -3,11 +3,10 @@
   "operations": {
     "box": {
       "status": "reviewed",
-      "explanation": "Creates an axis-aligned rectangular solid with gmsh.model.occ.addBox from a minimum corner and three extents in millimetres, as the solid source for a tetrahedral node. Choose it for test domains, channel sections and mesh-size studies where no CAD file is needed; its exact volume and bounds let verification compare the mesh with analytic values. Use readSTEP for any other shape. The solid is not published by itself; only the tetrahedral node publishes files.",
+      "explanation": "Creates an axis-aligned rectangular solid with gmsh.model.occ.addBox from a minimum corner and three extents in millimetres, as the solid source for a tetrahedral node. Choose it for test domains, channel sections and mesh-size studies where no CAD file is needed; its exact volume and bounds let verification compare the mesh with analytic values. Use cylinder, hollowCylinder or sphere for those primitives, or readSTEP for other shapes. The solid is not published by itself; only the tetrahedral node publishes files.",
       "sources": [
-        "src/schemaxis/adaptors/gmsh/adaptor.py:40-42",
-        "src/schemaxis/adaptors/gmsh/adaptor.py:268-271",
-        "src/schemaxis/adaptors/gmsh/native.py:22-23",
+        "src/schemaxis/adaptors/gmsh/adaptor.py",
+        "src/schemaxis/adaptors/gmsh/native.py",
         "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc",
         "docs/gmsh.md#editable-input",
         "docs/gmsh.md#native-acceptance",
@@ -28,11 +27,8 @@
       "status": "reviewed",
       "explanation": "Imports exactly one solid from a single-file STEP document with gmsh.model.occ.importShapes, converting its length unit to millimetres. Choose it to mesh a real CAD part, such as a FreeCAD STEP artifact in a workflow. The file bytes are captured (digest and retained copy) before meshing, and the volume and bounds measured by OpenCASCADE become the reference for verification. Feature history and STEP labels are not imported; name faces with the tetrahedral faceGroups.",
       "sources": [
-        "src/schemaxis/adaptors/gmsh/adaptor.py:43-44",
-        "src/schemaxis/adaptors/gmsh/adaptor.py:78-79",
-        "src/schemaxis/adaptors/gmsh/adaptor.py:128-137",
-        "src/schemaxis/adaptors/gmsh/adaptor.py:180-187",
-        "src/schemaxis/adaptors/gmsh/native.py:24-29",
+        "src/schemaxis/adaptors/gmsh/adaptor.py",
+        "src/schemaxis/adaptors/gmsh/native.py",
         "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc",
         "https://gmsh.info/doc/texinfo/gmsh.html#Geometry-options",
         "docs/gmsh.md#editable-input",
@@ -51,22 +47,25 @@
     },
     "tetrahedral": {
       "status": "reviewed",
-      "explanation": "Meshes the preceding solid with first-order (4-node) tetrahedra using Gmsh's Delaunay 3D algorithm at a global target size, optionally finer near named boundaries, and assigns one named physical volume plus named planar face groups and a remainder boundary. It publishes result.msh (ASCII MSH 2.2 with names), volume.vtu and boundary.vtu (numeric physicalTag per cell, with quality arrays on the volume) and mesh-summary.json (name and tag map, mm units, counts, CAD and mesh volume, quality distributions). Every mesh is reopened in a fresh Gmsh process and checked independently for positive volumes, a closed boundary, face membership and agreement with the CAD volume. Add the top-level refinement object to refine until measured requirements pass.",
+      "explanation": "Meshes the preceding solid with first-order (4-node) tetrahedra using the chosen Delaunay or HXT 3D algorithm at a global target size, optionally finer near named boundaries, and assigns one named physical volume plus named planar face groups, named whole analytic cylindrical wall groups (bore wall, hole wall, shaft surface) with a proven material side, and a remainder boundary that may be empty when those groups cover the whole boundary. It publishes result.msh (ASCII MSH 2.2 with names), volume.vtu and boundary.vtu (numeric physicalTag per cell, with quality arrays on the volume) and mesh-summary.json (name and tag map, mm units, counts, CAD and mesh volume, quality distributions). Every mesh is reopened in a fresh Gmsh process and checked independently for positive volumes, a closed boundary, face membership and agreement with the CAD volume; every boundary triangle of a named wall is re-proven from coordinates, with measured chord deviation. Add the top-level refinement object to refine until measured requirements pass.",
       "sources": [
-        "src/schemaxis/adaptors/gmsh/adaptor.py:45-51",
-        "src/schemaxis/adaptors/gmsh/adaptor.py:215-279",
-        "src/schemaxis/adaptors/gmsh/native.py:30-126",
+        "src/schemaxis/adaptors/gmsh/adaptor.py",
+        "src/schemaxis/adaptors/gmsh/native.py",
         "src/schemaxis/adaptors/gmsh/mesh.py",
         "src/schemaxis/adaptors/gmsh/quality.py",
         "https://gmsh.info/doc/texinfo/gmsh.html#MSH-file-format-version-2-_0028Legacy_0029",
         "docs/gmsh.md#publications-and-meaning",
         "docs/gmsh.md#inspection-verification-and-recovery",
-        "src/schemaxis/adaptors/gmsh/capabilities.py"
+        "src/schemaxis/adaptors/gmsh/capabilities.py",
+        "src/schemaxis/adaptors/gmsh/cylinders.py",
+        "docs/gmsh.md#named-cylindrical-walls"
       ],
       "pitfalls": [
         "size is a target edge length in mm, not a guarantee of element count, maximum edge length or shape quality.",
         "The VTU files carry numeric tags only; keep mesh-summary.json for group names and units.",
-        "Outputs are bounded to 50000 nodes and 200000 cells, linear elements only, and no boundary conditions are applied."
+        "Outputs are bounded to 50000 nodes and 200000 cells, linear elements only, and no boundary conditions are applied.",
+        "Name a cylindrical wall with cylinderGroups, not faceGroups; only typed analytic world-axis cylinders are selectable (see cadSurfaces in mesh-summary.json).",
+        "Chord deviation falls roughly with the square of the edge length; a requirement tighter than the cell budget allows ends a refinement study with STUDY_REQUIREMENTS_NOT_MET."
       ],
       "examples": [
         {
@@ -76,6 +75,80 @@
         {
           "reference": "examples/schemaxis/gmsh-boundary-sizing.json",
           "purpose": "Name two opposite x faces and refine the mesh near one of them."
+        },
+        {
+          "reference": "examples/schemaxis/gmsh-named-sleeve.json",
+          "purpose": "Name two caps, a bore and an outer wall; the remainder is empty."
+        },
+        {
+          "reference": "examples/schemaxis/freecad-gmsh-bores.json",
+          "purpose": "FreeCAD plate with two equal bores, one named per hole, with local sizing near one."
+        }
+      ]
+    },
+    "cylinder": {
+      "status": "reviewed",
+      "explanation": "Constructs a full right circular cylinder as one solid for tetrahedral meshing. origin is the centre of the starting disk, axis chooses a positive world direction, radius and height are in millimetres. Use this for rods and cylindrical specimens without a CAD file; choose hollowCylinder for a through bore. The host independently checks CAD volume pi*r²*h, analytic bounds and radial containment of every mesh node. The solid is consumed by tetrahedral; it is not separately published. Linear triangles approximate circular caps and the lateral surface. Name the lateral wall with tetrahedral cylinderGroups (side outer, radius equal to this radius, centre equal to origin) to apply loads or constraints by name.",
+      "sources": [
+        "src/schemaxis/adaptors/gmsh/adaptor.py",
+        "src/schemaxis/adaptors/gmsh/native.py",
+        "src/schemaxis/adaptors/gmsh/geometry.py",
+        "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+        "docs/gmsh.md#curved-primitives-and-discretisation"
+      ],
+      "pitfalls": [
+        "A target mesh size is not a geometric-error guarantee; inspect the independently measured volume error.",
+        "Named circular or annular planar caps require an explicit areaTolerance; the strict default detects their discretisation loss."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/gmsh-cylinder.json",
+          "purpose": "Editable millimetre-scale cylinder mesh with analytic acceptance checks."
+        }
+      ]
+    },
+    "hollowCylinder": {
+      "status": "reviewed",
+      "explanation": "Constructs a straight annular solid by subtracting a coaxial through cylinder from a larger cylinder, consuming both tools and requiring exactly one resulting volume. Use it for tubes and sleeves without authoring a boolean tree. origin is the starting annulus centre; axis is positive x, y or z. radius is the outer radius, innerRadius the bore radius; their difference must be at least 0.001 mm. Independent verification checks pi*(radius²-innerRadius²)*height, bounds and each node against the outer radius and bore. Both curved walls remain in the remainder boundary group unless you name them with tetrahedral cylinderGroups (bore: side inner at innerRadius; outside: side outer at radius), which also lets the remainder be empty when the caps are named too.",
+      "sources": [
+        "src/schemaxis/adaptors/gmsh/adaptor.py",
+        "src/schemaxis/adaptors/gmsh/native.py",
+        "src/schemaxis/adaptors/gmsh/geometry.py",
+        "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+        "docs/gmsh.md#curved-primitives-and-discretisation"
+      ],
+      "pitfalls": [
+        "A target mesh size is not a geometric-error guarantee; inspect the independently measured volume error.",
+        "Named circular or annular planar caps require an explicit areaTolerance; the strict default detects their discretisation loss."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/gmsh-hollow-cylinder.json",
+          "purpose": "Editable millimetre-scale hollowCylinder mesh with analytic acceptance checks."
+        },
+        {
+          "reference": "examples/schemaxis/gmsh-named-sleeve.json",
+          "purpose": "Fully named sleeve: caps, bore and outer wall with references keeping selectors in step with the dimensions."
+        }
+      ]
+    },
+    "sphere": {
+      "status": "reviewed",
+      "explanation": "Constructs one complete spherical solid from a centre and radius in millimetres for tetrahedral meshing. Use it for spherical specimens and curved-boundary resolution studies. The host independently checks 4*pi*r³/3, analytic bounds and radial containment of every mesh node. It is a full ball, with no polar cuts, shell thickness or planar caps. Linear boundary triangles inscribe an approximation; choose a small enough mesh size to meet volumeTolerance.",
+      "sources": [
+        "src/schemaxis/adaptors/gmsh/adaptor.py",
+        "src/schemaxis/adaptors/gmsh/native.py",
+        "src/schemaxis/adaptors/gmsh/geometry.py",
+        "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+        "docs/gmsh.md#curved-primitives-and-discretisation"
+      ],
+      "pitfalls": [
+        "A sphere has no planar faces; keep its surface in the remainder group."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/gmsh-sphere.json",
+          "purpose": "Editable millimetre-scale sphere mesh with analytic acceptance checks."
         }
       ]
     }
@@ -85,7 +158,7 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "A Gmsh meshing document: one solid source node (box or readSTEP) followed by one tetrahedral node, run in an isolated Gmsh 4.15.x Python process. A successful run publishes result.msh (ASCII MSH 2.2 with named physical groups), volume.vtu, boundary.vtu and mesh-summary.json, after the mesh has been reopened in a fresh Gmsh process and checked independently (positive cell volumes, closed boundary, face membership, volume against CAD). Add the optional refinement object to mesh repeatedly at smaller sizes until declared quality or resolution requirements pass.",
+          "explanation": "A Gmsh meshing document: one solid source node (box, cylinder, hollowCylinder, sphere or readSTEP) followed by one tetrahedral node, run in an isolated Gmsh 4.15.x Python process. A successful run publishes result.msh (ASCII MSH 2.2 with named physical groups), volume.vtu, boundary.vtu and mesh-summary.json, after the mesh has been reopened in a fresh Gmsh process and checked independently (positive cell volumes, closed boundary, face membership, volume against CAD). Add the optional refinement object to mesh repeatedly at smaller sizes until declared quality or resolution requirements pass.",
           "pitfalls": [
             "The document prepares a mesh only: face and volume names are labels for a downstream solver; no materials, loads or boundary conditions are assigned.",
             "Every length in the document is in millimetres; there is no unit conversion for authored values."
@@ -124,8 +197,7 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:57-111",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:162-212",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
             "docs/gmsh.md#publications-and-meaning",
             "docs/gmsh.md#inspection-verification-and-recovery"
           ]
@@ -149,15 +221,15 @@
             "mm"
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:61",
-            "src/schemaxis/adaptors/gmsh/native.py:24-26",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "https://gmsh.info/doc/texinfo/gmsh.html#Geometry-options",
             "docs/gmsh.md#editable-input"
           ]
         },
         "/properties/nodes": {
           "status": "reviewed",
-          "explanation": "The meshing chain, which always has exactly two nodes in a fixed order: first the solid source (box or readSTEP), then the tetrahedral node whose inputs.input names the first node. Node ids must be distinct. Any other count or order fails planning with INVALID_DOCUMENT or INVALID_DEPENDENCY.",
+          "explanation": "The meshing chain, which always has exactly two nodes in a fixed order: first the solid source (box, cylinder, hollowCylinder, sphere or readSTEP), then the tetrahedral node whose inputs.input names the first node. Node ids must be distinct. Any other count or order fails planning with INVALID_DOCUMENT or INVALID_DEPENDENCY.",
           "label": "Nodes",
           "pitfalls": [
             "To mesh a different shape, replace the first node (for example box by readSTEP) rather than adding a third node."
@@ -191,13 +263,13 @@
             ]
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:62-77",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
             "docs/gmsh.md#editable-input"
           ]
         },
         "/properties/nodes/items": {
           "status": "reviewed",
-          "explanation": "One node of the two-node meshing chain. Its filter selects the operation: box or readSTEP is only valid in the first position and tetrahedral only in the second.",
+          "explanation": "One node of the two-node meshing chain. Its filter selects the operation: box, cylinder, hollowCylinder, sphere or readSTEP is only valid in the first position and tetrahedral only in the second.",
           "examples": [
             {
               "id": "solid",
@@ -212,12 +284,12 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:66-77"
+            "src/schemaxis/adaptors/gmsh/adaptor.py"
           ]
         },
         "/properties/nodes/items/oneOf/0": {
           "status": "reviewed",
-          "explanation": "Choose the box node when the domain is a rectangular block that you can describe by a corner and three extents, such as a test domain, channel section or mesh-size study. Because its volume and bounds are known exactly, verification also compares the mesh with the analytic volume and bounds. Choose readSTEP for any other shape.",
+          "explanation": "Choose the box node when the domain is a rectangular block that you can describe by a corner and three extents, such as a test domain, channel section or mesh-size study. Because its volume and bounds are known exactly, verification also compares the mesh with the analytic volume and bounds. Choose another typed primitive or readSTEP for other shapes.",
           "examples": [
             {
               "id": "solid",
@@ -237,8 +309,7 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:40-42",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:268-271",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
             "docs/gmsh.md#editable-input"
           ]
         },
@@ -260,9 +331,8 @@
           "status": "reviewed",
           "explanation": "Position and extents of the axis-aligned box, both in millimetres. size decides the domain and, together with the tetrahedral size, the number of cells; origin only moves the box, which also moves the planes used by faceGroups. Omitted settings take the Schemaxis defaults: origin [0, 0, 0] and size [10, 10, 10].",
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:20",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:41-42",
-            "src/schemaxis/adaptors/gmsh/native.py:22-23"
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py"
           ],
           "examples": [
             {
@@ -296,9 +366,8 @@
             ]
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:20",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:41-42",
-            "src/schemaxis/adaptors/gmsh/native.py:22-23",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc"
           ]
         },
@@ -309,8 +378,8 @@
             0
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:20",
-            "src/schemaxis/adaptors/gmsh/native.py:23"
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py"
           ]
         },
         "/properties/nodes/items/oneOf/0/properties/options/properties/size": {
@@ -330,9 +399,7 @@
             ]
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:41-42",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:97-99",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:268-271",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
             "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc"
           ]
         },
@@ -343,8 +410,8 @@
             10
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:41-42",
-            "src/schemaxis/adaptors/gmsh/native.py:23"
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py"
           ]
         },
         "/properties/nodes/items/oneOf/0/properties/inputs": {
@@ -367,9 +434,8 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:43-44",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:128-137",
-            "src/schemaxis/adaptors/gmsh/native.py:24-29",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "docs/gmsh.md#editable-input"
           ]
         },
@@ -391,7 +457,7 @@
           "status": "reviewed",
           "explanation": "The STEP import has a single required setting, the file. Import behaviour is fixed by Schemaxis: lengths are converted to millimetres, only the highest-dimension entities (solids) are imported, and the format is forced to STEP.",
           "sources": [
-            "src/schemaxis/adaptors/gmsh/native.py:24-29",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "https://gmsh.info/doc/texinfo/gmsh.html#Namespace-gmsh_002fmodel_002focc"
           ],
           "examples": [
@@ -406,7 +472,7 @@
           "label": "STEP file",
           "defaultMeaning": "Required; there is no default.",
           "pitfalls": [
-            "Assemblies or files with several solids fail natively with \"STEP input must contain exactly one solid volume\"; export one fused solid.",
+            "Assemblies or files with several solids are refused with UNSUPPORTED_RESOURCE (\"STEP input must contain exactly one solid volume\") located at this file option; export one fused solid.",
             "Editing the file changes its digest: earlier results are not reused, and a refinement study fails if the bytes change between attempts.",
             "Feature history and STEP face labels are not imported; name faces with faceGroups instead."
           ],
@@ -418,10 +484,8 @@
             "/data/part.step"
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:78-79",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:128-137",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:180-187",
-            "src/schemaxis/adaptors/gmsh/native.py:24-29",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "examples/schemaxis/freecad-gmsh-faces-paraview.json"
           ]
         },
@@ -451,9 +515,7 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:45-51",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:71-77",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:101"
+            "src/schemaxis/adaptors/gmsh/adaptor.py"
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/id": {
@@ -474,9 +536,8 @@
           "status": "reviewed",
           "explanation": "Settings for the tetrahedral mesh. The global size has the largest effect on cell count and on how well curved faces are approximated; faceGroups and nearBoundaries name planar faces and refine near them; volumeTolerance sets the volume acceptance check. Omitted settings take the Schemaxis defaults (size 3 mm, names \"domain\" and \"boundary\", no face groups or local sizing, volumeTolerance 0.01). Schemaxis sets the relevant Gmsh mesh options itself and does not read Gmsh configuration files.",
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:45-51",
-            "src/schemaxis/adaptors/gmsh/native.py:12",
-            "src/schemaxis/adaptors/gmsh/native.py:63-68"
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py"
           ],
           "examples": [
             {
@@ -489,25 +550,22 @@
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/size": {
           "status": "reviewed",
-          "explanation": "Global target edge length of the tetrahedra. Schemaxis passes it to Gmsh as Mesh.MeshSizeMax (and as Mesh.MeshSizeMin when no nearBoundaries rule is smaller) with sizes from CAD points, curvature and boundary extension disabled, and meshes with Gmsh's Delaunay 3D algorithm (Mesh.Algorithm3D = 1). Smaller values give more, smaller tetrahedra (the count grows roughly with the inverse cube of size) and follow curved faces more closely, because curvature-based sizing is off.",
+          "explanation": "Global target edge length of the tetrahedra. Schemaxis passes it to Gmsh as Mesh.MeshSizeMax (and as Mesh.MeshSizeMin when no nearBoundaries rule is smaller) with sizes from CAD points, curvature and boundary extension disabled, and meshes with the selected Delaunay or HXT 3D algorithm. Smaller values give more, smaller tetrahedra (the count grows roughly with the inverse cube of size) and follow curved faces more closely, because curvature-based sizing is off.",
           "label": "Target element size",
           "units": "Millimetres",
           "defaultMeaning": "Schemaxis default: 3 mm. Gmsh's own Mesh.MeshSizeMax default (1e+22) never applies because Schemaxis always sets it.",
           "pitfalls": [
             "It is a target, not a bound: individual edges can be longer. Use refinement.requirements.maximumEdgeLength when a bound matters.",
-            "A size that is small relative to the solid is rejected when the estimate 6 × Π(bounding-box extent / smallest size + 1) exceeds 200000. For a box this fails planning with RESOURCE_LIMIT; for readSTEP the bounds are only known after import, so the Gmsh worker fails natively with \"requested mesh size exceeds the 200000-cell work estimate\". Increase size either way."
+            "A size that is small relative to the solid is rejected when the estimate 6 × Π(bounding-box extent / smallest size + 1) exceeds 200000. For a box this fails planning with RESOURCE_LIMIT; for readSTEP the bounds are only known after import, so the Gmsh worker refuses with RESOURCE_LIMIT (\"requested mesh size exceeds the 200000-cell work estimate\") located at the tetrahedral size. Increase size either way."
           ],
           "examples": [
             2.5
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/native.py:37-39",
-            "src/schemaxis/adaptors/gmsh/native.py:63-68",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:97-99",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
             "https://gmsh.info/doc/texinfo/gmsh.html#Mesh-options",
-            "https://gmsh.info/doc/texinfo/gmsh.html#Specifying-mesh-element-sizes",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:84-85",
-            "src/schemaxis/adaptors/gmsh/native.py:37-41"
+            "https://gmsh.info/doc/texinfo/gmsh.html#Specifying-mesh-element-sizes"
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/volumeName": {
@@ -522,8 +580,8 @@
             "part"
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:81-84",
-            "src/schemaxis/adaptors/gmsh/native.py:45",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "docs/gmsh.md#publications-and-meaning",
             "https://gmsh.info/doc/texinfo/gmsh.html#Elementary-entities-vs-physical-groups"
           ]
@@ -540,19 +598,19 @@
             "walls"
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:81-84",
-            "src/schemaxis/adaptors/gmsh/native.py:60-62",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "docs/gmsh.md#editable-input"
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups": {
           "status": "reviewed",
-          "explanation": "Up to 12 named physical surface groups, each holding the whole CAD faces that lie flat on one axis-aligned plane (for example x = 0). Groups receive tags 3, 4, … in list order, and every face not selected goes to boundaryName (tag 2). Use them to name inlets, outlets, fixed or loaded faces for later setup. Each selector must match at least one face, selectors on the same axis must not overlap, and at least one face must remain for the remainder group.",
+          "explanation": "Up to 12 named physical surface groups (shared with cylinderGroups), each holding the whole CAD faces that lie flat on one axis-aligned plane (for example x = 0). Groups receive tags 3, 4, … in list order, and every face not selected goes to boundaryName (tag 2). Use them to name inlets, outlets, fixed or loaded faces for later setup. Each selector must match at least one face, selectors on the same axis must not overlap, and at least one face must remain for the remainder group.",
           "label": "Planar face groups",
           "defaultMeaning": "Schemaxis default: [] (no face groups; the whole exterior belongs to boundaryName).",
           "pitfalls": [
-            "Naming all six faces of a box leaves no remainder and fails natively (\"leave at least one face for the remainder boundary group\"); name at most five.",
-            "Curved or oblique faces cannot be selected; they always belong to the remainder group.",
+            "Naming all six faces of a box leaves no remainder and is refused with INVALID_SELECTION (\"leave at least one face for the remainder boundary group\"). The remainder may be empty only when cylinderGroups are declared and, together with the plane groups, name the whole boundary.",
+            "Planar groups select planes only; name a cylindrical wall with cylinderGroups (typed analytic cylinders on a world axis). Other curved or oblique faces always belong to the remainder group.",
             "Reordering the list changes the numeric tags written to the VTU files."
           ],
           "examples": [
@@ -570,8 +628,8 @@
             ]
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:85-88",
-            "src/schemaxis/adaptors/gmsh/native.py:46-62",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "src/schemaxis/adaptors/gmsh/mesh.py:127-135",
             "docs/gmsh.md#editable-input"
           ]
@@ -587,7 +645,7 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/native.py:47-58"
+            "src/schemaxis/adaptors/gmsh/native.py"
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups/items/properties/name": {
@@ -601,8 +659,8 @@
             "inlet"
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:81-84",
-            "src/schemaxis/adaptors/gmsh/native.py:58",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "docs/gmsh.md#editable-input"
           ]
         },
@@ -617,7 +675,7 @@
             "z"
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/native.py:48-53"
+            "src/schemaxis/adaptors/gmsh/native.py"
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups/items/properties/coordinate": {
@@ -626,13 +684,13 @@
           "label": "Plane coordinate",
           "units": "Millimetres (world coordinates)",
           "pitfalls": [
-            "If no face lies on the plane, meshing fails with \"face selector … is empty\"; check cadBounds in mesh-summary.json or the CAD model coordinates."
+            "If no face lies on the plane, meshing is refused with INVALID_SELECTION (\"face selector … is empty\"), located at that faceGroups entry; check cadBounds in mesh-summary.json or the CAD model coordinates."
           ],
           "examples": [
             10
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/native.py:47-53",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "docs/gmsh.md#editable-input"
           ]
         },
@@ -646,8 +704,8 @@
             0.0001
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:85-88",
-            "src/schemaxis/adaptors/gmsh/native.py:52",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "src/schemaxis/adaptors/gmsh/mesh.py:127-135",
             "docs/gmsh.md#editable-input"
           ]
@@ -671,9 +729,9 @@
             ]
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/native.py:72-94",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "src/schemaxis/adaptors/gmsh/sizing.py",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:89-96",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
             "https://gmsh.info/doc/texinfo/gmsh.html#Gmsh-mesh-size-fields",
             "docs/gmsh.md#meshing-intent-near-named-boundaries"
           ]
@@ -689,8 +747,8 @@
             }
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:89-96",
-            "src/schemaxis/adaptors/gmsh/native.py:74-88"
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py"
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/nearBoundaries/items/properties/boundary": {
@@ -704,8 +762,8 @@
             "fixed"
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:89-93",
-            "src/schemaxis/adaptors/gmsh/native.py:72-78"
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py"
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/nearBoundaries/items/properties/size": {
@@ -720,10 +778,8 @@
             0.75
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:94-97",
-            "src/schemaxis/adaptors/gmsh/native.py:38",
-            "src/schemaxis/adaptors/gmsh/native.py:63",
-            "src/schemaxis/adaptors/gmsh/native.py:81-82",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "https://gmsh.info/doc/texinfo/gmsh.html#Gmsh-mesh-size-fields"
           ]
         },
@@ -739,7 +795,7 @@
             2
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/native.py:77-83",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "https://gmsh.info/doc/texinfo/gmsh.html#Gmsh-mesh-size-fields",
             "docs/gmsh.md#meshing-intent-near-named-boundaries"
           ]
@@ -758,8 +814,8 @@
             1e-06
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:272",
-            "src/schemaxis/adaptors/gmsh/native.py:33-34",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
             "docs/gmsh.md#editable-input",
             "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
           ]
@@ -773,13 +829,13 @@
         },
         "/properties/nodes/items/oneOf/2/properties/inputs/properties/input": {
           "status": "reviewed",
-          "explanation": "Id of the solid node (the box or readSTEP node in the first position) to be meshed. Any other value fails planning with INVALID_DEPENDENCY.",
+          "explanation": "Id of the solid node (the box, cylinder, hollowCylinder, sphere or readSTEP node in the first position) to be meshed. Any other value fails planning with INVALID_DEPENDENCY.",
           "label": "Solid",
           "examples": [
             "solid"
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:75-77"
+            "src/schemaxis/adaptors/gmsh/adaptor.py"
           ]
         },
         "/properties/output": {
@@ -793,8 +849,7 @@
             "mesh"
           ],
           "sources": [
-            "src/schemaxis/adaptors/gmsh/adaptor.py:53",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:101",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
             "docs/gmsh.md#publications-and-meaning",
             "docs/gmsh.md#bounded-refinement-under-explicit-requirements",
             "examples/schemaxis/freecad-gmsh-faces-paraview.json"
@@ -956,7 +1011,7 @@
           ],
           "sources": [
             "src/schemaxis/adaptors/gmsh/refinement.py:96-97",
-            "src/schemaxis/adaptors/gmsh/adaptor.py:272",
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
             "docs/gmsh.md#bounded-refinement-under-explicit-requirements"
           ]
         },
@@ -1015,6 +1070,638 @@
           "sources": [
             "src/schemaxis/adaptors/gmsh/refinement.py:98-102",
             "examples/schemaxis/gmsh-boundary-refinement.json"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups/items/properties/areaTolerance": {
+          "status": "reviewed",
+          "explanation": "Maximum relative discrepancy between the selected planar group triangle area and its CAD area: abs(meshArea-CADArea)/CADArea. Unitless, default 1e-10, bounded above by 0.02; numerical absolute roundoff allowance is 1e-8 mm². Keep the strict default for polygon faces. Explicitly use an engineering area-loss budget for circular or annular caps, whose straight boundary chords cannot have exact CAD area. Refine size when it fails. This does not relax plane membership or volumeTolerance, and is not a maximum pointwise surface-distance guarantee.",
+          "units": "unitless",
+          "defaultMeaning": "Require the established strict planar polygon area agreement.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/algorithm": {
+          "status": "reviewed",
+          "explanation": "Three-dimensional tetrahedral generation choice: delaunay (default, Mesh.Algorithm3D=1) or hxt (=10). Both produce first-order tetrahedra and use the same size, boundary and independent verification contracts. This unitless choice changes the meshing method, not the acceptance criteria; compare measured quality instead of assuming one is superior.",
+          "defaultMeaning": "Use Gmsh Delaunay 3D meshing.",
+          "sources": [
+            "https://gmsh.info/doc/texinfo/#Mesh-options",
+            "docs/gmsh.md#meshing-decisions"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/optimise": {
+          "status": "reviewed",
+          "explanation": "Boolean controlling Gmsh Mesh.Optimize during generation, true by default. It enables Gmsh tetrahedral quality optimisation; false skips that option. It is unitless and does not guarantee a minimum mean ratio. Inspect measured quality or declare refinement requirements. Native readback records the selected value; HXT may also perform algorithm-internal improvement.",
+          "defaultMeaning": "Enable the standard Gmsh optimisation option.",
+          "sources": [
+            "https://gmsh.info/doc/texinfo/#Mesh-options",
+            "docs/gmsh.md#meshing-decisions"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3": {
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation",
+            "guidance:operation cylinder"
+          ],
+          "status": "reviewed",
+          "explanation": "Constructs a full right circular cylinder as one solid for tetrahedral meshing. origin is the centre of the starting disk, axis chooses a positive world direction, radius and height are in millimetres. Use this for rods and cylindrical specimens without a CAD file; choose hollowCylinder for a through bore. The host independently checks CAD volume pi*r²*h, analytic bounds and radial containment of every mesh node. The solid is consumed by tetrahedral; it is not separately published. Linear triangles approximate circular caps and the lateral surface.",
+          "pitfalls": [
+            "A target mesh size is not a geometric-error guarantee; inspect the independently measured volume error.",
+            "Named circular or annular planar caps require an explicit areaTolerance; the strict default detects their discretisation loss."
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md",
+            "guidance:/properties/nodes/items/oneOf/0/properties/id"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Selects cylinder as the solid-source operation. This literal operation name is unitless; use the tetrahedral node to generate publications.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options": {
+          "status": "reviewed",
+          "explanation": "Dimensions and placement of this cylinder solid, in millimetres. Omitted members use the field defaults; unknown native options are refused.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/origin": {
+          "status": "reviewed",
+          "explanation": "Centre of the starting circular or annular cap in world x/y/z millimetres, default [0,0,0]. It is not the bounding-box minimum corner; the opposite cap is height along the selected positive axis. Face-group coordinates are absolute world coordinates.",
+          "units": "mm",
+          "defaultMeaning": "The starting cap is centred at the world origin.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/origin/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate in the ordered [x,y,z] world vector, in millimetres; each component is between -100000 and 100000. The vector default supplies zero for all three coordinates when the field is omitted.",
+          "units": "mm",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/axis": {
+          "status": "reviewed",
+          "explanation": "Positive world direction of the cylinder length: x, y or z, default z. This is a unitless direction choice, not an angle or arbitrary vector; radius spans the other two axes. Changing axis also changes the cap planes to select.",
+          "units": "unitless",
+          "defaultMeaning": "The cylinder extends along positive z.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Outer radius of the circular cross-section (or ball), in mm, default 5, between 0.001 and 100000. This is half the diameter. For a hollowCylinder it must exceed innerRadius by at least 0.001 mm. Very large solids or small mesh sizes can exceed the bounded work estimate.",
+          "units": "mm",
+          "defaultMeaning": "A 5 mm outer radius is used.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/options/properties/height": {
+          "status": "reviewed",
+          "explanation": "Positive distance between the two cap planes in mm, default 10, between 0.001 and 100000. Length extends along the selected positive axis from origin; this is not an absolute end coordinate.",
+          "units": "mm",
+          "defaultMeaning": "The cylinder is 10 mm long.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/3/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md",
+            "guidance:/properties/nodes/items/oneOf/0/properties/inputs"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4": {
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation",
+            "guidance:operation hollowCylinder"
+          ],
+          "status": "reviewed",
+          "explanation": "Constructs a straight annular solid by subtracting a coaxial through cylinder from a larger cylinder, consuming both tools and requiring exactly one resulting volume. Use it for tubes and sleeves without authoring a boolean tree. origin is the starting annulus centre; axis is positive x, y or z. radius is the outer radius, innerRadius the bore radius; their difference must be at least 0.001 mm. Independent verification checks pi*(radius²-innerRadius²)*height, bounds and each node against the outer radius and bore. Both curved walls remain in the remainder boundary group unless planar caps are named; there is no separate inner-wall selector.",
+          "pitfalls": [
+            "A target mesh size is not a geometric-error guarantee; inspect the independently measured volume error.",
+            "Named circular or annular planar caps require an explicit areaTolerance; the strict default detects their discretisation loss."
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md",
+            "guidance:/properties/nodes/items/oneOf/0/properties/id"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Selects hollowCylinder as the solid-source operation. This literal operation name is unitless; use the tetrahedral node to generate publications.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options": {
+          "status": "reviewed",
+          "explanation": "Dimensions and placement of this hollowCylinder solid, in millimetres. Omitted members use the field defaults; unknown native options are refused.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/origin": {
+          "status": "reviewed",
+          "explanation": "Centre of the starting circular or annular cap in world x/y/z millimetres, default [0,0,0]. It is not the bounding-box minimum corner; the opposite cap is height along the selected positive axis. Face-group coordinates are absolute world coordinates.",
+          "units": "mm",
+          "defaultMeaning": "The starting cap is centred at the world origin.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/origin/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate in the ordered [x,y,z] world vector, in millimetres; each component is between -100000 and 100000. The vector default supplies zero for all three coordinates when the field is omitted.",
+          "units": "mm",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/axis": {
+          "status": "reviewed",
+          "explanation": "Positive world direction of the cylinder length: x, y or z, default z. This is a unitless direction choice, not an angle or arbitrary vector; radius spans the other two axes. Changing axis also changes the cap planes to select.",
+          "units": "unitless",
+          "defaultMeaning": "The cylinder extends along positive z.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Outer radius of the circular cross-section (or ball), in mm, default 5, between 0.001 and 100000. This is half the diameter. For a hollowCylinder it must exceed innerRadius by at least 0.001 mm. Very large solids or small mesh sizes can exceed the bounded work estimate.",
+          "units": "mm",
+          "defaultMeaning": "A 5 mm outer radius is used.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/innerRadius": {
+          "status": "reviewed",
+          "explanation": "Radius of the coaxial through bore in mm, default 3, between 0.001 and 100000. It must be at least 0.001 mm smaller than radius; zero is not a bore and requires cylinder instead. The bore spans the complete height and leaves one annular solid.",
+          "units": "mm",
+          "defaultMeaning": "A 3 mm through-bore radius is used.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/options/properties/height": {
+          "status": "reviewed",
+          "explanation": "Positive distance between the two cap planes in mm, default 10, between 0.001 and 100000. Length extends along the selected positive axis from origin; this is not an absolute end coordinate.",
+          "units": "mm",
+          "defaultMeaning": "The cylinder is 10 mm long.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/4/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md",
+            "guidance:/properties/nodes/items/oneOf/0/properties/inputs"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5": {
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation",
+            "guidance:operation sphere"
+          ],
+          "status": "reviewed",
+          "explanation": "Constructs one complete spherical solid from a centre and radius in millimetres for tetrahedral meshing. Use it for spherical specimens and curved-boundary resolution studies. The host independently checks 4*pi*r³/3, analytic bounds and radial containment of every mesh node. It is a full ball, with no polar cuts, shell thickness or planar caps. Linear boundary triangles inscribe an approximation; choose a small enough mesh size to meet volumeTolerance.",
+          "pitfalls": [
+            "A sphere has no planar faces; keep its surface in the remainder group."
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/id": {
+          "status": "reference",
+          "explanation": "Give this object a unique name. References use this name to identify the result or object.",
+          "sources": [
+            "docs/studio-adaptor-contract.md",
+            "guidance:/properties/nodes/items/oneOf/0/properties/id"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/filter": {
+          "status": "reviewed",
+          "explanation": "Selects sphere as the solid-source operation. This literal operation name is unitless; use the tetrahedral node to generate publications.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options": {
+          "status": "reviewed",
+          "explanation": "Dimensions and placement of this sphere solid, in millimetres. Omitted members use the field defaults; unknown native options are refused.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/centre": {
+          "status": "reviewed",
+          "explanation": "Centre of the complete sphere in world x/y/z millimetres, default [0,0,0]. Bounds are centre minus/plus radius on each axis; this is not the minimum corner.",
+          "units": "mm",
+          "defaultMeaning": "The sphere is centred at the world origin.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/centre/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate in the ordered [x,y,z] world vector, in millimetres; each component is between -100000 and 100000. The vector default supplies zero for all three coordinates when the field is omitted.",
+          "units": "mm",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/options/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Outer radius of the circular cross-section (or ball), in mm, default 5, between 0.001 and 100000. This is half the diameter. For a hollowCylinder it must exceed innerRadius by at least 0.001 mm. Very large solids or small mesh sizes can exceed the bounded work estimate.",
+          "units": "mm",
+          "defaultMeaning": "A 5 mm outer radius is used.",
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/adaptor.py",
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/geometry.py",
+            "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+            "docs/gmsh.md#curved-primitives-and-discretisation"
+          ]
+        },
+        "/properties/nodes/items/oneOf/5/properties/inputs": {
+          "status": "reference",
+          "explanation": "Connect named results from other nodes to the input ports of this operation.",
+          "sources": [
+            "docs/studio-adaptor-contract.md",
+            "guidance:/properties/nodes/items/oneOf/0/properties/inputs"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups": {
+          "status": "reviewed",
+          "explanation": "Up to 12 named physical wall groups (shared with faceGroups: faceGroups plus cylinderGroups together may not exceed 12), each holding every whole analytic cylindrical CAD face that lies on one cylinder aligned with a world axis. Groups receive tags after the planar groups, in declared order. Use them to name a bore, a shaft or a sleeve's outer wall so loads, constraints or heat flux can be applied by name later. When planar and cylinder groups together name the whole boundary, the remainder group (tag 2) is empty and absent; the mesh then has no unnamed surface.",
+          "label": "Cylindrical wall groups",
+          "defaultMeaning": "Schemaxis default: [] (no cylinder groups; curved walls belong to boundaryName, as before).",
+          "pitfalls": [
+            "A literal radius or centre goes stale when the solid changes; reference one shared value with $document so selector and solid stay together, or planning refuses with INVALID_SELECTION at that selector.",
+            "Only typed analytic cylinders with a world-axis direction are selectable. Cones, spheres, B-spline approximations of cylinders and oblique cylinders are not; see cadSurfaces in mesh-summary.json for what the CAD actually contains.",
+            "Two groups may not describe the same cylinder, and a box or sphere has no cylindrical wall."
+          ],
+          "examples": [
+            [
+              {
+                "name": "bore",
+                "axis": "x",
+                "centre": [
+                  0,
+                  0,
+                  0
+                ],
+                "radius": 2,
+                "side": "inner"
+              },
+              {
+                "name": "outside",
+                "axis": "x",
+                "centre": [
+                  0,
+                  0,
+                  0
+                ],
+                "radius": 4,
+                "side": "outer"
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items": {
+          "status": "reviewed",
+          "explanation": "One named cylinder selector. Every whole CAD face lying on the cylinder with this axis, centre line, radius and material side joins the group. Verification then classifies every boundary triangle from its coordinates, proves each triangle is on that cylinder and faces the stated side, and measures the wall's chord deviation and unrolled area.",
+          "examples": [
+            {
+              "name": "bore",
+              "axis": "z",
+              "centre": [
+                15,
+                20,
+                0
+              ],
+              "radius": 4,
+              "side": "inner"
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Name of the wall group as written to the MSH and mesh-summary.json. ASCII letters, digits, underscores and hyphens, starting with a letter; unique across the volume, the remainder boundary, every faceGroups name and every cylinderGroups name.",
+          "label": "Wall group name",
+          "pitfalls": [
+            "VTU files carry only the numeric tag; keep mesh-summary.json for the name map."
+          ],
+          "examples": [
+            "bore"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items/properties/axis": {
+          "status": "reviewed",
+          "explanation": "World axis the cylinder is parallel to (x, y or z). The CAD cylinder's axis direction must match within 1e-9 in either sign; oblique cylinders are not selectable.",
+          "label": "Cylinder axis",
+          "pitfalls": [
+            "An oblique cylinder, even with the right radius, matches nothing and is refused with INVALID_SELECTION and a candidate list."
+          ],
+          "examples": [
+            "z"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items/properties/centre": {
+          "status": "reviewed",
+          "explanation": "Any point on the cylinder's axis line, in world millimetres. Its component along axis is ignored, so a primitive's origin can be pasted or referenced unchanged. The two transverse components locate the axis.",
+          "label": "Axis point",
+          "units": "Millimetres (world coordinates)",
+          "pitfalls": [
+            "Using the centre of a different bore of the same radius selects nothing. After STEP import, check cadSurfaces in mesh-summary.json for the exact transverse position."
+          ],
+          "examples": [
+            [
+              45,
+              20,
+              0
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items/properties/centre/items": {
+          "status": "reviewed",
+          "explanation": "One world coordinate of the axis point, in millimetres.",
+          "units": "Millimetres",
+          "examples": [
+            20
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items/properties/radius": {
+          "status": "reviewed",
+          "explanation": "Cylinder radius in millimetres. The CAD face radius plus the axis-line offset must agree with this value within tolerance.",
+          "label": "Radius",
+          "units": "Millimetres",
+          "pitfalls": [
+            "A bore diameter is twice the radius.",
+            "Changing the solid's radius without changing this value is refused when the solid is a primitive; for STEP the native selection refuses with candidates."
+          ],
+          "examples": [
+            4
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items/properties/side": {
+          "status": "reviewed",
+          "explanation": "Which side of the wall is material. outer: material lies inside the radius (a shaft, rod or a sleeve's outside). inner: material lies outside the radius (the wall of a bore). Checked natively by classifying probe points either side of the wall, and again from the mesh by each wall triangle's adjacent tetrahedron, so swapped names are caught.",
+          "label": "Material side",
+          "pitfalls": [
+            "A bore is inner even though it is the inside of a tube; a sleeve's outside is outer."
+          ],
+          "examples": [
+            "inner"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items/properties/tolerance": {
+          "status": "reviewed",
+          "explanation": "Radial and axis-line tolerance in millimetres for matching a CAD face and for classifying mesh vertices. Mesh vertices sit on the CAD wall to about 1e-15 mm, so the default leaves large margin.",
+          "label": "Match tolerance",
+          "units": "Millimetres",
+          "defaultMeaning": "Default 1e-6 mm, the same as planar faceGroups; range 1e-6 to 1e-3.",
+          "examples": [
+            1e-06
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items/properties/areaTolerance": {
+          "status": "reviewed",
+          "explanation": "Maximum relative difference between the wall's unrolled mesh area and its CAD area: abs(unrolledArea-CADArea)/CADArea. The unrolled area (arc length times axial height, from vertex angles) is exact for a full or axis-normal-rimmed wall, so the default is tight (measured error about 1e-15). Unitless; raise it only for a wall whose rim is not an axis-normal circle or axial line (for example an obliquely trimmed face). This is different from chord deviation: the flat facets of a cylinder always lose area, and that loss is reported as maximumChordDeviation, not hidden here.",
+          "label": "Unrolled area tolerance",
+          "units": "unitless",
+          "defaultMeaning": "Default 1e-9: require the unrolled mesh area to equal the CAD wall area.",
+          "examples": [
+            1e-09
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/native.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#named-cylindrical-walls"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/boundaryMaximumChordDeviation": {
+          "status": "reviewed",
+          "explanation": "Requirement that each named cylinder wall's maximum chord deviation stays within a limit. Chord deviation is the largest gap, over the wall's triangles, between the true cylinder and the flat facet, measured from the mesh coordinates alone: radius minus the nearest approach of the triangle's projection to the axis. For an N-sided regular prism it equals radius*(1-cos(pi/N)). The refinement loop shrinks the target size until every listed wall meets its limit or a stopping rule applies.",
+          "label": "Cylinder chord deviation",
+          "pitfalls": [
+            "Only cylinder group names are valid; planar or remainder names are refused.",
+            "A tight limit on a large part may hit the cell budget; the study then ends with STUDY_REQUIREMENTS_NOT_MET and no mesh is exported."
+          ],
+          "examples": [
+            [
+              {
+                "boundary": "bore",
+                "maximum": 0.05
+              }
+            ]
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#chord-deviation-and-refinement"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/boundaryMaximumChordDeviation/items": {
+          "status": "reviewed",
+          "explanation": "One cylinder wall and its allowed chord deviation.",
+          "examples": [
+            {
+              "boundary": "bore",
+              "maximum": 0.05
+            }
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#chord-deviation-and-refinement"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/boundaryMaximumChordDeviation/items/properties/boundary": {
+          "status": "reviewed",
+          "explanation": "Name of a cylinderGroups entry. Names must be distinct and refer to cylinder walls.",
+          "label": "Wall name",
+          "examples": [
+            "bore"
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#chord-deviation-and-refinement"
+          ]
+        },
+        "/properties/refinement/properties/requirements/properties/boundaryMaximumChordDeviation/items/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Largest acceptable chord deviation in millimetres, inclusive. A 16-segment circle has about 0.019*radius deviation; 36 segments about 0.0038*radius.",
+          "label": "Maximum chord deviation",
+          "units": "Millimetres",
+          "pitfalls": [
+            "Smaller is not automatically better: deviation falls roughly with the square of the edge length, so halving it costs about 1.4 times the elements around the circle and more through the volume."
+          ],
+          "examples": [
+            0.05
+          ],
+          "sources": [
+            "src/schemaxis/adaptors/gmsh/refinement.py",
+            "src/schemaxis/adaptors/gmsh/cylinders.py",
+            "docs/gmsh.md#chord-deviation-and-refinement"
           ]
         }
       }

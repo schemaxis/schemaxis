@@ -1,23 +1,29 @@
 # Expanded FreeCAD and Blender workflows
 
-Schemaxis now exposes **22 FreeCAD operations** and **37 Blender operations**, with
-native examples that run in the installed applications. This extends the original
-four-operation CAD adaptor and 21-operation Blender adaptor; it does not claim full
-application parity. Host discovery, planning and schemas still require no native
-application imports or third-party Python packages.
+Schemaxis exposes typed CAD and Blender operations, with native examples that run
+in the installed applications. The linked capability maps track the continuing
+[FreeCAD](freecad-capabilities.md) and [Blender](blender-capabilities.md) programmes;
+these milestones do not claim full application parity. Host discovery, planning
+and schemas require no native application imports or third-party Python packages.
 
 ## FreeCAD: modelling, finishing and imported solids
 
 | Family | Operations | Contract |
 | --- | --- | --- |
 | Primitives | `box`, `cylinder`, `sphere`, `cone`, `torus` | Literal dimensions in mm; explicit origin and supported axes |
-| Boolean solids | `cut`, `fuse`, `common`, `multiFuse` | Native linked features; `multiFuse` fuses 2 to 32 solids in one feature; final output must be one valid solid |
-| Profiles | `polygon`, `rectangle`, `circle` | Closed sketch on XY, XZ or YZ. `polygon`: unique vertices, no self-intersection. `rectangle` (width, height) and `circle` (radius and optional signed centre): fully constrained with the named dimensional constraints `width`, `height` and `radius` |
-| Sketch-based parts | `body`, `pad`, `pocket` | One origin-based Body, constrained XY rectangle/circle profiles, first Pad and linear through-all Pockets; [workflow guide](freecad-part-design.md) |
-| Sweeps | `extrude`, `revolve`, `loft` | Native extrusion/revolution linked to the profile; `loft` blends 2 to 32 profile sections (optionally ruled) into one solid |
-| Finishing | `fillet`, `chamfer` | Geometric edge predicates with exact match counts, or explicit one-based indices |
-| Legacy import | `readSTEP` | One solid; captured immutable STEP input, digest provenance and saved verification from the retained copy; no authored source-unit assertion |
-| Checked import | `importSTEP` | Declared file units and signed-axis orientation, part-frame expectations, editable placement and optional linked refinement; [scope and limits](freecad.md) |
+| Boolean solids | `cut`, `fuse`, `common`, `multiFuse` | Native linked features; bounded multi-solid fusion; final output must be one valid solid |
+| Profiles and paths | `sketch`, `polygon`, `rectangle`, `circle`, `slot`, `holeLocations`, `boltGrid`, `boltCircle`, `arcPath` | Typed constrained line/circle/arc sketches and dimensional intent; explicit frames and checked extreme planar-face attachments; rectangle and circle retain named constraints; [history guide](freecad-histories.md) |
+| Editable Draft outlines | `draftProfile` | Closed straight-edged native Draft Wires with explicit planar frames and checked extrusion/boolean composition; [polygon profile guide](freecad-draft-profiles.md) |
+| Bodies and linear features | `body`, `bodySeed`, `pad`, `pocket` | Independent editable Body histories, checked solid seeds, subsequent Pads, finite or through-all Pockets and persistent length relationships; [workflow guide](freecad-part-design.md), [seed guide](freecad-body-seeds.md) |
+| Rotations and references | `datumAxis`, `bodyRevolve`, `groove` | Named datum axes, bounded native additive/subtractive revolutions and retained profile references |
+| Helical features | `additiveHelix`, `subtractiveHelix` | Typed additive/subtractive Body helices with explicit axes, handedness and checked pitch/height/turns/growth modes; [history guide](freecad-histories.md), [measurement limits](freecad-measurements.md) |
+| Repeated features | `linearPattern`, `polarPattern`, `mirror` | Native history features with checked membership, direction, count and material effects |
+| Body blends and bends | `additiveLoft`, `subtractiveLoft`, `additivePipe`, `subtractivePipe` | Ordered profile sections and connected paths, retained orientation/guide/corner intent; [sweep guide](freecad-sweeps.md) |
+| Machining and walls | `hole`, `shell`, `bodyDraft` | Unthreaded Hole depth/tip/recess intent and uniform Skin thickness with exact opening counts and face-selected mould-release taper; [Hole guide](freecad-drilling.md), [shell guide](freecad-shells.md) |
+| General profile solids | `extrude`, `revolve`, `loft` | Linked profile sweeps; bounded ordered loft sections (optionally ruled) into one solid |
+| Finishing | `fillet`, `chamfer`, `bodyFillet`, `bodyChamfer` | Geometric edge predicates with exact match counts, explicit indices, or native Body history finishing |
+| Legacy import | `readSTEP` | One solid; captured immutable STEP input and saved verification; no authored source-unit assertion |
+| Checked import | `importSTEP`, `importMesh` | Captured STEP solids or manifold STL triangles with declared units/orientation, checked part-frame expectations, editable placement and linked refinement; [STEP scope](freecad.md), [mesh-to-solid scope](freecad-mesh-preparation.md) |
 
 Named `dimensions`, document references and the existing pure document-resolution
 functions now work before CAD option validation. For example, use
@@ -57,9 +63,10 @@ PYTHONPATH=src python3 -m schemaxis inspect \
 Inspection prunes to the selected solid and its dependencies. The output includes
 edge indices, lengths, centres, bounds, endpoints and curve types, plus face areas
 and surface types. Edge indices belong to that particular topology: regenerate the
-inspection after changing upstream features. General persistent face/edge naming,
-FEM and manufacturing constraints are not implemented. The separate
-[assembly route](freecad-assemblies.md) supports bounded fixed trees.
+inspection after changing upstream features. General persistent face/edge repair remains open. Separate routes provide
+[fixed assemblies](freecad-assemblies.md), [technical sheets](freecad-drawings.md)
+and [linear static solid analysis](freecad-analysis.md), each with its own
+source-admission, verification and loss limits.
 
 [Semantic edge selections](freecad-selections.md) can resolve curve type,
 direction, plane and length predicates afresh after parameter changes, with an

@@ -48,6 +48,13 @@ class StudioCaseTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+        # These fixtures deliberately exercise existing native dispatch.
+        from schemaxis.app_modules import ModuleManager
+        module_home = self.root/'app-modules'
+        environment = patch.dict('os.environ', {'SCHEMAXIS_MODULE_HOME': str(module_home)})
+        environment.start()
+        self.addCleanup(environment.stop)
+        ModuleManager(module_home).configure(backend='native', allow_downloads=False)
         session = AdaptorConsoleSession(self.root, provider='workflow')
         self.addCleanup(session.close)
         self.app = ConsoleApplication(session)
@@ -287,6 +294,25 @@ class StudioCaseTests(unittest.TestCase):
         self.assertEqual(result['fault']['code'], 'RUNNER_CANCELLED')
         self.assertNotIn('result', result)
         self.assertFalse(self.app.busy)
+
+    def test_completed_case_is_available_in_shared_results_with_all_run_files(self):
+        from schemaxis.studio_results import StudioResults
+        job = self.request('run')
+        result = self.finish(job)
+        self.assertEqual(result['status'], 'succeeded')
+        results = StudioResults(self.app)
+        library = results.refresh()
+        identity = 'job-' + job['job']
+        rows = library.records(identity, '/viewer/')
+        filenames = {row['relativePath'] for row in rows}
+        self.assertTrue(any(name.endswith('verification.json') for name in filenames))
+        self.assertTrue(any(name.endswith('.metadata.json') for name in filenames))
+        self.assertTrue(any(name.endswith('result.csv') for name in filenames))
+        self.assertTrue(any(name.endswith('authored.json') for name in filenames))
+        self.assertEqual(next(row for row in library.listing()['recent'] if row['id'] == identity)['kind'], 'run')
+        Path(result['result']['outputs'][0]['path']).write_text('changed publication')
+        with self.assertRaisesRegex(ValueError, 'changed after verification'):
+            StudioResults(self.app).refresh().records(identity, '/viewer/')
 
     def test_changed_publications_fail_output_reverification(self):
         job = self.request('run')

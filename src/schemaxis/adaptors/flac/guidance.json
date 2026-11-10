@@ -1,0 +1,282 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "encodeLossless": {
+      "status": "reviewed",
+      "explanation": "Archive one captured PCM16 WAV recording as native lossless FLAC. The host reads the WAV itself, hands the trusted flac only raw 16-bit PCM, and then decodes the published FLAC again in a separate process: every PCM byte must equal the WAV samples and match the FLAC sample count and MD5. Choose it to store a finished or intermediate recording in a smaller file without changing a single sample; it does not edit, resample or normalise audio. Optionally it stores a title, an artist and a description you wrote as native Vorbis comments, so an archive keeps its name with its audio; the host reads the published comment back and requires exactly those labels.",
+      "sources": [
+        "docs/flac.md#what-the-fields-mean",
+        "docs/flac.md#verification-contract",
+        "docs/flac.md#recording-labels"
+      ],
+      "pitfalls": [
+        "Only canonical PCM16 mono or stereo WAV at 8000-192000 Hz, at most 600 seconds and 32 MiB, is accepted; 24-bit, float, multichannel and compressed WAV are refused, not converted.",
+        "WAV LIST and JUNK chunks are dropped and listed in the summary; without metadata the FLAC carries no tags, and it never carries pictures or cue points. The file is not guaranteed to be smaller than the WAV (noise barely compresses).",
+        "A run and a later verification both need the trusted flac (--flac for run, or SCHEMAXIS_FLAC or a stored flac location); verification can never succeed without it.",
+        "metadata labels are author-declared text, not an identity, rights or provenance certificate; they are stored exactly as written (no trimming or Unicode normalisation), must be nonempty visible plain text, and are dropped again by decodePCM16."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/flac-baseline.json",
+          "purpose": "Archive a 48 kHz stereo recording with asymmetric full-scale extrema across two FLAC blocks."
+        },
+        {
+          "reference": "examples/schemaxis/flac-variant.json",
+          "purpose": "Archive an 8 kHz mono recording whose WAV carries a LIST chunk that is dropped."
+        },
+        {
+          "reference": "examples/schemaxis/flac-tag-archive.json",
+          "purpose": "Archive an 8 kHz mono recording with title, artist and description labels, one containing an equals sign."
+        },
+        {
+          "reference": "examples/schemaxis/flac-tag-unicode.json",
+          "purpose": "Archive a 16 kHz stereo recording with non-ASCII labels preserved as exact UTF-8."
+        },
+        {
+          "reference": "examples/schemaxis/flac-tag-workflow.json",
+          "purpose": "Conform with SoX, archive with labels, then decode the archive for reuse; the labels do not travel into the decoded WAV."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
+    },
+    "decodePCM16": {
+      "status": "reviewed",
+      "explanation": "Turn one native FLAC recording into a PCM16 WAV so it can enter speech preparation (SoX conform, then transcription). The host checks STREAMINFO, the metadata framing and the first frame header before anything runs, the trusted flac decodes the frames, and the decoded samples must match the FLAC's own sample count and MD5. Choose it when a recording arrives as FLAC; it does not repair damaged files, resample or change channels.",
+      "sources": [
+        "docs/flac.md#what-the-fields-mean",
+        "docs/flac.md#verification-contract"
+      ],
+      "pitfalls": [
+        "Only native FLAC that starts with fLaC is accepted: Ogg FLAC, ID3-prefixed files, 24-bit, more than two channels, an unknown (zero) sample count or an all-zero MD5 are refused with a distinct fault.",
+        "Damaged frames are refused, never concealed. A matching MD5 proves the file is internally consistent, not that the recording is authentic or unaltered.",
+        "Tags (including title, artist and description labels from an archive), pictures, seek tables and padding are dropped and listed, and no labels can be authored here; the WAV is 44 bytes of header plus PCM and at most 32 MiB, the largest file SoX conform accepts."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/flac-decode.json",
+          "purpose": "Decode a 16 kHz stereo FLAC to PCM16 WAV."
+        },
+        {
+          "reference": "examples/schemaxis/flac-decode-tagged.json",
+          "purpose": "Decode a FLAC that carries tags, a seek table and padding, which are dropped."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
+    }
+  },
+  "routes": {
+    "schemaxis.flac/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Describe one FLAC publication: either archive a PCM16 WAV as lossless FLAC (encodeLossless) or decode a native FLAC to a PCM16 WAV (decodePCM16). The named file is captured as immutable evidence before the native tool runs; the output is the audio file plus a JSON summary of geometry, sizes, hashes, peaks, the STREAMINFO and, when labels were authored, the labels read back from the published file.",
+          "pitfalls": [
+            "Do not author encoder flags, compression levels, tag names, pictures, resampling or channel changes: this contract has none. The only metadata is the optional title, artist and description of encodeLossless."
+          ],
+          "sources": [
+            "docs/flac.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the FLAC publication document contract. This identifies the authored structure, not the installed FLAC release (1.5 is observed and checked at run time).",
+          "pitfalls": [
+            "Use schemaxis.flac/1."
+          ],
+          "sources": [
+            "docs/flac.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose encodeLossless to archive a PCM16 WAV as FLAC, or decodePCM16 to decode a native FLAC to a PCM16 WAV. The operation decides the required file type of source.",
+          "pitfalls": [
+            "Lossy, Ogg FLAC, 24-bit, resampling and metadata editing (beyond the optional encodeLossless labels) are outside this contract."
+          ],
+          "sources": [
+            "docs/flac.md#what-the-fields-mean"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose one absolute local file: a PCM16 mono or stereo .wav for encodeLossless, a native .flac for decodePCM16, at most 600 seconds of 8000-192000 Hz audio. A verified file artifact from an earlier step (for example a SoX conform output or an earlier FLAC publication) can be bound here. Its bytes are captured before processing and decide scheduler reuse.",
+          "pitfalls": [
+            "The file extension must match the operation (.wav to encode, .flac to decode); URLs, relative paths, symlinks and non-regular files are refused.",
+            "Decoded PCM may not exceed a 32 MiB canonical WAV, so a 192 kHz stereo recording is limited to about 43 seconds and a 48 kHz stereo one to about 174 seconds, although 600 seconds is the duration ceiling."
+          ],
+          "fileExtensions": [
+            ".wav",
+            ".flac"
+          ],
+          "sources": [
+            "docs/flac.md#supported-subset-and-refusals"
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Archive variant of the document: version, operation encodeLossless and one source file (.wav). The output is audio.flac plus flac-summary.json.",
+          "sources": [
+            "docs/flac.md#what-the-fields-mean"
+          ]
+        },
+        "/oneOf/0/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.flac/1; it covers both encodeLossless and decodePCM16. The version identifies the document schema, while the native release is FLAC 1.5.",
+          "sources": [
+            "docs/flac.md"
+          ],
+          "pitfalls": [
+            "Use schemaxis.flac/1."
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Fixed to encodeLossless in this variant, which decides that source must be a .wav file.",
+          "sources": [
+            "docs/flac.md#what-the-fields-mean"
+          ],
+          "pitfalls": [
+            "Lossy, Ogg FLAC, 24-bit, resampling and metadata editing (beyond the optional encodeLossless labels) are outside this contract."
+          ]
+        },
+        "/oneOf/0/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose the existing absolute local .wav file to archive: canonical signed PCM16 little-endian, one or two channels, 8000-192000 Hz, at most 600 seconds and a 32 MiB file (LIST and JUNK chunks are dropped). The runner captures its bytes; the original is not modified and later changes invalidate workflow reuse. A workflow handoff {\"$artifact\":\"earlier\",\"index\":0} supplies a verified earlier WAV such as a SoX output.",
+          "sources": [
+            "docs/flac.md#supported-subset-and-refusals"
+          ],
+          "fileExtensions": [
+            ".wav"
+          ],
+          "pitfalls": [
+            "Relative paths, URLs, symlinks, devices, non-WAV files, 24-bit or float WAV and more than two channels are refused with a distinct fault, never converted.",
+            "Duration is at most 600 seconds and the decoded canonical WAV at most 32 MiB, whichever is reached first."
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Decode variant of the document: version, operation decodePCM16 and one source file (.flac). The output is a canonical PCM16 audio.wav plus flac-summary.json.",
+          "sources": [
+            "docs/flac.md#what-the-fields-mean"
+          ]
+        },
+        "/oneOf/1/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.flac/1; it covers both encodeLossless and decodePCM16. The version identifies the document schema, while the native release is FLAC 1.5.",
+          "sources": [
+            "docs/flac.md"
+          ],
+          "pitfalls": [
+            "Use schemaxis.flac/1."
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Fixed to decodePCM16 in this variant, which decides that source must be a .flac file.",
+          "sources": [
+            "docs/flac.md#what-the-fields-mean"
+          ],
+          "pitfalls": [
+            "Lossy, Ogg FLAC, 24-bit, resampling and metadata editing are outside this contract."
+          ]
+        },
+        "/oneOf/1/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose the existing absolute local native .flac file to decode: 16-bit mono or stereo, 8000-192000 Hz, a known length of at most 600 seconds and a nonzero STREAMINFO MD5, with decoded PCM that fits a 32 MiB canonical WAV. The runner captures its bytes; the original is not modified and later changes invalidate workflow reuse. A workflow handoff {\"$artifact\":\"earlier\",\"index\":0} supplies a verified earlier FLAC publication.",
+          "sources": [
+            "docs/flac.md#supported-subset-and-refusals"
+          ],
+          "fileExtensions": [
+            ".flac"
+          ],
+          "pitfalls": [
+            "Relative paths, URLs, symlinks, devices, Ogg FLAC, ID3-prefixed, 24-bit, float and more than two channels are refused with a distinct fault, never converted.",
+            "Duration is at most 600 seconds and the decoded canonical WAV at most 32 MiB, whichever is reached first."
+          ]
+        },
+        "/properties/metadata": {
+          "status": "reviewed",
+          "explanation": "Optional recording labels for an encodeLossless archive: a closed object with any of title, artist and description (at least one). Each becomes one native Vorbis comment (TITLE, ARTIST, DESCRIPTION), in that fixed order, so the archive keeps a human-written name. Omit the whole object for the original untagged archive.",
+          "pitfalls": [
+            "Only these three labels exist; there are no authored tag names, flags, pictures or tags read from files. An empty object, an unknown key or any non-string value is refused before anything runs.",
+            "Labels are author-declared text, not proof of who made or owns the recording; decodePCM16 does not carry them forward."
+          ],
+          "sources": [
+            "docs/flac.md#recording-labels"
+          ]
+        },
+        "/properties/metadata/properties/title": {
+          "status": "reviewed",
+          "explanation": "A short human name for the recording, stored as the TITLE comment exactly as written: 1 to 200 code points and at most 512 UTF-8 bytes of plain visible text. Non-ASCII text, quotes and equals signs are fine.",
+          "pitfalls": [
+            "Control characters (including newlines and tabs), bidirectional controls, lone surrogates, private-use and invisible characters, text with no visible character, and over-long values are refused; nothing is trimmed, cropped or Unicode-normalised."
+          ],
+          "sources": [
+            "docs/flac.md#recording-labels"
+          ]
+        },
+        "/properties/metadata/properties/artist": {
+          "status": "reviewed",
+          "explanation": "Who is credited for the recording, stored as the ARTIST comment exactly as written: 1 to 200 code points and at most 512 UTF-8 bytes of plain visible text. It is a label you declare, not a verified identity.",
+          "pitfalls": [
+            "The text is not checked against any person or rights record, and it is not normalised or cropped; the same character rules as the title apply."
+          ],
+          "sources": [
+            "docs/flac.md#recording-labels"
+          ]
+        },
+        "/properties/metadata/properties/description": {
+          "status": "reviewed",
+          "explanation": "A free-text note about the recording, stored as the DESCRIPTION comment exactly as written: 1 to 1000 code points and at most 3000 UTF-8 bytes of plain visible text on one line.",
+          "pitfalls": [
+            "Line breaks and other control characters are refused, so a multi-line note must be written as one line; the text is declared by the author and is not a provenance or licence statement."
+          ],
+          "sources": [
+            "docs/flac.md#recording-labels"
+          ]
+        },
+        "/oneOf/0/properties/metadata": {
+          "status": "reviewed",
+          "explanation": "Optional recording labels for an encodeLossless archive: a closed object with any of title, artist and description (at least one). Each becomes one native Vorbis comment (TITLE, ARTIST, DESCRIPTION), in that fixed order, so the archive keeps a human-written name. Omit the whole object for the original untagged archive.",
+          "pitfalls": [
+            "Only these three labels exist; there are no authored tag names, flags, pictures or tags read from files. An empty object, an unknown key or any non-string value is refused before anything runs.",
+            "Labels are author-declared text, not proof of who made or owns the recording; decodePCM16 does not carry them forward."
+          ],
+          "sources": [
+            "docs/flac.md#recording-labels"
+          ]
+        },
+        "/oneOf/0/properties/metadata/properties/title": {
+          "status": "reviewed",
+          "explanation": "A short human name for the recording, stored as the TITLE comment exactly as written: 1 to 200 code points and at most 512 UTF-8 bytes of plain visible text. Non-ASCII text, quotes and equals signs are fine.",
+          "pitfalls": [
+            "Control characters (including newlines and tabs), bidirectional controls, lone surrogates, private-use and invisible characters, text with no visible character, and over-long values are refused; nothing is trimmed, cropped or Unicode-normalised."
+          ],
+          "sources": [
+            "docs/flac.md#recording-labels"
+          ]
+        },
+        "/oneOf/0/properties/metadata/properties/artist": {
+          "status": "reviewed",
+          "explanation": "Who is credited for the recording, stored as the ARTIST comment exactly as written: 1 to 200 code points and at most 512 UTF-8 bytes of plain visible text. It is a label you declare, not a verified identity.",
+          "pitfalls": [
+            "The text is not checked against any person or rights record, and it is not normalised or cropped; the same character rules as the title apply."
+          ],
+          "sources": [
+            "docs/flac.md#recording-labels"
+          ]
+        },
+        "/oneOf/0/properties/metadata/properties/description": {
+          "status": "reviewed",
+          "explanation": "A free-text note about the recording, stored as the DESCRIPTION comment exactly as written: 1 to 1000 code points and at most 3000 UTF-8 bytes of plain visible text on one line.",
+          "pitfalls": [
+            "Line breaks and other control characters are refused, so a multi-line note must be written as one line; the text is declared by the author and is not a provenance or licence statement."
+          ],
+          "sources": [
+            "docs/flac.md#recording-labels"
+          ]
+        }
+      }
+    }
+  }
+}

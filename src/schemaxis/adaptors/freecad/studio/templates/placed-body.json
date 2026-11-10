@@ -1,0 +1,182 @@
+{
+  "version": "schemaxis.freecad/1",
+  "parameters": {
+    "thickness": {
+      "kind": "length",
+      "value": {
+        "$fill": "thickness"
+      },
+      "minimum": 5,
+      "maximum": 11
+    }
+  },
+  "nodes": [
+    {
+      "id": "part",
+      "filter": "body",
+      "options": {
+        "frame": {
+          "origin": [
+            {
+              "$fill": "bodyX"
+            },
+            {
+              "$fill": "bodyY"
+            },
+            {
+              "$fill": "bodyZ"
+            }
+          ],
+          "xAxis": [
+            0.6,
+            0.8,
+            0
+          ],
+          "normal": [
+            0.48,
+            -0.36,
+            0.8
+          ]
+        }
+      }
+    },
+    {
+      "id": "outline",
+      "filter": "rectangle",
+      "options": {
+        "width": 24,
+        "height": 16,
+        "frame": {
+          "origin": [
+            3,
+            4,
+            5
+          ],
+          "xAxis": [
+            0,
+            1,
+            0
+          ],
+          "normal": [
+            1,
+            0,
+            0
+          ]
+        }
+      },
+      "inputs": {
+        "body": "part"
+      }
+    },
+    {
+      "id": "slab",
+      "filter": "pad",
+      "inputs": {
+        "body": "part",
+        "profile": "outline"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "thickness": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "bore",
+      "filter": "circle",
+      "options": {
+        "radius": 2,
+        "centre": [
+          3,
+          2
+        ],
+        "frame": {
+          "origin": [
+            3,
+            4,
+            5
+          ],
+          "xAxis": [
+            0,
+            1,
+            0
+          ],
+          "normal": [
+            1,
+            0,
+            0
+          ]
+        }
+      },
+      "inputs": {
+        "body": "part"
+      }
+    },
+    {
+      "id": "finished",
+      "filter": "pocket",
+      "options": {
+        "direction": "forward"
+      },
+      "inputs": {
+        "base": "slab",
+        "profile": "bore"
+      }
+    }
+  ],
+  "output": "finished",
+  "measurements": [
+    {
+      "id": "featureCentre",
+      "node": "finished",
+      "quantity": "centreOfMass"
+    },
+    {
+      "id": "featureBounds",
+      "node": "finished",
+      "quantity": "bounds"
+    },
+    {
+      "id": "intermediateCentre",
+      "node": "slab",
+      "quantity": "centreOfMass"
+    },
+    {
+      "id": "intermediateBounds",
+      "node": "slab",
+      "quantity": "bounds"
+    },
+    {
+      "id": "worldEdges",
+      "node": "slab",
+      "quantity": "edgeCount",
+      "edges": {
+        "where": {
+          "parallelTo": [
+            0.6,
+            0.8,
+            0
+          ]
+        },
+        "expect": 4
+      }
+    },
+    {
+      "id": "worldEdgeLength",
+      "node": "slab",
+      "quantity": "totalEdgeLength",
+      "edges": {
+        "where": {
+          "parallelTo": [
+            0.6,
+            0.8,
+            0
+          ]
+        },
+        "expect": 4
+      }
+    }
+  ]
+}

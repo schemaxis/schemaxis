@@ -28,7 +28,7 @@
     },
     "acSweep": {
       "status": "reviewed",
-      "explanation": "Computes the small-signal phasor response of a linear RLC network to one grounded sinusoidal source at evenly spaced frequencies. results.csv gives, per probe, real and imaginary parts and magnitude in volts and phase in degrees, alongside circuit-summary.json and circuit.cir; every value is checked against an independent complex nodal solution. Choose it for filter cut-offs, resonance and gain versus frequency; inductors are only allowed in this analysis.",
+      "explanation": "Characterise bounded ideal linear RLC networks across linear, decade or octave frequencies: native node voltages, optional native source-current/KCL checks, derived input impedance and passive branch complex power. Declare peak/RMS phasor convention and sampled gain, relative phase, current, power or loading requirements. Results retain verified CSV, circuit summary and inspectable netlist. Use for filters, source loading, resonance and resistor heating; no nonlinear or general transient claim.",
       "sources": [
         "src/schemaxis/adaptors/ngspice/capabilities.py",
         "src/schemaxis/adaptors/ngspice/adaptor.py:19-108",
@@ -36,9 +36,10 @@
         "docs/ngspice.md"
       ],
       "pitfalls": [
-        "start and stop are in hertz with linear (not logarithmic) spacing; use enough points to resolve narrow resonances.",
-        "Phase uses the exp(+j*omega*t) convention, so a lagging output has negative phase.",
-        "Loops made only of inductors, an inductor directly across the source, and singular or ill-conditioned networks at any sample frequency are rejected; there is no mutual coupling."
+        "For logarithmic spacing points is nominal samples per decade/octave, not total output count; actual count must fit3–512.",
+        "Declare peak or rms amplitude convention before interpreting power; currents are a to b and input current is -i(vdrive). Branch current is derived, whereas input current is native observed.",
+        "Phase requirements use principal relative Vprobe/Vsource angle and refuse zero response. A bound never wraps and solver tolerance does not relax user acceptance.",
+        "Every frequency must have a nonsingular, conditioned network; no ideal-inductor/source loops, mutual coupling, nonlinear models or continuous-envelope guarantee."
       ],
       "examples": [
         {
@@ -60,6 +61,10 @@
         {
           "reference": "examples/schemaxis/ngspice-ac-requirements.json",
           "purpose": "Apply named finite-sample acceptance and inspect observed worst conditions."
+        },
+        {
+          "reference": "examples/schemaxis/ngspice-filter-characterisation.json",
+          "purpose": "Declare sampled gain/phase/loading/heating goals and inspect passive electrical metrics on a logarithmic grid."
         }
       ]
     },
@@ -169,7 +174,7 @@
         },
         "/properties/circuit/anyOf/0/properties/source": {
           "status": "reference",
-          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -197,7 +202,7 @@
         },
         "/properties/circuit/anyOf/0/properties/resistors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -245,7 +250,7 @@
         },
         "/properties/circuit/anyOf/0/properties/capacitors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -287,14 +292,14 @@
         },
         "/properties/circuit/anyOf/0/properties/probes/items": {
           "status": "reference",
-          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/properties/circuit/anyOf/1": {
           "status": "reviewed",
-          "explanation": "Circuit for acSweep: the same resistors, capacitors and probes plus uncoupled ideal inductors, with at most 15 probes.",
+          "explanation": "Circuit for acSweep: the same resistors, capacitors and probes plus uncoupled ideal inductors, with at most 15 voltage probes plus optional branchProbes and portMetrics within 64 total columns.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -302,7 +307,7 @@
         },
         "/properties/circuit/anyOf/1/properties/source": {
           "status": "reference",
-          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -330,7 +335,7 @@
         },
         "/properties/circuit/anyOf/1/properties/resistors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -379,7 +384,7 @@
         },
         "/properties/circuit/anyOf/1/properties/capacitors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -421,7 +426,7 @@
         },
         "/properties/circuit/anyOf/1/properties/probes/items": {
           "status": "reference",
-          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -449,7 +454,7 @@
         },
         "/properties/circuit/anyOf/1/properties/inductors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -494,7 +499,7 @@
         },
         "/properties/start/anyOf/1": {
           "status": "reviewed",
-          "explanation": "Lowest frequency, 0.001 Hz to 1e9 Hz. Frequencies from start to stop are linearly spaced, both included; stop must be greater than start.",
+          "explanation": "Lowest frequency, 0.001 Hz to 1e9 Hz. Linear spacing includes both endpoints; decade/octave spacing uses nominal density and a partial final interval may end below stop. stop must exceed start.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -556,7 +561,7 @@
         },
         "/properties/points": {
           "status": "reference",
-          "explanation": "Number of evenly spaced samples including endpoints: 2–512 for DC/RC, 3–512 for AC; default 101. Finite samples cannot prove a continuous response envelope.",
+          "explanation": "Sample control, default 101: for linear AC it is total frequencies including endpoints (3–512); for decade/octave it is nominal points per decade/octave and actual count must be 3–512. DC/RC use total uniform samples. Narrow resonances need appropriate density; requirements inspect only sampled points.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -575,7 +580,7 @@
         },
         "/properties/points/anyOf/1": {
           "status": "reviewed",
-          "explanation": "Number of linearly spaced frequencies including both endpoints, 3 to 512. Narrow resonances need enough points near the peak; requirements only see these samples.",
+          "explanation": "AC sample control: linear uses 3–512 total frequencies including endpoints; decade/octave uses nominal samples per interval and the actual output must contain 3–512 points. Narrow resonances need appropriate density; requirements inspect only those samples.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -683,14 +688,14 @@
         },
         "/properties/requirements/anyOf/0/items/properties/minimum": {
           "status": "reference",
-          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "explanation": "Optional inclusive lower bound in the chosen quantity units. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude quantities require nonnegative bounds; voltage, dB, phase and powers retain their signs.",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/properties/requirements/anyOf/0/items/properties/maximum": {
           "status": "reference",
-          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "explanation": "Optional inclusive upper bound in the chosen quantity units. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -713,7 +718,7 @@
         },
         "/properties/requirements/anyOf/1": {
           "status": "reviewed",
-          "explanation": "Requirements for an AC sweep: limits on a probe's phasor magnitude in volts (magnitude_V) or gain relative to the source (gainMagnitude) over a frequency window (frequency_Hz).",
+          "explanation": "Named finite-frequency AC acceptance selects a published node, branch or $input quantity, an inclusive sample-containing frequency window and at least one bound. Supports voltage/gain, relative phase/dB, passive branch current/power and input loading. Signed quantities retain polarity and convention; only magnitude bounds must be nonnegative. No continuous-band guarantee.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/performance.py:9-67"
@@ -721,7 +726,7 @@
         },
         "/properties/requirements/anyOf/1/items": {
           "status": "reviewed",
-          "explanation": "One AC requirement: a name, a published probe, quantity magnitude_V or gainMagnitude, axis frequency_Hz, a frequency window and at least one nonnegative bound.",
+          "explanation": "Named finite-frequency AC acceptance selects a published node, branch or $input quantity, an inclusive sample-containing frequency window and at least one bound. Supports voltage/gain, relative phase/dB, passive branch current/power and input loading. Signed quantities retain polarity and convention; only magnitude bounds must be nonnegative. No continuous-band guarantee.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/performance.py:9-67"
@@ -749,14 +754,14 @@
         },
         "/properties/requirements/anyOf/1/items/properties/probe": {
           "status": "reference",
-          "explanation": "Select a node already listed in circuit.probes. Requirements use actual independently checked native node voltages.",
+          "explanation": "For voltage/gain/relative-phase quantities, select a node listed in circuit.probes. For current/power select a component listed in circuit.branchProbes or $input with portMetrics; input impedance only accepts $input. Branch metrics derive from verified native voltages; $input current is native -i(vdrive).",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/properties/requirements/anyOf/1/items/properties/quantity": {
           "status": "reviewed",
-          "explanation": "magnitude_V: magnitude of the probe's phasor in volts. gainMagnitude: that magnitude divided by the absolute source amplitude (V/V, not decibels). Phase limits are not supported.",
+          "explanation": "Select magnitude_V or gainMagnitude for nonnegative voltage/gain magnitude; gain_dB is 20log10(abs(Vprobe/Vsource)); phase_deg is principal relative phase in [-180,180]. currentMagnitude_A, activePower_W and reactivePower_var select branchProbes or $input; impedanceMagnitude_Ohm selects $input only with portMetrics. dB, phase and power bounds are signed; zero response refuses dB/phase.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/performance.py:9-67"
@@ -795,21 +800,21 @@
         },
         "/properties/requirements/anyOf/1/items/properties/window/items": {
           "status": "reference",
-          "explanation": "One finite sample coordinate in the stated axis units; the first is the inclusive lower endpoint, the second the inclusive upper endpoint.",
+          "explanation": "Named finite-frequency AC acceptance selects a published node, branch or $input quantity, an inclusive sample-containing frequency window and at least one bound. Supports voltage/gain, relative phase/dB, passive branch current/power and input loading. Signed quantities retain polarity and convention; only magnitude bounds must be nonnegative. No continuous-band guarantee.",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/properties/requirements/anyOf/1/items/properties/minimum": {
           "status": "reference",
-          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "explanation": "Inclusive lower bound in the chosen quantity units (V, V/V, dB, degrees, A, W, var or ohms). Magnitudes are nonnegative; phase/dB/powers preserve sign. Worst condition is the smallest sampled value, and margin is observed minus minimum. No solver tolerance relaxes acceptance.",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/properties/requirements/anyOf/1/items/properties/maximum": {
           "status": "reference",
-          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "explanation": "Inclusive upper bound in the chosen quantity units. Magnitudes are nonnegative; phase/dB/powers preserve sign. Worst condition is the largest sampled value; margin is maximum minus observed. At least one bound is required and minimum cannot exceed maximum.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -824,7 +829,7 @@
         },
         "/properties/requirements/anyOf/1/items/anyOf/1": {
           "status": "reviewed",
-          "explanation": "Upper-bound form: maximum is given, so the largest sampled value in the window must not exceed maximum; minimum may also be given.",
+          "explanation": "Named finite-frequency AC acceptance selects a published node, branch or $input quantity, an inclusive sample-containing frequency window and at least one bound. Supports voltage/gain, relative phase/dB, passive branch current/power and input loading. Signed quantities retain polarity and convention; only magnitude bounds must be nonnegative. No continuous-band guarantee.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/performance.py:9-67"
@@ -921,14 +926,14 @@
         },
         "/properties/requirements/anyOf/2/items/properties/minimum": {
           "status": "reference",
-          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "explanation": "Optional inclusive lower bound in the chosen quantity units. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude quantities require nonnegative bounds; voltage, dB, phase and powers retain their signs.",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/properties/requirements/anyOf/2/items/properties/maximum": {
           "status": "reference",
-          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "explanation": "Optional inclusive upper bound in the chosen quantity units. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -951,7 +956,7 @@
         },
         "/properties/amplitude": {
           "status": "reviewed",
-          "explanation": "Source voltage for acSweep and rcStep, -1000 to 1000 V, and must be nonzero; dcSweep uses start and stop instead. In acSweep it is the phasor amplitude (gainMagnitude divides by its absolute value); in rcStep it is the height of the step.",
+          "explanation": "Nonzero source phasor/step amplitude in volts, range -1000 to 1000, default 1. In AC amplitudeConvention explicitly interprets phasors as peak (default) or rms and controls power factor. Negative source amplitude reverses native voltage/current phasors while relative transfer phase and power remain consistent. rcStep uses the step height.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -997,7 +1002,7 @@
         },
         "/oneOf/0/properties/circuit/properties/source": {
           "status": "reference",
-          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -1025,7 +1030,7 @@
         },
         "/oneOf/0/properties/circuit/properties/resistors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1074,7 +1079,7 @@
         },
         "/oneOf/0/properties/circuit/properties/capacitors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1116,7 +1121,7 @@
         },
         "/oneOf/0/properties/circuit/properties/probes/items": {
           "status": "reference",
-          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -1249,14 +1254,14 @@
         },
         "/oneOf/0/properties/requirements/items/properties/minimum": {
           "status": "reference",
-          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "explanation": "Optional inclusive lower bound in the chosen quantity units. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude quantities require nonnegative bounds; voltage, dB, phase and powers retain their signs.",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/oneOf/0/properties/requirements/items/properties/maximum": {
           "status": "reference",
-          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "explanation": "Optional inclusive upper bound in the chosen quantity units. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -1279,7 +1284,7 @@
         },
         "/oneOf/1": {
           "status": "reference",
-          "explanation": "AC document: linear RLC phasors at finite linearly spaced frequencies with nonzero source amplitude.",
+          "explanation": "AC document: ideal linear RLC phasors at finite linear/decade/octave frequencies with a nonzero source amplitude and explicit peak/RMS convention. Optional branch and port metrics publish verified electrical characterisation.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -1312,7 +1317,7 @@
         },
         "/oneOf/1/properties/circuit/properties/source": {
           "status": "reference",
-          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -1340,7 +1345,7 @@
         },
         "/oneOf/1/properties/circuit/properties/resistors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1389,7 +1394,7 @@
         },
         "/oneOf/1/properties/circuit/properties/capacitors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1431,7 +1436,7 @@
         },
         "/oneOf/1/properties/circuit/properties/probes/items": {
           "status": "reference",
-          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -1459,7 +1464,7 @@
         },
         "/oneOf/1/properties/circuit/properties/inductors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1484,7 +1489,7 @@
         },
         "/oneOf/1/properties/start": {
           "status": "reviewed",
-          "explanation": "Lowest frequency, 0.001 Hz to 1e9 Hz. Frequencies from start to stop are linearly spaced, both included; stop must be greater than start.",
+          "explanation": "Lowest frequency, 0.001 Hz to 1e9 Hz. Linear spacing includes both endpoints; decade/octave spacing uses nominal density and a partial final interval may end below stop. stop must exceed start.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1510,7 +1515,7 @@
         },
         "/oneOf/1/properties/points": {
           "status": "reviewed",
-          "explanation": "Number of linearly spaced frequencies including both endpoints, 3 to 512. Narrow resonances need enough points near the peak; requirements only see these samples.",
+          "explanation": "Sample control, default 101: for linear AC it is total frequencies including endpoints (3–512); for decade/octave it is nominal points per decade/octave and actual count must be 3–512. DC/RC use total uniform samples. Narrow resonances need appropriate density; requirements inspect only sampled points.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1522,7 +1527,7 @@
         },
         "/oneOf/1/properties/amplitude": {
           "status": "reviewed",
-          "explanation": "Amplitude of the sinusoidal source phasor, -1000 to 1000 V, nonzero. The circuit is linear, so node magnitudes scale with it; gainMagnitude requirements divide by its absolute value.",
+          "explanation": "Nonzero source phasor/step amplitude in volts, range -1000 to 1000, default 1. In AC amplitudeConvention explicitly interprets phasors as peak (default) or rms and controls power factor. Negative source amplitude reverses native voltage/current phasors while relative transfer phase and power remain consistent. rcStep uses the step height.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1542,7 +1547,7 @@
         },
         "/oneOf/1/properties/requirements/items": {
           "status": "reviewed",
-          "explanation": "One AC requirement: a name, a published probe, quantity magnitude_V or gainMagnitude, axis frequency_Hz, a frequency window and at least one nonnegative bound.",
+          "explanation": "Named finite-frequency AC acceptance selects a published node, branch or $input quantity, an inclusive sample-containing frequency window and at least one bound. Supports voltage/gain, relative phase/dB, passive branch current/power and input loading. Signed quantities retain polarity and convention; only magnitude bounds must be nonnegative. No continuous-band guarantee.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/performance.py:9-67"
@@ -1570,14 +1575,14 @@
         },
         "/oneOf/1/properties/requirements/items/properties/probe": {
           "status": "reference",
-          "explanation": "Select a node already listed in circuit.probes. Requirements use actual independently checked native node voltages.",
+          "explanation": "For voltage/gain/relative-phase quantities, select a node listed in circuit.probes. For current/power select a component listed in circuit.branchProbes or $input with portMetrics; input impedance only accepts $input. Branch metrics derive from verified native voltages; $input current is native -i(vdrive).",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/oneOf/1/properties/requirements/items/properties/quantity": {
           "status": "reviewed",
-          "explanation": "magnitude_V: magnitude of the probe's phasor in volts. gainMagnitude: that magnitude divided by the absolute source amplitude (V/V, not decibels). Phase limits are not supported.",
+          "explanation": "Select magnitude_V or gainMagnitude for nonnegative voltage/gain magnitude; gain_dB is 20log10(abs(Vprobe/Vsource)); phase_deg is principal relative phase in [-180,180]. currentMagnitude_A, activePower_W and reactivePower_var select branchProbes or $input; impedanceMagnitude_Ohm selects $input only with portMetrics. dB, phase and power bounds are signed; zero response refuses dB/phase.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/performance.py:9-67"
@@ -1616,21 +1621,21 @@
         },
         "/oneOf/1/properties/requirements/items/properties/window/items": {
           "status": "reference",
-          "explanation": "One finite sample coordinate in the stated axis units; the first is the inclusive lower endpoint, the second the inclusive upper endpoint.",
+          "explanation": "Named finite-frequency AC acceptance selects a published node, branch or $input quantity, an inclusive sample-containing frequency window and at least one bound. Supports voltage/gain, relative phase/dB, passive branch current/power and input loading. Signed quantities retain polarity and convention; only magnitude bounds must be nonnegative. No continuous-band guarantee.",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/oneOf/1/properties/requirements/items/properties/minimum": {
           "status": "reference",
-          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "explanation": "Inclusive lower bound in the chosen quantity units (V, V/V, dB, degrees, A, W, var or ohms). Magnitudes are nonnegative; phase/dB/powers preserve sign. Worst condition is the smallest sampled value, and margin is observed minus minimum. No solver tolerance relaxes acceptance.",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/oneOf/1/properties/requirements/items/properties/maximum": {
           "status": "reference",
-          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "explanation": "Inclusive upper bound in the chosen quantity units. Magnitudes are nonnegative; phase/dB/powers preserve sign. Worst condition is the largest sampled value; margin is maximum minus observed. At least one bound is required and minimum cannot exceed maximum.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -1645,7 +1650,7 @@
         },
         "/oneOf/1/properties/requirements/items/anyOf/1": {
           "status": "reviewed",
-          "explanation": "Upper-bound form: maximum is given, so the largest sampled value in the window must not exceed maximum; minimum may also be given.",
+          "explanation": "Named finite-frequency AC acceptance selects a published node, branch or $input quantity, an inclusive sample-containing frequency window and at least one bound. Supports voltage/gain, relative phase/dB, passive branch current/power and input loading. Signed quantities retain polarity and convention; only magnitude bounds must be nonnegative. No continuous-band guarantee.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/performance.py:9-67"
@@ -1710,7 +1715,7 @@
         },
         "/oneOf/2/properties/circuit/properties/source": {
           "status": "reference",
-          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in.",
+          "explanation": "Non-ground node driven by the single ideal source referenced to node 0. Use a lowercase identifier; default in. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -1749,7 +1754,7 @@
         },
         "/oneOf/2/properties/circuit/properties/resistors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1806,7 +1811,7 @@
         },
         "/oneOf/2/properties/circuit/properties/capacitors/items/properties/a": {
           "status": "reviewed",
-          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ.",
+          "explanation": "First terminal node of this component: \"0\" is ground; any other node is a lowercase letter followed by up to 31 lowercase letters, digits or underscores. a and b must differ. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1848,7 +1853,7 @@
         },
         "/oneOf/2/properties/circuit/properties/probes/items": {
           "status": "reference",
-          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct.",
+          "explanation": "A present non-ground node to publish; selected probe identifiers must be distinct. The name gnd in any case is reserved because ngspice rewrites it to ground node 0; use 0 for ground or another name such as gnd1.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -1883,7 +1888,7 @@
         },
         "/oneOf/2/properties/amplitude": {
           "status": "reviewed",
-          "explanation": "Height of the voltage step applied at t = 0, -1000 to 1000 V, nonzero. The capacitor voltage rises from 0 towards this value.",
+          "explanation": "Nonzero source phasor/step amplitude in volts, range -1000 to 1000, default 1. In AC amplitudeConvention explicitly interprets phasors as peak (default) or rms and controls power factor. Negative source amplitude reverses native voltage/current phasors while relative transfer phase and power remain consistent. rcStep uses the step height.",
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/adaptor.py:19-108"
@@ -1984,14 +1989,14 @@
         },
         "/oneOf/2/properties/requirements/items/properties/minimum": {
           "status": "reference",
-          "explanation": "Optional inclusive lower bound in V or V/V. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude and gain bounds must be nonnegative.",
+          "explanation": "Optional inclusive lower bound in the chosen quantity units. The smallest observed value is the worst lower-bound condition; signed margin is observed minus minimum. Magnitude quantities require nonnegative bounds; voltage, dB, phase and powers retain their signs.",
           "sources": [
             "docs/ngspice.md"
           ]
         },
         "/oneOf/2/properties/requirements/items/properties/maximum": {
           "status": "reference",
-          "explanation": "Optional inclusive upper bound in V or V/V. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
+          "explanation": "Optional inclusive upper bound in the chosen quantity units. The largest observed value is the worst upper-bound condition; signed margin is maximum minus observed. At least one bound is required; minimum cannot exceed maximum.",
           "sources": [
             "docs/ngspice.md"
           ]
@@ -2010,6 +2015,312 @@
           "sources": [
             "docs/ngspice.md",
             "src/schemaxis/adaptors/ngspice/performance.py:9-67"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/branchProbes": {
+          "status": "reviewed",
+          "explanation": "Optional list of up to eight existing component names for derived AC current phasors and passive active/reactive power. Omit for no branch output. Current is positive from authored a to b; reversing terminals reverses current but preserves absorbed power. Currents use verified terminal voltages and ideal R/C/L laws, rather than native device-current readback. All selected metrics together must fit 64 CSV columns.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/circuit/anyOf/1/properties/branchProbes/items": {
+          "status": "reviewed",
+          "explanation": "A declared resistor, capacitor or inductor name, unique in this selection. Branch current is positive from its authored a terminal to b; this is a component identifier, not a node name. Example r1.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/0": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/0/if": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/0/if/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/0/then": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/0/then/properties/minimum": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/0/then/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/1": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/1/if": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/1/if/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/1/then": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/1/then/properties/minimum": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/requirements/anyOf/1/items/allOf/1/then/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/spacing": {
+          "status": "reviewed",
+          "explanation": "Frequency grid: linear (default) means points total including endpoints; decade/octave means nominal samples per frequency decade/octave. Octave and short-decade partial intervals may end below stop. Ngspice47 redistributes full-decade spans to include stop; inspect frequencyGrid.actualSamples and lastFrequency_Hz. At least 3 and at most 512 actual samples are required. Use enough density to resolve narrow features.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/portMetrics": {
+          "status": "reviewed",
+          "explanation": "When true, save native source current and independently check -i(vdrive) against solved current and KCL before publishing $input current, derived input impedance and complex/apparent power. Default false omits these ten columns. Current enters the passive network; input impedance near zero current is undefined and rejected. Select fewer probes if the whole output exceeds 64 columns.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/properties/amplitudeConvention": {
+          "status": "reviewed",
+          "explanation": "Interpret all AC phasor magnitudes as peak (default) or rms. Native AC analysis supplies linear phasors without choosing physical amplitude convention. Peak uses S=V*conj(I)/2; rms uses S=V*conj(I). Switching convention preserves native voltages/currents and doubles powers. The declared convention and factor remain in the summary.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/branchProbes": {
+          "status": "reviewed",
+          "explanation": "Optional list of up to eight existing component names for derived AC current phasors and passive active/reactive power. Omit for no branch output. Current is positive from authored a to b; reversing terminals reverses current but preserves absorbed power. Currents use verified terminal voltages and ideal R/C/L laws, rather than native device-current readback. All selected metrics together must fit 64 CSV columns.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/circuit/properties/branchProbes/items": {
+          "status": "reviewed",
+          "explanation": "A declared resistor, capacitor or inductor name, unique in this selection. Branch current is positive from its authored a terminal to b; this is a component identifier, not a node name. Example r1.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/spacing": {
+          "status": "reviewed",
+          "explanation": "Frequency grid: linear (default) means points total including endpoints; decade/octave means nominal samples per frequency decade/octave. Octave and short-decade partial intervals may end below stop. Ngspice47 redistributes full-decade spans to include stop; inspect frequencyGrid.actualSamples and lastFrequency_Hz. At least 3 and at most 512 actual samples are required. Use enough density to resolve narrow features.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/portMetrics": {
+          "status": "reviewed",
+          "explanation": "When true, save native source current and independently check -i(vdrive) against solved current and KCL before publishing $input current, derived input impedance and complex/apparent power. Default false omits these ten columns. Current enters the passive network; input impedance near zero current is undefined and rejected. Select fewer probes if the whole output exceeds 64 columns.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/amplitudeConvention": {
+          "status": "reviewed",
+          "explanation": "Interpret all AC phasor magnitudes as peak (default) or rms. Native AC analysis supplies linear phasors without choosing physical amplitude convention. Peak uses S=V*conj(I)/2; rms uses S=V*conj(I). Switching convention preserves native voltages/currents and doubles powers. The declared convention and factor remain in the summary.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/0": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/0/if": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/0/if/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/0/then": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/0/then/properties/minimum": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/0/then/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Magnitude quantities (voltage/gain/current/impedance magnitudes) require nonnegative minimum and maximum bounds in their stated units; dB, phase and active/reactive power remain signed. This constraint does not relax a sampled bound.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/1": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/1/if": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/1/if/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/1/then": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/1/then/properties/minimum": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
+          ]
+        },
+        "/oneOf/1/properties/requirements/items/allOf/1/then/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Principal relative transfer-phase bounds must lie within [-180,180] degrees. Bounds do not wrap across the branch cut; choose frequency windows with meaningful principal-phase limits. Zero transfer response makes phase undefined.",
+          "sources": [
+            "docs/ngspice.md",
+            "src/schemaxis/adaptors/ngspice/circuit.py",
+            "src/schemaxis/adaptors/ngspice/performance.py"
           ]
         }
       }

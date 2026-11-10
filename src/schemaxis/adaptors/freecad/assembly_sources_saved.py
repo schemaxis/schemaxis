@@ -19,7 +19,7 @@ from schemaxis.errors import fail
 IDENTIFIER = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
 REFERENCES = {('Link', 'value'), ('Link', 'obj'), ('LinkSub', 'value'), ('XLink', 'name'),
               ('Dep', 'Name'), ('ObjectDeps', 'Name')}
-FILES = {('Part', 'file'), ('ElementMap2', 'file')}
+FILES = {('Part', 'file'), ('ElementMap2', 'file'), ('FloatList','file')}
 ORIGIN_TYPES = {'App::Origin', 'App::Line', 'App::Plane', 'App::Point'}
 JOINT_STATE = {'value': 'bnVsbA==', 'encoded': 'yes', 'module': 'JointObject'}
 
@@ -31,6 +31,8 @@ class Saved:
         from .document_xml import Document
         self.xml = Document(path)
         self.root = self.xml.root
+        from .source_envelope import document_ids
+        self.identities=document_ids(self.root)
         self.objects = {o.get('name'): o for o in self.root.findall('./Objects/Object')}
         self.data = {o.get('name'): o for o in self.root.findall('./ObjectData/Object')}
         self.deps = {}
@@ -62,7 +64,7 @@ def _rename(text, own, foreign, where):
     return IDENTIFIER.sub(replace, text)
 
 
-def _canonical(element, own, foreign, where):
+def _canonical(element, own, foreign, where, shadow_ids=None,regenerated_shadows=False):
     """Rename this source's references back to producer names; refuse foreign ones."""
     attributes = {}
     for key, value in element.attrib.items():
@@ -76,14 +78,70 @@ def _canonical(element, own, foreign, where):
             if '<<' in value:
                 raise ValueError('label references are outside the embedded source contract: '+where)
             value = _rename(value, own, foreign, where)
+        elif key=='shadow':
+            if regenerated_shadows:
+                # Generation 2 has an explicit regeneration contract: compare
+                # the logical target/index here, then bind this complete shadow
+                # to fresh trusted regeneration in history_copy_verify. Native
+                # copying can change both StringID and associated name index.
+                attributes[key]='<regenerated-topology-name>'
+                continue
+            from .assembly_payloads import TAG,HASH_ID
+            if shadow_ids is not None:
+                def remap(match):
+                    tag=int(match.group(2),16)
+                    if tag not in shadow_ids:raise ValueError('topological shadow refers outside its source: '+where)
+                    return ';:H'+match.group(1)+format(shadow_ids[tag],'x')
+                value=TAG.sub(remap,value)
+            value=HASH_ID.sub('#',value)
         attributes[key] = value
     return (element.tag, tuple(sorted(attributes.items())), (element.text or '').strip(),
-            tuple(_canonical(child, own, foreign, where) for child in element))
+            tuple(_canonical(child, own, foreign, where, shadow_ids,regenerated_shadows) for child in element))
 
 
-def isomorphic(producer, assembly, mapping, foreign, mounts, label):
+def _copied_numbers(producer, assembly, old, new, prop, typeid, tag):
+    """Bound double roundoff from native placement/quaternion re-serialization.
+
+    A copy re-evaluates attachments and converts matrices back to quaternions.
+    Each serialized field may differ by at most 64 binary64 ULPs (with a unit
+    scale floor for near-zero components). This is a roundoff budget, not a
+    model-size-relative geometric tolerance. Every redundant axis/angle field,
+    property attribute and child membership remains bound. The separate fresh
+    regeneration oracle binds the current assembly's actual bytes and geometry.
+    """
+    a = producer.xml.properties[old][prop]
+    b = assembly.xml.properties[new][prop]
+    if a.get('type') != typeid or b.get('type') != a.get('type'):
+        return False
+    if len(a) != 1 or len(b) != 1 or a[0].tag != tag or b[0].tag != a[0].tag:
+        return False
+    if set(a[0].attrib) != set(b[0].attrib) or len(a[0]) or len(b[0]):
+        return False
+    for key in a[0].attrib:
+        x, y = float(a[0].get(key)), float(b[0].get(key))
+        if not math.isfinite(x) or not math.isfinite(y):
+            return False
+        if abs(x-y) > 64*max(math.ulp(x), math.ulp(y), math.ulp(1.0)):
+            return False
+    # The rigid-transform reader also rejects a non-unit quaternion.
+    if typeid == 'App::PropertyPlacement':
+        producer.placement(old, prop)
+        assembly.placement(new, prop)
+    # Ignore only numeric serialization; the enclosing property stays exact.
+    normalised = ET.fromstring(ET.tostring(b))
+    normalised[0].attrib.clear()
+    normalised[0].attrib.update(a[0].attrib)
+    return _canonical(a, {}, set(), prop) == _canonical(normalised, {}, set(), prop)
+
+
+def _copied_placement(producer, assembly, old, new, prop):
+    return _copied_numbers(producer, assembly, old, new, prop, 'App::PropertyPlacement', 'PropertyPlacement')
+
+
+def isomorphic(producer, assembly, mapping, foreign, mounts, label, selected_body=None,regenerated_shadows=False,included_assets=None):
     """Prove one embedded source equals its producer under the recorded rename."""
     back = {new: old for old, new in mapping.items()}
+    ids={int(assembly.objects[new].get('id')):int(producer.objects[old].get('id')) for old,new in mapping.items()}
     if set(producer.objects) != set(mapping) or set(producer.data) != set(mapping):
         raise ValueError(label+': producer object membership differs from the rename map')
     if set(producer.deps) - set(mapping):
@@ -102,7 +160,7 @@ def isomorphic(producer, assembly, mapping, foreign, mounts, label):
             raise ValueError(where+': saved dependency record differs')
         if p_dep is not None:
             a_dep = ET.fromstring(ET.tostring(a_dep))
-            if producer.objects[old].get('type') == 'PartDesign::Body' and mounts:
+            if producer.objects[old].get('type') == 'PartDesign::Body' and mounts and (selected_body is None or old==selected_body):
                 tail = [d.get('Name') for d in list(a_dep)[-len(mounts):]]
                 if tail != mounts or a_dep.get('Count') != str(int(p_dep.get('Count'))+len(mounts)):
                     raise ValueError(where+': Body dependencies do not end with the declared mounts')
@@ -119,7 +177,10 @@ def isomorphic(producer, assembly, mapping, foreign, mounts, label):
             if prop in ('Label', 'Visibility'):
                 continue
             ours = a_props[prop]
-            if prop == 'Group' and kind == 'PartDesign::Body':
+            if prop=='SourceAsset' and included_assets and old in included_assets:
+                from .source_assets import copied_property
+                ours=copied_property(element,ours,included_assets[old],where)
+            if prop == 'Group' and kind == 'PartDesign::Body' and (selected_body is None or old==selected_body):
                 links = [l.get('value') for l in ours.find('LinkList')]
                 appended = links[len(links)-len(mounts):] if mounts else []
                 if appended != mounts or ours.find('LinkList').get('count') != str(len(links)):
@@ -128,21 +189,43 @@ def isomorphic(producer, assembly, mapping, foreign, mounts, label):
                 if [back.get(v) for v in links[:len(links)-len(mounts)]] != original:
                     raise ValueError(where+': Body group differs from its producer')
                 continue
-            if prop == 'AttacherEngine' and kind == 'Sketcher::SketchObject':
+            if prop == 'AttacherEngine' and kind in ('Sketcher::SketchObject','PartDesign::Line'):
                 p_value, a_value = element.find('Integer'), ours.find('Integer')
-                if p_value.get('value') not in ('0', '1') or a_value.get('value') != '1':
-                    raise ValueError(where+': sketch attacher engine changed unexpectedly')
+                # copyObject resolves the sketch's engine selector from its
+                # concrete attacher. A centroid attachment must remain Point;
+                # accepting Plane here would silently change recomputation.
+                if kind == 'Sketcher::SketchObject':
+                    attacher = producer.xml.child(old, 'AttacherType', 'String', 'App::PropertyString').get('value')
+                    targets = {'Attacher::AttachEnginePlane': '1', 'Attacher::AttachEnginePoint': '3'}
+                    if attacher not in targets:
+                        raise ValueError(where+': sketch attacher type is not qualified for copying')
+                    target = targets[attacher]
+                else:
+                    target = '2'
+                if p_value.get('value') not in ('0', target) or a_value.get('value') != target:
+                    raise ValueError(where+': attacher engine changed unexpectedly')
                 strip = lambda e: _canonical(e, back, foreign, where)[:2]+((),)  # noqa: E731
                 if [_canonical(c, back, foreign, where) for c in element if c.tag != 'Integer'] \
                         != [_canonical(c, back, foreign, where) for c in ours if c.tag != 'Integer'] or strip(element) != strip(ours):
-                    raise ValueError(where+': sketch attacher engine list differs')
+                    raise ValueError(where+': attacher engine list differs')
                 continue
             if prop == 'Placement' and kind in ORIGIN_TYPES:
                 a, b = producer.placement(old, prop), assembly.placement(new, prop)
                 if any(abs(x-y) > 1e-12 for x, y in zip(a, b)):
                     raise ValueError(where+': origin helper placement differs')
                 continue
-            if _canonical(element, {}, set(), where) != _canonical(ours, back, foreign, where):
+            if prop in ('Placement', 'AttachmentOffset') and regenerated_shadows:
+                if not _copied_placement(producer, assembly, old, new, prop):
+                    raise ValueError(where+': copied placement differs beyond binary64 roundoff')
+                continue
+            if prop == 'Direction' and regenerated_shadows and kind in ('PartDesign::Pad', 'PartDesign::Pocket'):
+                # Default Pad/Pocket directions derive from the copied sketch's
+                # rotation, so they inherit the same matrix roundoff budget.
+                if (producer.xml.boolean(old, 'UseCustomVector') or not producer.xml.boolean(old, 'AlongSketchNormal')
+                        or not _copied_numbers(producer, assembly, old, new, prop, 'App::PropertyVector', 'PropertyVector')):
+                    raise ValueError(where+': copied sketch-normal direction differs')
+                continue
+            if _canonical(element, {}, set(), where,regenerated_shadows=regenerated_shadows) != _canonical(ours, back, foreign, where, ids,regenerated_shadows):
                 raise ValueError(where+': property '+prop+' differs from its producer')
     return True
 
@@ -213,7 +296,7 @@ def _python(saved, name):
     return cls
 
 
-def verify_saved(prepared, path, renames, retained):
+def verify_saved(prepared, path, renames, retained, regenerated=None):
     from .assembly_sources import (check_archive, close, flat, frame, rot_z, labels, visibility, proxies,
                                    check_mount_expressions)
     from . import gui_state
@@ -252,11 +335,13 @@ def verify_saved(prepared, path, renames, retained):
         if {k: v for k, v in found.items() if v} != {'Ground': 'GroundedJoint', **{n: 'Joint' for n in joints.values()}}:
             raise ValueError('saved Python proxies differ from the controlled joint set')
         everything = set(xml.types)
-        for part in prepared['parts']:
+        for part_index,part in enumerate(prepared['parts']):
             producer = Saved(retained[part['id']])
             mapping = renames[part['id']]
             mounts = [native['mounts'][part['id']+'.'+m['id']] for m in part['mounts']]
-            isomorphic(producer, saved, mapping, everything-set(mapping.values()), mounts, part['id'])
+            from .source_assets import copied_assets
+            isomorphic(producer, saved, mapping, everything-set(mapping.values()), mounts, part['id'],part['source']['body'],
+                       regenerated_shadows=part['source'].get('generation')==2,included_assets=copied_assets(part,part_index))
             for old, new in mapping.items():
                 if part['source']['objects'][old] in ('App::Line', 'App::Plane', 'App::Point', 'App::Origin'):
                     label, producer_label = xml.string(new, 'Label'), producer.xml.string(old, 'Label')
@@ -326,6 +411,6 @@ def verify_saved(prepared, path, renames, retained):
                 raise ValueError('native label differs: '+name)
         gui_state.verify(path, visibility(prepared, list(xml.types), renames), proxies(prepared))
         from .assembly_payloads import bind
-        bind(prepared, path, saved.root, renames, retained, lambda name: saved.placement(name, 'Placement'))
+        bind(prepared, path, saved.root, renames, retained, lambda name: saved.placement(name, 'Placement'),regenerated)
     except (OSError, ValueError, KeyError, TypeError, AttributeError, IndexError, *ARCHIVE_ERRORS) as error:
         fail('VERIFICATION_FAILED', 'Saved sourced assembly is malformed or differs from its contract', str(path), detail=str(error))

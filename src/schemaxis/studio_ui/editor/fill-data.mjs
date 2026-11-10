@@ -42,6 +42,7 @@ export function replacing(value, pointer, replacement) {
 }
 
 export function parseField(text, field) {
+  if (field.type === 'string' && /^\s*".*"\s*,/.test(text)) throw Error('This is one text entry. Use Add item for another name, or edit the parent list as ["U", "p"].');
   if (['string', 'id', 'path', 'nodeRef', 'axisRef', 'field'].includes(field.type)) return text;
   return JSON.parse(text);
 }

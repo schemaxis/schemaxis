@@ -29,7 +29,7 @@ def catalogue():
     return {
         'groups': {'analysis': {'label': 'Numerical series', 'purpose': 'Prepare and analyse bounded real-valued samples.', 'domain': 'data-analysis'}},
         'requirements': ['No implicit physical-unit conversions or missing-value handling.',
-                         'Host planning validates structure; execution also checks data-dependent sampling constraints.',
+                         'Host planning validates structure and the sampling, fit and budget constraints of literal tables; nodes that depend on a CSV file are checked at run time before native launch.',
                          'Inspect CSV and statistics, then verify against independent host arithmetic.'],
         'references': ['docs/numerical-analysis.md', 'src/schemaxis/adaptors/octave/readiness.json',
                        'src/schemaxis/adaptors/octave/reference.py:evaluate'],

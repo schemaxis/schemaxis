@@ -284,7 +284,7 @@ def _distinct(values: Iterable[Any]) -> list[Any]:
 
 
 def _finite_number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    return (isinstance(value, int) and not isinstance(value, bool)) or (isinstance(value, float) and math.isfinite(value))
 
 
 def validate_specifications(

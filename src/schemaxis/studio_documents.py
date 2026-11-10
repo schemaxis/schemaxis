@@ -1,15 +1,55 @@
 # Copyright (C) 2026 David L F Gaden
 """Revision-checked Studio document lifecycle, independent of HTTP transport."""
 import copy
+from pathlib import Path
 import uuid
 
 from . import authoring
 from .console_session import CONSOLE_TYPES
+from .core.documents import document_format
 from .errors import fail, keys
 
 
+def provider_for(version, preferred=None):
+    """The registered document type that authors ``version``; ``preferred`` wins a tie."""
+    from .adaptors import registry
+    extra = {item['id']: item.get('additionalDocumentVersions', []) for item in registry.discover()['providers']}
+    matches = [name for name, item in sorted(CONSOLE_TYPES.items())
+               if version == item['version'] or version in extra.get(name, [])]
+    if preferred in matches: return preferred
+    return matches[0] if matches else None
+
+
+def open_file(app, request):
+    """Bring a saved input file into the workspace, or focus the document already holding it."""
+    session = app.session
+    filename = request.get('file')
+    if not isinstance(filename, str) or not filename.strip() or '\x00' in filename:
+        fail('INVALID_REQUEST', 'provide the path of a saved input file', 'file')
+    path = Path(filename).expanduser().absolute()
+    for identity, record in session._state['documents'].items():
+        if record.get('file') == str(path):
+            app.focus(identity)
+            return identity
+    try: payload = path.read_bytes()
+    except OSError as error: fail('RESOURCE_NOT_FOUND', str(error), str(path))
+    if len(payload) > authoring.LIMIT: fail('INVALID_SOURCE', 'source exceeds one MiB', str(path))
+    try: source = payload.decode('utf-8')
+    except UnicodeDecodeError: fail('INVALID_SOURCE', 'source must be UTF-8', str(path))
+    document, diagnostics = authoring.analyse(source, lambda value: None, document_format(path))
+    if document is None:
+        fail('INVALID_SOURCE', 'this file is not readable JSON or YAML: ' + diagnostics[0]['message'], str(path))
+    provider = provider_for(document.get('version'), request.get('provider'))
+    if provider is None:
+        fail('UNKNOWN_VERSION', 'this file does not name a document version that an installed adaptor opens',
+             str(path), version=document.get('version'))
+    session.new(path.stem, provider)
+    session.open(str(path))
+    return session.active_document
+
+
 def document_request(app, request):
-    keys(request, ('action', 'id', 'name', 'provider', 'document', 'revision', 'source', 'format'), 'documents')
+    keys(request, ('action', 'id', 'name', 'provider', 'document', 'revision', 'source', 'format', 'file'), 'documents')
     session = app.session
     action = request.get('action')
     with app.job_lock:
@@ -33,6 +73,10 @@ def document_request(app, request):
                     session.edit_source(source, session.active_document, session._record['revision'], request.get('format', 'json'))
                 elif initial is not None:
                     session._edit(initial)
+            elif action == 'open':
+                identity = open_file(app, request)
+                app.refresh_snapshot()
+                return app.document(identity)
             elif action == 'activate':
                 app.focus(request.get('id'))
             elif action in ('rename', 'duplicate', 'close'):
@@ -70,6 +114,6 @@ def document_request(app, request):
                     return {'closed': identity, 'activeDocument': session.active_document}
                 return app.document(identity)
             else:
-                fail('INVALID_REQUEST', 'choose new, activate, rename, duplicate or close', 'action')
+                fail('INVALID_REQUEST', 'choose new, open, activate, rename, duplicate or close', 'action')
             app.refresh_snapshot()
             return app.document(session.active_document)

@@ -1,0 +1,205 @@
+{
+  "id": "oracle",
+  "version": "schemaxis.oracle/1",
+  "adaptor": "schemaxis.adaptors.oracle.adaptor",
+  "declarations": "schemaxis.adaptors.oracle.adaptor:DECLARATIONS",
+  "runtimeFamily": "python-oracledb Thin",
+  "execution": "Typed Oracle tables: dictionary inspection and drift, exact typed loads, relational reports (joins, filters, groups, windows, set operations) and atomic mutation transactions, each independently verified from a fresh connection; bounded CLOB/BLOB documents and native JSON with typed scalar extraction",
+  "executables": [
+    "python3"
+  ],
+  "keywords": [
+    "Oracle Database",
+    "relational",
+    "typed tables",
+    "SQL",
+    "CLOB",
+    "BLOB",
+    "native JSON"
+  ],
+  "display": {
+    "name": "Oracle Database",
+    "mark": "Or",
+    "colour": "#b23c2e"
+  },
+  "capabilities": "schemaxis.adaptors.oracle.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.oracle/1",
+    "operation": "report",
+    "connection": {
+      "profile": "free_local"
+    },
+    "tables": [
+      {
+        "name": "customers",
+        "columns": [
+          {
+            "name": "id",
+            "type": "number",
+            "precision": 10,
+            "scale": 0
+          },
+          {
+            "name": "region",
+            "type": "varchar2",
+            "length": 12,
+            "nullable": true
+          }
+        ],
+        "primaryKey": [
+          "id"
+        ],
+        "source": {
+          "path": "/replace/with/customers.json"
+        }
+      },
+      {
+        "name": "orders",
+        "columns": [
+          {
+            "name": "id",
+            "type": "number",
+            "precision": 10,
+            "scale": 0
+          },
+          {
+            "name": "customer_id",
+            "type": "number",
+            "precision": 10,
+            "scale": 0,
+            "nullable": true
+          },
+          {
+            "name": "total",
+            "type": "number",
+            "precision": 12,
+            "scale": 2,
+            "nullable": true
+          }
+        ],
+        "primaryKey": [
+          "id"
+        ],
+        "foreignKeys": [
+          {
+            "columns": [
+              "customer_id"
+            ],
+            "table": "customers",
+            "references": [
+              "id"
+            ]
+          }
+        ],
+        "source": {
+          "path": "/replace/with/orders.json"
+        }
+      }
+    ],
+    "report": {
+      "selects": [
+        {
+          "from": {
+            "table": "customers",
+            "alias": "c"
+          },
+          "joins": [
+            {
+              "type": "left",
+              "table": "orders",
+              "alias": "o",
+              "on": [
+                {
+                  "left": "c.id",
+                  "right": "o.customer_id"
+                }
+              ]
+            }
+          ],
+          "groupBy": [
+            {
+              "column": "c.region"
+            }
+          ],
+          "measures": [
+            {
+              "name": "orders",
+              "function": "count",
+              "argument": {
+                "column": "o.id"
+              }
+            },
+            {
+              "name": "revenue",
+              "function": "sum",
+              "argument": {
+                "column": "o.total"
+              }
+            }
+          ],
+          "columns": [
+            {
+              "name": "region",
+              "operand": {
+                "column": "c.region"
+              }
+            },
+            {
+              "name": "orders",
+              "operand": {
+                "measure": "orders"
+              }
+            },
+            {
+              "name": "revenue",
+              "operand": {
+                "measure": "revenue"
+              }
+            }
+          ]
+        }
+      ],
+      "orderBy": [
+        {
+          "column": "region"
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.oracle/1": {
+      "module": "schemaxis.adaptors.oracle.adaptor",
+      "schema": "schemaxis.adaptors.oracle.adaptor:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "oracle",
+      "acceptedArtifacts": [],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.oracle.adaptor:query",
+        "resources": "schemaxis.adaptors.oracle.adaptor:resources"
+      }
+    }
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--oracle",
+      "dest": "oracle",
+      "help": "Absolute dedicated Python interpreter that has python-oracledb installed (Thin mode); credentials come from SCHEMAXIS_ORACLE_<PROFILE>_USER, _PASSWORD and _DSN environment variables"
+    }
+  ]
+}

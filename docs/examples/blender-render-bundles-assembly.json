@@ -1,0 +1,280 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "id": "captured-bundle",
+  "size": [
+    256,
+    128
+  ],
+  "render": {
+    "transparent": true,
+    "renderer": {
+      "kind": "cycles"
+    },
+    "samples": 8,
+    "threads": 2,
+    "worldStrength": 0,
+    "lightEnergy": 0,
+    "colourManagement": {
+      "view": {
+        "kind": "standard"
+      }
+    }
+  },
+  "production": {
+    "units": "metres",
+    "frameStart": 1,
+    "frameEnd": 12,
+    "currentFrame": 1,
+    "assets": [
+      {
+        "id": "left",
+        "file": "bundle-source/0000.blend",
+        "format": "blend",
+        "sourceUnits": "metres",
+        "scene": "Scene",
+        "viewLayer": "ViewLayer",
+        "location": [
+          -1.75,
+          0,
+          0
+        ]
+      },
+      {
+        "id": "right",
+        "file": "bundle-source/0000.blend",
+        "format": "blend",
+        "sourceUnits": "metres",
+        "scene": "Scene",
+        "viewLayer": "ViewLayer",
+        "location": [
+          1.75,
+          0,
+          0
+        ]
+      }
+    ],
+    "objects": [
+      {
+        "id": "shot",
+        "kind": "camera",
+        "location": [
+          0,
+          -6,
+          4
+        ],
+        "rotation": [
+          0.982793723247329,
+          0,
+          0
+        ],
+        "projection": "orthographic",
+        "orthographicSize": 8
+      }
+    ],
+    "camera": "shot",
+    "tracks": [
+      {
+        "object": "right",
+        "channel": "rotation",
+        "interpolation": "LINEAR",
+        "keys": [
+          {
+            "frame": 1,
+            "value": [
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "frame": 12,
+            "value": [
+              0,
+              0,
+              0.5235987755982988
+            ]
+          }
+        ]
+      }
+    ],
+    "viewLayers": [
+      {
+        "id": "complete",
+        "passes": [
+          "combined",
+          "depth",
+          "normal"
+        ],
+        "aovs": [
+          "ownerTag"
+        ],
+        "cryptomatte": {
+          "object": true,
+          "material": true,
+          "asset": true,
+          "levels": 4
+        }
+      },
+      {
+        "id": "selected",
+        "passes": [
+          "combined",
+          "depth"
+        ],
+        "collections": [
+          {
+            "target": {
+              "kind": "asset",
+              "asset": "left",
+              "path": [
+                "Assembly",
+                "Shaft"
+              ]
+            },
+            "mode": "exclude"
+          },
+          {
+            "target": {
+              "kind": "asset",
+              "asset": "right",
+              "path": [
+                "Assembly",
+                "Body"
+              ]
+            },
+            "mode": "holdout"
+          },
+          {
+            "target": {
+              "kind": "asset",
+              "asset": "right",
+              "path": [
+                "Assembly",
+                "Shaft"
+              ]
+            },
+            "mode": "indirectOnly"
+          }
+        ]
+      }
+    ],
+    "renderAovs": [
+      {
+        "id": "ownerTag",
+        "type": "value"
+      }
+    ],
+    "materialAovs": [
+      {
+        "id": "capturedOwner",
+        "aov": "ownerTag",
+        "target": {
+          "kind": "captured",
+          "asset": "right",
+          "sourceObject": "Shaft",
+          "sourceSlot": 0
+        },
+        "source": {
+          "kind": "value",
+          "value": 0.75
+        }
+      }
+    ],
+    "renderBundles": [
+      {
+        "id": "assembly",
+        "frames": [
+          1,
+          12
+        ],
+        "camera": "shot",
+        "outputs": [
+          {
+            "kind": "image",
+            "id": "preview",
+            "source": {
+              "kind": "pass",
+              "layer": "complete",
+              "pass": "combined"
+            },
+            "encoding": {
+              "kind": "png"
+            }
+          },
+          {
+            "kind": "multilayer",
+            "id": "parts",
+            "precision": "float",
+            "compression": "zip",
+            "layers": [
+              {
+                "id": "complete",
+                "source": {
+                  "kind": "pass",
+                  "layer": "complete",
+                  "pass": "combined"
+                }
+              },
+              {
+                "id": "selected",
+                "source": {
+                  "kind": "pass",
+                  "layer": "selected",
+                  "pass": "combined"
+                }
+              },
+              {
+                "id": "depth",
+                "source": {
+                  "kind": "pass",
+                  "layer": "complete",
+                  "pass": "depth"
+                }
+              },
+              {
+                "id": "normal",
+                "source": {
+                  "kind": "pass",
+                  "layer": "complete",
+                  "pass": "normal"
+                }
+              },
+              {
+                "id": "ownerTag",
+                "source": {
+                  "kind": "aov",
+                  "layer": "complete",
+                  "aov": "ownerTag"
+                }
+              },
+              {
+                "id": "objectMatte",
+                "source": {
+                  "kind": "cryptomatte",
+                  "layer": "complete",
+                  "matte": "object"
+                }
+              },
+              {
+                "id": "materialMatte",
+                "source": {
+                  "kind": "cryptomatte",
+                  "layer": "complete",
+                  "matte": "material"
+                }
+              },
+              {
+                "id": "assetMatte",
+                "source": {
+                  "kind": "cryptomatte",
+                  "layer": "complete",
+                  "matte": "asset"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,445 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.elmer/1": {
+      "guide": "docs/elmer.md",
+      "context": {
+        "purpose": "Evaluate temperature, heat loss and heater temperature through solid material layers with fixed temperature, prescribed outward heat flux or convection ends. Independent conservation checks and optional sampled limits gate publication.",
+        "assumptions": "Serial Elmer HeatSolver from stable 26.2.1 source; upstream binary identifies as 26.2. Constant-area, one-dimensional solid conduction; isotropic constant conductivity, uniform generation and perfect contact. SI metres, kelvin, W/(m K), W/m3, W/m2 and W/(m2 K).",
+        "constraints": "One to sixteen unique layers, at most 512 linear elements; stiffness contrast at most 1e8. At least one fixed-temperature or convection end anchors temperature. No CFD/fluid flow, scripts, imported decks/meshes, 2D/3D, transient, nonlinear/radiative/coupled physics or MPI. Limits cover mesh-node temperatures and element-midpoint Fourier flux; continuum extrema and mesh convergence are not certified. Adjacent mesh coordinates must remain distinct after the native eight-significant-digit VTU export.",
+        "inspection": "temperature.csv contains every mesh-node temperature; heat-flux.csv contains derived +x element-midpoint Fourier flux and layer index. thermal-summary.json retains source-corrected outward end flux, total heat rates, conservation residual, exact-solution discrepancies and literal bound margins. Keep mesh/native_t0001.vtu, mesh/thermal.result, generated model.sif, mesh and logs for interpretation and restart provenance.",
+        "recovery": "UNANCHORED_FIELD needs at least one value or convection end. INVALID_BOUNDARY needs value alone for value/flux, coefficient plus ambient for convection. INVALID_TEMPERATURE requires nonnegative continuum kelvin, including between-node extrema. ILL_CONDITIONED_FIELD needs smaller stiffness contrast; RESOURCE_LIMIT needs fewer cells or bounded scales. INTERPRETER_NOT_FOUND needs an absolute configured ElmerSolver. PERFORMANCE_NOT_MET means verified physics exceeded a literal sampled bound: inspect margins and revise design or bounds, then use a fresh directory. VERIFICATION_FAILED needs original untampered complete native evidence or a fresh execution; retain logs. EXPORT_PRECISION_LOSS needs geometry rescaling or fewer cells. RUNTIME_UNAVAILABLE needs a complete installation and dependency review from version logs; NATIVE_EXECUTION_FAILED needs solve/reopen log review. These are distinct from a missing executable and unsupported runtime family."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/elmer-baseline.json"
+        },
+        {
+          "id": "composite",
+          "reference": "examples/schemaxis/elmer-composite.json"
+        },
+        {
+          "id": "source",
+          "reference": "examples/schemaxis/elmer-source.json"
+        },
+        {
+          "id": "convection",
+          "reference": "examples/schemaxis/elmer-convection.json"
+        },
+        {
+          "id": "two-convection",
+          "reference": "examples/schemaxis/elmer-two-convection.json"
+        },
+        {
+          "id": "unanchored",
+          "document": {
+            "version": "schemaxis.elmer/1",
+            "operation": "steadyHeat",
+            "layers": [
+              {
+                "name": "wall",
+                "thickness_m": 0.2,
+                "conductivity_W_mK": 10,
+                "cells": 8
+              }
+            ],
+            "left": {
+              "kind": "flux",
+              "value": 0
+            },
+            "right": {
+              "kind": "flux",
+              "value": 0
+            }
+          },
+          "expect": "invalid",
+          "fault": "UNANCHORED_FIELD",
+          "schemaValid": true
+        },
+        {
+          "id": "bad-boundary",
+          "document": {
+            "version": "schemaxis.elmer/1",
+            "operation": "steadyHeat",
+            "layers": [
+              {
+                "name": "wall",
+                "thickness_m": 0.2,
+                "conductivity_W_mK": 10,
+                "cells": 8
+              }
+            ],
+            "left": {
+              "kind": "value",
+              "value": 400,
+              "ambient": 300
+            },
+            "right": {
+              "kind": "value",
+              "value": 300
+            }
+          },
+          "expect": "invalid",
+          "fault": "INVALID_BOUNDARY",
+          "schemaValid": true
+        },
+        {
+          "id": "bad-value",
+          "document": {
+            "version": "schemaxis.elmer/1",
+            "operation": "steadyHeat",
+            "layers": [
+              {
+                "name": "wall",
+                "thickness_m": 0.2,
+                "conductivity_W_mK": 10,
+                "cells": 8
+              }
+            ],
+            "left": {
+              "kind": "value",
+              "value": 400
+            },
+            "right": {
+              "kind": "value",
+              "value": 300
+            },
+            "area_m2": true
+          },
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "code-refused",
+          "document": {
+            "version": "schemaxis.elmer/1",
+            "operation": "steadyHeat",
+            "layers": [
+              {
+                "name": "wall",
+                "thickness_m": 0.2,
+                "conductivity_W_mK": 10,
+                "cells": 8
+              }
+            ],
+            "left": {
+              "kind": "value",
+              "value": 400
+            },
+            "right": {
+              "kind": "value",
+              "value": 300
+            },
+            "python": "exec(1)"
+          },
+          "expect": "invalid",
+          "fault": "UNKNOWN_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "flux-value",
+          "reference": "examples/schemaxis/elmer-flux-value.json"
+        },
+        {
+          "id": "film-flux",
+          "reference": "examples/schemaxis/elmer-film-flux.json"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_elmer_admission.py"
+      ],
+      "acceptance": [
+        "tools/qualify_elmer.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Shared task execution and resume with explicit temperature/flux/native publications; no native resource input chaining.",
+          "references": [
+            "docs/elmer.md",
+            "tools/qualify_elmer.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared typed source/property/analytic preparation validates each effective thermal document independently.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tools/qualify_elmer.py"
+          ]
+        }
+      },
+      "completion": {
+        "scope": "New steadyHeat route: all declared layered solid conduction fields, native save/restart, tables, sampled limits, discovery, Studio authoring and guidance. Serial-only finite element acceptance.",
+        "review": [
+          "verification/2026-11-04-elmer-completion.md",
+          "verification/2026-11-04-native-evidence-types.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native inspection hook; independently verified saved temperatures are ordinary table/text resources.",
+          "mpi": "Serial ElmerSolver only; no distributed mesh or MPI qualification.",
+          "time-batches": "Steady-state only; no time-dependent batch API.",
+          "live-editing": "Each run owns an isolated process; no resident native session.",
+          "native-save": "Retained ASCII restart is verified internally but is not a general interactive save/edit/roundtrip contract.",
+          "conversion": "No imported/exported universal model conversion; retained VTU and CSV have explicit scope and losses."
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/ElmerCSC/elmerfem/tree/release-26.2.1",
+          "https://www.nic.funet.fi/pub/sci/physics/elmer/doc/ElmerModelsManual.pdf",
+          "https://www.nic.funet.fi/pub/sci/physics/elmer/doc/ElmerSolverManual.pdf"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers runtime observation, HeatSolver and fresh-process restart, plus final verification; native commands use shared owned process-tree runner.",
+          "cancellation": "Shared cancellation terminates owned native processes and checks cancellation again before success publication.",
+          "logs": "Retain authored/effective plans, generated SIF/mesh, version/solve/reopen stdout/stderr/submissions, ASCII restart, native/reopened VTU, published tables, hashes and explicit failed result.",
+          "verification": "Independent piecewise-quadratic transfer equations check all native nodal temperatures and derived midpoint Fourier flux. Source corrections check all element/interface and global outflow balances. A fresh Elmer process reloads ASCII restart with HeatSolver Exec Solver Never and exports a second VTU. Independent ASCII restart and XML VTU readers cross-check membership, mesh and temperature. Digests, authored/plan agreement, deterministic inputs and sampled limits are recomputed offline. Native ASCII VTU has eight significant digits; full-precision published temperature and all physical checks use ASCII restart, while exported/reopened VTU is checked against that explicit rounding."
+        },
+        "data": [
+          {
+            "id": "temperatures",
+            "direction": "output",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "units": "x in m, temperature K",
+              "samples": "mesh nodes"
+            },
+            "losses": [
+              "CSV omits material topology; retain thermal summary and SIF."
+            ],
+            "scope": "All mesh-node temperatures only."
+          },
+          {
+            "id": "flux",
+            "direction": "output",
+            "kind": "table",
+            "format": "numeric CSV",
+            "traits": {
+              "units": "x in m, heat flux W/m2",
+              "samples": "element midpoints"
+            },
+            "losses": [
+              "Flux derives from verified native temperature gradients; no native recovered nodal flux claim."
+            ],
+            "scope": "Constant element Fourier flux with +x sign; physical end flux uses explicit generation correction."
+          },
+          {
+            "id": "native",
+            "direction": "output",
+            "kind": "text",
+            "format": "Elmer SIF/ASCII result and VTU XML",
+            "traits": {
+              "units": "SI",
+              "dimension": 1
+            },
+            "losses": [
+              "Generated bounded solid model only; native result is not a general editing/conversion API."
+            ],
+            "scope": "Inspectable generated model, saved mesh-node restart and temperature VTU."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "table",
+            "scope": "All nodal temperatures and derived element-midpoint Fourier flux.",
+            "limits": "At most 513 nodes/512 elements; no continuum envelope certification."
+          },
+          {
+            "panel": "text",
+            "scope": "Thermal summary, native generated input, ASCII restart and VTU.",
+            "limits": "Bounded one-dimensional solid model; no live handles."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Copy a Studio starter or the standalone baseline. Edit material layers, source and end conditions; retain SI units and unique layer names, then replan. Shared drafts and property edits use the same schema."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Ordinary shared workflow execution/resume and explicit table/text publications; no automatic solver chaining."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native inspection hook; independently verified saved temperatures are ordinary table/text resources."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document composition resolves values before thermal validation; no native handles cross jobs."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Serial ElmerSolver only; no distributed mesh or MPI qualification."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "All native input is inline; ordinary verified completed-run reuse checks source-bound publications. No imported decks, scripts, meshes or handles."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "Steady-state only; no time-dependent batch API."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Whole declared thermal JSON document is editable before planning."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Typed nested material, generation, boundary and sampled-limit fields are editable through shared authoring."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Each run owns an isolated process; no resident native session."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Retained ASCII restart is verified internally but is not a general interactive save/edit/roundtrip contract."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "No imported/exported universal model conversion; retained VTU and CSV have explicit scope and losses."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "scope": "Fourier q=k*(400-300)/0.2=5000 W/m2; area one m2.",
+            "checks": [
+              {
+                "file": "thermal-summary.json",
+                "format": "json",
+                "pointer": "/rightOutflowTotal",
+                "expected": 5000,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "conductivity-variant",
+            "example": "baseline",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/layers/0/conductivity_W_mK",
+                "value": 5
+              }
+            ],
+            "scope": "Halving conductivity halves constant-area heat loss.",
+            "checks": [
+              {
+                "file": "thermal-summary.json",
+                "format": "json",
+                "pointer": "/rightOutflowTotal",
+                "expected": 2500,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "composite",
+            "example": "composite",
+            "edits": [],
+            "scope": "Series resistance 0.1/10+0.1/1=.11 m2 K/W gives 100/.11 W.",
+            "checks": [
+              {
+                "file": "thermal-summary.json",
+                "format": "json",
+                "pointer": "/rightOutflowTotal",
+                "expected": 909.0909090909091,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "source",
+            "example": "source",
+            "edits": [],
+            "scope": "Uniform Q=100 W/m3, L=1 m, k=1 and two 300 K ends: peak 300+QL²/(8k)=312.5 K.",
+            "checks": [
+              {
+                "file": "thermal-summary.json",
+                "format": "json",
+                "pointer": "/maximumField",
+                "expected": 312.5,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "convection",
+            "example": "convection",
+            "edits": [],
+            "scope": "Outward flux left -1000 W/m2 means +x heating; right T=300+1000/100=310 K and left 320 K.",
+            "checks": [
+              {
+                "file": "thermal-summary.json",
+                "format": "json",
+                "pointer": "/maximumField",
+                "expected": 320,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "two-convection",
+            "example": "two-convection",
+            "edits": [],
+            "scope": "Two films 1/100 plus slab .2/10 total .04 m2 K/W; 100/.04=2500 W.",
+            "checks": [
+              {
+                "file": "thermal-summary.json",
+                "format": "json",
+                "pointer": "/rightOutflowTotal",
+                "expected": 2500,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "flux-value",
+            "example": "flux-value",
+            "edits": [],
+            "scope": "Prescribed left outward flux -1000 W/m2 and right 300 K gives left320K by Fourier law; verifies left natural-load sign.",
+            "checks": [
+              {
+                "file": "thermal-summary.json",
+                "format": "json",
+                "pointer": "/maximumField",
+                "expected": 320,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "film-flux",
+            "example": "film-flux",
+            "edits": [],
+            "scope": "Right outward flux1000 W/m2 and left ambient 400 K/film 100 gives left 390 K, right370K; verifies right natural-load and left film signs.",
+            "checks": [
+              {
+                "file": "thermal-summary.json",
+                "format": "json",
+                "pointer": "/minimumField",
+                "expected": 370,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

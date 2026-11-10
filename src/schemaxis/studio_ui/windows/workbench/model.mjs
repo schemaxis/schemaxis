@@ -1,7 +1,7 @@
 // Copyright (C) 2026 David L F Gaden
 // Pure document, schema and snippet helpers shared by the Workbench panels.
 
-import {schemasAt} from '../../editor/schema.mjs';
+import {schemasAt, excludedFields} from '../../editor/schema.mjs';
 
 export const escapePointer = (part) => String(part).replaceAll('~', '~0').replaceAll('/', '~1');
 
@@ -89,7 +89,9 @@ export function fieldsAt(schema, documentValue, pointer) {
   const properties = Object.assign({}, ...nodes.map((node) => node.properties || {}));
   const required = new Set(nodes.flatMap((node) => node.required || []));
   const names = [...new Set([...Object.keys(value || {}), ...Object.keys(properties)])];
-  return names.filter((name) => !name.startsWith('$')).map((name) => {
+  const excluded = excludedFields(nodes, value, schema);
+  return names.filter((name) => !name.startsWith('$')
+    && (!excluded.has(name) || Object.hasOwn(value || {}, name))).map((name) => {
     const path = `${pointer}/${escapePointer(name)}`;
     const parts = schema ? schemasAt(schema, documentValue, path) : [];
     const combined = Object.assign({}, ...parts);

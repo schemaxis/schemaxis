@@ -31,8 +31,9 @@ SELECT = {'type': 'object', 'properties': {'column': IDENT, 'name': IDENT,
 OPTIONS = {'source': {'type': 'string', 'minLength': 1, 'maxLength': 4096, 'required': True},
     'columns': {'type': 'array', 'items': COLUMN, 'minItems': 1, 'maxItems': 32, 'required': True},
     'where': {'type': 'array', 'items': PREDICATE, 'maxItems': 8, 'default': []},
-    'select': {'type': 'array', 'items': SELECT, 'minItems': 1, 'maxItems': 32, 'required': True}}
-DECLARATIONS = {'prepareTable': {'native': 'pyarrow.csv.read_csv / compute / Table / parquet.write_table',
+    'select': {'type': 'array', 'items': SELECT, 'minItems': 1, 'maxItems': 32, 'required': True},
+    'publishCSV': {'type': 'boolean', 'default': False}}
+DECLARATIONS = {'prepareTable': {'native': 'pyarrow.csv.read_csv / compute / Table / parquet.write_table / csv.write_csv',
     'kinds': ['file', 'text'], 'inputs': {}, 'options': {k: {'value': v} for k, v in OPTIONS.items()}}}
 LOSSES = ['CSV formatting and UTC offset spelling are normalised; source row order and typed values are checked.',
     'Only the reserved CSV cell \\N means null, including quoted cells; empty text and NA remain text.',
@@ -40,6 +41,9 @@ LOSSES = ['CSV formatting and UTC offset spelling are normalised; source row ord
     'Only flat bool/int32/int64/float64/utf8/UTC-microsecond timestamps; no inferred types, metadata or units.',
     'Parquet is uncompressed PLAIN with no Arrow schema metadata, dictionaries, partitions or general Parquet input.',
     'No SQL, joins, aggregates, arbitrary expressions, narrowing casts, timezone conversion or unit conversion.']
+CSV_LOSSES = ['Optional table.csv carries no type metadata: a consumer must declare the identical column types and nullability; nothing is inferred.',
+    'Optional table.csv spells null as bare \\N, quotes text and timestamps, and carries values only as literal data: formula-looking text is not sanitised.',
+    'Optional table.csv is the closed canonical encoding (UTF-8, LF, comma, bare header, shortest binary64 text); no writer, delimiter, quoting or compression options.']
 
 
 def identifier(value, at):
@@ -97,8 +101,12 @@ def plan(document):
             if not column['nullable']:
                 fail('INVALID_ARROW_SELECTION', 'fillNull applies only to a nullable source', at + '.fillNull')
             literal(item['fillNull'], item.get('cast', column['type']), at + '.fillNull')
+    # Absent and explicit false are the same effective plan, identical to the
+    # plan before the option existed; only an explicit true is recorded.
+    publish = p.pop('publishCSV')
     return {'version': 'schemaxis.apachearrow.plan/1', 'operation': 'prepareTable', **p,
-            'outputColumns': reference.output_columns(p), 'losses': LOSSES}
+            **({'publishCSV': True} if publish else {}),
+            'outputColumns': reference.output_columns(p), 'losses': LOSSES + CSV_LOSSES if publish else LOSSES}
 
 
 def schema():
@@ -152,6 +160,20 @@ def digest(directory, name):
     return hashlib.sha256(bounded(directory / name)).hexdigest()
 
 
+def csv_bytes(p, rows):
+    """Canonical table.csv bytes for the planned table; refuses unrepresentable output before native work."""
+    columns, output, _ = reference.transform(p, rows)
+    try:
+        return reference.csv_encode(columns, output)
+    except reference.NullCollision as error:
+        fail('INVALID_ARROW_CSV_NULL_COLLISION', 'nonnull text \\N cannot be published because CSV consumers read it as null; '
+             'choose a different text value or set publishCSV false: ' + str(error),
+             '$.publishCSV', row=error.row, column=error.column)
+    except reference.CSVBudget as error:
+        fail('INVALID_ARROW_CSV_BUDGET', 'reduce rows, columns, text or replacements so the encoded CSV is at most '
+             + str(reference.MAX_CSV) + ' bytes, or set publishCSV false: ' + str(error), '$.publishCSV', limit=reference.MAX_CSV)
+
+
 def source_rows(data, p):
     try:
         rows = reference.source(data, p['columns'])
@@ -164,9 +186,11 @@ def source_rows(data, p):
             budget = sum(len(json.dumps(value, ensure_ascii=True)) + 16 for row in values for value in row)
             if budget > parquet.MAX_FILE - 1024**2:
                 raise ValueError('table exceeds bounded JSON snapshot/report budget')
-        return rows
     except (ValueError, UnicodeError, OverflowError) as error:
         fail('INVALID_ARROW_DATA', 'correct the complete typed CSV: ' + str(error), '$.source')
+    if p.get('publishCSV'):
+        csv_bytes(p, rows)
+    return rows
 
 
 def reusableInputs(document):
@@ -184,7 +208,8 @@ def implementation():
 
 
 def config(p):
-    return {key: p[key] for key in ('columns', 'where', 'select', 'outputColumns')}
+    # Absent and false publication configure the native worker identically.
+    return {key: p[key] for key in ('columns', 'where', 'select', 'outputColumns', *(('publishCSV',) if p.get('publishCSV') else ()))}
 
 
 def inspect(directory, p):
@@ -193,22 +218,52 @@ def inspect(directory, p):
     actual = parquet.read(bounded(directory / 'table.parquet'), columns)
     if not reference.equal(actual, expected):
         fail('VERIFICATION_FAILED', 'Parquet values/types/null masks differ from captured CSV and declared transformations')
-    for stage, wanted_columns, wanted_rows in [('convert', p['columns'], rows), ('readback', columns, expected)]:
+    snapshots = [('convert', p['columns'], rows), ('readback', columns, expected)]
+    if p.get('publishCSV'):
+        snapshots.append(('csvreadback', columns, expected))
+    for stage, wanted_columns, wanted_rows in snapshots:
         expected_snapshot = {'runtime': '26.0.0', 'cpp': '26.0.0',
             'table': {'columns': wanted_columns, 'rows': reference.wire_rows(wanted_columns, wanted_rows)}}
         if not reference.equal(read(directory, stage + '.stdout'), expected_snapshot):
             fail('VERIFICATION_FAILED', 'native CSV/readback types or exact values differ from independent reference', stage)
-    return reference.report(p, rows, digest(directory, 'source.csv'))
+    published = reference.report(p, rows, digest(directory, 'source.csv'))
+    if p.get('publishCSV'):
+        published['csv'] = csv_publication(directory, p, rows, columns, expected)
+    return published
 
 
-def artifacts(directory):
-    return [{'file': str(directory / name), 'kind': kind, 'sha256': digest(directory, name)}
-            for name, kind in [('table.parquet', 'file'), ('table-report.json', 'text')]]
+def csv_publication(directory, p, rows, columns, expected):
+    """Check every byte of table.csv against the canonical encoding and the declared-schema parse."""
+    data = bounded(directory / 'table.csv', limit=reference.MAX_CSV)
+    if data != csv_bytes(p, rows):
+        fail('VERIFICATION_FAILED', 'table.csv differs from the canonical encoding of the independently prepared table', 'table.csv')
+    try:
+        decoded = reference.source(data, columns)
+    except (ValueError, UnicodeError) as error:
+        fail('VERIFICATION_FAILED', 'table.csv is not readable under its declared schema: ' + str(error), 'table.csv')
+    if not reference.equal(decoded, expected):
+        fail('VERIFICATION_FAILED', 'table.csv typed cells differ from the prepared table under the declared schema', 'table.csv')
+    return {'file': 'table.csv', 'format': reference.CSV_FORMAT, 'bytes': len(data),
+            'sha256': hashlib.sha256(data).hexdigest(), 'nullToken': reference.NULL}
 
 
-def evidence_names():
+def publications(p):
+    """Fixed publication order; table.csv is appended only after an explicit opt-in."""
+    return [('table.parquet', 'file'), ('table-report.json', 'text'), *([('table.csv', 'file')] if p.get('publishCSV') else [])]
+
+
+def artifacts(directory, p=None):
+    p = plan(read(directory, 'authored.json')) if p is None else p
+    return [{'file': str(directory / name), 'kind': kind, 'sha256': digest(directory, name)} for name, kind in publications(p)]
+
+
+def stages(p):
+    return ('convert', 'readback', *(('csvreadback',) if p.get('publishCSV') else ()))
+
+
+def evidence_names(p=None):
     return {'authored.json', 'plan.json', 'source.csv', 'capture.json', 'native-worker.py', 'native-config.json', 'implementation.json'} | {
-        stage + suffix for stage in ('convert', 'readback')
+        stage + suffix for stage in stages(p or {})
         for suffix in ('.stdout', '.stderr', '-inputs.json', '-submission.json')}
 
 
@@ -238,12 +293,12 @@ def run(document, directory, *, executable=None, timeout=60):
         (directory / 'native-worker.py').write_text(worker_source())
         atomic_json(directory / 'native-config.json', config(p))
         atomic_json(directory / 'implementation.json', implementation())
-        for stage in ('convert', 'readback'):
+        for stage in stages(p):
             execute([str(executable), '-I', str(directory / 'native-worker.py'), stage], directory,
                     stage, deadline - time.monotonic(), {'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'LANG': 'C.UTF-8'})
         atomic_json(directory / 'table-report.json', inspect(directory, p))
-        atomic_json(directory / 'verification.json', {'artifacts': artifacts(directory),
-            'evidence': {name: digest(directory, name) for name in sorted(evidence_names())},
+        atomic_json(directory / 'verification.json', {'artifacts': artifacts(directory, p),
+            'evidence': {name: digest(directory, name) for name in sorted(evidence_names(p))},
             'executable': str(executable), 'runtime': 'PyArrow 26.0.0 / Arrow C++ 26.0.0'})
         result = verify(directory, require_result=False)
         if cancellation_requested():
@@ -284,24 +339,24 @@ def verify(directory, require_result=True):
             fail('VERIFICATION_FAILED', 'native runtime identity differs')
         if bounded(directory / 'native-worker.py').decode() != worker_source() or not reference.equal(read(directory, 'native-config.json'), config(p)):
             fail('VERIFICATION_FAILED', 'trusted worker or native configuration differs')
-        for stage in ('convert', 'readback'):
+        for stage in stages(p):
             submission = read(directory, stage + '-submission.json')
             if submission.get('nativeCommand') != [executable, '-I', str(directory / 'native-worker.py'), stage] or type(submission.get('exitCode')) is not int or submission['exitCode'] != 0:
                 fail('VERIFICATION_FAILED', 'native command/completion differs', stage)
-            consumed = 'source.csv' if stage == 'convert' else 'table.parquet'
+            consumed = {'convert': 'source.csv', 'readback': 'table.parquet', 'csvreadback': 'table.csv'}[stage]
             if read(directory, stage + '-inputs.json') != {name: digest(directory, name) for name in (consumed, 'native-config.json', 'native-worker.py')}:
                 fail('VERIFICATION_FAILED', 'native consumed-input binding differs', stage)
         if not reference.equal(read(directory, 'table-report.json'), inspect(directory, p)):
             fail('VERIFICATION_FAILED', 'published report differs from independent table')
         present = {path.name for path in directory.glob('table*') if not path.name.endswith('.metadata.json')}
-        if present != {'table.parquet', 'table-report.json'} or receipt['artifacts'] != artifacts(directory):
+        if present != {name for name, _ in publications(p)} or receipt['artifacts'] != artifacts(directory, p):
             fail('VERIFICATION_FAILED', 'publication membership/digests differ')
-        if set(receipt['evidence']) != evidence_names():
+        if set(receipt['evidence']) != evidence_names(p):
             fail('VERIFICATION_FAILED', 'evidence membership differs')
-        for name in evidence_names():
+        for name in evidence_names(p):
             if receipt['evidence'][name] != digest(directory, name):
                 fail('VERIFICATION_FAILED', 'retained evidence differs', name)
-        return {'verified': True, 'artifacts': 2, 'runtime': receipt['runtime'],
+        return {'verified': True, 'artifacts': len(publications(p)), 'runtime': receipt['runtime'],
                 'rows': read(directory, 'table-report.json')['outputRows']}
     except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError, UnicodeError, OverflowError, RecursionError) as error:
         fail('VERIFICATION_FAILED', 'invalid retained Arrow evidence: ' + str(error))

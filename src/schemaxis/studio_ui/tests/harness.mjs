@@ -42,7 +42,8 @@ export async function launch({provider = 'freecad', width = 1440, height = 960, 
   const server = spawn(process.env.STUDIO_PYTHON || 'python3', ['-B', '-m', 'schemaxis', 'console', '--provider', provider,
     '--workspace', workspace, '--web'], {
     cwd: REPOSITORY,
-    env: {...process.env, PYTHONPATH: join(REPOSITORY, 'src')},
+    // Automated runs must never open a file window on the developer's desktop.
+    env: {...process.env, PYTHONPATH: join(REPOSITORY, 'src'), SCHEMAXIS_DESKTOP_CHOOSER: '0'},
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const serverErrors = [];
@@ -109,8 +110,19 @@ export async function launch({provider = 'freecad', width = 1440, height = 960, 
     async wait(expression, description, timeout = 20000) {
       const deadline = Date.now() + timeout * SCALE;
       while (Date.now() < deadline) {
-        if (await session.evaluate(expression)) {
-          return;
+        try {
+          if (await session.evaluate(expression)) {
+            return;
+          }
+        } catch (error) {
+          // A reload can discard the inspected context between predicate polls.
+          // Only this protocol transition is retried; an unavailable target
+          // still fails at the original deadline, and application errors escape.
+          let protocol;
+          try { protocol = JSON.parse(error.message); } catch { throw error; }
+          if (protocol?.code !== -32000 || protocol.message !== 'Inspected target navigated or closed') {
+            throw error;
+          }
         }
         await delay(80);
       }

@@ -52,7 +52,97 @@ def voltages(prepared,value):
 
 def samples(prepared):
     count=prepared['points'];start=prepared.get('start',0);stop=prepared['stop']
-    return [start+(stop-start)*i/(count-1) for i in range(count)]
+    spacing=prepared.get('spacing','linear')
+    if spacing=='linear':return [start+(stop-start)*i/(count-1) for i in range(count)]
+    # ngspice 47 acan.c: decade spans >= 1 decade redistribute floor(density*
+    # log10(ratio)) intervals to include stop. Short decades and octaves retain
+    # their nominal ratio. Independently reconstruct the expected sample grid.
+    intervals=math.floor(math.log10(stop/start)*count)
+    factor=(math.exp(math.log(stop/start)/intervals) if spacing=='decade' and stop/10>=start
+            else math.exp(math.log(10 if spacing=='decade' else 2)/count))
+    result=[];value=start
+    while value<=stop+factor*stop*1e-9:
+        result.append(value)
+        if len(result)>512:return result  # admission rejects before native work
+        value*=factor
+    return result
+
+
+def row_width(prepared):
+    return 1+len(prepared['nodes'])*(2 if prepared['operation']=='acSweep' else 1)+2*bool(prepared.get('portMetrics'))
+
+
+def branches(prepared,frequency,values):
+    """Passive current a -> b and complex power from checked native voltages."""
+    factor=.5 if prepared.get('amplitudeConvention','peak')=='peak' else 1
+    result={}
+    for kind,field in (('resistors','resistance'),('capacitors','capacitance'),('inductors','inductance')):
+        for component in prepared['circuit'].get(kind,[]):
+            drop=values[component['a']]-values[component['b']];parameter=component[field]
+            y={'resistors':lambda:1/parameter,'capacitors':lambda:2j*math.pi*frequency*parameter,
+               'inductors':lambda:1/(2j*math.pi*frequency*parameter)}[kind]()
+            current=drop*y
+            result[component['name']]={'voltage':drop,'current':current,'power':factor*drop*current.conjugate()}
+    return result
+
+
+def input_current(prepared,frequency,values):
+    currents=branches(prepared,frequency,values);drive=prepared['circuit']['source'];total=0j
+    for kind in ('resistors','capacitors','inductors'):
+        for component in prepared['circuit'].get(kind,[]):
+            i=currents[component['name']]['current']
+            if component['a']==drive:total+=i
+            if component['b']==drive:total-=i
+    return total
+
+
+def port_impedance(prepared,frequency,values):
+    current=input_current(prepared,frequency,values)
+    scale=sum(abs(branch['current']) for branch in branches(prepared,frequency,values).values())
+    if abs(current)<=max(1e-30,1e-14*scale):
+        fail('UNDEFINED_OBSERVABLE','input impedance is undefined or ill-conditioned near zero input current; disable portMetrics or add a physical load','$.portMetrics')
+    return values[prepared['circuit']['source']]/current
+
+
+def native_values(prepared,row):
+    return {'0':0j,**{node:complex(row[1+2*i],row[2+2*i]) for i,node in enumerate(prepared['nodes'])}}
+
+
+def source_current(prepared,row):
+    offset=1+2*len(prepared['nodes'])
+    return -complex(row[offset],row[offset+1])
+
+
+def current_error(prepared,rows):
+    maximum=0.0
+    for frequency,row in zip(samples(prepared),rows):
+        observed=source_current(prepared,row)
+        independent=input_current(prepared,frequency,expected(prepared,frequency))
+        kcl=input_current(prepared,frequency,native_values(prepared,row))
+        error=max(abs(observed-independent),abs(observed-kcl));maximum=max(maximum,error)
+        check(abs(observed)>0 and error<=1e-7*abs(independent),'independent source current/KCL differs (relative error; no absolute-current floor)')
+    return maximum
+
+
+def observables(prepared,row):
+    """Named AC engineering quantities from checked native observations."""
+    values=native_values(prepared,row);drive=values[prepared['circuit']['source']]
+    result={}
+    for node in prepared['circuit']['probes']:
+        value=values[node];gain=value/drive
+        result[node]={'magnitude_V':abs(value),'gainMagnitude':abs(gain)}
+        if abs(gain)>1e-30:
+            result[node].update(phase_deg=math.degrees(cmath.phase(gain)),gain_dB=20*math.log10(abs(gain)))
+    for name,branch in branches(prepared,row[0],values).items():
+        if name in prepared['circuit'].get('branchProbes',[]):
+            result.setdefault(name,{}).update(currentMagnitude_A=abs(branch['current']),
+                activePower_W=branch['power'].real,reactivePower_var=branch['power'].imag)
+    if prepared.get('portMetrics'):
+        current=source_current(prepared,row);check(abs(current)>0,'zero native input current cannot define impedance');factor=.5 if prepared['amplitudeConvention']=='peak' else 1
+        power=factor*drive*current.conjugate()
+        result['$input']={'currentMagnitude_A':abs(current),'impedanceMagnitude_Ohm':abs(drive/current),
+                          'activePower_W':power.real,'reactivePower_var':power.imag}
+    return result
 
 
 def expected(prepared,axis):
@@ -73,10 +163,10 @@ def read_table(path,width,points):
 
 def inspect(prepared,rows):
     complex_values=prepared['operation']=='acSweep';nodes=prepared['nodes']
-    check(len(rows)==prepared['points'],'unexpected native sample count')
+    check(len(rows)==len(samples(prepared)),'unexpected native sample count')
     maximum=0.0
     for axis,row in zip(samples(prepared),rows):
-        check(len(row)==1+len(nodes)*(2 if complex_values else 1),'native row width differs')
+        check(len(row)==row_width(prepared),'native row width differs')
         # Native DC stepping accumulates roundoff. Scale its absolute allowance
         # to the full interval, including when the authored endpoint is zero.
         scale=max(abs(prepared.get('start',0)),abs(prepared['stop']),1e-12)
@@ -87,7 +177,15 @@ def inspect(prepared,rows):
             value=reference[node];error=abs(observed-value);maximum=max(maximum,error)
             tolerance=(2e-6*max(abs(prepared['amplitude']),1) if prepared['operation']=='rcStep'
                        else 1e-9+1e-7*abs(value))
+            if complex_values:
+                # Preserve transfer-function accuracy at tiny excitation levels.
+                # The inherited fixed voltage floor is unsuitable for ratios.
+                tolerance=1e-12*abs(prepared['amplitude'])+1e-7*abs(value)
+                relative_required=any(entry['probe']==node and entry['quantity'] in ('gainMagnitude','gain_dB','phase_deg')
+                    for entry in prepared.get('requirements',[]))
+                if relative_required and abs(value)>0:tolerance=min(tolerance,1e-7*abs(value))
             check(math.isfinite(error) and error<=tolerance,'independent voltage differs for '+node)
+    if prepared.get('portMetrics'):current_error(prepared,rows)
     return maximum
 
 
@@ -96,6 +194,10 @@ def publication(prepared,rows):
     columns=[{'dcSweep':'sourceVoltage_V','acSweep':'frequency_Hz','rcStep':'time_s'}[prepared['operation']]]
     for node in prepared['circuit']['probes']:
         columns += ([node+'_real_V',node+'_imag_V',node+'_magnitude_V',node+'_phase_deg'] if complex_values else [node+'_V'])
+    for name in prepared['circuit'].get('branchProbes',[]):
+        columns += [name+suffix for suffix in ('_current_real_A','_current_imag_A','_current_magnitude_A','_current_phase_deg','_activePower_W','_reactivePower_var')]
+    if prepared.get('portMetrics'):
+        columns += ['$input'+suffix for suffix in ('_current_real_A','_current_imag_A','_current_magnitude_A','_current_phase_deg','_impedance_real_Ohm','_impedance_imag_Ohm','_impedance_magnitude_Ohm','_activePower_W','_reactivePower_var','_apparentPower_VA')]
     values=[]
     for row in rows:
         selected=[row[0]]
@@ -104,6 +206,16 @@ def publication(prepared,rows):
             if complex_values:
                 value=complex(row[1+2*index],row[2+2*index]);selected.extend([value.real,value.imag,abs(value),math.degrees(cmath.phase(value))])
             else:selected.append(row[index+1])
+        if complex_values:
+            native=native_values(prepared,row)
+            branch_values=branches(prepared,row[0],native)
+            for name in prepared['circuit'].get('branchProbes',[]):
+                branch=branch_values[name];i=branch['current'];power=branch['power']
+                selected.extend([i.real,i.imag,abs(i),math.degrees(cmath.phase(i)),power.real,power.imag])
+            if prepared.get('portMetrics'):
+                i=source_current(prepared,row);check(abs(i)>0,'zero native input current cannot define impedance');drive=native[prepared['circuit']['source']];z=drive/i
+                power=drive*i.conjugate()*(.5 if prepared['amplitudeConvention']=='peak' else 1)
+                selected.extend([i.real,i.imag,abs(i),math.degrees(cmath.phase(i)),z.real,z.imag,abs(z),power.real,power.imag,abs(power)])
         values.append(selected)
     return {'columns':columns,'rows':values}
 
@@ -120,17 +232,19 @@ def read_raw(path,prepared):
         key,separator,value=line.partition(':')
         check(bool(separator) and key not in headers,'invalid/repeated raw header')
         headers[key]=value.strip()
-    complex_values=prepared['operation']=='acSweep';count=1+len(prepared['nodes'])
+    complex_values=prepared['operation']=='acSweep';count=1+len(prepared['nodes'])+bool(prepared.get('portMetrics'))
     check(headers.get('Flags')==('complex' if complex_values else 'real'),'raw numerical kind differs')
-    check(int(headers['No. Variables'])==count and int(headers['No. Points'])==prepared['points'],'raw dimensions differ')
+    check(int(headers['No. Variables'])==count and int(headers['No. Points'])==len(samples(prepared)),'raw dimensions differ')
     variables=[line.split() for line in lines[start+1:stop]]
     scale={'dcSweep':'v(v-sweep)','acSweep':'frequency','rcStep':'time'}[prepared['operation']]
+    if prepared.get('spacing','linear')!='linear' and variables and variables[0][-1:] == ['grid=3']:
+        variables[0]=variables[0][:-1]
     check(len(variables)==count and all(len(v)==3 and v[0]==str(i) for i,v in enumerate(variables)),'raw variable indices differ')
-    check([v[1] for v in variables]==[scale]+['v('+n+')' for n in prepared['nodes']],'raw variable names differ')
+    check([v[1] for v in variables]==[scale]+['v('+n+')' for n in prepared['nodes']]+(['i(vdrive)'] if prepared.get('portMetrics') else []),'raw variable names differ')
     values=' '.join(lines[stop+1:]).split()
-    check(len(values)==prepared['points']*(count+1),'raw value count differs')
+    check(len(values)==len(samples(prepared))*(count+1),'raw value count differs')
     rows=[]
-    for i in range(prepared['points']):
+    for i in range(len(samples(prepared))):
         offset=i*(count+1);check(values[offset]==str(i),'raw sample index differs')
         parsed=[]
         for value in values[offset+1:offset+count+1]:

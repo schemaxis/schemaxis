@@ -13,7 +13,7 @@ import time
 
 from schemaxis.artifacts import atomic_json, file_digest
 from schemaxis.core.declarations import validate_arguments
-from schemaxis.core.faults import SchemaxisError
+from schemaxis.core.faults import Fault,SchemaxisError
 from schemaxis.dispatch import cancellation_requested
 from schemaxis.errors import fail, keys
 from schemaxis.native_command import execute
@@ -38,20 +38,63 @@ OPTIONS={'predictors':{'type':'array','items':VARIABLE,'minItems':1,'maxItems':8
     'response':VARIABLE,'training':ROWS,'heldout':{**ROWS,'minItems':1,'required':False},
     'intercept':{'type':'boolean','default':True},
     'inference':{'type':'object','properties':{'level':{'type':'number','minimum':0.5,'maximum':0.999,'default':0.95}}},
+    'prediction':{'type':'object','properties':{
+        'interval':{'type':'enum','values':['confidence','individual'],'required':True},
+        'level':{'type':'number','minimum':0.5,'maximum':0.999,'default':0.95},
+        'newdata':{'type':'array','items':{'type':'array','items':NUMBER,'minItems':1,'maxItems':8},'minItems':1,'maxItems':64,'required':True}}},
     'requirements':{'type':'array','items':REQUIREMENT,'minItems':1,'maxItems':32}}
-DECLARATIONS={'linearRegression':{'native':'stats::lm / base::saveRDS / stats::predict / stats::summary.lm / stats::confint',
+DECLARATIONS={'linearRegression':{'native':'stats::lm / base::saveRDS / stats::predict / stats::predict.lm / stats::summary.lm / stats::confint',
     'kinds':['table','text'],'inputs':{},'options':{key:{'value':value} for key,value in OPTIONS.items()}}}
 LOSSES=['Unweighted numeric additive ordinary least squares only; no categorical, interaction, polynomial or authored formula terms',
     'Declared units are retained labels, not unit conversion or physical calibration',
     'Finite training/held-out rows only; no causal inference or future-generalisation guarantee',
     'Optional coefficient inference assumes a correct additive mean, independent homoscedastic normal errors and fixed predictors; it is not a prediction interval, model selection or multiplicity-adjusted test',
+    'Optional prediction intervals for declared new predictor-only rows assume the same fixed, error-free predictors, correct additive mean and independent homoscedastic normal errors; they are not coefficient intervals, held-out validation, a calibration certificate or a coverage guarantee, and extrapolation is reported, not validated',
     'RDS is retained native replay evidence, not a cross-machine interchange or imported arbitrary model']
+
+
+MISSING_TOKENS={'','na','n/a','nan','null','none','missing'}
+
+
+def check_cells(document):
+    """Name missing and unsupported-type cells before generic numeric validation.
+
+    Only rows of rows are inspected; structure, range and infinity faults stay with
+    the declared-argument validator. Nothing is coerced, dropped or imputed.
+    """
+    predictors=document.get('predictors');names=[]
+    if isinstance(predictors,list):
+        names=[item.get('name') for item in predictors if isinstance(item,dict)]
+    response=document.get('response')
+    if isinstance(response,dict):names.append(response.get('name'))
+    request=document.get('prediction')
+    for scope in ('training','heldout','prediction.newdata'):
+        rows=request.get('newdata') if scope=='prediction.newdata' and isinstance(request,dict) else document.get(scope)
+        if not isinstance(rows,list):continue
+        for index,row in enumerate(rows):
+            if not isinstance(row,list):continue
+            for column,value in enumerate(row):
+                if type(value) in (int,float) and not (type(value) is float and math.isnan(value)):continue
+                variable=names[column] if column<len(names) and isinstance(names[column],str) else f'column {column}'
+                at=f'$.{scope}[{index}][{column}]'
+                seen={'variable':variable,'type':type(value).__name__ if value is not None else 'null'}
+                if isinstance(value,str):seen['value']=value[:64]
+                elif isinstance(value,bool):seen['value']=value
+                elif isinstance(value,float):seen['value']='NaN'
+                missing=value is None or (type(value) is float and math.isnan(value)) or (isinstance(value,str) and value.strip().lower() in MISSING_TOKENS)
+                if missing:
+                    raise SchemaxisError(Fault('MISSING_VALUE',f'{scope} row {index} has no observed value for {variable}',at,'pipeline',observed=seen,
+                        recovery='Schemaxis does not drop, impute or fill missing cells. Remove the incomplete row (complete-case analysis) or supply the measured number, then plan again; document any exclusion yourself.'))
+                if isinstance(value,(str,bool)):
+                    raise SchemaxisError(Fault('UNSUPPORTED_VALUE_TYPE',f'{scope} row {index} {variable} is {seen["type"]}; only finite numbers are supported',at,'pipeline',observed=seen,
+                        recovery='Cells are never coerced from text or booleans. Supply a plain JSON numeric measurement; categorical, boolean-coded or text predictors need an explicit numeric encoding with its own meaning, which this route does not choose.'))
 
 
 def plan(document):
     keys(document,('version','operation',*OPTIONS),'$')
     if document.get('version')!=VERSION:fail('UNSUPPORTED_VERSION','expected '+VERSION)
     if document.get('operation')!='linearRegression':fail('UNKNOWN_FILTER','select linearRegression')
+    check_cells(document)
     prepared=validate_arguments(OPTIONS,{key:value for key,value in document.items() if key not in ('version','operation')})
     variables=[*prepared['predictors'],prepared['response']]
     names=[value['name'] for value in variables]
@@ -76,6 +119,11 @@ def plan(document):
             if not math.isfinite(prediction) or abs(prediction)>1e100 or abs(row[-1]-prediction)>1e100:
                 fail('INVALID_PREDICTION','projected prediction/residual exceeds the numeric table budget',f'$.{scope}[{index}]')
     if 'inference' in prepared:reference.residual_variance(prepared,independent)
+    if 'prediction' in prepared:
+        for index,row in enumerate(prepared['prediction']['newdata']):
+            if len(row)!=len(prepared['predictors']):
+                fail('INVALID_TABLE','each new-data row needs exactly the declared predictors in order and no response',f'$.prediction.newdata[{index}]')
+        reference.prediction_intervals(prepared,independent)
     terms=(['intercept'] if prepared['intercept'] else [])+[p['name'] for p in prepared['predictors']]
     seen=set()
     for index,requirement in enumerate(prepared.get('requirements',[])):
@@ -183,17 +231,25 @@ def sources(prepared,directory):
         if scope in prepared:
             write_csv(directory/(scope+'-input.csv'),{'columns':[f'x{i+1}' for i in range(width)]+['y'],
                 'rows':[[value/scale for value,scale in zip(row[:-1],scales)]+[row[-1]] for row in prepared[scope]]})
+    if 'prediction' in prepared:write_csv(directory/'prediction-input.csv',prediction_input(prepared))
+
+
+def prediction_input(prepared):
+    scales=prepared['scales'][int(prepared['intercept']):]
+    return {'columns':[f'x{i+1}' for i in range(len(prepared['predictors']))],
+        'rows':[[value/scale for value,scale in zip(row,scales)] for row in prepared['prediction']['newdata']]}
 
 
 def commands(executable,directory,prepared):
     common=[executable,'--vanilla','--default-packages=stats,utils',str(directory/'worker.R')]
     options=[str(len(prepared['predictors'])),str(int(prepared['intercept'])),str(int('heldout' in prepared)),
         repr(float(prepared['inference']['level'])) if 'inference' in prepared else 'none']
+    if 'prediction' in prepared:options.append(repr(float(prepared['prediction']['level'])))
     return {stage:common+[stage,*options] for stage in ('fit','reopen')}
 
 
 def stage_inputs(directory,prepared,stage):
-    names=['worker.R','training-input.csv']+(['heldout-input.csv'] if 'heldout' in prepared else [])
+    names=['worker.R','training-input.csv']+(['heldout-input.csv'] if 'heldout' in prepared else [])+(['prediction-input.csv'] if 'prediction' in prepared else [])
     if stage=='reopen':names+=['model.rds']
     return [directory/name for name in names]
 
@@ -245,7 +301,7 @@ def native_tables(directory,prepared,stage):
             expected=[i,authored[-1],predicted,residual]+([predicted,residual] if scope=='training' else [])
             if native[0]!=i or not math.isclose(native[1],authored[-1],rel_tol=1e-14,abs_tol=128*math.ulp(abs(authored[-1]))) or not close(native[2:],expected[2:],rel=1e-10,absolute=tolerance):
                 fail('VERIFICATION_FAILED','native prediction/residual differs from independent model',stage+'-'+scope)
-    return coefficients,result,native_inference(directory,prepared,stage,independent,tolerance)
+    return coefficients,result,native_inference(directory,prepared,stage,independent,tolerance),native_prediction(directory,prepared,stage,independent,tolerance)
 
 
 INFERENCE_COLUMNS=['coefficientIndex','scaledEstimate','scaledStandardError','tStatistic','pValue','scaledLower','scaledUpper']
@@ -271,6 +327,58 @@ def native_inference(directory,prepared,stage,independent,tolerance):
     return {**{key:native[key] for key in STATISTICS_COLUMNS},'coefficients':coefficients}
 
 
+PREDICTION_COLUMNS=['sample','fit','seFit','confidenceLower','confidenceUpper','individualLower','individualUpper']
+PREDICTION_STATISTICS=['level','residualDF','criticalValue','sigma','individualSigma','confidenceDF','individualDF']
+
+
+def native_prediction(directory,prepared,stage,independent,tolerance):
+    """Check native stats::predict.lm confidence and individual intervals against independent QR leverage."""
+    if 'prediction' not in prepared:return None
+    table=read_table(directory,stage+'-prediction.csv');statistics=read_table(directory,stage+'-prediction-statistics.csv')
+    rows=len(prepared['prediction']['newdata'])
+    if table['columns']!=PREDICTION_COLUMNS or len(table['rows'])!=rows or statistics['columns']!=PREDICTION_STATISTICS or len(statistics['rows'])!=1:
+        fail('VERIFICATION_FAILED','native prediction table dimensions differ',stage+'-prediction')
+    native={**dict(zip(PREDICTION_STATISTICS,statistics['rows'][0])),'rows':[dict(zip(PREDICTION_COLUMNS,row)) for row in table['rows']]}
+    if native['confidenceDF']!=prepared['residualDF'] or native['individualDF']!=prepared['residualDF']:
+        fail('VERIFICATION_FAILED','native prediction residual degrees of freedom differ',stage+'-prediction')
+    expected=reference.prediction_intervals(prepared,independent)
+    differing=reference.compare_prediction(native,expected,tolerance)
+    if differing:fail('VERIFICATION_FAILED','native prediction '+differing+' differs from independent QR leverage intervals',stage+'-prediction')
+    return native
+
+
+def prediction_summary(prepared,native):
+    """Summary of the requested interval with row identity, units, leverage and assumptions."""
+    request=prepared['prediction'];kind=request['interval'];units=prepared['response']['unit']
+    # Leverage and range flags are properties of the independent design, not of native output.
+    expected=reference.prediction_intervals(prepared,reference.decompose(prepared['training'],prepared['intercept']))
+    rows=[]
+    for index,(item,actual) in enumerate(zip(expected['rows'],native['rows'])):
+        lower,upper=actual[kind+'Lower'],actual[kind+'Upper']
+        rows.append({'sample':index,'inputs':[{'name':p['name'],'unit':p['unit'],'value':value} for p,value in zip(prepared['predictors'],item['predictors'])],
+            'prediction':actual['fit'],'lower':lower,'upper':upper,'halfWidth':(upper-lower)/2,'standardErrorOfFit':actual['seFit'],
+            'leverage':item['leverage'],'outsideTrainingRange':item['outsideTrainingRange']})
+    return {'version':'schemaxis.r.prediction/1','interval':kind,'level':native['level'],'residualDF':native['residualDF'],'criticalValue':native['criticalValue'],
+        'residualStandardError':{'value':native['sigma'],'units':units},'responseUnits':units,'rows':rows,
+        'meaning':'Mean confidence interval: uncertainty of the fitted mean response at each new predictor row.' if kind=='confidence'
+            else 'Individual prediction interval: uncertainty of one future observation at each new predictor row; always wider than the mean confidence interval.',
+        'method':'stats::predict.lm on the reopened native lm; independent Householder QR, h=x\'(X\'X)^-1x and Student-t critical value',
+        'verifiedIntervalTypes':['confidence','individual'],
+        'assumptions':['The declared additive linear mean is correct, including for the new rows.',
+            'Errors are independent, have constant variance and are normally distributed; exact t levels depend on normality.',
+            'Predictors are fixed and measured without error; new rows are declared inputs with no known response.'],
+        'limits':'The level is a nominal confidence statement under these assumptions, not a coverage or reliability guarantee, not a calibration certificate, model selection, causal claim or held-out validation. '
+            'Rows outside the training predictor range are reported in outsideTrainingRange and are extrapolation observed, not validated or excluded; leverage is reported for inspection.',
+        'tolerance':{'relative':reference.PREDICTION_RELATIVE,'criticalValueRelative':reference.DISTRIBUTION_RELATIVE,'maximumLeverage':reference.MAX_LEVERAGE,'resolutionFactor':reference.RESOLUTION_FACTOR,
+            'fit':'response roundoff allowance scaled by the new-point design magnitude'}}
+
+
+def prediction_table(prepared,summary):
+    width=len(prepared['predictors'])
+    return {'columns':['sample']+[f'x{i+1}' for i in range(width)]+['prediction','lower','upper','halfWidth'],
+        'rows':[[row['sample']]+[item['value'] for item in row['inputs']]+[row['prediction'],row['lower'],row['upper'],row['halfWidth']] for row in summary['rows']]}
+
+
 def inference_summary(prepared,inferred):
     intercept=prepared['intercept']
     return {'version':'schemaxis.r.inference/1','method':'Classical ordinary least-squares t and F inference: stats::summary.lm, stats::confint and stats::pf',
@@ -289,7 +397,7 @@ def inference_summary(prepared,inferred):
         'limits':'Per-coefficient two-sided tests and intervals are not adjusted for multiple comparisons, are not prediction intervals for new observations and do not establish causality or validate the model choice.'}
 
 
-def summaries(prepared,coefficients,tables,inferred=None):
+def summaries(prepared,coefficients,tables,inferred=None,predicted=None):
     names=(['intercept'] if prepared['intercept'] else [])+[p['name'] for p in prepared['predictors']]
     details={'version':'schemaxis.r.summary/1','operation':prepared['operation'],
         'predictors':prepared['predictors'],'response':prepared['response'],'intercept':prepared['intercept'],
@@ -299,6 +407,7 @@ def summaries(prepared,coefficients,tables,inferred=None):
         'metrics':{scope:reference.metrics(table['rows']) for scope,table in tables.items()},
         'verificationTolerance':{'relative':1e-10,'absoluteResponseUnits':reference.response_tolerance(prepared['training'],prepared['scaledInfinityCondition'])},'losses':LOSSES}
     if inferred is not None:details['inference']=inference_summary(prepared,inferred)
+    if predicted is not None:details['prediction']=prediction_summary(prepared,predicted)
     if 'requirements' in prepared:details['acceptance']=reference.assess(prepared,tables,inferred)
     return details
 
@@ -306,7 +415,8 @@ def summaries(prepared,coefficients,tables,inferred=None):
 def publications(prepared):
     # Opt-in inference is appended so existing artifact indices never move.
     return ([('coefficients.csv','table'),('training.csv','table')]+([('heldout.csv','table')] if 'heldout' in prepared else [])
-        +[('regression-summary.json','text')]+([('inference.csv','table')] if 'inference' in prepared else []))
+        +[('regression-summary.json','text')]+([('inference.csv','table')] if 'inference' in prepared else [])
+        +([('prediction.csv','table')] if 'prediction' in prepared else []))
 
 
 def inference_table(inferred):
@@ -319,11 +429,12 @@ def manifest(directory,prepared):
 
 
 def evidence_names(prepared):
-    names=['worker.R','model.rds','training-input.csv']+(['heldout-input.csv'] if 'heldout' in prepared else [])
+    names=['worker.R','model.rds','training-input.csv']+(['heldout-input.csv'] if 'heldout' in prepared else [])+(['prediction-input.csv'] if 'prediction' in prepared else [])
     for stage in ('fit','reopen'):
         names += [stage+'-'+scope+'.csv' for scope in ('training','heldout') if scope in prepared]
         names += [stage+'-coefficients.csv',stage+'-metadata.csv',stage+'-runtime.txt',stage+'-launcher.py',stage+'-inputs.json',stage+'-submission.json',stage+'.stdout',stage+'.stderr']
         names += [stage+'-inference.csv',stage+'-statistics.csv'] if 'inference' in prepared else []
+        names += [stage+'-prediction.csv',stage+'-prediction-statistics.csv'] if 'prediction' in prepared else []
     return names
 
 
@@ -351,12 +462,14 @@ def run(document,directory,*,executable=None,timeout=300):
             script=directory/(stage+'-launcher.py');script.write_text(launcher(directory,prepared,stage,native[stage]))
             execute([sys.executable,str(script)],directory,stage,deadline-time.monotonic(),
                 {'OMP_NUM_THREADS':'1','OPENBLAS_NUM_THREADS':'1','LC_ALL':'C'})
-        coefficients,tables,inferred=native_tables(directory,prepared,'reopen')
+        coefficients,tables,inferred,predicted=native_tables(directory,prepared,'reopen')
         write_csv(directory/'coefficients.csv',{'columns':['coefficientIndex','estimate'],
             'rows':[[i,value] for i,value in enumerate(coefficients)]})
         for scope,table in tables.items():write_csv(directory/(scope+'.csv'),{'columns':table['columns'][:4],'rows':[row[:4] for row in table['rows']]})
-        atomic_json(directory/'regression-summary.json',summaries(prepared,coefficients,tables,inferred))
+        details=summaries(prepared,coefficients,tables,inferred,predicted)
+        atomic_json(directory/'regression-summary.json',details)
         if inferred is not None:write_csv(directory/'inference.csv',inference_table(inferred))
+        if predicted is not None:write_csv(directory/'prediction.csv',prediction_table(prepared,details['prediction']))
         runtime=payload(directory,'fit-runtime.txt').decode().strip()
         atomic_json(directory/'verification.json',{'artifacts':manifest(directory,prepared),'runtime':runtime,
             'evidence':{name:digest(directory,name) for name in evidence_names(prepared)}})
@@ -375,7 +488,12 @@ def run(document,directory,*,executable=None,timeout=300):
 def verify(directory,require_result=True):
     directory=Path(directory).absolute()
     try:
-        prepared=plan(read(directory,'authored.json'));receipt=read(directory,'verification.json')
+        authored=read(directory,'authored.json')
+        try:prepared=plan(authored)
+        except SchemaxisError as error:
+            # Retained authored input that cannot be planned is malformed/unsupported evidence, not a fresh input request.
+            fail('VERIFICATION_FAILED','retained authored regression cannot be planned: '+error.fault.message,'authored.json',authoredFault=error.fault.to_dict())
+        receipt=read(directory,'verification.json')
         if read(directory,'plan.json')!=prepared:fail('VERIFICATION_FAILED','effective plan differs from authored regression')
         if require_result:
             result=read(directory,'result.json')
@@ -388,6 +506,8 @@ def verify(directory,require_result=True):
             expected={'columns':[f'x{i+1}' for i in range(len(prepared['predictors']))]+['y'],
                 'rows':[[value/scale for value,scale in zip(row[:-1],scales)]+[row[-1]] for row in prepared[scope]]}
             if read_table(directory,scope+'-input.csv')!=expected:fail('VERIFICATION_FAILED','captured input differs from declared numeric rows',scope)
+        if 'prediction' in prepared and read_table(directory,'prediction-input.csv')!=prediction_input(prepared):
+            fail('VERIFICATION_FAILED','captured input differs from declared new predictor rows','prediction')
         submissions={stage:read(directory,stage+'-submission.json') for stage in ('fit','reopen')}
         # The trusted native command is embedded literally in the generated launcher.
         import ast
@@ -404,11 +524,12 @@ def verify(directory,require_result=True):
                 fail('VERIFICATION_FAILED','native command or completion differs',stage)
             bindings={str(path):digest(directory,path.name) for path in stage_inputs(directory,prepared,stage)}
             if read(directory,stage+'-inputs.json')!=bindings:fail('VERIFICATION_FAILED','native stage consumed different input/model bytes',stage)
-        coefficients,tables,inferred=native_tables(directory,prepared,'fit');reopened,reopened_tables,reinferred=native_tables(directory,prepared,'reopen')
+        coefficients,tables,inferred,predicted=native_tables(directory,prepared,'fit');reopened,reopened_tables,reinferred,repredicted=native_tables(directory,prepared,'reopen')
         if not close(coefficients,reopened,rel=1e-12,absolute=1e-12) or not close(tables,reopened_tables,rel=1e-12,absolute=1e-12):
             fail('VERIFICATION_FAILED','fresh native model reopen differs')
         if not close(inferred,reinferred,rel=1e-12,absolute=1e-300):fail('VERIFICATION_FAILED','fresh native model reopen inference differs')
-        details=summaries(prepared,reopened,reopened_tables,reinferred)
+        if not close(predicted,repredicted,rel=1e-12,absolute=1e-300):fail('VERIFICATION_FAILED','fresh native model reopen prediction differs')
+        details=summaries(prepared,reopened,reopened_tables,reinferred,repredicted)
         if read(directory,'regression-summary.json')!=details:fail('VERIFICATION_FAILED','summary differs from independently checked native model')
         coefficient_table={'columns':['coefficientIndex','estimate'],'rows':[[i,value] for i,value in enumerate(reopened)]}
         if read_table(directory,'coefficients.csv')!=coefficient_table:fail('VERIFICATION_FAILED','published coefficients differ')
@@ -417,6 +538,8 @@ def verify(directory,require_result=True):
                 fail('VERIFICATION_FAILED','published prediction table differs',scope)
         if reinferred is not None and read_table(directory,'inference.csv')!=inference_table(reinferred):
             fail('VERIFICATION_FAILED','published inference table differs')
+        if repredicted is not None and read_table(directory,'prediction.csv')!=prediction_table(prepared,details['prediction']):
+            fail('VERIFICATION_FAILED','published prediction table differs')
         runtime=payload(directory,'fit-runtime.txt').decode().strip()
         if not re.fullmatch(r'R version \d+\.\d+\.\d+[^\r\n]*',runtime) or payload(directory,'reopen-runtime.txt').decode().strip()!=runtime:
             fail('VERIFICATION_FAILED','native R runtime identity differs')
@@ -427,9 +550,10 @@ def verify(directory,require_result=True):
             fail('FIT_REQUIREMENT_NOT_MET','verified regression does not meet the named finite fit requirements','$.requirements',assessment=details['acceptance'])
         result={'verified':True,'artifacts':len(expected['artifacts']),'runtime':runtime,'rank':prepared['rank'],'metrics':details['metrics']}
         if 'inference' in details:result['inference']={'level':details['inference']['level'],'residualDF':details['inference']['residualDF']}
+        if 'prediction' in details:result['prediction']={'interval':details['prediction']['interval'],'level':details['prediction']['level'],'rows':len(details['prediction']['rows'])}
         if 'acceptance' in details:result['acceptance']=details['acceptance']
         return result
-    except (OSError,ValueError,KeyError,TypeError,IndexError,StopIteration,SyntaxError,OverflowError) as error:
+    except (OSError,ValueError,KeyError,TypeError,IndexError,StopIteration,SyntaxError,OverflowError,RecursionError) as error:
         fail('VERIFICATION_FAILED','missing or invalid regression evidence: '+str(error))
 
 

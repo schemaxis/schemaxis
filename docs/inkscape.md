@@ -10,7 +10,10 @@ Choose this route for a small editable technical block diagram. Declare `width`,
 optional `colour` (`blue`, `green`, `amber`). `links` name `source` and `target`
 boxes. Coordinates, dimensions, `margin` (default 5), `clearance` (5), `padding`
 (2) and `fontSize` (3) are mm. `dpi` defaults to 96. Each rectangle has a fixed
-0.4 mm stroke. Labels are escaped single-line plain text in native sans-serif.
+0.4 mm stroke. Labels are escaped single-line plain text in native sans-serif. A label must contain
+at least one non-whitespace character and no control, line-separator (U+0085, U+2028,
+U+2029) or XML-forbidden character; otherwise planning fails with `INVALID_LAYOUT`
+at the authored `$.boxes[i].label`, also for `flowDiagram`, before any native launch.
 
 The page must preserve the declared margin outside every stroked rectangle.
 The minimum Euclidean separation between stroked boxes must reach `clearance`.
@@ -48,6 +51,12 @@ changed geometry or inserted scripting fails even if a publication hash is
 updated. Native bounds, decoded probes, measured JSON, hashes, authored input,
 plan and successful result must agree. Native receipts are preserved evidence;
 verification does not rerun Inkscape or certify another installed runtime.
+A launcher that reports anything other than stable `Inkscape 1.4.x` stops after
+the version visit with `UNSUPPORTED_RUNTIME` and the observed version; it is never
+asked to query or export, so its output is not misread as malformed evidence. The
+run directory retains `diagram.svg` and the failed `result.json`. Select a 1.4.x
+executable and rerun in a fresh directory. An absent or non-executable launcher
+remains `INTERPRETER_NOT_FOUND`.
 
 Workflow execution is scheduled and self-contained; `reusableInputs` supplies
 an empty external-source map. The scheduler can reuse a complete job after

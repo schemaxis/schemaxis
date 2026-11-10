@@ -1,0 +1,277 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "narrate": {
+      "status": "reviewed",
+      "explanation": "Speak one short plain-text script with the fixed offline English (United States) eSpeak NG voice, or with one explicitly selected voice (en-gb, fr-fr or es), and publish a canonical PCM16 mono 22050 Hz WAV voiceover draft. The host captures the script bytes, refuses control characters, [[ ]] phoneme escapes, markup and text without words, runs the trusted espeak-ng with fixed arguments, and then re-synthesises the captured text in a separate process: every PCM byte must match. Choose it to create a first-pass narration to listen to, to time a script, or to feed a speech or archive step; it is synthetic, not a human recording, and a person must read the words and listen before publishing.",
+      "sources": [
+        "docs/espeakng.md#what-the-fields-mean",
+        "docs/espeakng.md#verification-contract"
+      ],
+      "pitfalls": [
+        "The speaking rate and an optional voice are the only authored synthesis choices. Without voice the fixed English (United States) voice speaks; with voice only en-us, en-gb, fr-fr or es are accepted. Pitch, amplitude, voice names or paths, variants, flags, SSML, phoneme codes, language detection and translation are rejected, not passed through.",
+        "The script must be plain words: control characters (including tabs, carriage returns and form feeds), [[ ]] phoneme escapes, SSML or other markup, and text with no letter or digit are refused with the offending code point; nothing is silently rewritten. The synthesizer may still expand numbers and abbreviations or ignore characters, so read the words as well as listening.",
+        "Verification needs the same trusted espeak-ng 1.52.0 with matching native data (--espeakng for run, or SCHEMAXIS_ESPEAKNG or a stored espeakng location for verify). A different build or voice data can change the samples and fail an older proof. Success proves consistent derivation only, not intelligibility, pronunciation, accent or accessibility.",
+        "A voice speaks the script as written by its own rules: Schemaxis does not detect or check the script language, translate it or correct it, so choose the voice that matches the language of the words (for example fr-fr for French text). The voice label is the one the runtime lists for that name, not a certificate of the accent or pronunciation you will hear."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/espeakng-baseline.json",
+          "purpose": "Narrate a literal two-sentence script at the default 175 words per minute."
+        },
+        {
+          "reference": "examples/schemaxis/espeakng-variant.json",
+          "purpose": "Narrate a numbered, multi-line script from a UTF-8 text file at a slower 140 words per minute."
+        },
+        {
+          "reference": "examples/schemaxis/espeakng-voice-en-gb.json",
+          "purpose": "Narrate a literal script with the explicitly selected English (Great Britain) voice."
+        },
+        {
+          "reference": "examples/schemaxis/espeakng-voice-fr-fr.json",
+          "purpose": "Narrate a French UTF-8 literal with the French (France) voice."
+        },
+        {
+          "reference": "examples/schemaxis/espeakng-voice-es.json",
+          "purpose": "Narrate a Spanish UTF-8 literal with the Spanish (Spain) voice."
+        },
+        {
+          "reference": "examples/schemaxis/espeakng-voice-archive-workflow.json",
+          "purpose": "Narrate French, conform the narration with SoX and archive it as lossless FLAC."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
+    }
+  },
+  "routes": {
+    "schemaxis.espeakng/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Describe one narration: a script (text or source), an optional speaking rate and an optional voice. The script is captured as immutable bytes, spoken by the fixed eSpeak NG en-us voice or the one explicitly selected voice, and checked by a fresh native re-synthesis. The output is narration.wav (canonical PCM16 mono 22050 Hz) plus a JSON summary with the script and sound hashes.",
+          "pitfalls": [
+            "Do not author voice names or paths, variants, flags, SSML, phoneme codes or markup: the only voice choice is the closed voice list. The result is a synthetic draft that a person must read and listen to."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the narration document contract. This identifies the authored structure, not the installed eSpeak NG release (1.52.0 is observed and checked at run time).",
+          "pitfalls": [
+            "Use exactly schemaxis.espeakng/1; another value is refused before anything runs."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select the only operation, narrate: speak the script and publish narration.wav and espeakng-summary.json.",
+          "pitfalls": [
+            "There is no other operation; a different name is rejected with UNKNOWN_FILTER."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean"
+          ]
+        },
+        "/properties/text": {
+          "status": "reviewed",
+          "explanation": "The script to speak, written directly in the document: plain words, 1 to 1024 Unicode code points and at most 8 KiB of UTF-8. Use this for a short line or two; line feeds separate lines. It is captured exactly as written. Author exactly one of text and source.",
+          "units": "Unicode code points (at most 1024) and UTF-8 bytes (at most 8192)",
+          "defaultMeaning": "No default: exactly one of text and source is required.",
+          "pitfalls": [
+            "Tabs, carriage returns, form feeds and other control characters, [[ ]] phoneme escapes, tags or character references such as <b> or &amp;, and punctuation-only text are refused, never cleaned up. Use line feeds only.",
+            "Some symbols are read aloud by their native rules, numbers and abbreviations are expanded, and unsupported characters may be skipped; the sound can differ from what you expect, so listen and read."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean",
+            "docs/espeakng.md#supported-subset-and-refusals"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose one absolute local UTF-8 .txt file holding the script, at most 1024 code points and 8 KiB, or bind a verified text or file artifact from an earlier step (for example a whisper.cpp transcript.txt). The file bytes are captured before synthesis and decide scheduler reuse. Author exactly one of text and source.",
+          "fileExtensions": [
+            ".txt"
+          ],
+          "defaultMeaning": "No default: exactly one of text and source is required.",
+          "pitfalls": [
+            "The name must end in .txt; URLs, relative paths, symlinks and non-regular files are refused. The file must be valid UTF-8 without a byte-order mark and obey the same plain-text profile as text, with line feeds only.",
+            "Text exported by other tools often ends with a form feed or uses carriage returns; clean it with a tool you control, then choose the cleaned file."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean",
+            "docs/espeakng.md#supported-subset-and-refusals"
+          ]
+        },
+        "/properties/rateWpm": {
+          "status": "reviewed",
+          "explanation": "Speaking rate in approximate words per minute, from 120 (slow and deliberate) to 240 (brisk). It scales how fast the fixed voice speaks; it does not change pitch or voice. Use the default for general narration, slow it down for instructions or clarity, speed it up for terse announcements.",
+          "units": "words per minute",
+          "defaultMeaning": "Omitted means 175, the eSpeak NG default rate.",
+          "pitfalls": [
+            "Only whole numbers from 120 to 240 are accepted (175.0, strings and booleans are refused). The actual duration depends on the words, numbers and punctuation, not only the rate, and a finished narration must stay within 120 seconds and 8 MiB.",
+            "Changing the rate changes the samples, so an earlier narration cannot be verified against a different rate."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean",
+            "docs/espeakng.md#native-mapping"
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Literal-script variant of the document: version, operation narrate, a text string, an optional rateWpm and an optional voice. The output is narration.wav plus espeakng-summary.json.",
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean"
+          ]
+        },
+        "/oneOf/0/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the narration document contract. This identifies the authored structure, not the installed eSpeak NG release (1.52.0 is observed and checked at run time).",
+          "pitfalls": [
+            "Use exactly schemaxis.espeakng/1; another value is refused before anything runs."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select the only operation, narrate: speak the script and publish narration.wav and espeakng-summary.json.",
+          "pitfalls": [
+            "There is no other operation; a different name is rejected with UNKNOWN_FILTER."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean"
+          ]
+        },
+        "/oneOf/0/properties/text": {
+          "status": "reviewed",
+          "explanation": "The script to speak, written directly in the document: plain words, 1 to 1024 Unicode code points and at most 8 KiB of UTF-8. Use this for a short line or two; line feeds separate lines. It is captured exactly as written. Author exactly one of text and source.",
+          "units": "Unicode code points (at most 1024) and UTF-8 bytes (at most 8192)",
+          "defaultMeaning": "No default: exactly one of text and source is required.",
+          "pitfalls": [
+            "Tabs, carriage returns, form feeds and other control characters, [[ ]] phoneme escapes, tags or character references such as <b> or &amp;, and punctuation-only text are refused, never cleaned up. Use line feeds only.",
+            "Some symbols are read aloud by their native rules, numbers and abbreviations are expanded, and unsupported characters may be skipped; the sound can differ from what you expect, so listen and read."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean",
+            "docs/espeakng.md#supported-subset-and-refusals"
+          ]
+        },
+        "/oneOf/0/properties/rateWpm": {
+          "status": "reviewed",
+          "explanation": "Speaking rate in approximate words per minute, from 120 (slow and deliberate) to 240 (brisk). It scales how fast the fixed voice speaks; it does not change pitch or voice. Use the default for general narration, slow it down for instructions or clarity, speed it up for terse announcements.",
+          "units": "words per minute",
+          "defaultMeaning": "Omitted means 175, the eSpeak NG default rate.",
+          "pitfalls": [
+            "Only whole numbers from 120 to 240 are accepted (175.0, strings and booleans are refused). The actual duration depends on the words, numbers and punctuation, not only the rate, and a finished narration must stay within 120 seconds and 8 MiB.",
+            "Changing the rate changes the samples, so an earlier narration cannot be verified against a different rate."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean",
+            "docs/espeakng.md#native-mapping"
+          ]
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "File variant of the document: version, operation narrate, a source .txt file or artifact, an optional rateWpm and an optional voice. The output is narration.wav plus espeakng-summary.json.",
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean"
+          ]
+        },
+        "/oneOf/1/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the narration document contract. This identifies the authored structure, not the installed eSpeak NG release (1.52.0 is observed and checked at run time).",
+          "pitfalls": [
+            "Use exactly schemaxis.espeakng/1; another value is refused before anything runs."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Select the only operation, narrate: speak the script and publish narration.wav and espeakng-summary.json.",
+          "pitfalls": [
+            "There is no other operation; a different name is rejected with UNKNOWN_FILTER."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean"
+          ]
+        },
+        "/oneOf/1/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose one absolute local UTF-8 .txt file holding the script, at most 1024 code points and 8 KiB, or bind a verified text or file artifact from an earlier step (for example a whisper.cpp transcript.txt). The file bytes are captured before synthesis and decide scheduler reuse. Author exactly one of text and source.",
+          "fileExtensions": [
+            ".txt"
+          ],
+          "defaultMeaning": "No default: exactly one of text and source is required.",
+          "pitfalls": [
+            "The name must end in .txt; URLs, relative paths, symlinks and non-regular files are refused. The file must be valid UTF-8 without a byte-order mark and obey the same plain-text profile as text, with line feeds only.",
+            "Text exported by other tools often ends with a form feed or uses carriage returns; clean it with a tool you control, then choose the cleaned file."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean",
+            "docs/espeakng.md#supported-subset-and-refusals"
+          ]
+        },
+        "/oneOf/1/properties/rateWpm": {
+          "status": "reviewed",
+          "explanation": "Speaking rate in approximate words per minute, from 120 (slow and deliberate) to 240 (brisk). It scales how fast the fixed voice speaks; it does not change pitch or voice. Use the default for general narration, slow it down for instructions or clarity, speed it up for terse announcements.",
+          "units": "words per minute",
+          "defaultMeaning": "Omitted means 175, the eSpeak NG default rate.",
+          "pitfalls": [
+            "Only whole numbers from 120 to 240 are accepted (175.0, strings and booleans are refused). The actual duration depends on the words, numbers and punctuation, not only the rate, and a finished narration must stay within 120 seconds and 8 MiB.",
+            "Changing the rate changes the samples, so an earlier narration cannot be verified against a different rate."
+          ],
+          "sources": [
+            "docs/espeakng.md#what-the-fields-mean",
+            "docs/espeakng.md#native-mapping"
+          ]
+        },
+        "/properties/voice": {
+          "status": "reviewed",
+          "explanation": "Optionally choose which of four fixed offline eSpeak NG voices speaks the script: en-us (English, United States), en-gb (English, Great Britain), fr-fr (French, France) or es (Spanish, Spain). It selects the voice only: the script is not translated, language-checked or corrected, so pick the voice that matches the language of the words. Leave it out for the original English (United States) voice, whose plans and proofs are unchanged.",
+          "defaultMeaning": "Omitted means the original fixed en-us voice, exactly as before this option existed. An explicit en-us speaks the same synthesis but is recorded as an explicit choice.",
+          "pitfalls": [
+            "Only the four listed names are accepted; other languages, regional or variant voices (such as en-gb-x-rp or fr-be), voice paths, MBROLA voices and automatic language detection are refused, not approximated.",
+            "Verification re-synthesises with the same voice in the trusted espeak-ng and needs that voice's native data; a runtime that does not list the exact voice is refused, because eSpeak NG would otherwise silently speak with a different voice. The label is what the runtime lists for the name, not a certificate of the accent heard, and no pronunciation, translation or original-speaker claim is made."
+          ],
+          "sources": [
+            "docs/espeakng.md#voices",
+            "docs/espeakng.md#native-mapping"
+          ]
+        },
+        "/oneOf/0/properties/voice": {
+          "status": "reviewed",
+          "explanation": "Optionally choose which of four fixed offline eSpeak NG voices speaks the script: en-us (English, United States), en-gb (English, Great Britain), fr-fr (French, France) or es (Spanish, Spain). It selects the voice only: the script is not translated, language-checked or corrected, so pick the voice that matches the language of the words. Leave it out for the original English (United States) voice, whose plans and proofs are unchanged.",
+          "defaultMeaning": "Omitted means the original fixed en-us voice, exactly as before this option existed. An explicit en-us speaks the same synthesis but is recorded as an explicit choice.",
+          "pitfalls": [
+            "Only the four listed names are accepted; other languages, regional or variant voices (such as en-gb-x-rp or fr-be), voice paths, MBROLA voices and automatic language detection are refused, not approximated.",
+            "Verification re-synthesises with the same voice in the trusted espeak-ng and needs that voice's native data; a runtime that does not list the exact voice is refused, because eSpeak NG would otherwise silently speak with a different voice. The label is what the runtime lists for the name, not a certificate of the accent heard, and no pronunciation, translation or original-speaker claim is made."
+          ],
+          "sources": [
+            "docs/espeakng.md#voices",
+            "docs/espeakng.md#native-mapping"
+          ]
+        },
+        "/oneOf/1/properties/voice": {
+          "status": "reviewed",
+          "explanation": "Optionally choose which of four fixed offline eSpeak NG voices speaks the script: en-us (English, United States), en-gb (English, Great Britain), fr-fr (French, France) or es (Spanish, Spain). It selects the voice only: the script is not translated, language-checked or corrected, so pick the voice that matches the language of the words. Leave it out for the original English (United States) voice, whose plans and proofs are unchanged.",
+          "defaultMeaning": "Omitted means the original fixed en-us voice, exactly as before this option existed. An explicit en-us speaks the same synthesis but is recorded as an explicit choice.",
+          "pitfalls": [
+            "Only the four listed names are accepted; other languages, regional or variant voices (such as en-gb-x-rp or fr-be), voice paths, MBROLA voices and automatic language detection are refused, not approximated.",
+            "Verification re-synthesises with the same voice in the trusted espeak-ng and needs that voice's native data; a runtime that does not list the exact voice is refused, because eSpeak NG would otherwise silently speak with a different voice. The label is what the runtime lists for the name, not a certificate of the accent heard, and no pronunciation, translation or original-speaker claim is made."
+          ],
+          "sources": [
+            "docs/espeakng.md#voices",
+            "docs/espeakng.md#native-mapping"
+          ]
+        }
+      }
+    }
+  }
+}

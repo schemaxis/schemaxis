@@ -275,6 +275,29 @@
       "pitfalls": [
         "This is a transform hierarchy, not Godot named membership groups, animation, instancing or physics. All descendants remain owned by the saved scene root."
       ]
+    },
+    "animatedSprite3D": {
+      "status": "reviewed",
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
+      "explanation": "Turns one named, forward-running Aseprite tag into a native editable AnimatedSprite3D with its own SpriteFrames, so a technical artist's authored per-frame timing survives into the Godot scene. Choose it when a sprite should play inside the 3D scene; choose sprite3D for a still picture. It reads the exported sheet PNG and its schemaxis.aseprite.sheet/1 metadata together, keeps every frame's rectangle and its duration in milliseconds, and plays the slice at an animation speed of 1 frame per second with each frame's duration written in seconds, so a 250 ms frame stays 250 ms. The scene plays the animation when it runs. Reverse and ping-pong tags, other tags in the sheet, trimmed frames and per-frame offsets are not imported; they are refused or ignored by design, never reinterpreted.",
+      "sources": [
+        "src/schemaxis/adaptors/godot/sprites.py",
+        "docs/godot.md#timed-sprite-animation",
+        "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+        "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+      ],
+      "pitfalls": [
+        "Godot stores frame durations as relative weights. Schemaxis fixes the animation speed at 1 frame per second and writes durationMS/1000, so editing the speed or speed_scale in Godot rescales every frame together rather than editing milliseconds.",
+        "Only the tag named by animation is imported, and only if its direction is forward; reverse, pingPong and pingPongReverse tags are refused with UNSUPPORTED_ANIMATION_DIRECTION.",
+        "Playback is qualified headless against Godot's own process frames at a fixed 1 ms tick. Godot carries a frame's leftover progress as a fraction across a boundary, so state can deviate from the ideal clock by up to about one tick times the duration ratio per boundary; this limit is exposed in the verification, not hidden. Rendered appearance and GUI playback were not qualified.",
+        "Take file and metadata from the same Aseprite publication (sheet.png and sheet.json); a metadata width, height or rectangle that disagrees with the PNG is refused."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/aseprite-animation-to-godot.json",
+          "purpose": "Real Aseprite producer feeding both the sheet PNG and sheet.json into an animated sprite inside a transform group."
+        }
+      ]
     }
   },
   "routes": {
@@ -3280,6 +3303,157 @@
           ],
           "pitfalls": [
             "A material or mesh id cannot be a parent. Parent identity is distinct from ownership: the saved scene root owns every node."
+          ]
+        },
+        "/properties/nodes/items/oneOf/14": {
+          "status": "reviewed",
+          "explanation": "Choose an animatedSprite3D node to play one forward Aseprite tag as a timed sprite animation. It needs the exported sheet image (file), the matching sheet metadata (metadata) and the tag name (animation); it needs no material, counts as the visible content a scene requires, and may sit inside a transformGroup.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ],
+          "examples": [
+            {
+              "id": "hero",
+              "filter": "animatedSprite3D",
+              "options": {
+                "file": "/data/sheet.png",
+                "metadata": "/data/sheet.json",
+                "animation": "walk",
+                "loop": true,
+                "pixelSize": 0.05
+              }
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/id": {
+          "status": "reference",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ],
+          "explanation": "Give this object a unique name. References use this name to identify the result or object."
+        },
+        "/properties/nodes/items/oneOf/14/properties/filter": {
+          "status": "reference",
+          "sources": [
+            "docs/studio-adaptor-contract.md"
+          ],
+          "explanation": "Select the declared operation that creates this node’s result."
+        },
+        "/properties/nodes/items/oneOf/14/properties/options": {
+          "status": "reviewed",
+          "explanation": "The sheet, its metadata, which tag to play, whether it repeats, how large it is and where it sits. file, metadata and animation are required; loop defaults to true, pixelSize to 0.01 m per pixel and position to the origin.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ],
+          "examples": [
+            {
+              "file": "/data/sheet.png",
+              "metadata": "/data/sheet.json",
+              "animation": "walk",
+              "loop": false,
+              "pixelSize": 0.05,
+              "position": [
+                0,
+                1,
+                0
+              ]
+            }
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/options/properties/position": {
+          "status": "reviewed",
+          "explanation": "Local position [x, y, z] in metres of the centre of the frame rectangle, relative to the parent group (or the scene root). Metres, Y up; the picture faces +Z and is not rotated or scaled by this node.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/options/properties/position/items": {
+          "status": "reviewed",
+          "explanation": "One coordinate in metres, between -100000 and 100000.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/options/properties/file": {
+          "status": "reviewed",
+          "explanation": "The Aseprite sheet PNG: all frames in one non-interlaced 8-bit RGB or RGBA image of at most 4096 x 256 pixels and 524288 pixels, 1 MiB. Take it from an Aseprite operation's sheet publication with a workflow artifact reference (the third publication, zero-based index 2) or give an absolute path. The bytes are captured and hashed before Godot runs.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/options/properties/metadata": {
+          "status": "reviewed",
+          "explanation": "The sheet.json published beside the PNG (schemaxis.aseprite.sheet/1): exact width and height, 1 to 32 frames with x, y, width, height and durationMS in whole milliseconds (1 to 5000), and tags. Use a workflow artifact reference to the fourth publication (zero-based index 3), the one published beside the PNG, or an absolute path. Unknown keys, wrong types, overlapping or out-of-sheet rectangles and a mismatch with the PNG are refused with the failing metadata location.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/options/properties/animation": {
+          "status": "reviewed",
+          "explanation": "The name of the Aseprite tag to play. It becomes the SpriteFrames animation name, so it must start with a letter and use only letters, digits and underscores (at most 64). The tag must run forward; its frames are fromFrame to toFrame, counted from 1 and inclusive, and together last at most 8000 ms. Durations the fixed 1 ms playback check cannot tell apart (frames of only a few milliseconds, or a frame many times longer or shorter than its neighbour) are refused before Godot starts.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/options/properties/loop": {
+          "status": "reviewed",
+          "explanation": "true repeats the slice from its first frame after the last; false plays it once and holds the last frame. Omitted means true. This sets Godot's linear or no-loop animation mode; ping-pong is not offered.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/options/properties/pixelSize": {
+          "status": "reviewed",
+          "explanation": "World size of one image pixel in metres, 0.00001 to 10 (default 0.01). A frame 8 pixels wide at 0.05 is 0.4 m wide. Every frame of the animation shares it.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/inputs": {
+          "status": "reviewed",
+          "explanation": "Optional placement link. Omit it to attach the sprite to the scene root.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
+          ]
+        },
+        "/properties/nodes/items/oneOf/14/properties/inputs/properties/parent": {
+          "status": "reviewed",
+          "explanation": "The id of a transformGroup that moves this sprite as part of a static assembly; the sprite's position is then local to that group. Parent ids may refer forward. Omit it for the scene root. The group's own scale and rotation apply, so a rotated or scaled group rotates and scales the picture.",
+          "sources": [
+            "src/schemaxis/adaptors/godot/sprites.py",
+            "docs/godot.md#timed-sprite-animation",
+            "https://docs.godotengine.org/en/stable/classes/class_spriteframes.html",
+            "https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html"
           ]
         }
       }

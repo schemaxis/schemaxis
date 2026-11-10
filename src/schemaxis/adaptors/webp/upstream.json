@@ -1,0 +1,21 @@
+{
+  "policy": "latest-stable",
+  "absorbedVersion": null,
+  "source": {
+    "kind": "pattern",
+    "url": "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/index.html",
+    "pattern": "libwebp-(\\d+\\.\\d+\\.\\d+)\\.tar\\.gz"
+  },
+  "releaseNotes": "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/index.html",
+  "scope": "libwebp 1.6.0 cwebp/dwebp built from the official source archive (static, no libpng). Pending: source-current bounded native acceptance recorded after shared integration. decodeToPng uses only dwebp -nodither -pam (libwebp 1.6.0, official docs https://developers.google.com/speed/webp/docs/dwebp). Fresh integrated native development-kit cases were repeated against the current source; consult the registered receipt for exact cases and recorded runtimes. This refresh does not broaden the documented operation or runtime-support scope. Fresh native development-kit cases were repeated on the integrated source; the registered receipt records exact cases and runtimes. This refresh alone does not broaden operation scope.",
+  "evidence": [
+    "verification/2026-10-25-webp-40.md",
+    "verification/2026-10-25-webp-43.md",
+    "verification/2026-10-25-webp-51.md"
+  ],
+  "acceptance": [
+    "Run tools/qualify_webp.py with libwebp 1.6 cwebp and dwebp. Require three literal-count cases, hostile refreshed-hash rejections (including a corrupt bitstream with valid framing), strict-JSON and typed-claim rejections, missing-dwebp verification fault, workflow reuse and lifecycle. Register only after shared integration freezes.",
+    "Run tools/qualify_webp_lossy.py with libwebp 1.6 cwebp and dwebp: encodeLossy over quality, geometry and opacity variants with independently computed all-RGB error against dwebp, byte budgets, and the refusals (partial alpha, quality/error bounds, over-budget, corrupt VP8, missing decoder, forged retained evidence, cancel, timeout).",
+    "Run tools/qualify_webp_decode.py with --dwebp and --webp (libwebp 1.6 dwebp and cwebp; --webp is required because the tool makes its inputs and the legacy comparison with the real encoder, while decodeToPng itself needs only dwebp): decodeToPng over literal lossless RGBA with hidden RGB, opaque lossless RGB and lossy, hand-set VP8 upscaling-bit combinations compared with a direct dwebp decode, the refusals (animated, VP8X, corrupt, truncated, forged alpha hint, tampered PNG with refreshed hashes), decoder-only run, timeout and cancellation by an owned stall wrapper (the real dwebp is not started), unchanged legacy plans, results and receipts, and the Pandoc PNG handoff. The output is a private probe record with local paths, not a public receipt, and process IDs cover only the wrapper-logged and direct launches."
+  ]
+}

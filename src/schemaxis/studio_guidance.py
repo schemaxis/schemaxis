@@ -80,7 +80,9 @@ def validate_record(record):
                     for k in ('start', 'end')) and control['start'] != control['end'])
         blocks = (isinstance(control, dict) and set(control) == {'kind', 'input'}
                   and control['kind'] == 'blocks' and isinstance(control['input'], str) and bool(control['input']))
-        if not line and not blocks:
+        reader = (isinstance(control, dict) and set(control) == {'kind', 'field'}
+                  and control['kind'] == 'reader-selection' and control['field'] in ('regions', 'cellArrays'))
+        if not line and not blocks and not reader:
             raise ValueError('control requires line endpoint names or a blocks input port')
     if record['status'] != 'pending' and not record.get('explanation'):
         raise ValueError('available guidance requires an explanation')
@@ -125,7 +127,7 @@ def annotate(node, guide, path, provider, version):
         if node.get('description'):
             node['x-studio-technical'] = node['description']
         node['description'] = guide['explanation']
-    if guide.get('fileExtensions'):
+    if 'fileExtensions' in guide:
         node['x-studio-file'] = {'extensions': guide['fileExtensions']}
 
 
@@ -140,7 +142,8 @@ MARKERS_ROUTE = 'schemaxis.workflow/1'
 
 def marker_definitions():
     from .schema_authoring import composition_definitions
-    return set(composition_definitions())
+    # capturedInput is shared by every adaptor that admits captured inputs.
+    return set(composition_definitions()) | {'capturedInput'}
 
 
 def shared_schema(version, annotate_documents=None):

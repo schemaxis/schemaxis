@@ -58,12 +58,21 @@ LOSSES = ['PNG is flattened and loses editable geometry and text; retain diagram
 
 def fault(code, message, location='$', **observed):
     raise SchemaxisError(Fault(code, message, location, 'pipeline', observed=observed,
-        recovery={'INVALID_LAYOUT': 'Move or resize boxes; keep page margins and declared clearance; route links left-to-right without crossing unrelated boxes.',
+        recovery={'INVALID_LAYOUT': 'Move or resize boxes; keep page margins and declared clearance; route links left-to-right without crossing unrelated boxes. For a label fault, use one line of visible text without control or line-separator characters.',
                   'FLOW_CYCLE': 'Remove or reverse the named cyclic dependencies; flowDiagram requires a DAG.',
                   'FLOW_PAGE_OVERFLOW': 'Increase page width/height or reduce card size/gaps within clearance limits; inspect requiredPage and ranks before retrying.',
                   'FLOW_ROUTING_COLLISION': 'Change the dependency structure or use blockDiagram to place cards explicitly; the bounded deterministic router cannot safely route this graph.',
                   'LABEL_OVERFLOW': 'Widen or heighten the named box, shorten its label, or lower fontSize; rerun to measure the actual native font.',
+                  'UNSUPPORTED_RUNTIME': 'Select an absolute stable Inkscape 1.4.x executable (inspect observed for the reported version) or repair its data directory; verification of retained receipts does not rerun native code.',
                   'VERIFICATION_FAILED': 'Preserve the failed evidence and run the original authored document in a fresh directory.'}.get(code, 'Correct the located input or select a usable absolute Inkscape executable; retry in a fresh directory.')))
+
+
+def check_label(label, location):
+    """Labels are single-line XML 1.0 text with at least one non-whitespace character."""
+    if any(ord(c) < 32 or ord(c) == 127 or c in '\x85\u2028\u2029' or 0xd800 <= ord(c) <= 0xdfff or ord(c) in (0xfffe, 0xffff) for c in label):
+        fault('INVALID_LAYOUT', 'label must be single-line XML 1.0 text without control, line-separator or forbidden characters', location)
+    if not label.strip():
+        fault('INVALID_LAYOUT', 'label must contain at least one non-whitespace character; blank text cannot be measured or read', location)
 
 
 def _block_plan(document):
@@ -77,8 +86,7 @@ def _block_plan(document):
         identity = box['id']
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,31}', identity) or identity in seen:
             fault('INVALID_LAYOUT', 'box and link IDs must be unique simple names', location + '.id')
-        if any(ord(c) < 32 or ord(c) == 127 or 0xd800 <= ord(c) <= 0xdfff or ord(c) in (0xfffe, 0xffff) for c in box['label']):
-            fault('INVALID_LAYOUT', 'labels must be single-line XML 1.0 text without control or forbidden characters', location + '.label')
+        check_label(box['label'], location + '.label')
         seen.add(identity); boxes[identity] = box
         m = options['margin']; x, y, w, h = (box[k] for k in ('x', 'y', 'width', 'height'))
         if x - .2 + 1e-10 < m or y - .2 + 1e-10 < m or x + w + .2 > options['width'] - m + 1e-10 or y + h + .2 > options['height'] - m + 1e-10:
@@ -138,6 +146,8 @@ def plan(document):
     if document.get('operation') != 'flowDiagram': fail('UNKNOWN_FILTER', 'select blockDiagram or flowDiagram')
     keys(document, ('version', 'operation', *FLOW_OPTIONS), '$')
     options = validate_arguments(FLOW_OPTIONS, {k: v for k, v in document.items() if k not in ('version', 'operation')})
+    # Authored positions are known only here; derived rank/lane order is not.
+    for i, box in enumerate(options['boxes']): check_label(box['label'], f'$.boxes[{i}].label')
     from .layout import arrange
     return arrange(options, _block_plan, fault)
 
@@ -247,6 +257,13 @@ def raster(prepared, data):
     return {'width': w, 'height': h, 'probes': probes}
 
 
+def supported_runtime(output):
+    runtime = output.strip()
+    if not re.fullmatch(r'Inkscape 1\.4\.\d+[^\n]*', runtime):
+        fault('UNSUPPORTED_RUNTIME', 'this route targets stable Inkscape 1.4.x', observed=runtime[:200])
+    return runtime
+
+
 def receipt(directory, prepared):
     if (directory / 'diagram.svg').read_bytes() != svg(prepared):
         fault('VERIFICATION_FAILED', 'editable SVG semantics differ from authored diagram')
@@ -254,9 +271,7 @@ def receipt(directory, prepared):
     image = directory / 'diagram.png'
     if image.stat().st_size > MAX_BYTES: fault('VERIFICATION_FAILED', 'PNG byte budget exceeded')
     preview = raster(prepared, image.read_bytes())
-    runtime = (directory / 'version.stdout').read_text().strip()
-    if not re.fullmatch(r'Inkscape 1\.4\.\d+[^\n]*', runtime):
-        fault('UNSUPPORTED_RUNTIME', 'this route targets stable Inkscape 1.4.x', observed=runtime)
+    runtime = supported_runtime((directory / 'version.stdout').read_text())
     return {'artifacts': [{'file': str(directory / name), 'kind': kind, 'sha256': file_digest(directory / name)}
                           for name, kind in [('diagram.svg', 'text'), ('diagram.png', 'image'), ('diagram-measurements.json', 'text')]],
             'native': native, 'preview': preview, 'runtime': runtime, 'losses': LOSSES}
@@ -305,6 +320,9 @@ def run(document, directory, *, executable=None, timeout=300):
     try:
         (directory / 'diagram.svg').write_bytes(svg(prepared))
         native_visit(executable, prepared, directory, 'version', deadline - time.monotonic())
+        # Reject an unsupported runtime before query/export so its different
+        # output is not misreported as malformed native evidence.
+        supported_runtime((directory / 'version.stdout').read_text())
         # Open the durable SVG in independent native visits for query and export.
         native_visit(executable, prepared, directory, 'query', deadline - time.monotonic())
         if 'Unrecognized unit' in (directory / 'query.stderr').read_text() or 'Units file' in (directory / 'query.stderr').read_text():

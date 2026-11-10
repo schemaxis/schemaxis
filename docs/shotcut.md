@@ -52,6 +52,13 @@ ordinary evidence integrity; wholesale fabrication of all native evidence is
 outside this local trust model. A regular-file check precedes source capture and
 nonblocking descriptor validation rejects FIFOs without hanging. The adaptor
 never accepts a process exit or file existence as sufficient proof.
+Reopening also requires `result.json` to name exactly this run directory's
+`video.mkv`, `project.mlt` and `project-bundle.zip` with three artifacts; a result
+that says `succeeded` but points elsewhere or miscounts is `VERIFICATION_FAILED`.
+Source frame counts are native observations, so a clip that selects frames beyond
+its probed source fails as `INVALID_RANGE` right after that asset's probe, before
+any decode or render, reporting the asset, clip, requested end and actual source
+frames. Shorten the range or supply a longer source, then run in a fresh directory.
 
 `examples/schemaxis/shotcut-timeline.json` is editable and plan-only until its
 absolute placeholder is bound. The six-frame fixture contains red, green, blue,

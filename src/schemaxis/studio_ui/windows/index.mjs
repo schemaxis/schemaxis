@@ -11,10 +11,11 @@ import {installDocumentActions} from './documents.mjs';
 import {helpWindow} from './help/help.mjs';
 import {setupWindow} from './setup.mjs';
 import {schedulesWindow} from './schedules.mjs';
+import {resultsWindow} from './results.mjs';
 
 export function registerWindows(ctx) {
   for (const type of [startWindow, settingsWindow, designerWindow, workbenchWindow, runnerWindow,
-    schemaEditorWindow, setupWindow, schedulesWindow, helpWindow]) {
+    schemaEditorWindow, setupWindow, schedulesWindow, resultsWindow, helpWindow]) {
     ctx.windows.register(type);
   }
   installDocumentActions(ctx);

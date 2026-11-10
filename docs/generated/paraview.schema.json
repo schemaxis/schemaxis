@@ -721,6 +721,178 @@
           "type": "object",
           "properties": {
             "$call": {
+              "const": "boundsFromExtents"
+            },
+            "args": {
+              "type": "object",
+              "properties": {
+                "extents": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "$ref": "#/$defs/runtime"
+                          }
+                        ]
+                      },
+                      "minItems": 6,
+                      "maxItems": 6
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "extents"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "$call",
+            "args"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$call": {
+              "const": "boundsPoint"
+            },
+            "args": {
+              "type": "object",
+              "properties": {
+                "bounds": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "min": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              },
+                              "minItems": 3,
+                              "maxItems": 3
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ]
+                        },
+                        "max": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              },
+                              "minItems": 3,
+                              "maxItems": 3
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "min",
+                        "max"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                },
+                "x": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "min",
+                        "mid",
+                        "max"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ],
+                  "default": "mid"
+                },
+                "y": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "min",
+                        "mid",
+                        "max"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ],
+                  "default": "mid"
+                },
+                "z": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "min",
+                        "mid",
+                        "max"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ],
+                  "default": "mid"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "bounds"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "$call",
+            "args"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$call": {
               "const": "boundsSize"
             },
             "args": {
@@ -3580,8 +3752,75 @@
               "items": {
                 "anyOf": [
                   {
-                    "type": "string",
-                    "minLength": 1
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          {
+                            "$ref": "#/$defs/runtime"
+                          }
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "pattern": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                              "pattern"
+                            ]
+                          },
+                          {
+                            "$ref": "#/$defs/runtime"
+                          }
+                        ]
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "exclude": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 256
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                              "exclude"
+                            ]
+                          },
+                          {
+                            "$ref": "#/$defs/runtime"
+                          }
+                        ]
+                      }
+                    ]
                   },
                   {
                     "$ref": "#/$defs/runtime"
@@ -3594,6 +3833,7 @@
               "$ref": "#/$defs/runtime"
             }
           ],
+          "x-schemaxis-compiler": "paraview-block-selection",
           "x-schemaxis-path": [
             "Selectors"
           ]
@@ -3812,19 +4052,125 @@
         "regions": {
           "anyOf": [
             {
-              "type": "array",
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  {
-                    "$ref": "#/$defs/runtime"
-                  }
-                ]
-              },
-              "minItems": 1
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              },
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "pattern": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 256
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "pattern"
+                                    ]
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "$ref": "#/$defs/runtime"
+                          }
+                        ]
+                      },
+                      "minItems": 1
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "select": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "all"
+                              ]
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "select"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "pattern": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "pattern"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                }
+              ]
             },
             {
               "$ref": "#/$defs/runtime"
@@ -3833,6 +4179,7 @@
           "default": [
             "internalMesh"
           ],
+          "x-schemaxis-compiler": "paraview-reader-selection",
           "x-schemaxis-path": [
             "MeshRegions"
           ]
@@ -3840,24 +4187,131 @@
         "cellArrays": {
           "anyOf": [
             {
-              "type": "array",
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  {
-                    "$ref": "#/$defs/runtime"
-                  }
-                ]
-              },
-              "minItems": 1
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              },
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "pattern": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 256
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "pattern"
+                                    ]
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "$ref": "#/$defs/runtime"
+                          }
+                        ]
+                      },
+                      "minItems": 1
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "select": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "all"
+                              ]
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "select"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "pattern": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "pattern"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                }
+              ]
             },
             {
               "$ref": "#/$defs/runtime"
             }
           ],
+          "x-schemaxis-compiler": "paraview-reader-selection",
           "x-schemaxis-path": [
             "CellArrays"
           ]
@@ -127653,6 +128107,69 @@
                     }
                   ],
                   "default": false
+                },
+                "bold": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                },
+                "fontSize": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 4,
+                      "maximum": 256
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                },
+                "italic": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                },
+                "justification": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "Left",
+                        "Center",
+                        "Right"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
+                },
+                "position": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "Upper Left Corner",
+                        "Upper Right Corner",
+                        "Upper Center",
+                        "Lower Left Corner",
+                        "Lower Right Corner",
+                        "Lower Center"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/runtime"
+                    }
+                  ]
                 }
               },
               "additionalProperties": false
@@ -127680,6 +128197,32 @@
                     640,
                     480
                   ]
+                },
+                "background": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  ],
+                  "default": [
+                    1,
+                    1,
+                    1
+                  ]
+                },
+                "transparentBackground": {
+                  "type": "boolean",
+                  "default": false
                 },
                 "cameras": {
                   "type": "array",
@@ -130678,6 +131221,10 @@
             "type": "boolean",
             "default": false
           },
+          "stateBundle": {
+            "type": "boolean",
+            "default": false
+          },
           "appearances": {
             "type": "array",
             "minItems": 1,
@@ -130861,6 +131408,69 @@
                       }
                     ],
                     "default": false
+                  },
+                  "bold": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "$ref": "#/$defs/runtime"
+                      }
+                    ]
+                  },
+                  "fontSize": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 4,
+                        "maximum": 256
+                      },
+                      {
+                        "$ref": "#/$defs/runtime"
+                      }
+                    ]
+                  },
+                  "italic": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "$ref": "#/$defs/runtime"
+                      }
+                    ]
+                  },
+                  "justification": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "Left",
+                          "Center",
+                          "Right"
+                        ]
+                      },
+                      {
+                        "$ref": "#/$defs/runtime"
+                      }
+                    ]
+                  },
+                  "position": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "Upper Left Corner",
+                          "Upper Right Corner",
+                          "Upper Center",
+                          "Lower Left Corner",
+                          "Lower Right Corner",
+                          "Lower Center"
+                        ]
+                      },
+                      {
+                        "$ref": "#/$defs/runtime"
+                      }
+                    ]
                   }
                 },
                 "additionalProperties": false

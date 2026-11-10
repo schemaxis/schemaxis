@@ -1,0 +1,293 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "body",
+      "filter": "body"
+    },
+    {
+      "id": "outer",
+      "filter": "circle",
+      "options": {},
+      "inputs": {
+        "body": "body"
+      },
+      "drive": {
+        "radius": {
+          "terms": {
+            "outerRadius": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "bend",
+      "filter": "arcPath",
+      "options": {
+        "frame": {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "xAxis": [
+            -1,
+            0,
+            0
+          ],
+          "normal": [
+            0,
+            1,
+            0
+          ]
+        },
+        "sweepAngle": 90
+      },
+      "inputs": {
+        "body": "body"
+      },
+      "drive": {
+        "bendRadius": {
+          "terms": {
+            "bendRadius": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "stock",
+      "filter": "additivePipe",
+      "options": {},
+      "inputs": {
+        "body": "body",
+        "profile": "outer",
+        "spine": "bend"
+      }
+    },
+    {
+      "id": "inner",
+      "filter": "circle",
+      "options": {},
+      "inputs": {
+        "body": "body"
+      },
+      "drive": {
+        "radius": {
+          "terms": {
+            "outerRadius": 1,
+            "wall": -1
+          }
+        }
+      }
+    },
+    {
+      "id": "tube",
+      "filter": "subtractivePipe",
+      "options": {},
+      "inputs": {
+        "body": "body",
+        "base": "stock",
+        "profile": "inner",
+        "spine": "bend"
+      }
+    },
+    {
+      "id": "outletProfile",
+      "filter": "circle",
+      "options": {
+        "onFace": {
+          "face": "right",
+          "anchor": "centroid"
+        }
+      },
+      "inputs": {
+        "body": "body",
+        "support": "tube"
+      },
+      "drive": {
+        "radius": {
+          "terms": {
+            "flangeRadius": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "outletStock",
+      "filter": "pad",
+      "inputs": {
+        "body": "body",
+        "base": "tube",
+        "profile": "outletProfile"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "flangeLength": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "outletBore",
+      "filter": "holeLocations",
+      "options": {
+        "centres": [
+          [
+            0,
+            0
+          ]
+        ],
+        "onFace": {
+          "face": "right",
+          "anchor": "centroid"
+        }
+      },
+      "inputs": {
+        "body": "body",
+        "support": "outletStock"
+      }
+    },
+    {
+      "id": "outletFinished",
+      "filter": "hole",
+      "options": {
+        "extent": "length"
+      },
+      "inputs": {
+        "body": "body",
+        "base": "outletStock",
+        "profile": "outletBore"
+      },
+      "drive": {
+        "depth": {
+          "terms": {
+            "flangeLength": 1
+          }
+        },
+        "diameter": {
+          "terms": {
+            "outerRadius": 2,
+            "wall": -2
+          }
+        }
+      }
+    },
+    {
+      "id": "inletProfile",
+      "filter": "circle",
+      "options": {
+        "onFace": {
+          "face": "bottom",
+          "anchor": "centroid"
+        }
+      },
+      "inputs": {
+        "body": "body",
+        "support": "outletFinished"
+      },
+      "drive": {
+        "radius": {
+          "terms": {
+            "flangeRadius": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "inletStock",
+      "filter": "pad",
+      "inputs": {
+        "body": "body",
+        "base": "outletFinished",
+        "profile": "inletProfile"
+      },
+      "drive": {
+        "length": {
+          "terms": {
+            "flangeLength": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "inletBore",
+      "filter": "holeLocations",
+      "options": {
+        "centres": [
+          [
+            0,
+            0
+          ]
+        ],
+        "onFace": {
+          "face": "bottom",
+          "anchor": "centroid"
+        }
+      },
+      "inputs": {
+        "body": "body",
+        "support": "inletStock"
+      }
+    },
+    {
+      "id": "inletFinished",
+      "filter": "hole",
+      "options": {
+        "extent": "length"
+      },
+      "inputs": {
+        "body": "body",
+        "base": "inletStock",
+        "profile": "inletBore"
+      },
+      "drive": {
+        "depth": {
+          "terms": {
+            "flangeLength": 1
+          }
+        },
+        "diameter": {
+          "terms": {
+            "outerRadius": 2,
+            "wall": -2
+          }
+        }
+      }
+    }
+  ],
+  "output": "inletFinished",
+  "parameters": {
+    "bendRadius": {
+      "kind": "length",
+      "value": 10,
+      "minimum": 8,
+      "maximum": 15
+    },
+    "outerRadius": {
+      "kind": "length",
+      "value": 3,
+      "minimum": 2.5,
+      "maximum": 3.5
+    },
+    "wall": {
+      "kind": "length",
+      "value": 1,
+      "minimum": 0.5,
+      "maximum": 1.5
+    },
+    "flangeRadius": {
+      "kind": "length",
+      "value": 5,
+      "minimum": 4.5,
+      "maximum": 6
+    },
+    "flangeLength": {
+      "kind": "length",
+      "value": 5,
+      "minimum": 3,
+      "maximum": 7
+    }
+  }
+}

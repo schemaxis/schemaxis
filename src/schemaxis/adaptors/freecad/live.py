@@ -106,15 +106,17 @@ def prepare(document):
         fault('INVALID_DOCUMENT', 'Expected a document object')
     if any(isinstance(n,dict) and (n.get('filter') in ('body','pad','pocket') or (isinstance(n.get('inputs'),dict) and 'body' in n['inputs'])) for n in (document.get('nodes') if isinstance(document.get('nodes'),list) else [])):
         fault('UNSUPPORTED_LIVE_INPUT','PartDesign Body workflows currently require a batch run')
-    if 'parameters' in document or any(isinstance(n, dict) and 'drive' in n for n in (document.get('nodes') if isinstance(document.get('nodes'), list) else [])):
+    if 'parameters' in document or 'spreadsheet' in document or any(isinstance(n, dict) and 'drive' in n for n in (document.get('nodes') if isinstance(document.get('nodes'), list) else [])):
         fault('UNSUPPORTED_LIVE_INPUT', 'Native parameters and drive are batch-only; use run with finite variants')
     if 'designStudy' in document:
         fault('UNSUPPORTED_LIVE_INPUT', 'Run designStudy through batch execution; a live apply accepts one candidate')
     nodes = document.get('nodes')
     if not isinstance(nodes, list) or not 1 <= len(nodes) <= 100:
         fault('LIVE_LIMIT', 'Provide 1 to 100 live nodes')
-    if any(isinstance(n, dict) and n.get('filter') in ('readSTEP', 'importSTEP') for n in nodes):
-        fault('UNSUPPORTED_LIVE_INPUT', 'Live STEP imports are not supported; use a batch run')
+    if any(isinstance(n, dict) and n.get('filter') in ('readSTEP', 'importSTEP', 'importMesh') for n in nodes):
+        fault('UNSUPPORTED_LIVE_INPUT', 'Live captured geometry imports are not supported; use a batch run')
+    if any(isinstance(n,dict) and n.get('filter')=='draftProfile' for n in nodes):
+        fault('UNSUPPORTED_LIVE_INPUT','Draft profiles currently use batch construction and ordinary native Points editing')
     return plan(document, allow_profile=True)
 
 

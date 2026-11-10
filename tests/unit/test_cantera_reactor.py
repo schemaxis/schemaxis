@@ -48,7 +48,7 @@ class ReactorPlanningTests(unittest.TestCase):
         d = document(); d['nodes'][1]['options'] = {}
         options = adaptor.plan(d)['nodes'][1]['options']
         self.assertEqual(options,{'model':'constantPressure','temperature':1000,'times':[0,0.0001,0.0002,0.0003,0.0004,0.0005,0.001],
-                                  'relativeTolerance':1e-9,'absoluteTolerance':1e-15,'maxSteps':20000,'ignitionTemperatureRise':400})
+                                  'relativeTolerance':1e-9,'absoluteTolerance':1e-15,'maxSteps':20000,'ignitionTemperatureRise':400,'thermalConductance':0,'bathTemperature':300})
 
     def test_exact_faults_for_invalid_settings(self):
         cases = [('times',[0,0.001,0.001],'INVALID_TIMES'),('times',[0.002,0.001],'INVALID_TIMES'),

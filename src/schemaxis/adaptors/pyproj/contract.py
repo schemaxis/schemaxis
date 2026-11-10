@@ -94,6 +94,28 @@ def tau(s):
     return 1e-6 + 1e-12 * abs(s)
 
 
+def plain(number):
+    return format(number, 'f').rstrip('0').rstrip('.')
+
+
+def binary64_screen(document):
+    """Refuse integers that cannot become binary64 before the shared grammar converts them (OverflowError otherwise)."""
+    requirements = document.get('requirements')
+    requirements = requirements if isinstance(requirements, dict) else {}
+    members = [('$.spacing_m', document.get('spacing_m'), OPTIONS['spacing_m']['minimum'], OPTIONS['spacing_m']['maximum'])]
+    for name, bounds in requirements.items():
+        if isinstance(bounds, dict):
+            for key, value in bounds.items():
+                members.append((f'$.requirements.{name}.{key}', value, 0, LIMITS['maxTotal_m' if name == 'totalLength_m' else 'maxLeg_m']))
+    for location, value, low, high in members:
+        if type(value) is int:
+            try:
+                float(value)
+            except OverflowError:
+                located('INVALID_ARGUMENT', 'integer is outside the finite binary64 range; distances are binary64 metres', location,
+                        f'declare a number from {plain(low)} to {plain(high)} metres')
+
+
 def validate(document):
     """Validate an authored document; return the effective options (defaults applied)."""
     keys(document, ('version', 'operation', *OPTIONS), '$')
@@ -107,6 +129,7 @@ def validate(document):
     if 'coordinateOrder' in document and document['coordinateOrder'] != 'lonLat':
         located('INVALID_ARGUMENT', 'coordinates are longitude first; latitude-first input is never guessed', '$.coordinateOrder',
                 'declare coordinateOrder lonLat and supply lon_deg,lat_deg columns')
+    binary64_screen(document)
     p = validate_arguments(OPTIONS, {k: v for k, v in document.items() if k in OPTIONS}, location='$')
     # Distances are binary64 throughout: an authored integer spacing or bound becomes its float
     # value, so k * spacing_m is one floating multiplication on host and native alike.

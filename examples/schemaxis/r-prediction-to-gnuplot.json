@@ -1,0 +1,122 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "regression",
+      "document": {
+        "version": "schemaxis.r/1",
+        "operation": "linearRegression",
+        "predictors": [
+          {
+            "name": "temperature",
+            "unit": "degC"
+          }
+        ],
+        "response": {
+          "name": "reading",
+          "unit": "V"
+        },
+        "training": [
+          [
+            -2,
+            6.1
+          ],
+          [
+            -1,
+            7.8
+          ],
+          [
+            1,
+            12.2
+          ],
+          [
+            2,
+            13.9
+          ]
+        ],
+        "prediction": {
+          "interval": "individual",
+          "level": 0.95,
+          "newdata": [
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              3
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "plot",
+      "document": {
+        "version": "schemaxis.gnuplot/1",
+        "operation": "plot",
+        "title": "Calibration line with 95 percent individual prediction intervals",
+        "source": {
+          "$artifact": "regression",
+          "index": 3
+        },
+        "columns": [
+          {
+            "name": "sample",
+            "unit": "1"
+          },
+          {
+            "name": "x1",
+            "unit": "degC"
+          },
+          {
+            "name": "prediction",
+            "unit": "V"
+          },
+          {
+            "name": "lower",
+            "unit": "V"
+          },
+          {
+            "name": "upper",
+            "unit": "V"
+          },
+          {
+            "name": "halfWidth",
+            "unit": "V"
+          }
+        ],
+        "series": [
+          {
+            "label": "Individual 95 percent prediction interval (V)",
+            "x": "x1",
+            "y": "prediction",
+            "error": "halfWidth",
+            "colour": "blue"
+          }
+        ],
+        "xAxis": {
+          "label": "New temperature (x1 is the first predictor)",
+          "unit": "degC",
+          "range": [
+            -0.5,
+            3.5
+          ],
+          "scale": "linear"
+        },
+        "yAxis": {
+          "label": "Predicted reading",
+          "unit": "V",
+          "range": [
+            8,
+            18
+          ],
+          "scale": "linear"
+        },
+        "width": 800,
+        "height": 600
+      }
+    }
+  ]
+}

@@ -278,8 +278,13 @@ colliding names (`N0` becomes `N001`, `SchemaxisParameters` becomes
 The saved file also carries a minimal first-open view state: links, the
 assembly, the ground and each source tip are visible, and the installed joint
 view providers are named so the joint editor opens without a GUI stage. The
-optional GUI capture stage (`--freecad-gui`) is refused for sourced assemblies
-(`UNSUPPORTED_STAGE`) because it would replace that verified state.
+optional GUI capture stage (`--freecad-gui`) uses a private display and preference
+directory. It opens only after every retained source and the complete submitted
+assembly pass host verification. The exact verified native-file digest is carried
+into the GUI request and checked before and after inspection. First-open joint
+providers, poses, visibility and source Body layouts are inspected without
+recomputing, solving or saving; the native file remains unchanged. Timeout and
+cancellation stop the private GUI transport and display.
 
 **What verification checks.** In addition to the primitive checks below:
 
@@ -390,10 +395,43 @@ closed-loop or redundant constraints, face or edge selection on modelled parts,
 mixing primitive and sourced parts, subassemblies, imported STEP or third-party
 FCStd parts, external document links, live console or design-study execution,
 interference checking, contact, motion and multibody dynamics are unsupported.
-Sourced parts are limited to verified single-Body phase-one publications;
-mounts attach to the Body origin XY plane with signed-axis orientations.
+Sourced parts admit verified phase-one publications and the qualified typed
+mechanical histories. A multi-Body source retains its complete document,
+parameters and nonselected Bodies; the producer's selected final feature
+determines which Body each component instantiates. Mounts are appended only to
+that Body and attach to its origin XY plane with signed-axis orientations.
 
-FreeCAD re-encodes the element maps of the second and later sources against the
+Typed mechanical histories require a configured FreeCAD launcher during
+verification. FreeCAD copying and recomputation regenerate persistent topology
+names; the adaptor does not claim those internal names remain identical to the
+producer's. A fresh process recaptures the retained sources, rebuilds the
+assembly with current trusted code, and compares all saved element-map contents,
+XML subelement shadows and geometry payloads to that regeneration. String IDs
+and object IDs may be consistently renamed; their referenced contents, indices,
+owners and ordered alternatives remain bound. Repeated document-wide map aliases
+must describe identical maps across every payload. Missing, conflicting, foreign
+or changed indirect references fail verification even after artifact digests are
+refreshed.
+
+Every indexed face, edge and vertex of every copied history shape, and every
+actual downstream subelement consumer, is compared with its retained source.
+Geometry uses the documented 64-ULP history round-trip rule; current saved BREP
+payloads must match fresh regeneration exactly apart from negative-zero spelling.
+The enclosure qualification retains four Bodies, instantiates one shared housing
+twice, drives the lid mount from housing height, and checks two native parameter
+edits with independent fresh reopening. It also opens a standalone FCStd with
+every producer and retained input unavailable. Native editability is independent
+of those files; Schemaxis provenance verification still requires its pinned
+producer artifacts and a configured runtime.
+
+```bash
+PYTHONPATH=src python3 tools/qualify_freecad_history_assembly.py \
+  --directory evidence/history-assembly --executable /path/to/freecadcmd
+PYTHONPATH=src python3 tools/qualify_freecad_history_assembly.py \
+  --directory evidence/drilled-history-assembly --executable /path/to/freecadcmd --drilled
+```
+
+For the earlier phase-one source route, FreeCAD re-encodes the element maps of the second and later sources against the
 assembly's merged string hasher, and even regenerates them on recompute. The
 encoded name entries inside those maps are therefore counted and isolated, not
 decoded. Decoding them would need FreeCAD's internal element-map encoding. The
@@ -401,7 +439,9 @@ qualified route does not reference elements by mapped name: sketches and mounts
 attach to origin planes, joints reference whole mount datums, and sources may
 not contain sub-element references. A same-structure exchange of name entries
 leaves geometry, placements and the solve unchanged, and recompute regenerates
-the maps. Before the first recompute, however, such an exchange can make a mapped
+the maps. This older route retains its explicitly weaker map-binding limit;
+typed mechanical histories use the stronger fresh-regeneration check above.
+Before the first recompute, such an exchange can make a mapped
 edge name resolve to a different edge, which would affect a new name-based
 reference created in the GUI before recomputing. The source envelope is applied to new assembly
 admission only; the phase-one part verifier itself is unchanged. `expectedDegreesOfFreedom: 0` describes the fixed rooted tree; it is
@@ -415,3 +455,18 @@ Public installed API usage was inspected in FreeCAD's
 `assembly.solve.__doc__`. These supplied API names, reference conventions and
 solver status meanings. The adaptor calls the installed implementations; it
 does not copy their solver or joint implementation source.
+
+### Swept source histories
+
+Verified typed additive/subtractive Pipe histories can be embedded with their
+native profiles, guide curves and centroid-attached flange features. Copying a
+centroid attachment preserves the native Point engine; it cannot substitute a
+Plane engine. The saved-source envelope still rejects unknown properties,
+classes and executable state before opening a source in FreeCAD.
+
+For generation-two source histories, copying and recomputing attachments can
+round the saved placement, attachment offset and derived sketch-normal direction.
+Source-to-copy comparison permits at most 64 binary64 ULPs per serialized field,
+with a unit-scale floor for components close to zero. All other property content
+remains bound. This numerical serialization allowance does not replace fresh
+trusted regeneration, payload binding or the independent geometry checks.

@@ -4,11 +4,11 @@
     "schemaxis.pandoc/1": {
       "guide": "docs/pandoc.md",
       "context": {
-        "purpose": "Publish small structured reports as standalone HTML and editable Word DOCX.",
-        "assumptions": "Plain single-space text, one-row table headers, bounded local RGB/RGBA PNG imagery; default Pandoc typography.",
-        "constraints": "Up to 32 sections,128 content blocks, 65536 characters,8 images; heading levels 1–3 start at 1 and increase by at most 1. No authored markup/scripts/styles/templates/filters.",
-        "inspection": "Compare ordered headings, paragraph text, complete table cells and image alt/media bytes in HTML, independent OOXML and fresh native DOCX JSON readback. Inspect the report-summary loss policy and generated documents.",
-        "recovery": "INVALID_REPORT_TABLE needs rectangular rows; INVALID_HEADING_ORDER needs an outline starting at 1. INVALID_REPORT_IMAGE needs an absolute regular plain RGB/RGBA PNG. INVALID_REPORT_TEXT needs single-space plain text. INTERPRETER_NOT_FOUND needs configured Pandoc; retained logs and failed result explain native faults."
+        "purpose": "Publish small structured reports as standalone HTML and editable DOCX, including literal timed transcripts with millisecond-exact integer or HH:MM:SS.mmm columns and explicit draft or declared-review provenance. All-cues-deleted reviewed/2 or reviewed/3 sources publish provenance without a cue table.",
+        "assumptions": "Plain single-space text, one-row table headers, bounded local RGB/RGBA PNG imagery; default Pandoc typography. A transcript block names one retained whisper.cpp segments.json (closed machine-draft or author-declared reviewed/1, reviewed/2 or reviewed/3 contract; unsupported versions and extra members are refused). An image block source may also be the typed PNG artifact of an earlier workflow step (for example the WebP decodeToPng route); the PNG is captured and held to the same limits as a path. An optional metadata object declares up to 8 distinct plain-text authors and a description.",
+        "constraints": "Up to 32 sections,128 content blocks, 65536 characters,8 images; heading levels 1–3 start at 1 and increase by at most 1. No authored markup/scripts/styles/templates/filters. Transcript blocks: at most 2 per report, 4 MiB each, 512 cues in total, 256 characters per cue; larger documents are refused, never truncated. The file is read at run time, never when planning. Each transcript block may set timeFormat milliseconds or timecode; absent keeps the millisecond columns exactly. metadata holds only authors (1-8 names of at most 100 characters, no semicolon, no repeats) and description (at most 1000 characters), counted in the 65536 character report budget; absent metadata changes nothing.",
+        "inspection": "Compare ordered headings, paragraph text, complete table cells and image alt/media bytes in HTML, independent OOXML and fresh native DOCX JSON readback. Inspect the report-summary loss policy and generated documents. A transcript block is checked as the provenance paragraph and, when cues remain, the cue table from the retained captured bytes; the captured bytes, their digest and the optional pin are verified again. An explicit timeFormat is bound in the plan, the capture record and the report summary, and the start/end cells and their column headers are recomputed from the retained bytes. Bound transcriptObservations state the actual reviewed/2 deletion and table shape and the reviewed/3 author-declared timing edits; Pandoc checks this mapping for internal consistency without reopening the original machine draft. A handed-over PNG is captured from the producer's verified publication and compared byte for byte with the HTML data URI and the DOCX and EPUB media; its pixel colour and geometry readback are those of any captured PNG. The producer evidence is verified again, so a changed producer artifact is refused. A metadata declaration is bound in the plan, the capture record (text, character count and SHA-256) and the summary, and each format is read back independently: HTML author/description meta elements and title-block author lines, DOCX core-properties creator (joined with \"; \") and description plus Author-style paragraphs and the fresh Word readback authors, EPUB OPF dc:creator/role/dc:description, title-page author lines and the fresh EPUB readback (whose author order Pandoc 3.12.1 reverses). A missing, extra, stale, reordered or forged author or description in any format fails verification even with refreshed hashes.",
+        "recovery": "INVALID_REPORT_TABLE needs rectangular rows; INVALID_HEADING_ORDER needs an outline starting at 1. INVALID_REPORT_IMAGE needs an absolute regular plain RGB/RGBA PNG and a widthMm of at most five decimal places; a widthMm above 148 mm is an INVALID_ARGUMENT range fault. INVALID_REPORT_TEXT needs single-space plain text. INTERPRETER_NOT_FOUND needs configured Pandoc; UNSUPPORTED_NATIVE_BUILD needs the official self-contained Pandoc binary (distribution builds without embedded data files cannot run the sandboxed writers); retained logs and failed result explain native faults. TRANSCRIPT_SOURCE_MISSING and TRANSCRIPT_SOURCE_INVALID need an existing regular segments.json (not a link or directory) of at most 4 MiB; INVALID_TRANSCRIPT_SOURCE needs an absolute .json path without parent references; TIMED_TEXT_* faults mean the file does not satisfy the declared machine-draft or reviewed timed-text contract (UNSUPPORTED_VERSION, UNKNOWN_KEY, REVIEW_UNSUPPORTED, TIMING, CUE_TEXT, RESOURCE_LIMIT, INVALID_JSON, DIGEST_MISMATCH) and the location names the member or cue; REPORT_RESOURCE_LIMIT needs fewer transcripts, cues or characters. An unknown or non-text timeFormat is an INVALID_ARGUMENT fault at planning, before any file or native step; use milliseconds or timecode. A TYPE_MISMATCH fault at a report hand-off names an artifact kind the route does not accept (only text, for transcripts, and image); a text artifact at an image source is INVALID_REPORT_IMAGE because its path does not end in .png. A producer PNG above 4 MiB (8 MiB in total) is refused, never rescaled; the WebP route's own 5 MiB output cap therefore does not guarantee that every decoded PNG fits. An INVALID_ARGUMENT at $.metadata (or $.metadata.authors[i], $.metadata.description) needs the documented type, length, no semicolon in an author and no repeated author; an UNKNOWN_ARGUMENT at $.metadata means a key other than authors and description was supplied; a MISSING_ARGUMENT at $.metadata means the object was empty (omit it); INVALID_REPORT_TEXT there needs single-space plain text."
       },
       "examples": [
         {
@@ -20,25 +20,108 @@
           "reference": "examples/schemaxis/pandoc-report-variant.json"
         },
         {
+          "id": "transcript",
+          "reference": "examples/schemaxis/pandoc-transcript.json"
+        },
+        {
+          "id": "multilingual-transcript",
+          "reference": "examples/schemaxis/pandoc-multilingual-transcript.json"
+        },
+        {
+          "id": "transcript-artifact",
+          "reference": "examples/schemaxis/pandoc-transcript-artifact.json"
+        },
+        {
+          "id": "transcript-timecode",
+          "reference": "examples/schemaxis/pandoc-transcript-timecode.json"
+        },
+        {
+          "id": "transcript-mixed-formats",
+          "reference": "examples/schemaxis/pandoc-transcript-mixed-formats.json"
+        },
+        {
           "id": "ragged-table",
           "reference": "examples/schemaxis/pandoc-table-invalid.json",
           "expect": "invalid",
           "fault": "INVALID_REPORT_TABLE",
           "schemaValid": true
+        },
+        {
+          "id": "relative-transcript-source",
+          "reference": "examples/schemaxis/pandoc-transcript-relative-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_TRANSCRIPT_SOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "invalid-time-format",
+          "reference": "examples/schemaxis/pandoc-transcript-timeformat-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        },
+        {
+          "id": "epub-report",
+          "reference": "examples/schemaxis/pandoc-report-epub.json"
+        },
+        {
+          "id": "invalid-epub-language",
+          "reference": "examples/schemaxis/pandoc-report-epub-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": true
+        },
+        {
+          "id": "metadata-report",
+          "reference": "examples/schemaxis/pandoc-report-metadata.json"
+        },
+        {
+          "id": "metadata-report-epub",
+          "reference": "examples/schemaxis/pandoc-report-metadata-epub.json"
+        },
+        {
+          "id": "semicolon-author",
+          "reference": "examples/schemaxis/pandoc-report-metadata-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": true
+        },
+        {
+          "id": "boolean-authors",
+          "reference": "examples/schemaxis/pandoc-report-metadata-type-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
         }
       ],
       "conformance": [
-        "tests/unit/test_pandoc_admission.py"
+        "tests/unit/test_pandoc_admission.py",
+        "tests/unit/test_pandoc_evidence.py",
+        "tests/unit/test_pandoc_package.py",
+        "tests/unit/test_pandoc_transcript.py",
+        "tests/unit/test_pandoc_timedtext.py",
+        "tests/unit/test_pandoc_timecode.py",
+        "tests/unit/test_timed_text.py",
+        "tests/unit/test_pandoc_epub.py",
+        "tests/unit/test_pandoc_image_artifact.py",
+        "tests/unit/test_pandoc_metadata.py"
       ],
       "acceptance": [
-        "tools/qualify_pandoc.py"
+        "tools/qualify_pandoc.py",
+        "tools/qualify_pandoc_timecode.py",
+        "tools/qualify_pandoc_epub.py",
+        "tools/qualify_pandoc_image_artifact.py",
+        "tools/qualify_pandoc_metadata.py"
       ],
       "profiles": {
         "workflow": {
-          "scope": "Report jobs run within the common workflow with independently verified publications; no arbitrary document-format import.",
+          "scope": "Report jobs run within the common workflow with independently verified publications; no arbitrary document-format import. An image block source may also be the verified typed PNG artifact of an earlier step (the WebP decodeToPng route): the artifact is accepted by kind only (text and image), captured and held to the plain-PNG limits, with the producer evidence verified again; trust is unsigned semantic consistency, and a producer PNG above 4 MiB is refused, not rescaled.",
           "references": [
             "docs/pandoc.md",
-            "tools/qualify_pandoc.py"
+            "tools/qualify_pandoc.py",
+            "tools/qualify_pandoc_image_artifact.py",
+            "examples/schemaxis/pandoc-image-artifact.json",
+            "examples/schemaxis/pandoc-image-artifact-epub.json"
           ]
         },
         "composition": {
@@ -54,13 +137,17 @@
           "https://pandoc.org/MANUAL.html#creating-a-self-contained-web-page",
           "https://pandoc.org/MANUAL.html#option--sandbox",
           "https://github.com/jgm/pandoc-types/blob/master/src/Text/Pandoc/Definition.hs",
-          "https://pandoc.org/MANUAL.html#option--extract-media"
+          "https://pandoc.org/MANUAL.html#option--extract-media",
+          "https://pandoc.org/epub.html",
+          "https://pandoc.org/MANUAL.html#option--to",
+          "https://pandoc.org/MANUAL.html#metadata-variables",
+          "https://pandoc.org/MANUAL.html#epub-metadata"
         ],
         "lifecycle": {
           "timeout": "One total deadline covers runtime/API probes, both writers, fresh readback and verification.",
           "cancellation": "Owned native processes use shared cancellation; check again before publication.",
-          "logs": "Retain authored/effective plans, captured PNGs/digests, trusted AST, runtime, commands, stdout/stderr, HTML/DOCX, extracted readback media and failed/succeeded results.",
-          "verification": "Independent HTML parser and standard-library ZIP/OOXML relationships/cells/headings/image geometry/media checks compare with authored values; fresh Pandoc DOCX reader repeats the semantic check. Every image source is captured as a bounded regular file."
+          "logs": "Retain authored/effective plans, captured PNGs/digests, trusted AST, runtime, commands, stdout/stderr, HTML/DOCX, extracted readback media and failed/succeeded results. A transcript block also retains the captured segments.json bytes and their digest.",
+          "verification": "Independent HTML parser and standard-library ZIP/OOXML relationships/cells/headings/image geometry/media checks compare with authored values; fresh Pandoc DOCX reader repeats the semantic check. Every image source is captured as a bounded regular file. A transcript block is validated at run time against its closed machine-draft or declared-reviewed contract, its captured bytes are bound by SHA-256 in the capture record, and the paragraph, table and provenance are recomputed from those bytes and compared with the trusted AST and with HTML, OOXML and fresh DOCX readback. With timeFormat the column headers and every start/end cell are recomputed from those bytes and the authored format, so an altered label, value or claimed format fails even when the receipt hashes are refreshed. With epub, the EPUB package is read by independent host code (exact physical ZIP framing with no prefix, suffix or hidden bytes and local headers equal to the central entries, stored mimetype first at offset 0 without extra field, bounded regular unique safe ZIP members, closed member set, container/OPF manifest, spine and navigation cross-references, pinned writer stylesheet, XHTML chapters with exact headings, paragraphs, table cells and PNG bytes, widths and alt text) and by a fresh Pandoc EPUB readback; scripts, external resources, DTDs, SVG, fonts and edited styles are refused."
         },
         "data": [
           {
@@ -101,7 +188,37 @@
             "losses": [
               "Only IHDR/IDAT/IEND chunks; export a plain PNG without auxiliary metadata."
             ],
-            "scope": "At most 8 bounded local source PNGs captured with paths and SHA-256."
+            "scope": "At most 8 bounded local source PNGs captured with paths and SHA-256, or handed over as a verified workflow image artifact (for example the WebP decodeToPng output) and captured the same way; at most 4 MiB each and 8 MiB in total."
+          },
+          {
+            "id": "segments",
+            "direction": "input",
+            "kind": "text",
+            "format": "schemaxis.whispercpp.segments/1 JSON",
+            "traits": {
+              "status": "machine-draft",
+              "timeUnit": "millisecond",
+              "maxCues": 512,
+              "maxCueCharacters": 256
+            },
+            "losses": [
+              "Machine-draft and declared reviewed/1, reviewed/2 or reviewed/3 timed text are read. Speakers, word times, confidence and caption-file formats are not published. Review status is author-declared; human identity, hearing the audio, recognition accuracy and accessibility are not certified. All-cues-deleted reviewed/2 or reviewed/3 sources publish no table, with explicit observations of the published shape."
+            ],
+            "scope": "At most 2 retained segments.json documents of up to 4 MiB, captured by path and SHA-256 at run time, or handed over as a workflow text artifact."
+          },
+          {
+            "id": "epub",
+            "direction": "output",
+            "kind": "file",
+            "format": "EPUB 3",
+            "traits": {
+              "content": "ordered headings/plain text/rectangular tables/embedded PNG, one chapter per level 1 section",
+              "language": "author-declared plain ASCII tag"
+            },
+            "losses": [
+              "Default Pandoc typography, stylesheet and navigation only; no cover, fonts, metadata fields or Calibre conversion; not EPUBCheck conformance, reading-system or device rendering, accessibility or language-accuracy certification."
+            ],
+            "scope": "Optional fourth publication (artifact index 3) when the report declares epub; fresh Pandoc EPUB reader JSON is retained as evidence, not a publication."
           }
         ],
         "inspection": [
@@ -119,7 +236,7 @@
         "features": {
           "workflow": {
             "status": "supported",
-            "scope": "Report jobs run within the common workflow with independently verified publications; no arbitrary document-format import."
+            "scope": "Report jobs run within the common workflow with independently verified publications; no arbitrary document-format import. An image block source may also be the verified typed PNG artifact of an earlier step (the WebP decodeToPng route): the artifact is accepted by kind only (text and image), captured and held to the plain-PNG limits, with the producer evidence verified again; trust is unsigned semantic consistency, and a producer PNG above 4 MiB is refused, not rescaled."
           },
           "native-inspection": {
             "status": "unsupported",
@@ -135,7 +252,7 @@
           },
           "reusable-inputs": {
             "status": "supported",
-            "scope": "Captured local image digests invalidate reuse when the same source path changes."
+            "scope": "Captured local image and retained segments.json digests invalidate reuse when the same source path changes."
           },
           "time-batches": {
             "status": "unsupported",
@@ -232,13 +349,253 @@
                 "relative": 0
               }
             ]
+          },
+          {
+            "id": "interview-transcript",
+            "example": "transcript",
+            "edits": [],
+            "resources": {},
+            "scope": "Transcript or caption publication as the existing closed report: a table of literal start/end times labelled in milliseconds and dialogue text. The header row, every cell, row order and exact text (including literal < & > and non-Latin script) are checked in independent HTML/OOXML and fresh DOCX JSON readback.",
+            "checks": [
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/sections",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/tables",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/images",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/blocks",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "multilingual-transcript",
+            "example": "multilingual-transcript",
+            "edits": [],
+            "resources": {},
+            "scope": "Multilingual transcript rows with a Hebrew right-to-left mark, Persian ZWNJ, Indic ZWJ, Thai zero-width space and England/Scotland/Wales emoji tag flags. The retained HTML, DOCX and fresh native DOCX readback are compared with literal expectations in the qualifier. Plain-text readback only: no visual, shaping, bidirectional layout or font-fallback claim.",
+            "checks": [
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/tables",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/images",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/blocks",
+                "expected": 3,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "jfk-transcript-artifact",
+            "example": "transcript-artifact",
+            "edits": [],
+            "resources": {
+              "/sections/0/content/1/segments/path": "examples/schemaxis/fixtures/pandoc/segments-jfk-short.json"
+            },
+            "scope": "A real whisper.cpp 1.9.5 segments.json (public jfk.wav, base.en, three cues with a cue-length target) published as a provenance paragraph and a millisecond cue table; the retained HTML, DOCX and fresh DOCX readback are compared with literal expectations in the qualifier. Plain-text readback only, no accuracy, layout or accessibility claim.",
+            "checks": [
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/sections",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/tables",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/images",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/blocks",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/transcripts",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "jfk-transcript-timecode",
+            "example": "transcript-timecode",
+            "edits": [],
+            "resources": {
+              "/sections/0/content/1/segments/path": "examples/schemaxis/fixtures/pandoc/segments-jfk-short.json"
+            },
+            "scope": "The same real whisper.cpp 1.9.5 segments.json as the artifact case published with timeFormat timecode: Start (HH:MM:SS.mmm) / End (HH:MM:SS.mmm) / Text cells (00:00:05.410, 00:00:09.040, 00:00:11.000 ...) and the provenance paragraph unit are compared with literal expectations in HTML, DOCX and fresh DOCX readback. Plain-text readback only; no layout, accessibility, timing-accuracy or recognition claim.",
+            "checks": [
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/sections",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/tables",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/images",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/blocks",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/transcripts",
+                "expected": 1,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "jfk-transcript-mixed-formats",
+            "example": "transcript-mixed-formats",
+            "edits": [],
+            "resources": {
+              "/sections/0/content/0/segments/path": "examples/schemaxis/fixtures/pandoc/segments-jfk-short.json",
+              "/sections/1/content/0/segments/path": "examples/schemaxis/fixtures/pandoc/segments-jfk-short.json"
+            },
+            "scope": "Two transcript blocks over the same segments.json, one timecode and one milliseconds, in one report: each block is verified with its own format and column headers.",
+            "checks": [
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/sections",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/tables",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/images",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/blocks",
+                "expected": 6,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "report-summary.json",
+                "format": "json",
+                "pointer": "/transcripts",
+                "expected": 2,
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Initial structured report publication route, all declarations and native outputs.",
+        "scope": "Initial structured report publication route, all declarations and native outputs. 24 October 2026 follow-up: hostile retained-evidence verification (HTML structure, DOCX package, JSON, membership), native-build fault and qualifier probes; the review covers verification robustness only, not new report fields. 24 October 2026 transcript/caption strengthening: header-row, cell and exact-text semantics in HTML/DOCX/readback, DOCX style fingerprint, hostile Unicode refusal and a native transcript case; no new report fields. 24 October 2026 closeout: closed DOCX package (exact relationships, content types, fixed writer parts and picture placement), narrowed Unicode formatting rule and a native multilingual case; no new report fields. 24 October 2026 allocation: image widthMm is refused at planning above 148 mm or beyond five decimals (values the DOCX and HTML writers cannot reproduce); retained reports re-plan under their earlier rule; no new report fields. Allocation 33: transcript content block that publishes a retained whisper.cpp segments.json (closed machine-draft contract in the shared timed_text module, run-time capture, byte/digest binding, provenance paragraph and the existing table); existing reports and plans are unchanged. Allocation 47: optional per-block transcript timeFormat (milliseconds or timecode HH:MM:SS.mmm) with the format bound in the plan, capture record, summary and verification; blocks without the field plan, publish and verify exactly as before. Allocation 45 integration: internally consistent declared reviewed/2 mappings, explicit all-cues-deleted provenance without a table, and replay-bound transcriptObservations. Pandoc does not reopen or authenticate the original machine draft. Maintenance: verification accepts the earlier \"1 cues\" grammar of a genuine one-cue machine-draft report, at verification only; no new fields. Allocation 50: optional report-level epub object (required plain-ASCII language only) that appends an EPUB 3 publication (artifact index 3) written by the official Pandoc EPUB 3 writer from the same trusted model, checked by independent host ZIP/OPF/navigation/XHTML/PNG inspection and a fresh Pandoc EPUB readback; reports without epub plan, publish and verify exactly as before (artifact indices 0-2 unchanged). No EPUBCheck, reading-system, device, accessibility or language-accuracy claim. Allocation 53: the route declares acceptedArtifacts text and image so a verified PNG artifact (for example WebP decodeToPng) can be an image block source, captured and validated under the same plain-PNG limits as a path; the table, audio, file, archive, video, geometry and sprite-sheet kinds remain refused at the hand-off, artifact indices, HTML, DOCX and EPUB bytes and legacy transcript semantics are unchanged, trust is unsigned semantic consistency and no other image producer was tested. Allocation 54 integration: internally consistent declared reviewed/3 cue timing edits, exact published times and separate original/published correction ledger times; observations distinguish author-edited times without authenticating the draft or certifying audio synchronisation. Older transcript summaries and frozen plan loss text are retained. Allocation 62: optional report-level metadata object (authors list of 1-8 distinct plain-text names without semicolons, and description) published and read back in HTML (meta elements and title-block author lines), DOCX (core-properties creator and description, Author paragraphs, fresh readback) and optional EPUB 3 (OPF creators with role aut, description, title-page lines, fresh readback); bound in plan, capture record, summary and verification; reports without the field plan, publish and verify exactly as before, and authors and description are declarations, never verified identity, accessibility or review.",
         "review": [
-          "verification/2026-10-17-pandoc-completion.md"
+          "verification/2026-10-17-pandoc-completion.md",
+          "verification/2026-10-24-pandoc-evidence.md",
+          "verification/2026-10-24-pandoc-transcript.md",
+          "verification/2026-10-24-pandoc-closeout.md",
+          "verification/2026-10-24-pandoc-allocation.md",
+          "verification/2026-10-25-pandoc-33.md",
+          "verification/2026-10-25-pandoc-47.md",
+          "verification/2026-10-25-pandoc-legacy-compat.md",
+          "verification/2026-10-25-whispercpp-45.md",
+          "verification/2026-10-25-pandoc-50.md",
+          "verification/2026-10-25-pandoc-53.md",
+          "verification/2026-10-25-whispercpp-54.md",
+          "verification/2026-10-26-pandoc-62.md"
         ],
         "notApplicable": {
           "native-inspection": "This batch report route does not implement native-inspection; it publishes only the declared HTML/DOCX subset.",

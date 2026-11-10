@@ -98,7 +98,7 @@ def main():
     report={'version':'schemaxis.r.qualification/1','verified':False,'sourceDigest':source_digest('r'),
         'sourceDigests':{name:source_digest(name) for name in ('r','calc')},
         'recipeSHA256':file_digest(__file__),'workflowSHA256':file_digest(ROOT/'examples/schemaxis/r-to-calc.json'),
-        'scope':'Exact recorded Rscript runtime; numeric additive OLS,1–8 predictors, declared training/held-out rows, fixed formula symbols, independent QR/condition checks, RDS fresh reopen, optional classical coefficient inference (summary.lm/confint/pf) checked against exact rational normal equations and closed-form t quantiles, and Calc numeric handoff. Inference holds only under independent constant-variance normal errors; no prediction intervals or future-generalisation guarantee.',
+        'scope':'Exact recorded Rscript runtime; numeric additive OLS,1–8 predictors, declared training/held-out rows, fixed formula symbols, independent QR/condition checks, RDS fresh reopen, optional classical coefficient inference (summary.lm/confint/pf) checked against exact rational normal equations and closed-form t quantiles, and Calc numeric handoff. Inference holds only under independent constant-variance normal errors; one prediction-request smoke case is included and the full prediction scope is qualified by tools/qualify_r_prediction.py; no coverage or future-generalisation guarantee.',
         'accepted':{},'unmet':{},'negative':{},'workflows':{},'inference':{}}
     def refresh(directory):
         prepared=adaptor.plan(json.loads((directory/'authored.json').read_text()))
@@ -199,6 +199,14 @@ def main():
             for path,data in saved.items():path.write_bytes(data)
             finalise(directory)
         assert adaptor.verify(directory)['verified']
+        # Prediction request (new predictor-only rows): the dedicated scope qualifier is tools/qualify_r_prediction.py.
+        directory=root/'prediction';adaptor.run(example('prediction'),directory,executable=args.executable,timeout=args.timeout)
+        result=adaptor.verify(directory);summary=json.loads((directory/'regression-summary.json').read_text())['prediction']
+        assert result['prediction']=={'interval':'individual','level':.95,'rows':3} and summary['verifiedIntervalTypes']==['confidence','individual']
+        assert math.isclose(summary['rows'][2]['halfWidth'],.95*math.sqrt(2/(1-.95**2))*math.sqrt(.05)*math.sqrt(1+.25+.9),rel_tol=1e-9)
+        names=[Path(item['file']).name for item in json.loads((directory/'verification.json').read_text())['artifacts']]
+        assert names==['coefficients.csv','training.csv','regression-summary.json','prediction.csv'],names
+        report['accepted']['prediction']=result
         study=example('requirement-study');directory=root/'finite-study'
         adaptor.run(study,directory,executable=args.executable,timeout=args.timeout)
         assert adaptor.verify(directory)['verified'];report['accepted']['finite-study']=True

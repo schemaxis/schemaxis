@@ -1,0 +1,44 @@
+{
+  "version": "schemaxis.gmsh/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "solid",
+      "filter": "readSTEP",
+      "options": {
+        "file": {
+          "$fill": "step"
+        }
+      }
+    },
+    {
+      "id": "mesh",
+      "filter": "tetrahedral",
+      "inputs": {
+        "input": "solid"
+      },
+      "options": {
+        "size": 3,
+        "volumeName": "part",
+        "boundaryName": "free",
+        "volumeTolerance": 0.02,
+        "cylinderGroups": [
+          {
+            "name": "bore",
+            "axis": "z",
+            "centre": [
+              0,
+              0,
+              0
+            ],
+            "radius": {
+              "$fill": "radius"
+            },
+            "side": "inner"
+          }
+        ]
+      }
+    }
+  ],
+  "output": "mesh"
+}

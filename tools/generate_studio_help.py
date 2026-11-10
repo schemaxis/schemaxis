@@ -37,6 +37,28 @@ def headings(text):
     return result
 
 
+def native_terms(declaration):
+    """Declared option, input and enumerated value identifiers, lowercased, so native names stay searchable.
+
+    They are indexed apart from prose: Help matches them exactly, so a name such as
+    ``compareTo`` is found by its own name but its leading word does not make an
+    operation match a prose query for "compare".
+    """
+    names = list(declaration.get('inputs', {}))
+
+    def walk(options):
+        for name, binding in options.items():
+            names.append(name)
+            value = binding.get('value')
+            if isinstance(value, dict):
+                names.extend(v for v in value.get('values', []) if isinstance(v, str))
+            for choice, nested in binding.get('proxyChoices', {}).items():
+                names.append(choice)
+                walk(nested.get('options', {}))
+    walk(declaration.get('options', {}))
+    return sorted(set(re.findall(r'[\w$:.-]+', ' '.join(names).lower())))
+
+
 def build(*, check=False):
     from schemaxis.capabilities import CapabilityCatalogue, operation_id
     from schemaxis.documentation_links import markdown_anchors
@@ -118,10 +140,19 @@ def build(*, check=False):
             operation = chunk_title if split and anchor else None
             projection = (discovery.operation_search_text(provider, operation)
                           if provider in discovery._declarations and operation in discovery._declarations[provider] else '')
+            # An operation with its own curated terms is found by the same projection as
+            # discovery and Add, plus its declared native names as exact identifiers. Its
+            # page prose also states what the operation does not do, so indexing it would
+            # present limitations as capabilities. Uncurated operations and every other
+            # page stay prose-searchable.
+            curated = projection and discovery._metadata[provider].get('operations', {}).get(operation, {}).get('keywords')
+            searchable = projection if curated else body + ' ' + projection
+            native = native_terms(discovery._declarations[provider][operation]) if curated else []
             entries.append({'id': key, 'title': chunk_title, 'source': source, 'anchor': anchor or '',
                             'group': group, 'provider': provider, 'operation': chunk_title if split and anchor else None,
                             **({'capabilityId': operation_id(provider, operation)} if projection else {}),
-                            'summary': summary, 'search': ' '.join(sorted(set(re.findall(r'[\w$.-]+', (body + ' ' + projection).lower()))))})
+                            'summary': summary, 'search': ' '.join(sorted(set(re.findall(r'[\w$:.-]+', searchable.lower())))),
+                            **({'nativeTerms': native} if native else {})})
     links['docs/generated/paraview-operations.md'] = links[OPERATIONS]
     # Resolve packaged local navigation to topic IDs at build time.
     anchor_cache, link_errors = {}, []
@@ -179,10 +210,12 @@ def build(*, check=False):
              'shared': links['docs/dollar-reference.md'][''], 'entries': entries}
     assets = {}
     for key, page in pages.items():
-        if len(page['body'].encode()) > 100000:
+        # Keep machine-readable documents directly inspectable in packaged
+        # assets, regardless of size. Large prose retains the existing codec.
+        if page['format'] != 'json' and len(page['body'].encode()) > 100000:
             packed = gzip.compress(page.pop('body').encode(), compresslevel=9, mtime=0)
-            # Python 3.11/3.12 delegate mtime=0 to zlib, which supplies the host
-            # OS byte. Match the canonical "unknown" OS used by other versions.
+            # Python 3.11/3.12 supply a platform OS byte for mtime=0.
+            # Retain the public release's canonical unknown-OS header.
             packed = packed[:9] + b'\xff' + packed[10:]
             page['bodyGzip'] = base64.b64encode(packed).decode()
         assets[key + '.json'] = json.dumps(page, ensure_ascii=False, separators=(',', ':')) + '\n'

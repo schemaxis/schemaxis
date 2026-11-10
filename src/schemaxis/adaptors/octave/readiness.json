@@ -6,9 +6,9 @@
       "context": {
         "purpose": "Bounded real-valued one-dimensional analysis with numeric CSV publications; use for signals and fitted trends, not arbitrary MATLAB programs.",
         "assumptions": "Finite real x/y samples; callers own physical units. Frequency is cycles per x unit and phase is radians. Native APIs are described by the public GNU Octave manual; the supported subset is defined by the declarations.",
-        "constraints": "Derivatives, integrals and resampling require strictly increasing x; FFT requires uniform power-of-two sampling. Complex values, missing data, plotting and user functions are unsupported. Some data-dependent constraints are checked during execution, after host planning.",
+        "constraints": "Derivatives, integrals and resampling require strictly increasing x; FFT requires uniform power-of-two sampling. Complex values, missing data, plotting and user functions are unsupported. Sampling, fit and budget constraints on literal and generated tables are checked when planning; nodes that depend on a CSV file are checked at run time, before native launch, because planning never reads files.",
         "inspection": "Inspect output CSV x/y values and statistics.json; native.json retains intermediates and fit/FFT metadata. Run verify to compare retained native results and publications with independent host arithmetic (relative 2e-8, absolute 2e-9). The embedded derivative example should publish y=[2,2,2].",
-        "recovery": "INVALID_TABLE requires matching x/y lengths and numeric columns. INVALID_SAMPLING requires correcting order, spacing, sample count or smoothing window. A SINGULAR_FIT needs varying x. Repair input, plan again and use a fresh output directory; do not relax verification tolerances to hide disagreement."
+        "recovery": "INVALID_TABLE requires matching x/y lengths and numeric columns. INVALID_SAMPLING (reported at planning for literal data, with the node id as location) requires correcting order, spacing, sample count or smoothing window. A SINGULAR_FIT needs varying x. Repair input, plan again and use a fresh output directory; do not relax verification tolerances to hide disagreement."
       },
       "examples": [
         {
@@ -300,6 +300,12 @@
               }
             ]
           }
+        ]
+      },
+      "completion": {
+        "scope": "Bounded real-valued 1D analysis route; 24 October 2026 review moves data-dependent numerical-contract checks for literal tables to planning, with node locations and recovery.",
+        "review": [
+          "verification/2026-10-24-octave-allocation.md"
         ]
       }
     }

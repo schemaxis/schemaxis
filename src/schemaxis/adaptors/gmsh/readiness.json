@@ -4,11 +4,11 @@
     "schemaxis.gmsh/1": {
       "guide": "docs/gmsh.md",
       "context": {
-        "purpose": "Mesh a solid under named-boundary resolution rules, assess independently measured cell quality, and run bounded refinement until explicit requirements pass.",
+        "purpose": "Mesh a solid under named-boundary resolution rules, name planar faces and cylindrical bore/shaft/sleeve walls with an independently proven material side, assess measured cell quality and cylinder chord deviation, and run bounded refinement until explicit requirements pass.",
         "assumptions": "An isolated Python environment with Gmsh 4.15.x. Coordinates and target element sizes are explicitly millimetres; the STEP importer normalises native units to mm.",
-        "constraints": "One solid and one tetrahedral node, 16 MiB STEP, 50000 nodes, 200000 cells. One volume, up to twelve disjoint axis-aligned planar face groups and a nonempty remainder boundary. No source face labels, automatic boundary conditions, high-order elements, solver setup or MPI.",
-        "inspection": "Read mesh-summary.json for named groups, mm units, positive cell volumes, cell counts, bounds and CAD/mesh volume discrepancy. Open volume.vtu and boundary.vtu in a mesh viewer; numeric physicalTag maps to summary group names. boundaryGroups measures each named surface area in mm^2 and its bounds; face membership is checked from every triangle coordinate. quality reports mean-ratio shape, edge-length distributions, per-boundary resolution and worst-cell indices/centroids. Feedback studies retain study-summary.json and a human-readable study.html explaining each decision.",
-        "recovery": "Increase size for RESOURCE_LIMIT or excessive cell counts. Refine size when mesh volume exceeds volumeTolerance. Supply exactly one valid STEP solid, distinct physical names, a configured Gmsh Python and a fresh output directory; retain build/reopen logs. STUDY_REQUIREMENTS_NOT_MET retains a verified decision history without exporting a rejected mesh; inspect failed checks and the stop reason before changing requirements or budgets."
+        "constraints": "One box, cylinder, hollow cylinder, sphere or STEP solid and one tetrahedral node, 16 MiB STEP, 50000 nodes, 200000 cells. One volume, up to twelve groups in total of disjoint axis-aligned planar faces and whole analytic cylindrical walls on a world axis (cylinderGroups), and a remainder that may be empty only when cylinder groups cover the boundary. No source face labels, automatic boundary conditions, high-order elements, solver setup or MPI.",
+        "inspection": "Read mesh-summary.json for named groups, mm units, positive cell volumes, cell counts, bounds and CAD/mesh volume discrepancy. Open volume.vtu and boundary.vtu in a mesh viewer; numeric physicalTag maps to summary group names. boundaryGroups measures each named surface area in mm^2 and its bounds; face membership is checked from every triangle coordinate. quality reports mean-ratio shape, edge-length distributions, per-boundary resolution and worst-cell indices/centroids. Feedback studies retain study-summary.json and a human-readable study.html explaining each decision. boundaryAreaChecks reports the separate CAD/mesh area discrepancy and explicit budget for each planar group. cylinderChecks reports per wall group the side, triangles, CAD and unrolled area, vertex residual, maximum chord deviation and equivalent segment count; cadSurfaces lists the solid's planes and cylinders (advisory native readback) for authoring selectors. The artifact viewer does not render VTU geometry: open result.msh in Gmsh or the VTU files in an external VTK-capable tool.",
+        "recovery": "Increase size for RESOURCE_LIMIT or excessive cell counts. Refine size when mesh volume exceeds volumeTolerance. Supply exactly one valid STEP solid, distinct physical names, a configured Gmsh Python and a fresh output directory; retain build/reopen logs. STUDY_REQUIREMENTS_NOT_MET retains a verified decision history without exporting a rejected mesh; inspect failed checks and the stop reason before changing requirements or budgets. INVALID_SELECTION on a cylinder group is located at that cylinderGroups entry: compare axis, centre, radius and side with the candidates or cadSurfaces, or reference one value from both the solid and the selector. VERIFICATION_FAILED about a physical face tag can mean a flat face inscribed in a selected cylinder; refine the mesh there."
       },
       "examples": [
         {
@@ -67,16 +67,328 @@
         {
           "id": "boundary-refinement",
           "reference": "examples/schemaxis/gmsh-boundary-refinement.json"
+        },
+        {
+          "id": "cylinder",
+          "reference": "examples/schemaxis/gmsh-cylinder.json"
+        },
+        {
+          "id": "hollow-cylinder",
+          "reference": "examples/schemaxis/gmsh-hollow-cylinder.json"
+        },
+        {
+          "id": "sphere",
+          "reference": "examples/schemaxis/gmsh-sphere.json"
+        },
+        {
+          "id": "nonpositive-wall",
+          "document": {
+            "version": "schemaxis.gmsh/1",
+            "units": "mm",
+            "nodes": [
+              {
+                "id": "solid",
+                "filter": "hollowCylinder",
+                "options": {
+                  "origin": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "axis": "x",
+                  "radius": 4,
+                  "innerRadius": 4,
+                  "height": 8
+                }
+              },
+              {
+                "id": "mesh",
+                "filter": "tetrahedral",
+                "inputs": {
+                  "input": "solid"
+                },
+                "options": {
+                  "size": 0.6,
+                  "volumeName": "part",
+                  "boundaryName": "wall",
+                  "volumeTolerance": 0.02,
+                  "faceGroups": [
+                    {
+                      "name": "start",
+                      "axis": "x",
+                      "coordinate": 0,
+                      "areaTolerance": 0.02
+                    },
+                    {
+                      "name": "end",
+                      "axis": "x",
+                      "coordinate": 8,
+                      "areaTolerance": 0.02
+                    }
+                  ],
+                  "algorithm": "hxt",
+                  "optimise": false
+                }
+              }
+            ],
+            "output": "mesh"
+          },
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": true
+        },
+        {
+          "id": "named-sleeve",
+          "reference": "examples/schemaxis/gmsh-named-sleeve.json"
+        },
+        {
+          "id": "named-sleeve-literal",
+          "document": {
+            "version": "schemaxis.gmsh/1",
+            "units": "mm",
+            "nodes": [
+              {
+                "id": "solid",
+                "filter": "hollowCylinder",
+                "options": {
+                  "origin": [
+                    1,
+                    2,
+                    3
+                  ],
+                  "axis": "x",
+                  "radius": 4,
+                  "innerRadius": 2,
+                  "height": 8
+                }
+              },
+              {
+                "id": "mesh",
+                "filter": "tetrahedral",
+                "inputs": {
+                  "input": "solid"
+                },
+                "options": {
+                  "size": 0.7,
+                  "volumeName": "sleeve",
+                  "boundaryName": "unassigned",
+                  "volumeTolerance": 0.02,
+                  "faceGroups": [
+                    {
+                      "name": "start",
+                      "axis": "x",
+                      "coordinate": 1,
+                      "areaTolerance": 0.02
+                    },
+                    {
+                      "name": "end",
+                      "axis": "x",
+                      "coordinate": 9,
+                      "areaTolerance": 0.02
+                    }
+                  ],
+                  "cylinderGroups": [
+                    {
+                      "name": "bore",
+                      "axis": "x",
+                      "centre": [
+                        1,
+                        2,
+                        3
+                      ],
+                      "radius": 2,
+                      "side": "inner"
+                    },
+                    {
+                      "name": "outer",
+                      "axis": "x",
+                      "centre": [
+                        1,
+                        2,
+                        3
+                      ],
+                      "radius": 4,
+                      "side": "outer"
+                    }
+                  ]
+                }
+              }
+            ],
+            "output": "mesh"
+          }
+        },
+        {
+          "id": "stale-bore-selector",
+          "document": {
+            "version": "schemaxis.gmsh/1",
+            "units": "mm",
+            "nodes": [
+              {
+                "id": "solid",
+                "filter": "hollowCylinder",
+                "options": {
+                  "origin": [
+                    1,
+                    2,
+                    3
+                  ],
+                  "axis": "x",
+                  "radius": 4,
+                  "innerRadius": 2.5,
+                  "height": 8
+                }
+              },
+              {
+                "id": "mesh",
+                "filter": "tetrahedral",
+                "inputs": {
+                  "input": "solid"
+                },
+                "options": {
+                  "size": 0.7,
+                  "volumeName": "sleeve",
+                  "boundaryName": "unassigned",
+                  "volumeTolerance": 0.02,
+                  "faceGroups": [
+                    {
+                      "name": "start",
+                      "axis": "x",
+                      "coordinate": 1,
+                      "areaTolerance": 0.02
+                    },
+                    {
+                      "name": "end",
+                      "axis": "x",
+                      "coordinate": 9,
+                      "areaTolerance": 0.02
+                    }
+                  ],
+                  "cylinderGroups": [
+                    {
+                      "name": "bore",
+                      "axis": "x",
+                      "centre": [
+                        1,
+                        2,
+                        3
+                      ],
+                      "radius": 2,
+                      "side": "inner"
+                    },
+                    {
+                      "name": "outer",
+                      "axis": "x",
+                      "centre": [
+                        1,
+                        2,
+                        3
+                      ],
+                      "radius": 4,
+                      "side": "outer"
+                    }
+                  ]
+                }
+              }
+            ],
+            "output": "mesh"
+          },
+          "expect": "invalid",
+          "fault": "INVALID_SELECTION",
+          "schemaValid": true
+        },
+        {
+          "id": "wrong-wall-side",
+          "document": {
+            "version": "schemaxis.gmsh/1",
+            "units": "mm",
+            "nodes": [
+              {
+                "id": "solid",
+                "filter": "hollowCylinder",
+                "options": {
+                  "origin": [
+                    1,
+                    2,
+                    3
+                  ],
+                  "axis": "x",
+                  "radius": 4,
+                  "innerRadius": 2,
+                  "height": 8
+                }
+              },
+              {
+                "id": "mesh",
+                "filter": "tetrahedral",
+                "inputs": {
+                  "input": "solid"
+                },
+                "options": {
+                  "size": 0.7,
+                  "volumeName": "sleeve",
+                  "boundaryName": "unassigned",
+                  "volumeTolerance": 0.02,
+                  "faceGroups": [
+                    {
+                      "name": "start",
+                      "axis": "x",
+                      "coordinate": 1,
+                      "areaTolerance": 0.02
+                    },
+                    {
+                      "name": "end",
+                      "axis": "x",
+                      "coordinate": 9,
+                      "areaTolerance": 0.02
+                    }
+                  ],
+                  "cylinderGroups": [
+                    {
+                      "name": "bore",
+                      "axis": "x",
+                      "centre": [
+                        1,
+                        2,
+                        3
+                      ],
+                      "radius": 2,
+                      "side": "outer"
+                    },
+                    {
+                      "name": "outer",
+                      "axis": "x",
+                      "centre": [
+                        1,
+                        2,
+                        3
+                      ],
+                      "radius": 4,
+                      "side": "outer"
+                    }
+                  ]
+                }
+              }
+            ],
+            "output": "mesh"
+          },
+          "expect": "invalid",
+          "fault": "INVALID_SELECTION",
+          "schemaValid": true
         }
       ],
       "conformance": [
         "tests/unit/test_gmsh_admission.py",
         "tests/unit/test_gmsh_quality.py",
-        "tests/unit/test_feedback.py"
+        "tests/unit/test_feedback.py",
+        "tests/unit/test_gmsh_primitives.py",
+        "tests/unit/test_gmsh_cylinders.py",
+        "tests/unit/test_gmsh_cylinder_plan.py"
       ],
       "acceptance": [
         "tools/qualify_gmsh.py",
-        "tools/qualify_gmsh_studies.py"
+        "tools/qualify_gmsh_studies.py",
+        "tools/qualify_gmsh_primitives.py",
+        "tools/qualify_gmsh_cylinders.py"
       ],
       "profiles": {
         "workflow": {
@@ -97,7 +409,10 @@
       "development": {
         "api": [
           "https://gmsh.info/doc/texinfo/#Gmsh-API",
-          "https://gmsh.info/doc/texinfo/#MSH-file-format-version-2-_0028Legacy_0029"
+          "https://gmsh.info/doc/texinfo/#MSH-file-format-version-2-_0028Legacy_0029",
+          "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel_002focc",
+          "https://gmsh.info/doc/texinfo/#Mesh-options",
+          "https://gmsh.info/doc/texinfo/#Namespace-gmsh_002fmodel"
         ],
         "lifecycle": {
           "timeout": "One total timeout bounds the two native processes; the shared conformance watchdog also bounds host parsing and cleanup.",
@@ -163,14 +478,14 @@
         "inspection": [
           {
             "panel": "text",
-            "scope": "Inspect summary units, bounds, counts, volumes, names and loss declarations. Inspect quality distributions, declared acceptance checks and selected/rejected candidate history; study.html renders the same independently replayed report.",
-            "limits": "Geometry is inspected via published VTU and a viewer; no native interactive Gmsh inspector hook."
+            "scope": "Inspect summary units, bounds, counts, volumes, names and loss declarations. Inspect quality distributions, declared acceptance checks and selected/rejected candidate history; study.html renders the same independently replayed report. Inspect cylinderChecks (side, unrolled area, chord deviation), cadSurfaces and the group name/tag map in the same text panel.",
+            "limits": "Geometry is inspected via published VTU in an external tool (the artifact viewer does not render VTU) or result.msh in Gmsh; no native interactive Gmsh inspector hook."
           }
         ],
         "authoring": {
           "model": "nodes",
           "example": "baseline",
-          "reuse": "Edit box dimensions or absolute STEP file and tetrahedral size/names using source or JSON pointer edits. Replan, run in a fresh directory, compare summary volume/bounds and inspect VTU."
+          "reuse": "Edit primitive dimensions/placement, single-solid STEP file, named cap budgets, meshing method or size. Replan in a fresh directory and compare independent analytic/CAD volume, radial containment, group area and quality evidence."
         },
         "features": {
           "workflow": {
@@ -191,7 +506,7 @@
           },
           "reusable-inputs": {
             "status": "supported",
-            "scope": "Captured STEP digest changes invalidate reuse; inline boxes have no external source."
+            "scope": "Captured STEP digest changes invalidate reuse; a digest-pinned adopted STEP snapshot ($resource) is accepted by readSTEP; inline typed primitives have no external source. The shared revision checkout/prepare commands accept completed scheduled FreeCAD to Gmsh parents with one native visit per operation, and rerun the child with the edited STEP adopted."
           },
           "time-batches": {
             "status": "unsupported",
@@ -442,13 +757,664 @@
                 "absolute": 1e-07
               }
             ]
+          },
+          {
+            "id": "cylinder-baseline",
+            "example": "cylinder",
+            "edits": [],
+            "scope": "Closed-form primitive volume/bounds and disk or annulus area from literal dimensions; changed radius/height/axis/placement and meshing choices. Independent host node containment, signed tetrahedra, manifold topology and publication/native reopen checks apply. No pointwise chord-error or solver-accuracy claim.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadVolume",
+                "expected": 226.1946710584651,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 226.1946710584651,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadBounds",
+                "expected": [
+                  -1,
+                  -4,
+                  3,
+                  5,
+                  2,
+                  11
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/0/cadArea",
+                "expected": 28.274333882308138,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/1/cadArea",
+                "expected": 28.274333882308138,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/0/meshArea",
+                "expected": 28.274333882308138,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/1/meshArea",
+                "expected": 28.274333882308138,
+                "relative": 0.02,
+                "absolute": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "cylinder-changed-dimensions",
+            "example": "cylinder",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options",
+                "value": {
+                  "origin": [
+                    -2,
+                    1,
+                    3
+                  ],
+                  "axis": "y",
+                  "radius": 4,
+                  "height": 6
+                }
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/0/axis",
+                "value": "y"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/1/axis",
+                "value": "y"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/0/coordinate",
+                "value": 1
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/1/coordinate",
+                "value": 7
+              }
+            ],
+            "scope": "Closed-form primitive volume/bounds and disk or annulus area from literal dimensions; changed radius/height/axis/placement and meshing choices. Independent host node containment, signed tetrahedra, manifold topology and publication/native reopen checks apply. No pointwise chord-error or solver-accuracy claim.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadVolume",
+                "expected": 301.59289474462014,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 301.59289474462014,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadBounds",
+                "expected": [
+                  -6,
+                  1,
+                  -1,
+                  2,
+                  7,
+                  7
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/0/cadArea",
+                "expected": 50.26548245743669,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/1/cadArea",
+                "expected": 50.26548245743669,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/0/meshArea",
+                "expected": 50.26548245743669,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/1/meshArea",
+                "expected": 50.26548245743669,
+                "relative": 0.02,
+                "absolute": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "hollow-cylinder-baseline",
+            "example": "hollow-cylinder",
+            "edits": [],
+            "scope": "Closed-form primitive volume/bounds and disk or annulus area from literal dimensions; changed radius/height/axis/placement and meshing choices. Independent host node containment, signed tetrahedra, manifold topology and publication/native reopen checks apply. No pointwise chord-error or solver-accuracy claim.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadVolume",
+                "expected": 301.59289474462014,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 301.59289474462014,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadBounds",
+                "expected": [
+                  0,
+                  -4,
+                  -4,
+                  8,
+                  4,
+                  4
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/0/cadArea",
+                "expected": 37.69911184307752,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/1/cadArea",
+                "expected": 37.69911184307752,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/0/meshArea",
+                "expected": 37.69911184307752,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/1/meshArea",
+                "expected": 37.69911184307752,
+                "relative": 0.02,
+                "absolute": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "hollow-cylinder-changed-dimensions",
+            "example": "hollow-cylinder",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options",
+                "value": {
+                  "origin": [
+                    2,
+                    3,
+                    -1
+                  ],
+                  "axis": "z",
+                  "radius": 5,
+                  "innerRadius": 3,
+                  "height": 6
+                }
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/0/axis",
+                "value": "z"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/1/axis",
+                "value": "z"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/0/coordinate",
+                "value": -1
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/faceGroups/1/coordinate",
+                "value": 5
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/algorithm",
+                "value": "delaunay"
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/optimise",
+                "value": true
+              }
+            ],
+            "scope": "Closed-form primitive volume/bounds and disk or annulus area from literal dimensions; changed radius/height/axis/placement and meshing choices. Independent host node containment, signed tetrahedra, manifold topology and publication/native reopen checks apply. No pointwise chord-error or solver-accuracy claim.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadVolume",
+                "expected": 301.59289474462014,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 301.59289474462014,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadBounds",
+                "expected": [
+                  -3,
+                  -2,
+                  -1,
+                  7,
+                  8,
+                  5
+                ],
+                "absolute": 1e-06
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/0/cadArea",
+                "expected": 50.26548245743669,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/1/cadArea",
+                "expected": 50.26548245743669,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/0/meshArea",
+                "expected": 50.26548245743669,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/boundaryAreaChecks/1/meshArea",
+                "expected": 50.26548245743669,
+                "relative": 0.02,
+                "absolute": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "sphere-baseline",
+            "example": "sphere",
+            "edits": [],
+            "scope": "Closed-form primitive volume/bounds and disk or annulus area from literal dimensions; changed radius/height/axis/placement and meshing choices. Independent host node containment, signed tetrahedra, manifold topology and publication/native reopen checks apply. No pointwise chord-error or solver-accuracy claim.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadVolume",
+                "expected": 113.09733552923255,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 113.09733552923255,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadBounds",
+                "expected": [
+                  -2,
+                  -1,
+                  0,
+                  4,
+                  5,
+                  6
+                ],
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "sphere-changed-dimensions",
+            "example": "sphere",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options",
+                "value": {
+                  "centre": [
+                    -2,
+                    0,
+                    4
+                  ],
+                  "radius": 4
+                }
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/size",
+                "value": 0.7
+              }
+            ],
+            "scope": "Closed-form primitive volume/bounds and disk or annulus area from literal dimensions; changed radius/height/axis/placement and meshing choices. Independent host node containment, signed tetrahedra, manifold topology and publication/native reopen checks apply. No pointwise chord-error or solver-accuracy claim.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadVolume",
+                "expected": 268.082573106329,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/volume",
+                "expected": 268.082573106329,
+                "relative": 0.02,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadBounds",
+                "expected": [
+                  -6,
+                  -4,
+                  0,
+                  2,
+                  4,
+                  8
+                ],
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "named-sleeve-baseline",
+            "example": "named-sleeve-literal",
+            "edits": [],
+            "scope": "Fully named sleeve R=4, r=2, h=8 on x at origin [1,2,3]. Literal volume 96*pi, bore wall 32*pi and outer wall 64*pi; tags 3-6 with an empty remainder. Host checks every triangle by coordinates, material side and unrolled area independent of the producer.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/groups",
+                "expected": [
+                  {
+                    "dimension": 2,
+                    "tag": 3,
+                    "name": "start"
+                  },
+                  {
+                    "dimension": 2,
+                    "tag": 4,
+                    "name": "end"
+                  },
+                  {
+                    "dimension": 2,
+                    "tag": 5,
+                    "name": "bore"
+                  },
+                  {
+                    "dimension": 2,
+                    "tag": 6,
+                    "name": "outer"
+                  },
+                  {
+                    "dimension": 3,
+                    "tag": 1,
+                    "name": "sleeve"
+                  }
+                ]
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadVolume",
+                "expected": 301.59289474462014,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/0/side",
+                "expected": "inner"
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/1/side",
+                "expected": "outer"
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/0/cadArea",
+                "expected": 100.53096491487338,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/1/cadArea",
+                "expected": 201.06192982974676,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/0/unrolledArea",
+                "expected": 100.53096491487338,
+                "relative": 1e-09,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/1/unrolledArea",
+                "expected": 201.06192982974676,
+                "relative": 1e-09,
+                "absolute": 1e-08
+              }
+            ]
+          },
+          {
+            "id": "named-sleeve-changed-radius",
+            "example": "named-sleeve-literal",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/0/options/innerRadius",
+                "value": 2.5
+              },
+              {
+                "op": "replace",
+                "path": "/nodes/1/options/cylinderGroups/0/radius",
+                "value": 2.5
+              }
+            ],
+            "scope": "Same sleeve with bore radius 2.5: literal volume 78*pi and bore wall 40*pi; selector and solid change together. A stale literal selector is refused at plan time.",
+            "checks": [
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/groups",
+                "expected": [
+                  {
+                    "dimension": 2,
+                    "tag": 3,
+                    "name": "start"
+                  },
+                  {
+                    "dimension": 2,
+                    "tag": 4,
+                    "name": "end"
+                  },
+                  {
+                    "dimension": 2,
+                    "tag": 5,
+                    "name": "bore"
+                  },
+                  {
+                    "dimension": 2,
+                    "tag": 6,
+                    "name": "outer"
+                  },
+                  {
+                    "dimension": 3,
+                    "tag": 1,
+                    "name": "sleeve"
+                  }
+                ]
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cadVolume",
+                "expected": 245.04422698000386,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/0/side",
+                "expected": "inner"
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/1/side",
+                "expected": "outer"
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/0/cadArea",
+                "expected": 125.66370614359172,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/1/cadArea",
+                "expected": 201.06192982974676,
+                "relative": 1e-10,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/0/unrolledArea",
+                "expected": 125.66370614359172,
+                "relative": 1e-09,
+                "absolute": 1e-08
+              },
+              {
+                "file": "mesh-summary.json",
+                "format": "json",
+                "pointer": "/cylinderChecks/1/unrolledArea",
+                "expected": 201.06192982974676,
+                "relative": 1e-09,
+                "absolute": 1e-08
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Primary route: preserved conceptual guidance and examples; curated discovery phrases, Studio Add and contextual Help. Native behaviour is unchanged.",
+        "scope": "Named whole analytic cylindrical wall groups with independent coordinate classification, material-side and unrolled-area proof; empty remainder; cylinder chord-deviation refinement requirement; CAD surface inventory; adopted STEP inputs. Preserves box/STEP/primitive/planar/quality/refinement contracts. Scope and whole-application gaps are mapped in docs/gmsh.md.",
         "review": [
-          "verification/2026-10-10-adaptor-completion.md"
+          "verification/2026-11-03-gmsh-primitives.md",
+          "verification/2026-11-10-gmsh-cylinders.md"
         ],
         "notApplicable": {}
       }

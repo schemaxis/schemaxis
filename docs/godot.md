@@ -50,6 +50,7 @@ Nodes use `id`, `filter`, optional `options`, and typed `inputs`.
 | `plane` | Positive XZ `size` pair, XYZ `position` | `material` |
 | `readGLTF` | Absolute `.gltf` `file`, XYZ `position` | `material` |
 | `sprite3D` | Absolute PNG `file`, XYZ `position`, `pixelSize` in metres per pixel | None |
+| `animatedSprite3D` | Sheet PNG `file`, `metadata` (`schemaxis.aseprite.sheet/1`), tag `animation`, Boolean `loop`, `pixelSize`, XYZ `position` | Optional `parent` group |
 | `camera` | `position`, `target`, degree `fov`, `near`, `far`, Boolean `orbit` | None |
 | `directionalLight` | Degree XYZ `rotation`, RGB `colour`, `energy` | None |
 
@@ -111,6 +112,18 @@ left-drag orbits, the wheel zooms, and R resets the camera. `orbit: false` produ
 a fixed camera without an attached script. The remaining job JSON, logs and
 `worker.gd` are retained for audit. Editing the saved scene is supported in Godot,
 but intentionally invalidates the original verification receipt.
+
+`verify` also reads the retained `scene.tscn` as streamed text (never
+executed) and compares it with the plan independently of the native receipts:
+node names, Godot types, full parent paths, absence of foreign ownership,
+instancing or group attributes, local transforms of groups and geometry, camera
+direction, and any declared `position`. A scene whose hierarchy or placement was
+edited therefore fails even if its hash manifests were regenerated. A contradiction
+raises `VERIFICATION_FAILED` at `scene.tscn` with the line; unreadable scene text
+raises `SCENE_MALFORMED` and an oversized file `RESOURCE_LIMIT`. Keep a
+hand-edited scene as an unverified human revision, or rerun the adaptor in a
+fresh directory. This does not compare materials, mesh resources or light and
+camera settings in the text scene; those remain covered by the native receipts.
 
 ## Qualification
 
@@ -261,3 +274,103 @@ Official [Node3D transforms](https://docs.godotengine.org/en/stable/classes/clas
 [Node ownership](https://docs.godotengine.org/en/stable/classes/class_node.html#class-node-property-owner)
 and [PackedScene packing](https://docs.godotengine.org/en/stable/classes/class_packedscene.html#class-packedscene-method-pack)
 were reviewed for the implementation.
+
+The saved-scene structural check reads the canonical single-line node properties written by Godot’s saver. It rejects incomplete or multiline node assignments, non-canonical placement aliases and non-identity root placement; it is not a general Godot text-scene editor. Resource/material contents and script bindings remain outside this structural text check.
+
+The lexical scan tracks strings and balanced resource values across the whole file, so resource text cannot masquerade as a node header. Multiline resource dictionaries are allowed; complete tags and single-line node values cannot hide a second assignment or tag after their closing token.
+
+Saved scenes have no new whole-file size ceiling: embedded mesh resources can exceed 4 MiB under the existing import envelope. Resource values are scanned in 64 Ki-character chunks and hashes stream in 1 MiB chunks. Canonical tag and single-line node-property limits are 16384 and 65536 characters; resource nesting is limited to 64 levels. These guards cover the declared 128-node hierarchy and do not limit embedded resource payload size.
+
+
+## Timed sprite animation
+
+`animatedSprite3D` carries an Aseprite artist's per-frame timing into an editable
+Godot scene. It is a product hypothesis for the Aseprite-to-Godot hand-off, not
+evidence of customer demand. It reads two captured inputs from one Aseprite
+publication, `sheet.png` and `sheet.json` (`schemaxis.aseprite.sheet/1`), selects
+one named tag, and creates a native `AnimatedSprite3D` with its own `SpriteFrames`.
+Inside a workflow, both fields are generic artifact references to the producer's
+publications (zero-based `index` 2, the third publication, for the image and 3, the fourth, for the metadata; the Aseprite publications are `sprite.aseprite`, `preview.png`, `sheet.png`, `sheet.json`); absolute paths also work.
+
+```json
+{"id": "hero", "filter": "animatedSprite3D", "inputs": {"parent": "rig"},
+ "options": {"file": {"$artifact": "sprite", "index": 2},
+             "metadata": {"$artifact": "sprite", "index": 3},
+             "animation": "pulse", "loop": true, "pixelSize": 0.05, "position": [0, 0.5, 0]}}
+```
+
+**Supported meaning.** The named tag must run `forward`; its frames
+(`fromFrame` to `toFrame`, one-based, inclusive) play in order. `loop: true`
+repeats, `false` plays once and holds the last frame. Reverse, `pingPong` and
+`pingPongReverse` tags are refused (`UNSUPPORTED_ANIMATION_DIRECTION`) rather than
+flattened, other tags are not imported, and the metadata must be exactly
+`version`, `width`, `height`, `frames` (`x`, `y`, `width`, `height`, `durationMS`)
+and `tags` (`name`, `fromFrame`, `toFrame`, `direction`). Trimmed frames, offsets,
+layers, slices and user data do not exist in this contract.
+
+**Time.** Godot stores frame durations as *relative* weights; a frame lasts
+`duration / (animation FPS x playing speed)` seconds. Schemaxis never infers a
+rate: the animation speed is fixed at 1 frame per second, `speed_scale` stays 1,
+and each frame's duration is `durationMS / 1000`, so the Aseprite milliseconds are
+the playing seconds. Editing speed in Godot later rescales every frame together.
+Godot saves the durations as 32-bit floats, hence the existing `1e-5` readback
+tolerance.
+
+**Bounds, all enforced before Godot starts.** PNG at most 1 MiB, 4096 x 256 pixels
+and 524288 decoded pixels, non-interlaced 8-bit RGB or RGBA; metadata at most 64 KiB;
+1 to 32 frames of one size, each at most 256 x 256, inside the sheet and not
+overlapping; each `durationMS` 1 to 5000 (whole integers, no NaN or fractions); the
+slice at most 8000 ms; at most four animated sprites per scene. Faults carry
+structured locations such as `$.nodes[1].options.metadata:metadata.frames[2].durationMS`.
+The adaptor owns its decoder use and metadata reader; it imports no other adaptor.
+
+**Native evidence.** Both inputs are captured and hashed; the same unchanged path
+bytes reuse a workflow result and changed bytes of either invalidate it. Godot builds
+the `SpriteFrames` (an `AtlasTexture` per frame into one sheet texture, durations,
+speed, loop mode), attaches the node (`autoplay` set to the animation), saves
+`scene.tscn`, and a fresh process reopens it with the cache ignored and reads back every
+rectangle, duration, order, loop mode, frame pixel digest, and writes the raw frame
+pixels to `animation_<id>.rgba`. The host independently crops the captured sheet and
+reads `scene.tscn` text (sub-resources, regions, durations, loop mode, name) to compare
+byte-for-byte and value-for-value.
+
+A third fresh process, `playback`, loads the saved scene and advances the real
+`AnimatedSprite3D` through SceneTree process frames at `--fixed-fps 1000` after a
+150-frame warm-up (startup deltas are not uniform; the receipt records min and max
+delta, both exactly 1 ms). Samples are taken from the node's own `frame`,
+`frame_progress`, `is_playing()` and playing speed at times inside every frame, around
+every boundary, across the loop wrap and past the end of a non-looping slice. The host
+derives the expected frame and progress from the authored durations alone.
+
+**Observed limit.** Godot 4.7.2 computes the playing rate before it advances the frame, so
+the rest of a tick that crosses a boundary runs at the *previous* frame's rate and the
+leftover `frame_progress` fraction, not leftover time, carries over. A crossing from a
+frame of duration `d_old` to one of `d_new` therefore mis-times by at most one tick times
+`|d_new/d_old - 1|`. The verifier's bound is one tick plus that term for every crossing
+reached (not a ratio-capped or tuned figure). Boundary samples are placed 12 ms either side when that is decisive; otherwise
+at the first decisive offset from a fixed list (12 ms multiplied by powers of 1.5, or
+30%, 20% and 10% of the shorter adjacent frame). If none is decisive, the clip
+is refused. Every planned sample must lie farther from
+a possible boundary than the bound, and its expected frame is exact; a sample inside the bound fails closed.
+When the bound cannot be met (frames of a few milliseconds, or a frame many times longer
+or shorter than its neighbour, especially when looping) the clip is refused before Godot
+starts with `UNSUPPORTED_ANIMATION_TIMING`: the fixed 1 ms playback clock cannot tell its
+frames apart, which limits what can be verified, not what Godot can play. This does not
+certify rendered appearance, GUI playback, vsync pacing or frame-skipping at other frame rates.
+Official [SpriteFrames](https://docs.godotengine.org/en/stable/classes/class_spriteframes.html)
+and [AnimatedSprite3D](https://docs.godotengine.org/en/stable/classes/class_animatedsprite3d.html)
+references were re-read for this operation; `set_animation_loop` is deprecated, so
+`set_animation_loop_mode` is used.
+
+`tools/qualify_godot_animation.py` runs the real Aseprite producer (the locally
+configured executable, reported as observed, not as the latest release), the
+workflow hand-off, changed duration/pixel/order/loop cases, metadata and rectangle
+controls, hash-refreshed semantic mutants, timeout and cancellation retention, and
+legacy static-sprite and hierarchy controls. Its hash-refreshed mutants also refresh the
+publication metadata and prove it current before expecting the semantic reason, and include a
+source-PNG pixel mutant. The saved project's main scene is also run headless at a fixed tick so its
+`autoplay` is observed advancing. The development kit's `animated-sprite` and
+`animated-sprite-variant` cases use the committed 24x8 sheet fixtures
+(`tools/generate_godot_animation_fixtures.py --check`) with literal durations, rectangles, loop
+mode, frame pixel hashes and decisive playback frames; they do not claim shared timeout or
+cancellation of the sampling loop.

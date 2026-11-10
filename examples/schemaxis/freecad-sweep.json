@@ -1,0 +1,80 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "body",
+      "filter": "body"
+    },
+    {
+      "id": "outer",
+      "filter": "circle",
+      "options": {
+        "radius": 3
+      },
+      "inputs": {
+        "body": "body"
+      }
+    },
+    {
+      "id": "bend",
+      "filter": "arcPath",
+      "options": {
+        "frame": {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "xAxis": [
+            -1,
+            0,
+            0
+          ],
+          "normal": [
+            0,
+            1,
+            0
+          ]
+        },
+        "bendRadius": 10,
+        "sweepAngle": 90
+      },
+      "inputs": {
+        "body": "body"
+      }
+    },
+    {
+      "id": "stock",
+      "filter": "additivePipe",
+      "options": {},
+      "inputs": {
+        "body": "body",
+        "profile": "outer",
+        "spine": "bend"
+      }
+    },
+    {
+      "id": "inner",
+      "filter": "circle",
+      "options": {
+        "radius": 2
+      },
+      "inputs": {
+        "body": "body"
+      }
+    },
+    {
+      "id": "tube",
+      "filter": "subtractivePipe",
+      "options": {},
+      "inputs": {
+        "body": "body",
+        "base": "stock",
+        "profile": "inner",
+        "spine": "bend"
+      }
+    }
+  ],
+  "output": "tube"
+}

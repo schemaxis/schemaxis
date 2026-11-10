@@ -118,8 +118,8 @@ export function createParametersTab(ctx, model) {
       h('div', {class: 'dz-table-wrap'}, h('table', {class: 'dz-table'},
         h('thead', {}, h('tr', {}, ['ID', 'Label', 'Kind', 'Units', 'Default', 'Limits', 'Target', '']
           .map((text) => h('th', {}, text)))),
-        h('tbody', {}, rows.length ? rows : emptyRow(8, 'No parameters yet. Select an operation and use '
-          + '“Expose as parameter” in the inspector.')))),
+        h('tbody', {}, rows.length ? rows : emptyRow(8, 'No parameters yet. Open “Variables & expressions” '
+          + 'to create shared values, or select an operation and use “Expose as parameter” in the inspector.')))),
       footer(dirty, async () => {
         if (JSON.stringify(model.store.get().projection.parameters || {}) !== baseline) {
           ctx.notify.warn('Parameters changed elsewhere', {body: 'Your edits are kept. Discard to load the latest '

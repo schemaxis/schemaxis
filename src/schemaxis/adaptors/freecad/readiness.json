@@ -2,13 +2,13 @@
   "version": "schemaxis.readiness/1",
   "routes": {
     "schemaxis.freecad/1": {
-      "guide": "docs/freecad-part-design.md",
+      "guide": "docs/freecad-histories.md",
       "context": {
-        "purpose": "Construct one bounded solid from declared primitives, profiles and solid operations; publish an editable FCStd model with STEP and tessellated STL. Finishing can express geometric edge intent with exact match cardinality, re-evaluated on each design variant. Optional named geometric measurements publish verified values for downstream adaptors. A bounded designStudy can adjust one length to reach a named geometric target with explicit units and response direction. Optional native length parameters preserve shared affine design intent across features and native reopening. Mechanical parts can use an explicit Body with constrained XY sketches, first Pad and a linear through-all Pocket history.",
-        "assumptions": "Lengths are millimetres. FreeCAD public document and shape APIs execute in an isolated process; literal options and earlier-node references define the supported subset.",
-        "constraints": "The output must be one valid positive-volume solid. Profiles cannot be final outputs. Host-valid booleans can still fail native geometry checks; STL tessellation loses exact surface representation. Design studies are batch-only, change one resolved scalar option, and test a sampled response assumption; they do not solve general CAD constraints. Native parameters are batch-only, with bounded primitive, extrusion, rectangle/circle sketch and Pad length targets; they cannot combine with live editing or designStudy. PartDesign supports one origin-based Body, one first Pad and current-tip Pockets, with same-Body profile ownership; no second Pad, feature branches or mixed Part/PartDesign dependencies. The Body itself is not a solid output. importSTEP needs the assigned file unit, volume plus an orientation-sensitive fact, and one solid within 32 MiB, 100000 entities and 2000 edges per loop; it is batch-only and cannot share a document with a PartDesign Body. Runs without hardened export evidence fail with RERUN_REQUIRED.",
-        "inspection": "Inspect native shape validity, solid count, volume and bounds; verify reopens publications and checks geometry. The embedded box has analytic volume 1000 cubic millimetres. A preview alone does not establish geometry correctness. Native topology inspection supports analytic visit selection. Geometric selection evidence retains source edges, matches and actual native assignments before and after reopening. measurements.json provides selected node quantities with explicit units; value references select artifact 3 and /measurements/ID/value. Live geometry exposes the same requested measurements for its revision. Design studies retain study-summary.json and study.html with every candidate, target band and stop decision. Parameterised documents additionally verify exact typed VarSet membership and all ExpressionEngine assignments in native observations and the saved FCStd. PartDesign additionally verifies ordered Body Group/Tip, Origin roles, placements, sketch constraint types/names/endpoints, profile/base links and true ThroughAll semantics; current-shape equality cannot substitute for feature intent. Every new run publishes exact native volume, area, curved area, bounds and centre; verification integrates the STL on the host (signed volume, closure, centre, bounds) within a stated deflection and float32 budget and the 0.5 percent ceiling, and checks the exported STEP unit.",
-        "recovery": "Correct unknown node references and dimensional constraints before running. If booleans fail native checks, inspect operand placement/intersection and simplify the model. Replan and rerun in a fresh directory; preserve failed evidence. EMPTY_SELECTION, AMBIGUOUS_SELECTION and SELECTION_COUNT_MISMATCH require inspecting the effective source geometry and correcting predicates or intentional match counts; no nearest-edge substitution is performed. STUDY_REQUIREMENTS_NOT_MET retains an unmet design report; inspect the bracket, sampled response, native validity and finite limits before changing the goal. For CONFLICTING_BINDING remove the driven literal option; INVALID_PARAMETER/INVALID_BINDING require valid bounds and declared terms; UNOBSERVABLE_BINDING requires a measurable driver range; UNREPRESENTABLE_PARAMETER requires a length that survives native storage. INVALID_BODY_OWNERSHIP/INVALID_BODY_HISTORY require same-Body earlier profiles and a linear current-tip chain; select the final solid feature. UNSUPPORTED_ATTACHMENT requires origin XY sketches with zero offset. UNIT_MISMATCH/UNDECLARED_UNIT require the unit the file assigns; EXPECTATION_FAILED names the declared fact that differs; PREPARATION_CHANGED_GEOMETRY means refine changed the part; RERUN_REQUIRED means rerun the document to obtain hardened export evidence."
+        "purpose": "Build editable mechanical parts from constrained profile intent, explicit frames or checked planar attachments, and ordered native multi-Body histories. Compose stock, cavities, bosses, slots, turned features, dress-ups, patterns, lofts and unthreaded drilling/head recesses; publish one selected final solid as FCStd/STEP/STL while retaining all authored Bodies natively. Primitives/booleans, checked single-solid STEP import, named measurements, bounded batches, affine native length drivers and the separately bounded scalar designStudy remain available. Uniform native shells express wall/floor thickness and exact planar opening intent once, then compose with bosses and drilling. Editable sweep/path intent composes hollow elbows, varying sections and attached face-centred flanges/bores. Apply mould-release Draft to measured planar/cylindrical walls about a same-Body neutral profile plane, with optional native pull axis, and compose with uniform walls, bosses and drilling. Native engineering tables retain mixed-unit length inputs and affine formula aliases that drive the same finite dimension targets. Editable straight-edged Draft Wire outlines compose Part extrusions and booleans. Seed an editable Body from a checked STEP/STL import or supported typed Part solid, retain the original captured assets, and declare the Body frame explicitly for downstream sourced assemblies.",
+        "assumptions": "Lengths are millimetres; angles are degrees. Each Body represents one manufactured part and has its own owner/member/current-tip history. Typed declarations execute through public FreeCAD document, Sketcher, Part and PartDesign APIs in isolated native processes; authored data cannot select arbitrary native code or property paths.",
+        "constraints": "Select one valid positive-volume final solid tip; Body containers, datums and profiles are not solid outputs. Every PartDesign feature must continue its own Body current tip and use unused same-Body profiles; no feature branching or silent mixed Part/PartDesign dependencies. Multiple Bodies and subsequent Pads are supported. Profiles use orthonormal independent frames or exact-cardinality extreme Cartesian planar-face attachments; curved/rotated support faces and general topology repair remain open. General sketches cover reviewed lines/circles/arcs and named relation types, not arbitrary Sketcher geometry. Hole is common unthreaded drilling; threads, taper, standards tables and up-to-face modes remain open. Uniform Skin shells support inward/outward offsets and sharp/rounded joins; general surfaces/variable thickness and topology repair remain open. Sweeps use connected planar line/circle/arc sketch paths and closed sections; arbitrary3D/spline paths, partial-edge selection and some upstream corner export behaviours remain gaps. Transformed corners require tangent continuity; invalid rounded STEP handoffs fail verification. Helix and broader feature extents remain gaps. Draft selects planar/cylindrical source faces only; neutral references are earlier same-Body profiles and optional pull axes are same-Body datumAxis objects. General native neutral-face, conical/spline surface selectors and angular parameter drivers remain gaps. Native affine length drivers are batch-only with reviewed finite targets; no angular-driver AST, live Body sessions, reverse synchronisation or PartDesign designStudy. Scalar designStudy is confined to its separate documented subset and sampled monotonic response assumptions. Checked importSTEP supplies one static solid with assigned units/declared facts within32MiB/100000entities/2000edges per loop; bodySeed can use it, a checked importMesh solid or a supported typed Part solid as the first member of an ordered Body. An explicit Body frame places seeded or ordinary typed Body histories in world space; profile/attachment selectors and assembly mounts remain Body-local; legacy readSTEP is refused in seeded histories. Kernel validity can still fail after host admission. STEP/STL lose feature history and STL approximates curved surfaces. Spreadsheet and VarSet parameters are alternatives. Spreadsheet tables have at most32 cells, unitful positive length inputs and acyclic affine formulas; nonlinear/angular/general-table/cross-document workflows remain missing. Draft profiles have 3 to 256 distinct local points and one closed planar boundary. Live Body sessions and general native-history adoption remain unavailable; sourced assembly-history copying accepts the finite typed Body-history capability with retained typed intent and original assets when present.",
+        "inspection": "Verification checks native validity, solid count and shape facts, then independently reopens publications. Multi-Body records bind each native Group/Tip/owner, origin roles, profile/frame/attachment semantics, named geometry/constraints, current-base/profile links, feature settings and exact allowed expression engines. Saved FCStd XML is independently checked; present shape equality cannot replace editable feature intent. Geometric selectors retain exact source/match inventories. Native parameters retain typed VarSet membership and expressions. Hole retains actual diameter/extent/tip/recess semantics separately from marker radii. STEP unit/geometry and independently integrated STL volume/closure/centre/bounds use explicit deflection and float32 error budgets. Named measurements publish verified units/values for downstream consumers. Dedicated qualifier examples add analytic/neutral geometry, native edits/save/fresh reopen and refreshed-digest attacks; broader upstream coverage remains separately tracked. Draft retains complete measured source face inventory, exact selected Base links, neutral/pull references, angle/reversal and fixed support-transform/kernel-tolerance policy in native and saved readback. Spreadsheet cell membership, literal/formula grammar, aliases and display units are bound independently in saved XML before source restoration; actual unitful quantities are read separately on build and fresh reopen. Draft source geometry binds independently to typed polygon vertices/edges/winding, and the entire saved Part graph binds one coherent trusted fresh or first-reopen/save reference; submitted FCStd is never restored. Seeded source and assembly admission bind the complete saved history, maps and original asset bytes to trusted fresh typed reconstruction before opening submitted native documents; private assembly inspection carries the verified native digest.",
+        "recovery": "Correct earlier-node references, same-Body ownership and current-tip/profile consumption before native execution. For invalid stock or non-removing cuts, inspect actual overlap/direction and use a fresh profile; every drilling centre must reach material. For missing or ambiguous face/edge selections inspect the geometry and intentional cardinality; no nearest-face substitution occurs. CONFLICTING_FRAME requires either an independent frame/plane/origin or support+onFace, never both. INVALID_HOLE_EXTENT/INVALID_HOLE_RECESS require exactly the chosen finite depth/tip/head dimensions and positive bore below its head recess. INVALID_POCKET_EXTENT requires finite length or throughAll without length. Driver faults require bounded declared parameter terms and omission of the driven literal. Import faults require the assigned STEP unit, supported one-solid content and correct orientation-sensitive expected facts. Preserve failures and rerun in a fresh directory after changing intent; inspect native recompute errors after topology-changing edits. RERUN_REQUIRED needs fresh hardened export evidence. Unmet designStudy goals retain their report; inspect bracket, response and limits before changing a target. For spreadsheet faults, correct aliases, units and cycles, retain positive derived lengths across independent input bounds, and remove unused or algebraically cancelled inputs. INVALID_BODY_SEED requires a first Body member with an earlier external solid source and no cross-Body member dependency. INVALID_FRAME requires finite perpendicular unit axes for an explicit Body layout. Use checked importSTEP/importMesh with assigned units instead of legacy readSTEP for seeded histories; retain captured assets and rerun from trusted intent rather than editing native maps or receipt hashes."
       },
       "examples": [
         {
@@ -108,6 +108,1160 @@
           "reference": "examples/schemaxis/freecad-import-step-invalid.json",
           "expect": "invalid",
           "fault": "UNIT_MISMATCH"
+        },
+        {
+          "id": "counterbore",
+          "reference": "examples/schemaxis/freecad-counterbore.json"
+        },
+        {
+          "id": "counterbore-variant",
+          "reference": "examples/schemaxis/freecad-counterbore-variant.json"
+        },
+        {
+          "id": "blind-pocket",
+          "reference": "examples/schemaxis/freecad-blind-pocket.json"
+        },
+        {
+          "id": "counterbore-invalid",
+          "reference": "examples/schemaxis/freecad-counterbore-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_POCKET_EXTENT"
+        },
+        {
+          "id": "parametric-enclosure",
+          "reference": "examples/schemaxis/freecad-parametric-enclosure.json"
+        },
+        {
+          "id": "enclosure-lid",
+          "reference": "examples/schemaxis/freecad-parametric-enclosure-lid.json"
+        },
+        {
+          "id": "driven-housing",
+          "reference": "examples/schemaxis/freecad-driven-housing.json"
+        },
+        {
+          "id": "history-multi-body",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "first",
+                "filter": "body"
+              },
+              {
+                "id": "s1",
+                "filter": "rectangle",
+                "options": {
+                  "width": 40,
+                  "height": 30
+                },
+                "inputs": {
+                  "body": "first"
+                }
+              },
+              {
+                "id": "f1",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "first",
+                  "profile": "s1"
+                }
+              },
+              {
+                "id": "second",
+                "filter": "body"
+              },
+              {
+                "id": "s2",
+                "filter": "circle",
+                "options": {
+                  "radius": 3,
+                  "origin": [
+                    50,
+                    0,
+                    0
+                  ]
+                },
+                "inputs": {
+                  "body": "second"
+                }
+              },
+              {
+                "id": "f2",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "second",
+                  "profile": "s2"
+                }
+              }
+            ],
+            "output": "f2"
+          }
+        },
+        {
+          "id": "history-polygon",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "p",
+                "filter": "polygon",
+                "options": {
+                  "points": [
+                    [
+                      0,
+                      0
+                    ],
+                    [
+                      10,
+                      0
+                    ],
+                    [
+                      10,
+                      4
+                    ],
+                    [
+                      4,
+                      4
+                    ],
+                    [
+                      4,
+                      10
+                    ],
+                    [
+                      0,
+                      10
+                    ]
+                  ],
+                  "origin": [
+                    0,
+                    0,
+                    2
+                  ]
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "p"
+                }
+              }
+            ],
+            "output": "plate"
+          }
+        },
+        {
+          "id": "history-oblique-frame",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "stock",
+                "filter": "rectangle",
+                "options": {
+                  "width": 40,
+                  "height": 30,
+                  "frame": {
+                    "origin": [
+                      3,
+                      4,
+                      5
+                    ],
+                    "xAxis": [
+                      0,
+                      1,
+                      0
+                    ],
+                    "normal": [
+                      1,
+                      0,
+                      0
+                    ]
+                  }
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10,
+                  "direction": "symmetric"
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "stock"
+                }
+              }
+            ],
+            "output": "plate"
+          }
+        },
+        {
+          "id": "history-fixed-sketch",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "s",
+                "filter": "sketch",
+                "options": {
+                  "geometry": [
+                    {
+                      "id": "outer",
+                      "kind": "circle",
+                      "centre": [
+                        0,
+                        0
+                      ],
+                      "radius": 8
+                    },
+                    {
+                      "id": "inner",
+                      "kind": "circle",
+                      "centre": [
+                        0,
+                        0
+                      ],
+                      "radius": 3
+                    }
+                  ]
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "s"
+                }
+              }
+            ],
+            "output": "plate"
+          }
+        },
+        {
+          "id": "history-solve-sketch",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "s",
+                "filter": "sketch",
+                "options": {
+                  "geometry": [
+                    {
+                      "id": "outer",
+                      "kind": "circle",
+                      "centre": [
+                        2,
+                        3
+                      ],
+                      "radius": 8
+                    }
+                  ],
+                  "constraintMode": "solve",
+                  "constraints": [
+                    {
+                      "id": "x",
+                      "kind": "distanceX",
+                      "first": {
+                        "geometry": "outer",
+                        "point": "centre"
+                      },
+                      "value": 2
+                    },
+                    {
+                      "id": "y",
+                      "kind": "distanceY",
+                      "first": {
+                        "geometry": "outer",
+                        "point": "centre"
+                      },
+                      "value": 3
+                    },
+                    {
+                      "id": "r",
+                      "kind": "radius",
+                      "first": {
+                        "geometry": "outer"
+                      },
+                      "value": 8
+                    }
+                  ]
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "s"
+                }
+              }
+            ],
+            "output": "plate"
+          }
+        },
+        {
+          "id": "history-body-fillet",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "stock",
+                "filter": "rectangle",
+                "options": {
+                  "width": 40,
+                  "height": 30
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "stock"
+                }
+              },
+              {
+                "id": "finish",
+                "filter": "bodyFillet",
+                "options": {
+                  "edges": {
+                    "where": {
+                      "parallelTo": [
+                        0,
+                        0,
+                        1
+                      ]
+                    },
+                    "expect": 4
+                  }
+                },
+                "inputs": {
+                  "base": "plate"
+                }
+              }
+            ],
+            "output": "finish"
+          }
+        },
+        {
+          "id": "history-body-chamfer",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "stock",
+                "filter": "rectangle",
+                "options": {
+                  "width": 40,
+                  "height": 30
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "stock"
+                }
+              },
+              {
+                "id": "finish",
+                "filter": "bodyChamfer",
+                "options": {
+                  "edges": {
+                    "where": {
+                      "parallelTo": [
+                        0,
+                        0,
+                        1
+                      ]
+                    },
+                    "expect": 4
+                  }
+                },
+                "inputs": {
+                  "base": "plate"
+                }
+              }
+            ],
+            "output": "finish"
+          }
+        },
+        {
+          "id": "history-linear-pattern",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "stock",
+                "filter": "rectangle",
+                "options": {
+                  "width": 40,
+                  "height": 30
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "stock"
+                }
+              },
+              {
+                "id": "hole",
+                "filter": "circle",
+                "options": {
+                  "radius": 3,
+                  "centre": [
+                    8,
+                    0
+                  ],
+                  "origin": [
+                    0,
+                    0,
+                    10
+                  ]
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "cut",
+                "filter": "pocket",
+                "options": {
+                  "direction": "backward"
+                },
+                "inputs": {
+                  "base": "plate",
+                  "profile": "hole"
+                }
+              },
+              {
+                "id": "pattern",
+                "filter": "linearPattern",
+                "options": {
+                  "length": 8,
+                  "count": 2,
+                  "direction": "Y"
+                },
+                "inputs": {
+                  "base": "cut",
+                  "feature": "cut"
+                }
+              }
+            ],
+            "output": "pattern"
+          }
+        },
+        {
+          "id": "history-polar-pattern",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "stock",
+                "filter": "rectangle",
+                "options": {
+                  "width": 40,
+                  "height": 30
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "stock"
+                }
+              },
+              {
+                "id": "hole",
+                "filter": "circle",
+                "options": {
+                  "radius": 3,
+                  "centre": [
+                    8,
+                    0
+                  ],
+                  "origin": [
+                    0,
+                    0,
+                    10
+                  ]
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "cut",
+                "filter": "pocket",
+                "options": {
+                  "direction": "backward"
+                },
+                "inputs": {
+                  "base": "plate",
+                  "profile": "hole"
+                }
+              },
+              {
+                "id": "pattern",
+                "filter": "polarPattern",
+                "options": {
+                  "angle": 360,
+                  "count": 4,
+                  "axis": "Z"
+                },
+                "inputs": {
+                  "base": "cut",
+                  "feature": "cut"
+                }
+              }
+            ],
+            "output": "pattern"
+          }
+        },
+        {
+          "id": "history-mirror",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "stock",
+                "filter": "rectangle",
+                "options": {
+                  "width": 40,
+                  "height": 30
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "stock"
+                }
+              },
+              {
+                "id": "hole",
+                "filter": "circle",
+                "options": {
+                  "radius": 3,
+                  "centre": [
+                    8,
+                    0
+                  ],
+                  "origin": [
+                    0,
+                    0,
+                    10
+                  ]
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "cut",
+                "filter": "pocket",
+                "options": {
+                  "direction": "backward"
+                },
+                "inputs": {
+                  "base": "plate",
+                  "profile": "hole"
+                }
+              },
+              {
+                "id": "pattern",
+                "filter": "mirror",
+                "options": {
+                  "plane": "YZ"
+                },
+                "inputs": {
+                  "base": "cut",
+                  "feature": "cut"
+                }
+              }
+            ],
+            "output": "pattern"
+          }
+        },
+        {
+          "id": "history-body-revolve",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "p",
+                "filter": "polygon",
+                "options": {
+                  "points": [
+                    [
+                      2,
+                      0
+                    ],
+                    [
+                      6,
+                      0
+                    ],
+                    [
+                      6,
+                      10
+                    ],
+                    [
+                      2,
+                      10
+                    ]
+                  ],
+                  "plane": "XZ"
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "revolved",
+                "filter": "bodyRevolve",
+                "inputs": {
+                  "body": "body",
+                  "profile": "p"
+                }
+              }
+            ],
+            "output": "revolved"
+          }
+        },
+        {
+          "id": "history-additive-loft",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "bottom",
+                "filter": "circle",
+                "options": {
+                  "radius": 5
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "top",
+                "filter": "circle",
+                "options": {
+                  "radius": 8,
+                  "origin": [
+                    0,
+                    0,
+                    10
+                  ]
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "loft",
+                "filter": "additiveLoft",
+                "options": {
+                  "ruled": true
+                },
+                "inputs": {
+                  "body": "body",
+                  "sections": [
+                    "bottom",
+                    "top"
+                  ]
+                }
+              }
+            ],
+            "output": "loft"
+          }
+        },
+        {
+          "id": "history-groove",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "bottom",
+                "filter": "circle",
+                "options": {
+                  "radius": 8
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "bottom"
+                }
+              },
+              {
+                "id": "grooveProfile",
+                "filter": "polygon",
+                "options": {
+                  "points": [
+                    [
+                      6,
+                      4
+                    ],
+                    [
+                      9,
+                      4
+                    ],
+                    [
+                      9,
+                      6
+                    ],
+                    [
+                      6,
+                      6
+                    ]
+                  ],
+                  "plane": "XZ"
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "grooved",
+                "filter": "groove",
+                "inputs": {
+                  "body": "body",
+                  "base": "plate",
+                  "profile": "grooveProfile"
+                }
+              }
+            ],
+            "output": "grooved"
+          }
+        },
+        {
+          "id": "history-subtractive-loft",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "stock",
+                "filter": "rectangle",
+                "options": {
+                  "width": 40,
+                  "height": 30
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "stock"
+                }
+              },
+              {
+                "id": "bottom",
+                "filter": "circle",
+                "options": {
+                  "radius": 3
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "top",
+                "filter": "circle",
+                "options": {
+                  "radius": 5,
+                  "origin": [
+                    0,
+                    0,
+                    10
+                  ]
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "loft",
+                "filter": "subtractiveLoft",
+                "options": {
+                  "ruled": true
+                },
+                "inputs": {
+                  "body": "body",
+                  "base": "plate",
+                  "sections": [
+                    "bottom",
+                    "top"
+                  ]
+                }
+              }
+            ],
+            "output": "loft"
+          }
+        },
+        {
+          "id": "history-slot",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "slotProfile",
+                "filter": "slot",
+                "options": {
+                  "length": 10,
+                  "radius": 2
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "plate",
+                "filter": "pad",
+                "options": {
+                  "length": 10
+                },
+                "inputs": {
+                  "body": "body",
+                  "profile": "slotProfile"
+                }
+              }
+            ],
+            "output": "plate"
+          }
+        },
+        {
+          "id": "history-datum-revolve",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "body",
+                "filter": "body"
+              },
+              {
+                "id": "axis",
+                "filter": "datumAxis",
+                "options": {
+                  "origin": [
+                    10,
+                    0,
+                    0
+                  ],
+                  "direction": [
+                    0,
+                    0,
+                    1
+                  ]
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "p",
+                "filter": "polygon",
+                "options": {
+                  "points": [
+                    [
+                      12,
+                      0
+                    ],
+                    [
+                      16,
+                      0
+                    ],
+                    [
+                      16,
+                      10
+                    ],
+                    [
+                      12,
+                      10
+                    ]
+                  ],
+                  "plane": "XZ"
+                },
+                "inputs": {
+                  "body": "body"
+                }
+              },
+              {
+                "id": "turned",
+                "filter": "bodyRevolve",
+                "inputs": {
+                  "body": "body",
+                  "profile": "p",
+                  "axis": "axis"
+                }
+              }
+            ],
+            "output": "turned"
+          }
+        },
+        {
+          "id": "history-standalone-sketch",
+          "document": {
+            "version": "schemaxis.freecad/1",
+            "nodes": [
+              {
+                "id": "sketch",
+                "filter": "sketch",
+                "options": {
+                  "geometry": [
+                    {
+                      "id": "c",
+                      "kind": "circle",
+                      "centre": [
+                        1,
+                        2
+                      ],
+                      "radius": 3
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "solid",
+                "filter": "extrude",
+                "inputs": {
+                  "profile": "sketch"
+                }
+              }
+            ],
+            "output": "solid"
+          }
+        },
+        {
+          "id": "drilling",
+          "reference": "examples/schemaxis/freecad-drilling.json"
+        },
+        {
+          "id": "drilled-enclosure",
+          "reference": "examples/schemaxis/freecad-drilled-enclosure.json"
+        },
+        {
+          "id": "shell",
+          "reference": "examples/schemaxis/freecad-shell.json"
+        },
+        {
+          "id": "shell-enclosure",
+          "reference": "examples/schemaxis/freecad-shell-enclosure.json"
+        },
+        {
+          "id": "sweep",
+          "reference": "examples/schemaxis/freecad-sweep.json"
+        },
+        {
+          "id": "flanged-elbow",
+          "reference": "examples/schemaxis/freecad-flanged-elbow.json"
+        },
+        {
+          "id": "draft-enclosure",
+          "reference": "examples/schemaxis/freecad-draft-enclosure.json"
+        },
+        {
+          "id": "draft-cup",
+          "reference": "examples/schemaxis/freecad-draft-cup.json"
+        },
+        {
+          "id": "spreadsheet-enclosure",
+          "reference": "examples/schemaxis/freecad-spreadsheet-enclosure.json"
+        },
+        {
+          "id": "mesh-bracket",
+          "reference": "examples/schemaxis/freecad-mesh-bracket.json"
+        },
+        {
+          "id": "mesh-variant",
+          "reference": "examples/schemaxis/freecad-mesh-variant.json"
+        },
+        {
+          "id": "mesh-cavity",
+          "reference": "examples/schemaxis/freecad-mesh-cavity.json"
+        },
+        {
+          "id": "draft-profile-bracket",
+          "reference": "examples/schemaxis/freecad-draft-profile-bracket.json"
+        },
+        {
+          "id": "draft-profile-turned",
+          "reference": "examples/schemaxis/freecad-draft-profile-turned.json"
+        },
+        {
+          "id": "crossed-draft-profile",
+          "reference": "examples/schemaxis/freecad-draft-profile-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_DRAFT_PROFILE"
+        },
+        {
+          "id": "body-stock",
+          "reference": "examples/schemaxis/freecad-body-stock.json"
+        },
+        {
+          "id": "body-stock-turned",
+          "reference": "examples/schemaxis/freecad-body-stock-turned.json"
+        },
+        {
+          "id": "body-step-stock",
+          "reference": "examples/schemaxis/freecad-body-step-stock.json"
+        },
+        {
+          "id": "placed-body",
+          "reference": "examples/schemaxis/freecad-placed-body.json"
+        },
+        {
+          "id": "placed-body-attached",
+          "reference": "examples/schemaxis/freecad-placed-body-attached.json"
+        },
+        {
+          "id": "placed-bodies",
+          "reference": "examples/schemaxis/freecad-placed-bodies.json"
+        },
+        {
+          "id": "invalid-body-frame",
+          "reference": "examples/schemaxis/freecad-placed-body-invalid.json",
+          "expect": "invalid",
+          "fault": "INVALID_FRAME"
         }
       ],
       "conformance": [
@@ -117,7 +1271,19 @@
         "tests/unit/test_freecad_design_study.py",
         "tests/unit/test_freecad_parameters.py",
         "tests/unit/test_freecad_part_design.py",
-        "tests/unit/test_freecad_step_import.py"
+        "tests/unit/test_freecad_step_import.py",
+        "tests/unit/test_freecad_finite_pocket.py",
+        "tests/unit/test_freecad_histories.py",
+        "tests/unit/test_freecad_shell.py",
+        "tests/unit/test_freecad_sweep.py",
+        "tests/unit/test_freecad_spreadsheet.py",
+        "tests/unit/test_freecad_mesh_source.py",
+        "tests/unit/test_freecad_mesh_geometry.py",
+        "tests/unit/test_freecad_mesh_import.py",
+        "tests/unit/test_freecad_mesh_saved.py",
+        "tests/unit/test_freecad_mesh_cases.py",
+        "tests/unit/test_freecad_body_seed.py",
+        "tests/unit/test_freecad_source_assets.py"
       ],
       "acceptance": [
         "examples/schemaxis/check_freecad_gallery.py",
@@ -127,7 +1293,15 @@
         "tools/qualify_freecad_design_studies.py",
         "tools/qualify_freecad_parameters.py",
         "tools/qualify_freecad_part_design.py",
-        "tools/qualify_freecad_step_import.py"
+        "tools/qualify_freecad_step_import.py",
+        "tools/qualify_freecad_finite_pocket.py",
+        "tools/qualify_freecad_histories.py",
+        "tools/qualify_freecad_drilling.py",
+        "tools/qualify_freecad_shell.py",
+        "tools/qualify_freecad_sweep.py",
+        "tools/qualify_freecad_draft.py",
+        "tools/qualify_freecad_spreadsheet.py",
+        "tools/qualify_freecad_mesh.py"
       ],
       "profiles": {
         "workflow": {
@@ -158,7 +1332,20 @@
           "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/Expressions.md",
           "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/PartDesign_Body.md",
           "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/PartDesign_Pad.md",
-          "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/PartDesign_Pocket.md"
+          "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/PartDesign_Pocket.md",
+          "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/Sketcher_scripting.md",
+          "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/PartDesign_Pad.md",
+          "https://raw.githubusercontent.com/FreeCAD/FreeCAD/1.1.4/src/Mod/Sketcher/App/Constraint.h",
+          "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/PartDesign_Hole.md",
+          "https://github.com/FreeCAD/FreeCAD/blob/main/src/Mod/PartDesign/App/FeatureHole.cpp",
+          "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/PartDesign_Thickness.md",
+          "https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/Mod/PartDesign/App/FeatureThickness.cpp",
+          "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/PartDesign_AdditivePipe.md",
+          "https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/Mod/PartDesign/App/FeaturePipe.cpp",
+          "https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/Mod/Part/App/Attacher.cpp",
+          "https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/Mod/PartDesign/App/FeatureDraft.cpp",
+          "https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/Mod/Spreadsheet/App/Sheet.h",
+          "https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/Mod/Spreadsheet/App/PropertySheet.cpp"
         ],
         "lifecycle": {
           "timeout": "One CAD execution budget supplies the remaining timeout to build/reopen and is checked before publication; feedback studies also bound the total candidate history and verification.",
@@ -260,7 +1447,7 @@
         ],
         "authoring": {
           "model": "nodes",
-          "example": "mechanical-part",
+          "example": "parametric-enclosure",
           "reuse": "Change the declared dimensions or numeric options using JSON pointer edits; plan the new revision, use a fresh run directory and compare independent expectations. Edit /parameters/thickness/value in the persistent-plate example; drive retains native relationships in each fresh batch run. The mechanical-part example changes persistent sketch width, Pad thickness and hole radius, with a literal offset centre."
         },
         "features": {
@@ -298,7 +1485,7 @@
           },
           "live-editing": {
             "status": "supported",
-            "scope": "The adaptor advertises live geometry; qualification is separate from this batch acceptance. New native parameters/drive are explicitly batch-only and rejected by live sessions. Body/Pad/Pocket are also explicitly batch-only."
+            "scope": "The adaptor advertises live geometry; qualification is separate from this batch acceptance. New native parameters/drive are explicitly batch-only and rejected by live sessions. Body/Pad/Pocket are also explicitly batch-only. Native spreadsheet tables are also batch-only."
           },
           "native-save": {
             "status": "supported",
@@ -471,15 +1658,686 @@
                 "expected": "ThroughAll"
               }
             ]
+          },
+          {
+            "id": "counterbore-machining",
+            "example": "counterbore",
+            "edits": [],
+            "scope": "Independent literal analytic volume and saved native finite-depth intent; the dedicated machining qualifier additionally checks surface area, centre, points, cylindrical faces and direct native edits/reopening.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 47321.415986824606,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/partDesignObservations/features/finished/type",
+                "expected": "Length"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/partDesignObservations/features/finished/length",
+                "expected": 4
+              }
+            ]
+          },
+          {
+            "id": "counterbore-variant-machining",
+            "example": "counterbore-variant",
+            "edits": [],
+            "scope": "Independent literal analytic volume and saved native finite-depth intent; the dedicated machining qualifier additionally checks surface area, centre, points, cylindrical faces and direct native edits/reopening.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 78052.21255477433,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/partDesignObservations/features/finished/type",
+                "expected": "Length"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/partDesignObservations/features/finished/length",
+                "expected": 8
+              }
+            ]
+          },
+          {
+            "id": "blind-pocket-machining",
+            "example": "blind-pocket",
+            "edits": [],
+            "scope": "Independent literal analytic volume and saved native finite-depth intent; the dedicated machining qualifier additionally checks surface area, centre, points, cylindrical faces and direct native edits/reopening.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 47547.61065788307,
+                "absolute": 1e-06,
+                "relative": 1e-08
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/partDesignObservations/features/finished/type",
+                "expected": "Length"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/partDesignObservations/features/finished/length",
+                "expected": 4
+              }
+            ]
+          },
+          {
+            "id": "history-multi-body",
+            "example": "history-multi-body",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 282.7433388230814,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-polygon",
+            "example": "history-polygon",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 640,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-oblique-frame",
+            "example": "history-oblique-frame",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 12000,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-fixed-sketch",
+            "example": "history-fixed-sketch",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 1727.8759594743863,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-solve-sketch",
+            "example": "history-solve-sketch",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 2010.6192982974676,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-body-fillet",
+            "example": "history-body-fillet",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 11991.415926535898,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-body-chamfer",
+            "example": "history-body-chamfer",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 11980,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-linear-pattern",
+            "example": "history-linear-pattern",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 11434.513322353838,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-polar-pattern",
+            "example": "history-polar-pattern",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 10869.026644707674,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-mirror",
+            "example": "history-mirror",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 11434.513322353838,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-body-revolve",
+            "example": "history-body-revolve",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 1005.3096491487338,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-additive-loft",
+            "example": "history-additive-loft",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 1350.884841043611,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-groove",
+            "example": "history-groove",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 1834.690109696439,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-subtractive-loft",
+            "example": "history-subtractive-loft",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 11486.873199913667,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-slot",
+            "example": "history-slot",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 525.6637061435918,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-datum-revolve",
+            "example": "history-datum-revolve",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 1005.3096491487338,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "history-standalone-sketch",
+            "example": "history-standalone-sketch",
+            "edits": [],
+            "scope": "Typed native design-history family with independent analytic volume; supports its declared case, not exhaustive feature combinations.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 282.7433388230814,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "parametric-enclosure",
+            "example": "parametric-enclosure",
+            "edits": [],
+            "scope": "Multi-Body enclosure/lid with wall/floor/height/boss native drivers, attached sketches, successive Pads/Pockets and a fully constrained slot; independent analytic geometry and dedicated edit/reopen/tamper tool qualify these workflows.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 10316.495559215387,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "enclosure-lid",
+            "example": "enclosure-lid",
+            "edits": [],
+            "scope": "Multi-Body enclosure/lid with wall/floor/height/boss native drivers, attached sketches, successive Pads/Pockets and a fully constrained slot; independent analytic geometry and dedicated edit/reopen/tamper tool qualify these workflows.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 3518.5752220392305,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "drilling",
+            "example": "drilling",
+            "edits": [],
+            "scope": "Native Hole counterbore with four constrained grid locations, persistent pitch/diameter/depth and independent volume/axis/radius/void checks. Dedicated qualifier tests edit/save/reopen and attacks.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 8547.61065788307,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "shell-baseline",
+            "example": "shell",
+            "edits": [],
+            "scope": "Uniform native Skin wall intent with exact opening selection and independent analytic volume; dedicated qualifier additionally proves geometry/edits/reopen/tamper/workflow and attached enclosure composition.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 10128,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "shell-thinner",
+            "example": "shell",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/nodes/3/options/thickness",
+                "value": 2.5
+              }
+            ],
+            "scope": "Uniform native Skin wall intent with exact opening selection and independent analytic volume; dedicated qualifier additionally proves geometry/edits/reopen/tamper/workflow and attached enclosure composition.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 8687.5,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "shell-enclosure",
+            "example": "shell-enclosure",
+            "edits": [],
+            "scope": "Uniform native Skin wall intent with exact opening selection and independent analytic volume; dedicated qualifier additionally proves geometry/edits/reopen/tamper/workflow and attached enclosure composition.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 10316.495559215387,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "sweep",
+            "example": "sweep",
+            "edits": [],
+            "scope": "Native editable path/sweep composition and independent analytic volume; dedicated qualifier checks geometric surfaces/centres/voids, native two-stage edits/save/fresh reopen, hostile persistence and workflow invalidation.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 246.74011002723395,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "flanged-elbow",
+            "example": "flanged-elbow",
+            "edits": [],
+            "scope": "Native editable path/sweep composition and independent analytic volume; dedicated qualifier checks geometric surfaces/centres/voids, native two-stage edits/save/fresh reopen, hostile persistence and workflow invalidation.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 906.4745672810906,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "draft-enclosure",
+            "example": "draft-enclosure",
+            "edits": [],
+            "scope": "Independent analytic tapered-wall volume; dedicated Draft qualifier also checks section geometry/COM, native edits/fresh reopen, saved semantic attacks, source-copy assembly and workflow lifecycle.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 10045.460424730374,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "draft-cup",
+            "example": "draft-cup",
+            "edits": [],
+            "scope": "Independent analytic tapered-wall volume; dedicated Draft qualifier also checks section geometry/COM, native edits/fresh reopen, saved semantic attacks, source-copy assembly and workflow lifecycle.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 4826.74216922109,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "spreadsheet-enclosure",
+            "example": "spreadsheet-enclosure",
+            "edits": [],
+            "scope": "Independent hollow-box volume for mixed-unit native engineering tables and affine formula-driven Body walls. Dedicated qualifier adds held-out tilted geometry, actual cell edits, closed source-copy and workflow lifecycle.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 6159.2,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "spreadsheet-enclosure-variant",
+            "example": "spreadsheet-enclosure",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/spreadsheet/inputs/height/value",
+                "value": 24
+              },
+              {
+                "op": "replace",
+                "path": "/spreadsheet/inputs/wall/value",
+                "value": 2.5
+              },
+              {
+                "op": "replace",
+                "path": "/spreadsheet/inputs/width/value",
+                "value": 3.5
+              },
+              {
+                "op": "replace",
+                "path": "/spreadsheet/inputs/depth/value",
+                "value": 1.25
+              }
+            ],
+            "scope": "Independent hollow-box volume for mixed-unit native engineering tables and affine formula-driven Body walls. Dedicated qualifier adds held-out tilted geometry, actual cell edits, closed source-copy and workflow lifecycle.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 11185,
+                "relative": 1e-08,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "mesh-bracket",
+            "example": "mesh-bracket",
+            "edits": [],
+            "scope": "Independent three-region L-bracket material minus a cylindrical through-bore after STL conversion and native linked face refinement. Dedicated qualifier adds reversed centimetre cavity, current saved-state controls, native edits and workflow lifecycle.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 6021.825229575319,
+                "relative": 1e-07,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "mesh-variant",
+            "example": "mesh-variant",
+            "edits": [],
+            "scope": "Independent three-region L-bracket material minus a cylindrical through-bore after STL conversion and native linked face refinement. Dedicated qualifier adds reversed centimetre cavity, current saved-state controls, native edits and workflow lifecycle.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 10540.353996706152,
+                "relative": 1e-07,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "body-stock",
+            "example": "body-stock",
+            "edits": [],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/freecad-mesh-bracket.stl"
+            },
+            "scope": "Independent known imported stock material minus a cylindrical through-bore; native Body history and source/Body frames. Dedicated bridge qualifier covers authority and lifecycle; this case alone does not qualify arbitrary imported history.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 6021.825229575319,
+                "relative": 1e-07,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "body-stock-turned",
+            "example": "body-stock-turned",
+            "edits": [],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/freecad-body-stock.stl"
+            },
+            "scope": "Independent known imported stock material minus a cylindrical through-bore; native Body history and source/Body frames. Dedicated bridge qualifier covers authority and lifecycle; this case alone does not qualify arbitrary imported history.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 1184.292036732051,
+                "relative": 1e-07,
+                "absolute": 1e-06
+              }
+            ]
+          },
+          {
+            "id": "body-step-stock",
+            "example": "body-step-stock",
+            "edits": [],
+            "resources": {
+              "/nodes/0/options/file": "examples/schemaxis/freecad-import-step-bracket.step"
+            },
+            "scope": "Independent known imported stock material minus a cylindrical through-bore; native Body history and source/Body frames. Dedicated bridge qualifier covers authority and lifecycle; this case alone does not qualify arbitrary imported history.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/native/volume",
+                "expected": 10808.584073464102,
+                "relative": 1e-07,
+                "absolute": 1e-06
+              }
+            ]
           }
         ]
       },
       "completion": {
-        "scope": "Bounded phase-one mechanical parts: native persistent dimensions, constrained sketches, origin-based Body/first Pad/through-all Pocket history and finite variants, with existing Part workflows preserved. Assembly and import-preparation strengthening remain later phases. Phase three first increment: checked importSTEP (declared units, orientation, placement, part-frame facts, parametric refine), hardened STL/STEP export checks for every new run with RERUN_REQUIRED for older evidence, and retained-copy saved verification for importSTEP and readSTEP.",
+        "scope": "Strategic mechanical-design foundation: named typed general sketches and capsule slots, explicit frames and checked native planar-face attachments, independent per-Body ordered histories, subsequent Pads, datum axes, revolutions/grooves, Body dress-ups, single-feature patterns and additive/subtractive lofts; driven enclosure/lid edit-save-reopen-second-edit and geometric handoffs. Broad application completion remains open; see capability families. Common native unthreaded Hole drilling adds explicit centres and native constrained grid/bolt-circle intent, blind-tip conventions and head recesses with editable histories, geometry handoffs and hostile persistence checks. Uniform shell intent adds native Skin Thickness, exact directional opening-face selection and a shared wall/floor/lid driver in a complete enclosure with attached bosses and native drilling. Sweeps add dimensioned bend paths, five native orientation modes, world binormal intent, changing sections and editable flanged-elbow composition; new centroid attachments follow moving face centres through native recompute. Native mould-release Draft adds measured planar/cylindrical wall selection, same-Body neutral plane/pull references and composition with uniform shell/boss/Hole histories; general surface selectors and wider extents remain missing. Checked STL-to-Part preparation adds explicit units/winding/frame, native refinement and Part booleans. Broader scan repair and reverse engineering remain open. Checked imported-solid Body seeding, explicit Body layouts and retained sourced-assembly copies have source-bound lifecycle and independent authority evidence in the Body-seed verification note; whole-adaptor completion stays open across the remaining capability families.",
         "review": [
           "verification/2026-10-17-freecad-parameters.md",
           "verification/2026-10-17-freecad-part-design.md",
-          "verification/2026-10-19-freecad-step-import.md"
+          "verification/2026-10-19-freecad-step-import.md",
+          "verification/2026-10-24-freecad-allocation.md",
+          "verification/2026-11-04-freecad-completion.md",
+          "verification/2026-11-04-freecad-histories.md",
+          "verification/2026-11-04-freecad-drilling.md",
+          "verification/2026-11-04-freecad-shells.md",
+          "verification/2026-11-04-freecad-sweeps.md",
+          "verification/2026-11-05-freecad-body-seeds.md"
         ],
         "notApplicable": {
           "mpi": "Only serial execution is qualified; do not request multiple ranks.",
@@ -491,11 +2349,11 @@
     "schemaxis.freecad.assembly/1": {
       "guide": "docs/freecad-assemblies.md",
       "context": {
-        "purpose": "Create an editable native fixed assembly with reused parts, component links and declared joints; parts are box/cylinder constructors or verified PartDesign part publications joined at named mounts. Use the assembly document instead of a node graph.",
-        "assumptions": "Millimetre geometry, one grounded component and a bounded fixed-joint tree. Constructor parts use box/cylinder definitions; sourced parts use verified single-Body schemaxis.freecad/1 model.FCStd publications (workflow $artifact index 2) with named mounts. Native FreeCAD assembly APIs and solver compute placements.",
+        "purpose": "Create an editable native fixed assembly with reusable constructor parts or verified typed PartDesign source histories, component links and named mounting frames. One source definition preserves its complete document; repeated components share its selected output Body.",
+        "assumptions": "Millimetre geometry, one grounded component and a bounded fixed-joint tree. Constructor parts use box/cylinder definitions. Sourced parts use verified schemaxis.freecad/1 model.FCStd publications (workflow artifact index 2), including qualified multi-Body histories; the selected final output determines the instantiated Body. FreeCAD computes native placements; host frame composition supplies the independent oracle.",
         "constraints": "Fixed joints only: top/bottom faces for constructor parts, named mounts with parent-side offset and clocking for sourced parts; the two part forms never mix. Sourced assemblies refuse the optional GUI capture stage. No revolute motion, persistent assembly process, live editing or node inspection. Common analytic studies and scheduled workflow resume are supported. Timeout applies to each native stage separately for constructor parts and to the whole run for sourced parts.",
-        "inspection": "Inspect saved assembly components, joints, mounts, embedded source copies and independent reopened placement/geometry evidence. Verify the retained run and compare the solved assembly with the declared fixed-joint constraints; a rendered view alone is insufficient.",
-        "recovery": "INVALID_GROUND requires an existing component ID. Repair joint endpoints or connectivity for structural errors. UNSUPPORTED_SOURCE names a source that is not a verified single-Body part publication; INPUT_CHANGED means the source bytes changed, so rerun the part or the assembly into a fresh directory. Preserve solver logs on native failures and simplify constraints."
+        "inspection": "Inspect saved components, joints, mounts, complete embedded histories and native perturb/solve/reopen evidence. Typed mechanical histories additionally require a configured FreeCAD launcher for fresh source recapture and regeneration: every indexed history element and actual subelement consumer must correspond, and all saved maps, shadows and geometry payloads must bind to that regeneration. Consistent object/StringID allocation changes do not excuse changed names, dependencies or operation spans. A rendered view alone is insufficient.",
+        "recovery": "INVALID_GROUND requires an existing component ID. Repair joint endpoints or connectivity for structural errors. UNSUPPORTED_SOURCE names a source outside the qualified typed PartDesign publication contract; INPUT_CHANGED requires rebuilding changed producer/consumer runs. VERIFICATION_RUNTIME_REQUIRED needs a trusted configured FreeCAD launcher for typed history verification. Keep failed evidence; do not repair map or shadow failures by refreshing hashes or flattening history."
       },
       "examples": [
         {
@@ -834,7 +2692,7 @@
         ],
         "lifecycle": {
           "timeout": "Timeout is per native stage, not a total multi-stage wall-clock bound.",
-          "cancellation": "Shared process-tree cancellation for owned native stages; retain incomplete result and logs.",
+          "cancellation": "Shared process-tree cancellation for owned native stages; retain incomplete result and logs. Constructor GUI finish/reopen hooks use the same finite private Xvfb/D-Bus/profile transport, with effective native isolation readback and no inherited desktop IPC.",
           "logs": "Retain build/reopen submission receipts and runner stdout/stderr/metrics in the run directory.",
           "verification": "Use distinct build and reopening processes, compare authored definition and native geometry, then recheck publication hashes. Independent analytic expectations are additional to the native verifier."
         },
@@ -991,10 +2849,1833 @@
         ]
       },
       "completion": {
-        "scope": "Fixed-tree native assembly route: constructor parts unchanged; phase-two sourced parts (verified PartDesign publications at named mounts) added. Mechanisms, face mating and subassemblies remain later work.",
+        "scope": "Fixed-tree native assemblies with constructor parts or complete verified PartDesign histories. Typed multi-Body histories retain all Bodies and parameters, instantiate the selected output Body, and use explicit native topology-name regeneration with indexed geometry/consumer correspondence. Moving joints, mechanism simulation, mixed source forms and subassemblies remain open.",
         "review": [
           "verification/2026-10-17-freecad-parameters.md",
-          "verification/2026-10-18-freecad-assembly-sources.md"
+          "verification/2026-10-18-freecad-assembly-sources.md",
+          "verification/2026-11-04-freecad-history-assemblies.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "Inspect retained publications and receipts; no native node inspection hook is advertised.",
+          "mpi": "Only serial execution is qualified; do not request multiple ranks.",
+          "time-batches": "No finite native time-list batching support in this route.",
+          "live-editing": "Use bounded batch execution; no persistent native editing session is promised.",
+          "native-save": "Inspect and reuse declared publications; no console native-save extension is advertised for this route.",
+          "conversion": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+        }
+      }
+    },
+    "schemaxis.freecad.drawing/1": {
+      "guide": "docs/freecad-drawings.md",
+      "context": {
+        "purpose": "Publish an editable native TechDraw manufacturing sheet from checked STEP or a frozen FCStd shape, with standard views, geometric dimension intent, title/revision/notes and native SVG/PDF.",
+        "assumptions": "Drawing geometry and expectations are millimetres. STEP units assert the file assignment; FCStd sources use stored BREP coordinates. Source projects and feature proxies are never restored.",
+        "constraints": "One solid; A4/A3 landscape; at most6standard views,24dimensions and4notes. The drawing owns a frozen source shape and embedded template, with no upstream associative history or reverse synchronisation. Parent assembly placements/Links, section/detail views, hatching, GD&T, multi-page sheets, BOMs and DXF remain unfinished. Annotation positioning is not a general collision solver. Both command and GUI launchers are required; GUI runs offscreen with isolated preferences.",
+        "inspection": "Independent volume/bounds/centre expectations; scaled projection spans and frames; actual measured anchors and text; exact native typed object/link/layout checks; saved XML dimensions/annotations/template; source BREP geometry retention with only documented non-geometric OCCT cache/ownership normalisation; native SVG actual text plus artifact hashes and bounded PDF signature/truncation. Qualification additionally renders PDF and tests native editing/fresh reopening.",
+        "recovery": "For EXPECTATION_FAILED inspect source units/frame and declared geometry. FCStd object must name one unique stored shape by internal name or label. EMPTY_SELECTION/AMBIGUOUS_SELECTION need current geometric endpoints, circle radii/centres and exact cardinality; use point selectors for repeated holes. DRAWING_OVERFLOW needs a smaller scale or in-sheet label positions. Changed sources or stale publications require a fresh run, preserving original evidence."
+      },
+      "examples": [
+        {
+          "id": "supplier-drawing",
+          "reference": "examples/schemaxis/freecad-drawing.json"
+        },
+        {
+          "id": "supplier-drawing-variant",
+          "reference": "examples/schemaxis/freecad-drawing-variant.json"
+        },
+        {
+          "id": "supplier-unit-mismatch",
+          "reference": "examples/schemaxis/freecad-drawing-invalid.json",
+          "expect": "invalid",
+          "fault": "UNIT_MISMATCH"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_freecad_drawing.py"
+      ],
+      "acceptance": [
+        "tools/qualify_freecad_drawing.py"
+      ],
+      "profiles": {
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        },
+        "workflow": {
+          "scope": "Participates in scheduled workflows with common expressions, analytic inputs and verified value outputs. Only explicitly accepted artifact kinds may cross file handoffs; native qualification remains separately scoped.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/FreeCAD/FreeCAD/tree/1.1.4/src/Mod/TechDraw",
+          "https://github.com/FreeCAD/FreeCAD-documentation/blob/main/wiki/TechDrawGui_API.md"
+        ],
+        "lifecycle": {
+          "timeout": "Shared whole-run deadline bounds build, fresh reopen and isolated offscreen GUI publication; subprocess trees are owned and cancelled.",
+          "cancellation": "Shared process-tree cancellation retains incomplete result and logs.",
+          "logs": "Retain native submissions, stdout/stderr/metrics and publication.log.",
+          "verification": "Independent geometry and measured anchors; fresh native edit/reopen; saved settings, SVG content and publication hashes, with downstream workflow invalidation."
+        },
+        "data": [
+          {
+            "id": "solid",
+            "direction": "input",
+            "kind": "cad",
+            "format": "Plain STEP",
+            "traits": {
+              "units": "mm",
+              "frame": "stored source shape",
+              "topology": "one solid"
+            },
+            "losses": [
+              "Source history and external dependencies are deliberately not restored."
+            ],
+            "scope": "Captured frozen geometry with explicit volume/bounds/centre expectations. FCStd source itself is never opened natively."
+          },
+          {
+            "id": "native-solid",
+            "direction": "input",
+            "kind": "cadScene",
+            "format": "Selected stored FCStd BREP",
+            "traits": {
+              "units": "mm",
+              "frame": "stored source shape",
+              "topology": "one solid"
+            },
+            "losses": [
+              "Source history and external dependencies are deliberately not restored."
+            ],
+            "scope": "Captured frozen geometry with explicit volume/bounds/centre expectations. FCStd source itself is never opened natively."
+          },
+          {
+            "id": "editable-sheet",
+            "direction": "output",
+            "kind": "cadScene",
+            "format": "FreeCAD FCStd",
+            "traits": {
+              "units": "mm",
+              "frame": "sheet and source shape",
+              "topology": "editable TechDraw views/dimensions over frozen source"
+            },
+            "losses": [
+              "No associative update from upstream feature history."
+            ],
+            "scope": "Includes source BREP and page template; native edit/save/fresh reopen verified."
+          },
+          {
+            "id": "sheet-image",
+            "direction": "output",
+            "kind": "image",
+            "format": "SVG",
+            "traits": {
+              "units": "mm"
+            },
+            "losses": [
+              "No CAD association or feature history."
+            ],
+            "scope": "Actual native vector drawing, measured text and page dimensions checked."
+          },
+          {
+            "id": "print-sheet",
+            "direction": "output",
+            "kind": "document",
+            "format": "PDF",
+            "traits": {
+              "units": "mm"
+            },
+            "losses": [
+              "No editable CAD state."
+            ],
+            "scope": "Native publication; signature/truncation checked, representative page rendered and inspected in qualification."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "source",
+            "scope": "Inspect the exact authored dimensions, parts and output selection.",
+            "limits": "Source edits require the current draft revision."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect JSON verification records for geometry, component and solver values.",
+            "limits": "Bounded text snapshots are evidence; native validity comes from independent verification."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "supplier-drawing",
+          "reuse": "Use typed JSON properties or the technical-drawing starter; source facts must be intentionally updated for another source."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Participates in scheduled workflows with common expressions, analytic inputs and verified value outputs. Only explicitly accepted artifact kinds may cross file handoffs; native qualification remains separately scoped."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Inspect retained publications and receipts; no native node inspection hook is advertised."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Only serial execution is qualified; do not request multiple ranks."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Every source is captured and hashed; retained-source verification does not reopen the original. Workflow source bytes participate in reuse/invalidation."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No finite native time-list batching support in this route."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit ordinary JSON through the shared draft source; planning checks the current revision."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Use atomic JSON pointer patches through the shared draft model; node commands apply only to node-shaped routes."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Use bounded batch execution; no persistent native editing session is promised."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Inspect and reuse declared publications; no console native-save extension is advertised for this route."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "supplier-baseline",
+            "example": "supplier-drawing",
+            "edits": [],
+            "scope": "Checked supplier STEP unit/frame,4standard views and measured mechanical extents.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/views/1/id",
+                "expected": "top"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/dimensions/0/type",
+                "expected": "DistanceX"
+              }
+            ]
+          },
+          {
+            "id": "supplier-variant",
+            "example": "supplier-drawing-variant",
+            "edits": [],
+            "scope": "A3scale and opposite orthographic directions, retaining source geometry.",
+            "checks": [
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/views/0/id",
+                "expected": "rear"
+              },
+              {
+                "file": "verification.json",
+                "format": "json",
+                "pointer": "/dimensions/0/type",
+                "expected": "DistanceX"
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Standard-view technical-sheet milestone with verified frozen solid sources and geometric dimension intent; larger TechDraw and application families remain unfinished.",
+        "review": [
+          "verification/2026-11-04-freecad-drawings.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "Inspect retained publications and receipts; no native node inspection hook is advertised.",
+          "mpi": "Only serial execution is qualified; do not request multiple ranks.",
+          "time-batches": "No finite native time-list batching support in this route.",
+          "live-editing": "Use bounded batch execution; no persistent native editing session is promised.",
+          "native-save": "Inspect and reuse declared publications; no console native-save extension is advertised for this route.",
+          "conversion": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+        }
+      }
+    },
+    "schemaxis.freecad.analysis/1": {
+      "guide": "docs/freecad-analysis.md",
+      "context": {
+        "purpose": "Construct and solve editable native linear static isotropic solid FEM from checked CAD geometry, with typed material, mesh, geometric supports and face forces/pressures.",
+        "assumptions": "One homogeneous solid, small-displacement static elasticity, N/mm/MPa; straight-sided C3D4/C3D10 cells. Bundled FreeCAD1.1.x Gmsh and CalculiX2.23 are required.",
+        "constraints": "Planar directional face selection must be unambiguous. Resource bounds, mesh/CAD volume tolerance and 2% face-area tolerance apply. No gravity, contact, nonlinear, shell/beam, multimaterial, thermal, modal or transient physics. Native cache equality alone is insufficient.",
+        "inspection": "Inspect analysis.json, actual Mesh.inp/DAT/FRD and editable analysis.FCStd. Independent checks bind native mesh coordinates/connectivity, material, each nodal support/traction or pressure face, DAT/FRD/cache fields, force/moment equilibrium and strain-energy/external-work balance. Limits can be unmet while the calculation verifies.",
+        "recovery": "Correct source units/facts, ambiguous faces and physically unstable supports; refine narrow walls/bores within resource bounds. Preserve failed evidence and use a fresh run directory. Rerun after material, support, load or geometry changes; editing a result cache does not solve the changed analysis."
+      },
+      "examples": [
+        {
+          "id": "axial-control",
+          "document": {
+            "version": "schemaxis.freecad.analysis/1",
+            "source": {
+              "file": "tests/fixtures/freecad-analysis/axial-bar.step",
+              "units": "mm",
+              "expect": {
+                "volume": 320,
+                "bounds": [
+                  0,
+                  20,
+                  0,
+                  4,
+                  0,
+                  4
+                ],
+                "centreOfMass": [
+                  10,
+                  2,
+                  2
+                ]
+              }
+            },
+            "material": {
+              "name": "Elastic control",
+              "youngModulusMPa": 70000,
+              "poissonRatio": 0,
+              "densityKgPerM3": 2700
+            },
+            "mesh": {
+              "sizeMM": 2
+            },
+            "supports": [
+              {
+                "id": "clamp",
+                "face": {
+                  "face": "left"
+                }
+              }
+            ],
+            "loads": [
+              {
+                "id": "pull",
+                "kind": "force",
+                "face": {
+                  "face": "right"
+                },
+                "forceN": [
+                  100,
+                  0,
+                  0
+                ]
+              }
+            ],
+            "limits": [
+              {
+                "id": "deflection",
+                "quantity": "maxDisplacementMM",
+                "maximum": 0.002
+              }
+            ]
+          }
+        },
+        {
+          "id": "incompressible-invalid",
+          "document": {
+            "version": "schemaxis.freecad.analysis/1",
+            "source": {
+              "file": "tests/fixtures/freecad-analysis/axial-bar.step",
+              "units": "mm",
+              "expect": {
+                "volume": 320,
+                "bounds": [
+                  0,
+                  20,
+                  0,
+                  4,
+                  0,
+                  4
+                ],
+                "centreOfMass": [
+                  10,
+                  2,
+                  2
+                ]
+              }
+            },
+            "material": {
+              "name": "Elastic control",
+              "youngModulusMPa": 70000,
+              "poissonRatio": 0.5,
+              "densityKgPerM3": 2700
+            },
+            "mesh": {
+              "sizeMM": 2
+            },
+            "supports": [
+              {
+                "id": "clamp",
+                "face": {
+                  "face": "left"
+                }
+              }
+            ],
+            "loads": [
+              {
+                "id": "pull",
+                "kind": "force",
+                "face": {
+                  "face": "right"
+                },
+                "forceN": [
+                  100,
+                  0,
+                  0
+                ]
+              }
+            ],
+            "limits": [
+              {
+                "id": "deflection",
+                "quantity": "maxDisplacementMM",
+                "maximum": 0.002
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "INVALID_ARGUMENT",
+          "schemaValid": false
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_freecad_analysis.py"
+      ],
+      "acceptance": [
+        "tools/qualify_freecad_analysis.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Checked CAD inputs and FEM native/solver/result publications; captured source verification and common resume/invalidation.",
+          "references": [
+            "docs/freecad-analysis.md"
+          ]
+        },
+        "composition": {
+          "scope": "Common document/value expressions and finite analytic visits resolve to typed physical records.",
+          "references": [
+            "docs/adaptor-runtime.md"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://freecad.github.io/SourceDoc/dc/de2/group__FEM.html",
+          "https://github.com/FreeCAD/FreeCAD/tree/releases/FreeCAD-1-1/src/Mod/Fem",
+          "https://www.dhondt.de/"
+        ],
+        "lifecycle": {
+          "timeout": "Shared total run deadline bounds isolated build/solve/reopen processes; the solver also has a 180 second bound.",
+          "cancellation": "Common owned process-tree cancellation; retain incomplete result and native logs.",
+          "logs": "Build/reopen submission receipts and solver stdout/stderr are retained.",
+          "verification": "Independent constitutive integration and actual solver outputs, fresh native reopening and closed saved proxy policy; source expectations always mm."
+        },
+        "authoring": {
+          "model": "document",
+          "example": "axial-control",
+          "reuse": "Edit typed material/mesh/support/load records through JSON pointers, plan changed intent and execute in a fresh directory. Common resume invalidates changed CAD and load assumptions."
+        },
+        "inspection": [
+          {
+            "panel": "source",
+            "scope": "Inspect typed material, mesh, supports, loads and independent CAD facts.",
+            "limits": "Source geometry expectations must be correct before solving."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect actual solver files and independently computed physical summaries.",
+            "limits": "Gauss-point stress and finite refinement do not certify a physical design."
+          }
+        ],
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Checked captured CAD geometry and typed physical records use common workflow, analytic composition and source-aware reuse/invalidation."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No live analysis session, generic native inspection or console save extension is advertised; inspect the declared retained publications."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Checked captured CAD geometry and typed physical records use common workflow, analytic composition and source-aware reuse/invalidation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Only serial execution is qualified; do not request multiple ranks."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Checked captured CAD geometry and typed physical records use common workflow, analytic composition and source-aware reuse/invalidation."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No finite native time-list batching support in this route."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit ordinary JSON through the shared draft source; planning checks the current revision."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Use atomic JSON pointer patches through the shared draft model; node commands apply only to node-shaped routes."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No live analysis session, generic native inspection or console save extension is advertised; inspect the declared retained publications."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "No live analysis session, generic native inspection or console save extension is advertised; inspect the declared retained publications."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+          }
+        },
+        "data": [
+          {
+            "id": "cad-source",
+            "direction": "input",
+            "kind": "cad",
+            "format": "STEP",
+            "traits": {
+              "units": "mm/N/MPa per field; source assigned units asserted",
+              "topology": "one homogeneous solid"
+            },
+            "losses": [
+              "Feature history and material assignments are not recovered."
+            ],
+            "scope": "One checked frozen solid with independent mm geometry facts."
+          },
+          {
+            "id": "native-source",
+            "direction": "input",
+            "kind": "cadScene",
+            "format": "FCStd selected BREP",
+            "traits": {
+              "units": "mm/N/MPa per field; source assigned units asserted",
+              "topology": "one homogeneous solid"
+            },
+            "losses": [
+              "Parent Links and assembly transforms are not reconstructed."
+            ],
+            "scope": "Extract one stored shape without restoring producer scripts/history/proxies."
+          },
+          {
+            "id": "native-analysis",
+            "direction": "output",
+            "kind": "cadScene",
+            "format": "FCStd",
+            "traits": {
+              "units": "mm/N/MPa per field; source assigned units asserted",
+              "topology": "one homogeneous solid"
+            },
+            "losses": [],
+            "scope": "Editable material, mesh, geometric constraints, solver and result objects."
+          },
+          {
+            "id": "solver-results",
+            "direction": "output",
+            "kind": "text",
+            "format": "CalculiX INP/DAT/FRD and JSON",
+            "traits": {
+              "units": "mm/N/MPa per field; source assigned units asserted",
+              "topology": "one homogeneous solid"
+            },
+            "losses": [
+              "Straight tetrahedral boundary approximates curved CAD.",
+              "Gauss-point and extrapolated nodal stress maxima differ."
+            ],
+            "scope": "Actual closed static-solid deck and solver fields plus independently computed summary."
+          }
+        ],
+        "cases": [
+          {
+            "id": "axial-control",
+            "example": "axial-control",
+            "edits": [],
+            "resources": {
+              "/source/file": "tests/fixtures/freecad-analysis/axial-bar.step"
+            },
+            "scope": "Independent axial FL/EA displacement, F/A stress and force reaction controls; no general structural certification.",
+            "checks": [
+              {
+                "file": "analysis.json",
+                "format": "json",
+                "pointer": "/maxDisplacementMM",
+                "expected": 0.0017857142857142857,
+                "relative": 3e-05
+              },
+              {
+                "file": "analysis.json",
+                "format": "json",
+                "pointer": "/maxVonMisesMPa",
+                "expected": 6.25,
+                "relative": 5e-05
+              },
+              {
+                "file": "analysis.json",
+                "format": "json",
+                "pointer": "/reactionForceN/0",
+                "expected": -100,
+                "relative": 1e-05
+              }
+            ]
+          },
+          {
+            "id": "axial-held-out",
+            "example": "axial-control",
+            "edits": [
+              {
+                "op": "replace",
+                "path": "/loads/0/forceN/0",
+                "value": 150
+              }
+            ],
+            "resources": {
+              "/source/file": "tests/fixtures/freecad-analysis/axial-bar.step"
+            },
+            "scope": "Independent axial FL/EA displacement, F/A stress and force reaction controls; no general structural certification.",
+            "checks": [
+              {
+                "file": "analysis.json",
+                "format": "json",
+                "pointer": "/maxDisplacementMM",
+                "expected": 0.0026785714285714286,
+                "relative": 3e-05
+              },
+              {
+                "file": "analysis.json",
+                "format": "json",
+                "pointer": "/maxVonMisesMPa",
+                "expected": 9.375,
+                "relative": 5e-05
+              },
+              {
+                "file": "analysis.json",
+                "format": "json",
+                "pointer": "/reactionForceN/0",
+                "expected": -150,
+                "relative": 1e-05
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Initial CAD-to-linear-static-solid bridge. Broad FEM workbench coverage remains incomplete; no general enclosure design/stress certification.",
+        "review": [
+          "verification/2026-11-04-freecad-analysis.md"
+        ],
+        "notApplicable": {
+          "live-editing": "Batch analysis and native editable FCStd are delivered; no persistent live session is advertised.",
+          "mpi": "Bundled serial CalculiX execution uses at most two CPU threads; MPI is not advertised.",
+          "native-inspection": "Inspect retained native publications/results; no new live inspection hook.",
+          "time-batches": "A static step has no physical transient time batch.",
+          "native-save": "The declared output is already a native saved analysis; no generic console save hook.",
+          "conversion": "Declared frozen CAD handoff only; imported feature history is not reconstructed."
+        }
+      }
+    },
+    "schemaxis.freecad.mechanism/1": {
+      "guide": "docs/freecad-mechanisms.md",
+      "context": {
+        "purpose": "Prescribe constant-speed angular or linear motion at named joints of a verified fixed assembly tree, retaining native Revolute/Slider joints, Simulation/Motion objects and a sampled mm/degrees/seconds trajectory.",
+        "assumptions": "The initial assembly is grounded and fixed. Each motion starts at zero displacement and moves in its parent connector frame; offsets, clocking and serial parent motion compose. This is prescribed kinematics; it does not model loads, inertia, collisions or actuator feasibility.",
+        "constraints": "One verified Schemaxis fixed-assembly publication or portable constructor packet; keep sourced producer run/provenance available. At most31 motions and240 intervals. Rotation is at most one revolution and15 degrees per interval. General closed loops, couplings, other joint types and arbitrary formula input remain unfinished. Each component remains a valid single solid. Both batch and private GUI runtimes are required; Xvfb/private D-Bus isolate native GUI settings and display.",
+        "inspection": "Independent rigid-tree matrices, physical shape volume/solid count/centre of mass for every native frame, actual formula/type/joint/timing records, save/reopen and current-code regeneration. Verification never opens submitted mechanism files: it binds complete native object/dependency/property/GUI/payload state to trusted regeneration. Constructor source proxies are bound to a trusted native rebuild before opening. Native allocation IDs, UUID/create/save times and GUI payload filenames have explicit normalisation; referenced contents remain bound. Default constructor GUI root ranks are native owner IDs, bound under the object-ID bijection with explicit root order preserved; GUI-decorated constructors are regenerated with matching private GUI intent.",
+        "recovery": "UNKNOWN_JOINT needs the source fixed-joint author ID. MOTION_RESOLUTION needs more intervals or less rotation. INVALID_MOTION needs a nonzero endpoint. UNSUPPORTED_SOURCE needs the complete matching producer packet; arbitrary FCStd files are refused. Retain failed logs and use a fresh directory after correcting intent. RUNNER_CANCELLED/RUNNER_TIMED_OUT retain incomplete evidence; do not treat partial frames as success."
+      },
+      "examples": [
+        {
+          "id": "hinge-quarter-turn",
+          "reference": "examples/schemaxis/freecad-mechanism.json"
+        },
+        {
+          "id": "slider-travel",
+          "reference": "examples/schemaxis/freecad-mechanism-slider.json"
+        },
+        {
+          "id": "unresolved-hinge",
+          "document": {
+            "version": "schemaxis.freecad.mechanism/1",
+            "source": "tests/fixtures/freecad-mechanism-source/model.FCStd",
+            "durationSeconds": 2,
+            "intervals": 12,
+            "framesPerSecond": 24,
+            "motions": [
+              {
+                "joint": "absent",
+                "kind": "rotation",
+                "end": 90
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "UNKNOWN_JOINT"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_freecad_mechanism.py"
+      ],
+      "acceptance": [
+        "tools/qualify_freecad_mechanism.py"
+      ],
+      "profiles": {
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        },
+        "workflow": {
+          "scope": "Participates in scheduled workflows with common expressions, analytic inputs and verified value outputs. Only explicitly accepted artifact kinds may cross file handoffs; native qualification remains separately scoped.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/FreeCAD/FreeCAD/tree/1.1.4/src/Mod/Assembly",
+          "https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/Mod/Assembly/CommandCreateSimulation.py",
+          "https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/Mod/Assembly/JointObject.py"
+        ],
+        "lifecycle": {
+          "timeout": "Whole-run deadline includes source verification/rebuild, private display startup, native build, fresh reopen, current regeneration and host publication comparisons.",
+          "cancellation": "Cooperative gates before/after launch, during display wait, native polling, per-frame host physics and SID/property/payload comparisons; owned subprocess trees are terminated.",
+          "logs": "Retain stage GUI/display logs, private launch PID/display record, native build/reopen records, plan/authored/result and source capture.",
+          "verification": "Independent rigid-tree matrices, physical shape volume/solid count/centre of mass for every native frame, actual formula/type/joint/timing records, save/reopen and current-code regeneration. Verification never opens submitted mechanism files: it binds complete native object/dependency/property/GUI/payload state to trusted regeneration. Constructor source proxies are bound to a trusted native rebuild before opening. Native allocation IDs, UUID/create/save times and GUI payload filenames have explicit normalisation; referenced contents remain bound. Default constructor GUI root ranks are native owner IDs, bound under the object-ID bijection with explicit root order preserved; GUI-decorated constructors are regenerated with matching private GUI intent."
+        },
+        "data": [
+          {
+            "id": "fixed-tree",
+            "direction": "input",
+            "kind": "cadScene",
+            "format": "Verified FreeCAD FCStd fixed assembly packet",
+            "traits": {
+              "units": "mm",
+              "frame": "grounded assembly",
+              "topology": "single-solid components in a fixed tree"
+            },
+            "losses": [
+              "Arbitrary external FCStd/proxies are refused. Sourced producer provenance remains an explicit verification dependency."
+            ],
+            "scope": "Typed fixed assembly constructors or admitted native history sources; no arbitrary file restoration."
+          },
+          {
+            "id": "mechanism",
+            "direction": "output",
+            "kind": "cadScene",
+            "format": "FreeCAD FCStd",
+            "traits": {
+              "units": "mm",
+              "frame": "grounded assembly",
+              "topology": "prescribed open-tree mechanism"
+            },
+            "losses": [
+              "No dynamics, contact, collision or reverse synchronisation guarantee."
+            ],
+            "scope": "Native Revolute/Slider joints plus Simulation/Motion; saved at restored initial pose."
+          },
+          {
+            "id": "trajectory",
+            "direction": "output",
+            "kind": "text",
+            "format": "JSON",
+            "traits": {
+              "units": "mm",
+              "frame": "grounded assembly"
+            },
+            "losses": [
+              "Finite inclusive position samples; not a dynamic solver or continuous swept-volume proof."
+            ],
+            "scope": "N+1 independent time/placement samples including zero and duration; native duplicate initial frame is not duplicated in publication."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "source",
+            "scope": "Inspect the exact authored dimensions, parts and output selection.",
+            "limits": "Source edits require the current draft revision."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect JSON verification records for geometry, component and solver values.",
+            "limits": "Bounded text snapshots are evidence; native validity comes from independent verification."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "hinge-quarter-turn",
+          "reuse": "Use prescribed-mechanism Studio starter or the fixed-assembly-to-motion workflow. Name authored joints, choose rotation or translation, then change duration/endpoints and rerun in a fresh directory."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Participates in scheduled workflows with common expressions, analytic inputs and verified value outputs. Only explicitly accepted artifact kinds may cross file handoffs; native qualification remains separately scoped."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Inspect retained publications and receipts; no native node inspection hook is advertised."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Only serial execution is qualified; do not request multiple ranks."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Source assembly bytes are hashed; complete producer provenance is rechecked and source changes invalidate reuse. Portable constructor packets are explicitly supported; sourced producer directories remain required."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No finite native time-list batching support in this route."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit ordinary JSON through the shared draft source; planning checks the current revision."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Use atomic JSON pointer patches through the shared draft model; node commands apply only to node-shaped routes."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Use bounded batch execution; no persistent native editing session is promised."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Each successful run publishes its editable FCStd; no separate console-native-save extension is advertised."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "hinge-quarter-turn",
+            "example": "hinge-quarter-turn",
+            "edits": [],
+            "scope": "10mm cubes; ground(2,3,4) rotation90degrees and offset(3,4,5) give arm finalorigin(-2,16,19) and diagonalrotation(-1,-1,1).",
+            "checks": [
+              {
+                "file": "motion.json",
+                "format": "json",
+                "pointer": "/samples/12/placements/arm/3",
+                "expected": -2,
+                "absolute": 1e-08,
+                "relative": 1e-10
+              },
+              {
+                "file": "motion.json",
+                "format": "json",
+                "pointer": "/samples/12/placements/arm/7",
+                "expected": 16,
+                "absolute": 1e-08,
+                "relative": 1e-10
+              }
+            ],
+            "resources": {
+              "/source": "tests/fixtures/freecad-mechanism-source/model.FCStd"
+            }
+          },
+          {
+            "id": "slider-travel",
+            "example": "slider-travel",
+            "edits": [],
+            "scope": "Same connector frame with12.5mm travel yields armorigin(-2,6,31.5) independently of angular law.",
+            "checks": [
+              {
+                "file": "motion.json",
+                "format": "json",
+                "pointer": "/samples/10/placements/arm/11",
+                "expected": 31.5,
+                "absolute": 1e-08,
+                "relative": 1e-10
+              }
+            ],
+            "resources": {
+              "/source": "tests/fixtures/freecad-mechanism-source/model.FCStd"
+            }
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Prescribed constant-speed open-tree Revolute/Slider milestone; general assembly/mechanism and application families remain unfinished.",
+        "review": [
+          "verification/2026-11-04-freecad-mechanisms.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "Inspect retained publications and receipts; no native node inspection hook is advertised.",
+          "mpi": "Only serial execution is qualified; do not request multiple ranks.",
+          "time-batches": "No finite native time-list batching support in this route.",
+          "live-editing": "Use bounded batch execution; no persistent native editing session is promised.",
+          "native-save": "Each successful run publishes its editable FCStd; no separate console-native-save extension is advertised.",
+          "conversion": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+        }
+      }
+    },
+    "schemaxis.freecad.cam/1": {
+      "guide": "docs/freecad-cam.md",
+      "context": {
+        "purpose": "Create an editable native CAM Job with named flat or pointed tools, facing, closed pockets and source-bound drilling cycles; independently check the LinuxCNC program and complete physical tool/holder access against captured finished geometry.",
+        "assumptions": "Millimetres, top-centre G54 and a pre-sized blank. Legacy flat tools reach the whole blank; explicit aboveBlank or evolvingStock policies require complete fresh native physical geometry and a positive noncutting/holder gap.",
+        "constraints": "Fixed vertical tools, planar/cylindrical pocket walls, finite blind/clipped/spot/through pointed targets and qualified circular rims. A finite optional reduced shank carries its exact tool extension and launcher. General split cone faces, swallowed pilots without retained source faces, exterior detachment/holding, arbitrary tool profiles, oblique surfacing, ramps/helices, multi-axis, probing and other posts remain required unfinished families.",
+        "inspection": "Inspect actual native tool/controller and physical profile, every intended source hole, ordered motion/return planes and continuous removal. Under evolvingStock every expanded motion is checked against its actual prefix stock; rapid motion never removes material. Editable witnesses and scalar mass agreement alone do not establish authority or clearance.",
+        "recovery": "Correct declared dimensions, depth reference, source target, stock or complete tool/holder clearance. TOOL_COLLISION and TOOL_CLEARANCE refuse unsafe admitted geometry; material/authority failures retain evidence. Use the carried isolated profile and reduced-tool launcher where required. No general edited-CAM adoption or machine certification is promised."
+      },
+      "examples": [
+        {
+          "id": "millable-enclosure",
+          "document": {
+            "version": "schemaxis.freecad.cam/1",
+            "source": {
+              "file": "examples/schemaxis/freecad-cam-enclosure.step",
+              "units": "mm",
+              "expect": {
+                "volume": 10186.371699555895,
+                "bounds": [
+                  0,
+                  40,
+                  0,
+                  30,
+                  0,
+                  20
+                ],
+                "centreOfMass": [
+                  20,
+                  15,
+                  7.965866251319936
+                ]
+              }
+            },
+            "stock": {
+              "top": 2
+            },
+            "tool": {
+              "diameter": 3,
+              "cuttingLength": 25,
+              "length": 50,
+              "shankDiameter": 3,
+              "flutes": 2,
+              "rpm": 10000,
+              "feed": 300,
+              "plunge": 100
+            },
+            "operations": [
+              {
+                "id": "face",
+                "operation": "faceStock",
+                "stepDown": 1,
+                "stepOver": 0.5
+              },
+              {
+                "id": "cavity",
+                "operation": "pocket",
+                "floor": [
+                  20,
+                  15,
+                  3
+                ],
+                "stepDown": 2,
+                "stepOver": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "cutting-data-variant",
+          "document": {
+            "version": "schemaxis.freecad.cam/1",
+            "source": {
+              "file": "examples/schemaxis/freecad-cam-enclosure.step",
+              "units": "mm",
+              "expect": {
+                "volume": 10186.371699555895,
+                "bounds": [
+                  0,
+                  40,
+                  0,
+                  30,
+                  0,
+                  20
+                ],
+                "centreOfMass": [
+                  20,
+                  15,
+                  7.965866251319936
+                ]
+              }
+            },
+            "stock": {
+              "top": 2
+            },
+            "tool": {
+              "diameter": 3,
+              "cuttingLength": 25,
+              "length": 50,
+              "shankDiameter": 3,
+              "flutes": 2,
+              "rpm": 12000,
+              "feed": 420,
+              "plunge": 120
+            },
+            "operations": [
+              {
+                "id": "face",
+                "operation": "faceStock",
+                "stepDown": 1,
+                "stepOver": 0.5
+              },
+              {
+                "id": "cavity",
+                "operation": "pocket",
+                "floor": [
+                  20,
+                  15,
+                  3
+                ],
+                "stepDown": 2,
+                "stepOver": 0.5
+              }
+            ]
+          }
+        },
+        {
+          "id": "insufficient-cutter-reach",
+          "document": {
+            "version": "schemaxis.freecad.cam/1",
+            "source": {
+              "file": "examples/schemaxis/freecad-cam-enclosure.step",
+              "units": "mm",
+              "expect": {
+                "volume": 10186.371699555895,
+                "bounds": [
+                  0,
+                  40,
+                  0,
+                  30,
+                  0,
+                  20
+                ],
+                "centreOfMass": [
+                  20,
+                  15,
+                  7.965866251319936
+                ]
+              }
+            },
+            "stock": {
+              "top": 2
+            },
+            "tool": {
+              "diameter": 3,
+              "cuttingLength": 10,
+              "length": 50,
+              "shankDiameter": 3,
+              "flutes": 2,
+              "rpm": 10000,
+              "feed": 300,
+              "plunge": 100
+            },
+            "operations": [
+              {
+                "id": "face",
+                "operation": "faceStock",
+                "stepDown": 1,
+                "stepOver": 0.5
+              },
+              {
+                "id": "cavity",
+                "operation": "pocket",
+                "floor": [
+                  20,
+                  15,
+                  3
+                ],
+                "stepDown": 2,
+                "stepOver": 0.5
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "UNSUPPORTED_TOOL_REACH"
+        },
+        {
+          "id": "concentric-counterbore",
+          "document": {
+            "version": "schemaxis.freecad.cam/1",
+            "source": {
+              "file": "examples/schemaxis/freecad-cam-counterbore.step",
+              "units": "mm",
+              "expect": {
+                "volume": 8564.601776313844,
+                "bounds": [
+                  7,
+                  43,
+                  -20,
+                  0,
+                  -4,
+                  8
+                ],
+                "centreOfMass": [
+                  25.017606942075155,
+                  -9.991196528962424,
+                  1.9647861158496942
+                ]
+              }
+            },
+            "stock": {
+              "top": 0
+            },
+            "tools": [
+              {
+                "kind": "flatEndmill",
+                "cuttingLength": 20,
+                "length": 40,
+                "flutes": 2,
+                "id": "counterbore",
+                "diameter": 6,
+                "shankDiameter": 6,
+                "rpm": 6000,
+                "feed": 600,
+                "plunge": 150
+              },
+              {
+                "kind": "flatEndmill",
+                "cuttingLength": 20,
+                "length": 40,
+                "flutes": 2,
+                "id": "pilot",
+                "diameter": 2,
+                "shankDiameter": 2,
+                "rpm": 9000,
+                "feed": 350,
+                "plunge": 90
+              }
+            ],
+            "operations": [
+              {
+                "id": "large",
+                "operation": "drill",
+                "tool": "counterbore",
+                "locations": {
+                  "kind": "explicit",
+                  "centres": [
+                    [
+                      23,
+                      -11
+                    ]
+                  ]
+                },
+                "bottom": 6,
+                "cycle": {
+                  "kind": "drill",
+                  "return": "initial"
+                }
+              },
+              {
+                "id": "small",
+                "operation": "drill",
+                "tool": "pilot",
+                "locations": {
+                  "kind": "explicit",
+                  "centres": [
+                    [
+                      23,
+                      -11
+                    ]
+                  ]
+                },
+                "bottom": 0,
+                "cycle": {
+                  "kind": "peck",
+                  "peck": 2.25,
+                  "return": "retract"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "dwell-chipbreak-feed-retract",
+          "document": {
+            "version": "schemaxis.freecad.cam/1",
+            "source": {
+              "file": "examples/schemaxis/freecad-cam-counterbore.step",
+              "units": "mm",
+              "expect": {
+                "volume": 8564.601776313844,
+                "bounds": [
+                  7,
+                  43,
+                  -20,
+                  0,
+                  -4,
+                  8
+                ],
+                "centreOfMass": [
+                  25.017606942075155,
+                  -9.991196528962424,
+                  1.9647861158496942
+                ]
+              }
+            },
+            "stock": {
+              "top": 0
+            },
+            "tools": [
+              {
+                "kind": "flatEndmill",
+                "cuttingLength": 20,
+                "length": 40,
+                "flutes": 2,
+                "id": "pilot",
+                "diameter": 2,
+                "shankDiameter": 2,
+                "rpm": 9000,
+                "feed": 350,
+                "plunge": 90
+              },
+              {
+                "kind": "flatEndmill",
+                "cuttingLength": 20,
+                "length": 40,
+                "flutes": 2,
+                "id": "counterbore",
+                "diameter": 6,
+                "shankDiameter": 6,
+                "rpm": 6000,
+                "feed": 600,
+                "plunge": 150
+              }
+            ],
+            "operations": [
+              {
+                "id": "large",
+                "operation": "drill",
+                "tool": "counterbore",
+                "locations": {
+                  "kind": "explicit",
+                  "centres": [
+                    [
+                      23,
+                      -11
+                    ]
+                  ]
+                },
+                "bottom": 6,
+                "cycle": {
+                  "kind": "dwell",
+                  "dwell": 0.375,
+                  "return": "retract"
+                }
+              },
+              {
+                "id": "small",
+                "operation": "drill",
+                "tool": "pilot",
+                "locations": {
+                  "kind": "explicit",
+                  "centres": [
+                    [
+                      23,
+                      -11
+                    ]
+                  ]
+                },
+                "bottom": 0,
+                "cycle": {
+                  "kind": "chipBreak",
+                  "peck": 0.137,
+                  "return": "initial"
+                }
+              },
+              {
+                "id": "ream",
+                "operation": "drill",
+                "tool": "counterbore",
+                "locations": {
+                  "kind": "explicit",
+                  "centres": [
+                    [
+                      23,
+                      -11
+                    ]
+                  ]
+                },
+                "bottom": 6,
+                "cycle": {
+                  "kind": "feedRetract",
+                  "return": "initial"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "undeclared-drill-tool",
+          "document": {
+            "version": "schemaxis.freecad.cam/1",
+            "source": {
+              "file": "examples/schemaxis/freecad-cam-counterbore.step",
+              "units": "mm",
+              "expect": {
+                "volume": 8564.601776313844,
+                "bounds": [
+                  7,
+                  43,
+                  -20,
+                  0,
+                  -4,
+                  8
+                ],
+                "centreOfMass": [
+                  25.017606942075155,
+                  -9.991196528962424,
+                  1.9647861158496942
+                ]
+              }
+            },
+            "stock": {
+              "top": 0
+            },
+            "tools": [
+              {
+                "kind": "flatEndmill",
+                "cuttingLength": 20,
+                "length": 40,
+                "flutes": 2,
+                "id": "counterbore",
+                "diameter": 6,
+                "shankDiameter": 6,
+                "rpm": 6000,
+                "feed": 600,
+                "plunge": 150
+              },
+              {
+                "kind": "flatEndmill",
+                "cuttingLength": 20,
+                "length": 40,
+                "flutes": 2,
+                "id": "pilot",
+                "diameter": 2,
+                "shankDiameter": 2,
+                "rpm": 9000,
+                "feed": 350,
+                "plunge": 90
+              }
+            ],
+            "operations": [
+              {
+                "id": "large",
+                "operation": "drill",
+                "tool": "counterbore",
+                "locations": {
+                  "kind": "explicit",
+                  "centres": [
+                    [
+                      23,
+                      -11
+                    ]
+                  ]
+                },
+                "bottom": 6,
+                "cycle": {
+                  "kind": "drill",
+                  "return": "initial"
+                }
+              },
+              {
+                "id": "small",
+                "operation": "drill",
+                "tool": "missingTool",
+                "locations": {
+                  "kind": "explicit",
+                  "centres": [
+                    [
+                      23,
+                      -11
+                    ]
+                  ]
+                },
+                "bottom": 0,
+                "cycle": {
+                  "kind": "peck",
+                  "peck": 2.25,
+                  "return": "retract"
+                }
+              }
+            ]
+          },
+          "expect": "invalid",
+          "fault": "INVALID_MACHINING"
+        },
+        {
+          "id": "reduced-pointed-ordered-stock",
+          "document": {
+            "version": "schemaxis.freecad.cam/1",
+            "source": {
+              "file": "examples/schemaxis/freecad-cam-pointed.step",
+              "units": "mm",
+              "expect": {
+                "volume": 5976.961653873675,
+                "bounds": [
+                  -10,
+                  10,
+                  -10,
+                  10,
+                  -15,
+                  0
+                ],
+                "centreOfMass": [
+                  0,
+                  0,
+                  -7.514761077416506
+                ]
+              }
+            },
+            "stock": {
+              "top": 0,
+              "sides": 0,
+              "bottom": 0
+            },
+            "tools": [
+              {
+                "id": "pilot",
+                "kind": "drill",
+                "diameter": 2,
+                "tipAngle": 90,
+                "cuttingReach": 3,
+                "shankDiameter": 1,
+                "length": 16,
+                "rpm": 5000,
+                "feed": 400,
+                "plunge": 100,
+                "holder": {
+                  "stickOut": 12,
+                  "steps": [
+                    {
+                      "diameter": 4,
+                      "length": 6
+                    }
+                  ]
+                }
+              }
+            ],
+            "operations": [
+              {
+                "id": "pilot-hole",
+                "operation": "drill",
+                "tool": "pilot",
+                "bottom": -8,
+                "depthReference": "tip",
+                "locations": {
+                  "kind": "explicit",
+                  "centres": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                "cycle": {
+                  "kind": "drill",
+                  "return": "initial"
+                }
+              }
+            ],
+            "setup": {
+              "clearance": 5,
+              "safe": 3,
+              "toolClearance": {
+                "kind": "evolvingStock",
+                "minimumSeparation": 0.25
+              }
+            }
+          }
+        },
+        {
+          "id": "invalid-reduced-profile",
+          "document": {
+            "version": "schemaxis.freecad.cam/1",
+            "source": {
+              "file": "examples/schemaxis/freecad-cam-pointed.step",
+              "units": "mm",
+              "expect": {
+                "volume": 5976.961653873675,
+                "bounds": [
+                  -10,
+                  10,
+                  -10,
+                  10,
+                  -15,
+                  0
+                ],
+                "centreOfMass": [
+                  0,
+                  0,
+                  -7.514761077416506
+                ]
+              }
+            },
+            "stock": {
+              "top": 0,
+              "sides": 0,
+              "bottom": 0
+            },
+            "tools": [
+              {
+                "id": "pilot",
+                "kind": "drill",
+                "diameter": 2,
+                "tipAngle": 90,
+                "cuttingReach": 3,
+                "shankDiameter": 2,
+                "length": 16,
+                "rpm": 5000,
+                "feed": 400,
+                "plunge": 100,
+                "holder": {
+                  "stickOut": 12,
+                  "steps": [
+                    {
+                      "diameter": 4,
+                      "length": 6
+                    }
+                  ]
+                }
+              }
+            ],
+            "operations": [
+              {
+                "id": "pilot-hole",
+                "operation": "drill",
+                "tool": "pilot",
+                "bottom": -8,
+                "depthReference": "tip",
+                "locations": {
+                  "kind": "explicit",
+                  "centres": [
+                    [
+                      0,
+                      0
+                    ]
+                  ]
+                },
+                "cycle": {
+                  "kind": "drill",
+                  "return": "initial"
+                }
+              }
+            ],
+            "setup": {
+              "clearance": 5,
+              "safe": 3,
+              "toolClearance": {
+                "kind": "evolvingStock",
+                "minimumSeparation": 0.25
+              }
+            }
+          },
+          "expect": "invalid",
+          "fault": "INVALID_MACHINING"
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_freecad_cam.py",
+        "tests/unit/test_freecad_cam_drilling.py"
+      ],
+      "acceptance": [
+        "tools/qualify_freecad_cam.py",
+        "tools/qualify_freecad_cam_drilling.py"
+      ],
+      "profiles": {
+        "composition": {
+          "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        },
+        "workflow": {
+          "scope": "Participates in scheduled workflows with common expressions, analytic inputs and verified value outputs. Only explicitly accepted artifact kinds may cross file handoffs; native qualification remains separately scoped.",
+          "references": [
+            "docs/adaptor-runtime.md",
+            "tests/unit/test_adaptor_runtime.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://github.com/FreeCAD/FreeCAD/tree/1.1.4/src/Mod/CAM/Path",
+          "https://github.com/FreeCAD/FreeCAD/blob/1.1.4/src/Mod/CAM/Path/Op/Drilling.py",
+          "https://github.com/LinuxCNC/linuxcnc/blob/v2.9.4/src/emc/rs274ngc/interp_cycles.cc"
+        ],
+        "lifecycle": {
+          "timeout": "Shared deadline bounds native build, fresh reopen/edit and geometry-only continuous cutter replay.",
+          "cancellation": "Shared process-tree cancellation retains incomplete result and logs.",
+          "logs": "Retain native stage submissions, stdout/stderr/metrics, native document, posted NC and material replay.",
+          "verification": "Typed saved Job/tool/operation checks and independent modal NC reader; current trusted native geometry-only replay; native edit/save/fresh reopen, tamper and workflow invalidation."
+        },
+        "data": [
+          {
+            "id": "solid",
+            "direction": "input",
+            "kind": "cad",
+            "format": "Frozen FCStd BREP or plain STEP",
+            "traits": {
+              "units": "declared source unit; result mm",
+              "frame": "stored source frame",
+              "topology": "one solid"
+            },
+            "losses": [
+              "Source modelling history is not restored."
+            ],
+            "scope": "Captured geometry checked against independent volume, bounds and centre of mass."
+          },
+          {
+            "id": "solid-scene",
+            "direction": "input",
+            "kind": "cadScene",
+            "format": "Selected FCStd textual BREP",
+            "traits": {
+              "units": "mm",
+              "frame": "stored selected source shape",
+              "topology": "one solid",
+              "selection": "explicit internal object name or unique label"
+            },
+            "losses": [
+              "Source document history, links, materials and presentation are not restored."
+            ],
+            "scope": "Use source.object to select one bounded Part::PropertyPartShape from a captured FCStd publication, checked against independent volume, bounds and centre of mass."
+          },
+          {
+            "id": "editable-job",
+            "direction": "output",
+            "kind": "cadScene",
+            "format": "FreeCAD FCStd",
+            "traits": {
+              "units": "mm",
+              "frame": "G54 stock top centre",
+              "topology": "native editable Job/tool/controller/operations"
+            },
+            "losses": [
+              "No live association to producer CAD history."
+            ],
+            "scope": "One to eight named straight flat-endmills, explicit operation selection, facing, closed planar-floor pockets and every geometrically selected cylindrical drill target; G81/G82/G83/G73/G85 with typed peck/dwell/return intent."
+          },
+          {
+            "id": "posted-nc",
+            "direction": "output",
+            "kind": "machineCode",
+            "format": "LinuxCNC Gcode",
+            "traits": {
+              "units": "mm",
+              "frame": "G54 absolute XYZ",
+              "topology": "continuous horizontal/vertical and planar arcs"
+            },
+            "losses": [
+              "No machine-specific fixture, collision or controller certification."
+            ],
+            "scope": "Trusted LinuxCNC post, independent tool/feed/modal/cycle-state reader and continuous per-tool material replay; LinuxCNC2.9.4 default .254mm peck backoff, no controller remaps or physical timing claim."
+          },
+          {
+            "id": "portable-job",
+            "direction": "output",
+            "kind": "archive",
+            "format": "Native CAM FCStd + finite preferences + README; reduced profiles also carry exact installed tool extension and launcher",
+            "traits": {
+              "units": "mm",
+              "frame": "G54 stock top centre",
+              "topology": "editable Job with carried regeneration settings"
+            },
+            "losses": [
+              "Use the isolated curve-accuracy profile; reduced tools also require the supplied extension registered before opening the native document.",
+              "A bundle does not certify real machine/tool/fixture/controller conditions."
+            ],
+            "scope": "Exact bundle membership/profile bytes; actual GUI profile activation/edit/save/fresh reopen/repost and independent edited material acceptance."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "source",
+            "scope": "Inspect the exact authored dimensions, parts and output selection.",
+            "limits": "Source edits require the current draft revision."
+          },
+          {
+            "panel": "text",
+            "scope": "Inspect JSON verification records for geometry, component and solver values.",
+            "limits": "Bounded text snapshots are evidence; native validity comes from independent verification."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "millable-enclosure",
+          "reuse": "Choose checked milling, named flat drilling or physical pointed drilling. Use exactly one legacy flat tool or a named tools table and explicit selected tool IDs. Layouts use source XY; pointed depths explicitly name tip or fullDiameter at source Z. Optional shankDiameter selects the finite reduced native profile. An explicit physical clearance policy checks every complete noncutting/holder region, not merely tool length. Preserve independent source facts."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Participates in scheduled workflows with common expressions, analytic inputs and verified value outputs. Only explicitly accepted artifact kinds may cross file handoffs; native qualification remains separately scoped."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "Inspect retained publications and receipts; no native node inspection hook is advertised."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure value functions and expressions resolve for every finite analytic visit before native validation."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "Only serial execution is qualified; do not request multiple ranks."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Every source is captured and hashed; retained-source verification does not reopen the original. Workflow source bytes participate in reuse/invalidation."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No finite native time-list batching support in this route."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Edit ordinary JSON through the shared draft source; planning checks the current revision."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Use atomic JSON pointer patches through the shared draft model; node commands apply only to node-shaped routes."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "Use bounded batch execution; no persistent native editing session is promised."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "Inspect and reuse declared publications; no console native-save extension is advertised for this route."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Declared exports only; no generic lossless conversion or automatic conversion planning."
+          }
+        },
+        "cases": [
+          {
+            "id": "millable-enclosure",
+            "example": "millable-enclosure",
+            "edits": [],
+            "scope": "Declared source/work frame, native Job and independent finished material.",
+            "checks": [
+              {
+                "file": "material.json",
+                "format": "json",
+                "pointer": "/verified",
+                "expected": true
+              }
+            ]
+          },
+          {
+            "id": "cutting-data-variant",
+            "example": "cutting-data-variant",
+            "edits": [],
+            "scope": "RPM/feed/plunge variant with the same explicit target.",
+            "checks": [
+              {
+                "file": "material.json",
+                "format": "json",
+                "pointer": "/verified",
+                "expected": true
+              }
+            ]
+          },
+          {
+            "id": "concentric-counterbore",
+            "example": "concentric-counterbore",
+            "edits": [],
+            "scope": "Different cutter radii at different depths on the same source centre, with distinct actual G98/G99 returns.",
+            "checks": [
+              {
+                "file": "material.json",
+                "format": "json",
+                "pointer": "/verified",
+                "expected": true
+              }
+            ]
+          },
+          {
+            "id": "dwell-chipbreak-feed-retract",
+            "example": "dwell-chipbreak-feed-retract",
+            "edits": [],
+            "scope": "Return to the first-used tool with reversed definition order; dwell seconds, sub-backoff peck and feed retract remain distinct.",
+            "checks": [
+              {
+                "file": "material.json",
+                "format": "json",
+                "pointer": "/verified",
+                "expected": true
+              }
+            ]
+          },
+          {
+            "id": "reduced-pointed-ordered-stock",
+            "example": "reduced-pointed-ordered-stock",
+            "edits": [],
+            "scope": "Necessary within-motion cutting precedence with a real reduced shank and positive complete physical clearance.",
+            "checks": [
+              {
+                "file": "material.json",
+                "format": "json",
+                "pointer": "/verified",
+                "expected": true
+              },
+              {
+                "file": "material.json",
+                "format": "json",
+                "pointer": "/temporalCredits",
+                "expected": 1
+              }
+            ],
+            "resources": {
+              "/source/file": "examples/schemaxis/freecad-cam-pointed.step"
+            }
+          }
+        ]
+      },
+      "completion": {
+        "scope": "Bounded face/pocket, named flat/pointed drilling and explicit full physical-tool/holder clearance milestone under current qualification. Finite reduced profiles preserve an installed native template through edits/reopens. Whole FreeCAD and broader CAM strategies/holding/machine constraints remain required/open.",
+        "review": [
+          "verification/2026-11-04-freecad-cam.md",
+          "verification/2026-11-05-freecad-physical-cam.md"
         ],
         "notApplicable": {
           "native-inspection": "Inspect retained publications and receipts; no native node inspection hook is advertised.",

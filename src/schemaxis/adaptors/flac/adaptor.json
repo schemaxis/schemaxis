@@ -1,0 +1,68 @@
+{
+  "id": "flac",
+  "version": "schemaxis.flac/1",
+  "adaptor": "schemaxis.adaptors.flac.adaptor",
+  "declarations": "schemaxis.adaptors.flac.adaptor:DECLARATIONS",
+  "runtimeFamily": "1.5",
+  "execution": "Bounded lossless FLAC archive of one PCM16 WAV, optionally labelled with a title, artist and description, and canonical PCM16 WAV decode of one native FLAC, with every PCM byte proven by a fresh trusted native decode",
+  "executables": [
+    "flac"
+  ],
+  "keywords": [
+    "FLAC",
+    "lossless audio",
+    "PCM16 WAV",
+    "FLAC tags",
+    "label audio archive title artist"
+  ],
+  "display": {
+    "name": "FLAC",
+    "mark": "Fl",
+    "colour": "#3b6f8f"
+  },
+  "capabilities": "schemaxis.adaptors.flac.capabilities:catalogue",
+  "executionCapabilities": {
+    "modes": [
+      "process"
+    ],
+    "mpi": false
+  },
+  "consoleTemplate": {
+    "version": "schemaxis.flac/1",
+    "operation": "decodePCM16",
+    "source": "/replace/with/recording.flac"
+  },
+  "routes": {
+    "schemaxis.flac/1": {
+      "module": "schemaxis.adaptors.flac.adaptor",
+      "schema": "schemaxis.adaptors.flac.adaptor:schema",
+      "graphEditing": false,
+      "workflow": true,
+      "compose": true,
+      "timeBatches": false,
+      "schemaName": "flac",
+      "acceptedArtifacts": [
+        "file"
+      ],
+      "scheduled": true,
+      "hooks": {
+        "query": "schemaxis.adaptors.flac.adaptor:query",
+        "resources": "schemaxis.adaptors.flac.adaptor:resources",
+        "reusableInputs": "schemaxis.adaptors.flac.adaptor:reusableInputs"
+      }
+    }
+  },
+  "consoleCapabilities": {
+    "authoredSessions": true,
+    "multipleDocuments": true,
+    "liveGeometry": false,
+    "nativeEditReverseSync": false
+  },
+  "cliOptions": [
+    {
+      "flag": "--flac",
+      "dest": "flac",
+      "help": "Absolute FLAC 1.5 flac executable for run, which also uses it for the fresh verification decode; schemaxis verify has no such flag, so use SCHEMAXIS_FLAC or a stored flac location"
+    }
+  ]
+}

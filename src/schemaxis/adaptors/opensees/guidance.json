@@ -1,0 +1,261 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "trussStatic": {
+      "status": "reviewed",
+      "explanation": "Assess linear elastic planar truss networks: signed axial force and stress, deflection, support reactions and named serviceability limits.",
+      "sources": [
+        "schemaxis.adaptors.opensees.capabilities:catalogue"
+      ],
+      "pitfalls": [
+        "Nodes carry geometry and independent Cartesian restraints; members carry E and area, allowing redundant and mixed-stiffness structures.",
+        "Host direct stiffness checks stability before execution and independently verifies all native displacements, axial responses and reactions.",
+        "Fresh-process reconstruction reads the retained model; this is not a native database persistence claim."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/opensees-triangle.json",
+          "purpose": "Triangular pin/roller truss with literal hand-calculation witnesses."
+        },
+        {
+          "reference": "examples/schemaxis/opensees-redundant.json",
+          "purpose": "Redundant mixed-stiffness network."
+        },
+        {
+          "reference": "examples/schemaxis/opensees-reverse.json",
+          "purpose": "Signed uplift and lateral load."
+        }
+      ]
+    }
+  },
+  "routes": {
+    "schemaxis.opensees/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Describe one complete pin-jointed structural network, its physical stiffness, nodal loads and measured limits. The result is a linear elastic axial assessment; it does not certify stability or safety.",
+          "units": "SI m, N, Pa and m\u00b2",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Select the Schemaxis planar truss document contract. Keep schemaxis.opensees/1; this is separate from the native OpenSees engine version.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose trussStatic for one full static nodal-load increment of an elastic planar network. Bending and time-dependent response are outside this operation.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/nodes": {
+          "status": "reviewed",
+          "explanation": "List every physical joint once, with global coordinates and translation restraints. Members sharing a node ID share a pin joint; geometric crossings alone do not join members. Array order defines one-based node indices in the CSV.",
+          "units": "m",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/nodes/items": {
+          "status": "reviewed",
+          "explanation": "One pin joint carries its x/y position and optional zero-translation restraints. Every joint must belong to at least one member; brace each component sufficiently to prevent free mechanisms.",
+          "units": "m",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/nodes/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Name this joint with a unique lowercase identifier, such as apex. Member endpoints, nodal loads and displacement requirements refer to this exact ID; numeric CSV indices follow node array order.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/nodes/items/properties/x_m": {
+          "status": "reviewed",
+          "explanation": "Global horizontal coordinate of the undeformed joint in metres; negative coordinates are allowed. Use the same coordinate frame for every node and force. Coincident member endpoints are rejected.",
+          "units": "m",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/nodes/items/properties/y_m": {
+          "status": "reviewed",
+          "explanation": "Global vertical coordinate of the undeformed joint in metres. Coordinates describe the original small-deformation geometry, not a prescribed displacement.",
+          "units": "m",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/nodes/items/properties/fixed": {
+          "status": "reviewed",
+          "explanation": "Two Boolean restraints in x then y order: [true,true] is a pin support and [false,true] is a vertical restraint. Omission means [false,false], a free joint. Supports impose zero translations, not rotations or settlements.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/nodes/items/properties/fixed/items": {
+          "status": "reviewed",
+          "explanation": "Set true to hold this global translation at zero or false to leave it free. The first entry acts in x and the second in y; both entries are required when the pair is supplied.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/members": {
+          "status": "reviewed",
+          "explanation": "List straight axial bars with endpoints, Young's modulus and cross-sectional area. This permits arbitrary bounded triangular, redundant and mixed-stiffness networks; it does not create bending stiffness. Array order maps one-based member CSV indices.",
+          "units": "SI",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/members/items": {
+          "status": "reviewed",
+          "explanation": "One two-node straight elastic axial bar. Positive force is tension and negative force is compression. Compressive stiffness remains elastic; no buckling, slackening, yielding or bending check is implied.",
+          "units": "SI",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/members/items/properties/id": {
+          "status": "reviewed",
+          "explanation": "Give this bar a unique lowercase ID, such as diagonal_left. Force/stress requirements select this ID. Node IDs belong to a separate namespace.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/members/items/properties/a": {
+          "status": "reviewed",
+          "explanation": "ID of the first endpoint joint. It must name an existing node and differ from b. Reversing a and b preserves the tension-positive force convention.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/members/items/properties/b": {
+          "status": "reviewed",
+          "explanation": "ID of the second endpoint joint. Members join only through explicit shared endpoint IDs. Combine coincident parallel bars into an equivalent axial stiffness rather than duplicate endpoint pairs.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/members/items/properties/youngsModulus_Pa": {
+          "status": "reviewed",
+          "explanation": "Elastic axial Young's modulus of this member in pascals, such as 2e11 for a steel-like elastic study. Its product with area determines axial rigidity; do not enter GPa values without converting to Pa.",
+          "units": "Pa",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/members/items/properties/area_m2": {
+          "status": "reviewed",
+          "explanation": "Uniform member cross-sectional area in square metres, such as 0.001. Axial stiffness is E times area divided by length. Increasing area lowers elastic strain/stress in determinate bars but can redistribute force in redundant networks.",
+          "units": "m\u00b2",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/loads": {
+          "status": "reviewed",
+          "explanation": "List resultant global point forces at joints, with at most one entry per node. Superpose loads at the same node before authoring. At least one component must be nonzero; gravity/self-weight and distributed loads are not added automatically.",
+          "units": "N",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/loads/items": {
+          "status": "reviewed",
+          "explanation": "One nodal point-force resultant acting in the undeformed global frame. Loads at supports are permitted and contribute to support reaction balance.",
+          "units": "N",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/loads/items/properties/node": {
+          "status": "reviewed",
+          "explanation": "Existing node ID receiving this force. Use one force pair per loaded node; unlisted nodes receive zero applied force.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/loads/items/properties/force_N": {
+          "status": "reviewed",
+          "explanation": "Two signed force components [Fx,Fy] in newtons. Positive x is right and positive y is up; [0,-1000] applies a 1kN downward point load. Both components are required.",
+          "units": "N",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/loads/items/properties/force_N/items": {
+          "status": "reviewed",
+          "explanation": "Signed component of a global nodal point force in newtons, first x then y. Zero is allowed. Never enter kilonewtons without converting to newtons.",
+          "units": "N",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/requirements": {
+          "status": "reviewed",
+          "explanation": "Optional named maximum measurements used to accept or reject the analysed design. Omission means no user performance limits; independent numerical/stability checks still apply. A failure preserves observed values and margins for explicit redesign.",
+          "units": "selected quantity SI unit",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/requirements/items": {
+          "status": "reviewed",
+          "explanation": "One accountable maximum measurement at a named node or member. The measured magnitude must not exceed maximum. These are serviceability/elastic measurements, not code-compliance, yield or buckling certification.",
+          "units": "selected quantity SI unit",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/requirements/items/properties/name": {
+          "status": "reviewed",
+          "explanation": "Unique lowercase label identifying this design decision, such as apex_serviceability. It appears with the observed measurement and signed remaining margin in the assessment.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/requirements/items/properties/quantity": {
+          "status": "reviewed",
+          "explanation": "Choose displacement_m for the node translation-vector magnitude, force_N for absolute member axial force, or stress_Pa for absolute member axial engineering stress. Signed values remain in the result tables.",
+          "units": "m, N or Pa",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/requirements/items/properties/target": {
+          "status": "reviewed",
+          "explanation": "For displacement_m, name an existing node ID; for force_N or stress_Pa, name a member ID. Do not use numeric CSV indices or a node for a member quantity.",
+          "units": "unitless",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        },
+        "/properties/requirements/items/properties/maximum": {
+          "status": "reviewed",
+          "explanation": "Nonnegative maximum acceptable magnitude in the selected quantity's SI unit: metres for displacement, newtons for force or pascals for stress. This is an explicit user decision; it never changes itself to make a run pass.",
+          "units": "m, N or Pa",
+          "sources": [
+            "docs/opensees.md"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -28,6 +28,10 @@ from .studio_files import read_artifact, browse_inputs, choose_input_file
 from .studio_cases import StudioCases
 from .studio_setup import StudioSetup
 from .studio_library import load_library
+from .studio_results import StudioResults
+from schemaxis_viewer.transport import ViewerTransport
+from schemaxis_viewer.library import browse
+from schemaxis_viewer import WEB_ROOT as VIEWER_ROOT
 
 STATIC_ROOT = Path(__file__).with_name('studio_ui')
 STATIC_TYPES = {'.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/javascript',
@@ -42,6 +46,7 @@ class StudioApplication(ConsoleApplication):
         self.settings = SettingsStore(session.workspace)
         self.cases = StudioCases(self)
         self.setup = StudioSetup(self)
+        self.results = StudioResults(self)
         self._schemas = {}
         self._catalogue = None
         self._snapshot = None
@@ -196,11 +201,26 @@ class StudioApplication(ConsoleApplication):
         keys(request, ('path', 'extensions'), 'input-file')
         return choose_input_file(self, request.get('path', ''), request.get('extensions', []))
 
+    def peek_input_request(self, request):
+        keys(request, ('provider', 'input', 'node'), 'peek-input')
+        provider, document, node = request.get('provider'), request.get('input'), request.get('node')
+        meta = registry.metadata(provider)
+        if not isinstance(document, dict) or document.get('version') not in meta['routes'] or not isinstance(node, str):
+            fail('INVALID_REQUEST', 'Choose an input node to preview')
+        if not meta.get('studioPeek'):
+            fail('UNSUPPORTED_INSPECTION', 'This adaptor has no metadata-only preview; live data inspection may be available')
+        try:
+            return {'available': True, **registry.binding(meta['studioPeek'])(document, node)}
+        except SchemaxisError as error:
+            if error.fault.code not in ('UNAVAILABLE_METADATA', 'RESOURCE_NOT_FOUND', 'UNSUPPORTED_INSPECTION'):
+                raise
+            return {'available': False, 'scope': error.fault.message, 'code': error.fault.code}
+
     def inspect_input_request(self, request):
-        keys(request, ('provider', 'input', 'node', 'port', 'prepare'), 'inspect-input')
+        keys(request, ('provider', 'input', 'node', 'port', 'prepare', 'geometry'), 'inspect-input')
         provider, document, node = request.get('provider'), request.get('input'), request.get('node')
         port, prepare = request.get('port', 0), request.get('prepare', False)
-        if type(port) is not int or port < 0 or type(prepare) is not bool:
+        if type(port) is not int or port < 0 or type(prepare) is not bool or type(request.get('geometry', False)) is not bool:
             fail('INVALID_REQUEST', 'Choose a valid output port and inspection mode')
         if not isinstance(document, dict) or not isinstance(node, str) or not node:
             fail('INVALID_REQUEST', 'Choose a pipeline input to inspect')
@@ -225,7 +245,8 @@ class StudioApplication(ConsoleApplication):
                 from .dispatch import allocation
                 from .pipeline import digest
                 with allocation({}, self.cancellations[identity]), tempfile.TemporaryDirectory(prefix='studio-inspect-') as root:
-                    result = hook(document, node, executable, Path(root) / 'session', port=port, prepare=prepare)
+                    result = hook(document, node, executable, Path(root) / 'session', port=port, prepare=prepare,
+                                  **({'geometry': True} if request.get('geometry') else {}))
                 outcome = {'status': 'succeeded', 'result': {**result, 'inputDigest': digest(document)}}
             except Exception as error:
                 outcome = {'status': 'failed', 'fault': fault(error)}
@@ -324,27 +345,39 @@ class StudioApplication(ConsoleApplication):
         from .studio_catalogue import catalogue
         additions = catalogue(name, version) if name in registry.ADAPTORS else {'items': [], 'definitions': {}}
         if version and name in registry.ADAPTORS and version != registry.metadata(name)['version']:
-            studio = {**studio, 'snippets': [], 'templates': [], 'categories': []}
+            templates = [item for item in studio.get('templates', [])
+                         if item.get('document', {}).get('version') == version]
+            studio = {**studio, 'snippets': [], 'templates': templates, 'categories': []}
+        meta = registry.metadata(name) if name in registry.ADAPTORS else {}
         return {**studio, 'id': name, 'operationKinds': kinds, 'addCatalogue': additions,
+                'inspection': {'metadata': bool(meta.get('studioPeek')), 'metadataOperations': meta.get('studioPeekOperations'), 'live': bool(meta.get('studioInspect')),
+                               'geometry': bool(meta.get('studioInspectGeometry'))},
                 'viewers': studio.get('viewers', _default_viewers(CONSOLE_TYPES[name]))}
 
-    def schema(self, version):
+    def schema(self, version, scope=None):
         if not isinstance(version, str):
             fail('INVALID_REQUEST', 'provide a document version', 'version')
-        if version not in self._schemas:
-            from .schema import export_schema
+        # A workflow operation's own document admits workflow-only references
+        # (artifacts and captured inputs); standalone documents never do.
+        if scope not in (None, 'workflow'):
+            fail('INVALID_REQUEST', 'scope must be workflow or omitted', 'scope')
+        key = version if scope is None else (version, scope)
+        if key not in self._schemas:
             try:
                 from .studio_guidance import SHARED, enrich_shared, enrich_markers, document_annotator
-                if version in SHARED:
+                from .schema_authoring import WORKFLOW_VERSIONS, version_schema
+                if scope is not None and version not in WORKFLOW_VERSIONS:
+                    fail('UNSUPPORTED_VERSION', 'this document version cannot be a workflow operation', 'version')
+                if version in SHARED and scope is None:
                     schema = enrich_shared(version)
                 else:
-                    from .schema_authoring import version_schema
-                    schema = enrich_markers(version_schema(version, authored=True, annotate=document_annotator(version)))
+                    schema = enrich_markers(version_schema(version, authored=True, artifact=scope == 'workflow',
+                                                           annotate=document_annotator(version)))
             except SchemaxisError as error:
                 fail('UNKNOWN_VERSION', 'no authored schema is registered for this document version', 'version',
-                     version=version, cause=error.fault.code)
-            self._schemas[version] = json.dumps(schema, allow_nan=False, separators=(',', ':')).encode()
-        return self._schemas[version]
+                     version=version, scope=scope, cause=error.fault.code)
+            self._schemas[key] = json.dumps(schema, allow_nan=False, separators=(',', ':')).encode()
+        return self._schemas[key]
 
     def capabilities(self, request):
         keys(request, ('action', 'query', 'scope', 'id', 'inputKind', 'outputKind', 'limit', 'cursor',
@@ -398,10 +431,44 @@ def _default_viewers(item):
     return viewers
 
 
-class StudioHandler(ConsoleHandler):
+class StudioHandler(ViewerTransport, ConsoleHandler):
+    viewer_embedded = True
+
+    def _viewer(self, parsed, *, head=False):
+        self.authorised(parsed)
+        route = parsed.path[len('/artifact-viewer/'):]
+        query = {key: values[0] for key, values in parse_qs(parsed.query).items()}
+        library = self.server.application.results.refresh()
+        if route == 'api/library':
+            return self.respond(json.dumps(library.listing()).encode(), 'application/json', head)
+        if route == 'api/browse':
+            return self.respond(json.dumps(browse(query.get('directory'))).encode(), 'application/json', head)
+        if route == 'api/inventory':
+            return self.respond(json.dumps(library.records(query['id'], '/artifact-viewer/api/')).encode(), 'application/json', head)
+        if route == 'inventory.json':
+            return self.respond(b'[]', 'application/json', head)
+        if route.startswith('api/file/'):
+            identity, index = route[len('api/file/'):].split('/')
+            try:
+                path = library.file(identity, index)
+            except ValueError as error:
+                return self.send(409, {'fault': {'code': 'STALE_ARTIFACT', 'message': str(error)}})
+            return self.serve_file(path, head, artifact=True)
+        return self.send(404, {'fault': {'code': 'NOT_FOUND', 'message': 'unknown viewer resource'}})
+
+    def do_HEAD(self):
+        parsed = urlsplit(self.path)
+        if parsed.path.startswith('/artifact-viewer/api/file/'):
+            try:
+                return self._viewer(parsed, head=True)
+            except Exception as error:
+                return self.send(400, {'fault': fault(error)})
+        return self.send(405, {'fault': {'code': 'METHOD_NOT_ALLOWED'}})
+
     def _static(self, parsed):
-        relative = 'index.html' if parsed.path in ('/', '') else parsed.path.lstrip('/')
-        root = STATIC_ROOT.resolve()
+        viewer = parsed.path.startswith('/artifact-viewer/')
+        relative = (parsed.path[len('/artifact-viewer/'):] or 'index.html') if viewer else ('index.html' if parsed.path in ('/', '') else parsed.path.lstrip('/'))
+        root = VIEWER_ROOT.resolve() if viewer else STATIC_ROOT.resolve()
         path = (root / relative).resolve()
         if (root not in path.parents and path != root) or path.suffix not in STATIC_TYPES or not path.is_file():
             return self.send(404, {'fault': {'code': 'NOT_FOUND', 'message': 'unknown resource'}})
@@ -411,11 +478,15 @@ class StudioHandler(ConsoleHandler):
         if path.suffix == '.json':
             # Static JSON is already encoded; send() encodes application/json objects.
             content_type += '; charset=utf-8'
+        if viewer:
+            return self.respond(path.read_bytes(), content_type, False)
         return self.send(200, path.read_bytes(), content_type)
 
     def do_GET(self):
         try:
             parsed = urlsplit(self.path)
+            if parsed.path.startswith('/artifact-viewer/api/') or parsed.path == '/artifact-viewer/inventory.json':
+                return self._viewer(parsed)
             if not parsed.path.startswith('/api/'):
                 return self._static(parsed)
             self.authorised(parsed)
@@ -435,7 +506,7 @@ class StudioHandler(ConsoleHandler):
                 return self.send(200, app.studio_adaptor(query.get('id'), query.get('version')))
             if parsed.path == '/api/schema':
                 # Pre-encoded and cached; a charset suffix bypasses re-encoding in send().
-                return self.send(200, app.schema(query.get('version')), 'application/json; charset=utf-8')
+                return self.send(200, app.schema(query.get('version'), query.get('scope')), 'application/json; charset=utf-8')
             if parsed.path == '/api/input-files':
                 return self.send(200, browse_inputs(app, query.get('directory'), query.get('extensions', '')))
             if parsed.path == '/api/file':
@@ -458,7 +529,23 @@ class StudioHandler(ConsoleHandler):
                   '/api/settings': 'settings_request', '/api/validate': 'validate_source',
                   '/api/design': 'design', '/api/cases': 'case_request', '/api/setup': 'setup_request',
                   '/api/preview': 'preview_request', '/api/input-file': 'input_file_request',
-                  '/api/inspect-input': 'inspect_input_request'}
+                  '/api/inspect-input': 'inspect_input_request', '/api/peek-input': 'peek_input_request'}
+        if parsed.path == '/artifact-viewer/api/open':
+            try:
+                self.authorised(parsed)
+                size = int(self.headers.get('Content-Length', '0'))
+                if not 0 < size <= 65536:
+                    fail('INVALID_REQUEST', 'provide a local folder path')
+                value = json.loads(self.rfile.read(size))
+                paths = value.get('paths')
+                if not isinstance(paths, list) or not paths or len(paths) > 100 or not all(isinstance(path, str) for path in paths):
+                    fail('INVALID_REQUEST', 'choose local files or folders')
+                library = self.server.application.results.library
+                identity = library.register(paths)
+                return self.send(200, {'id': identity, 'records': library.records(identity, '/artifact-viewer/api/'), 'sources': library.sources(identity)})
+            except Exception as error:
+                denied = isinstance(error, SchemaxisError) and error.fault.code == 'ACCESS_DENIED'
+                return self.send(403 if denied else 400, {'fault': fault(error)})
         if parsed.path not in routes:
             return super().do_POST()
         try:

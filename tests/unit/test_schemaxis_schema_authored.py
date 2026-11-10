@@ -276,8 +276,8 @@ class AuthoredSchemaTests(unittest.TestCase):
             changed['operations'][0]['document'] = {'version': version}
             self.invalid(changed)
 
-    def test_discriminator_performance_preserves_complex_showcase(self):
-        document = json.loads((ROOT / 'examples/schemaxis/showcase.json').read_text())
+    def test_discriminator_performance_preserves_complex_primitives(self):
+        document = json.loads((ROOT / 'examples/schemaxis/primitives.json').read_text())
         started = time.monotonic()
         self.valid(document)
         self.assertLess(time.monotonic() - started, 10, 'irrelevant catalogue branches must short-circuit')

@@ -51,7 +51,10 @@ def fault(code, message, **observed):
 def validate(command, args, provider=None):
     if not isinstance(command, str) or command not in COMMANDS:
         fault('UNKNOWN_COMMAND', 'Unsupported live command')
-    if set(args) != COMMANDS[command]:
+    expected = COMMANDS[command] | ({'geometry'} if command == 'inspect' and 'geometry' in args else set())
+    if command == 'inspect' and type(args.get('geometry', False)) is not bool:
+        fault('INVALID_ARGUMENT', 'Geometry inspection must be true or false')
+    if set(args) != expected:
         fault('INVALID_ARGUMENT', 'Unexpected or missing live command arguments')
     try:
         size = len(json.dumps(args, allow_nan=False).encode())

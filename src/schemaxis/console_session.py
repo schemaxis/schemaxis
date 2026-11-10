@@ -423,7 +423,7 @@ class AdaptorConsoleSession:
         self._invalidate()
         return self.status()
 
-    def write_source(self, document_id, expected_revision, filename=None):
+    def write_source(self, document_id, expected_revision, filename=None, overwrite=False):
         self._check_revision(document_id, expected_revision)
         filename = filename or self._record['file']
         if not filename: fail('NO_SOURCE_FILE', 'choose a source file destination')
@@ -436,7 +436,9 @@ class AdaptorConsoleSession:
         payload = authoring.text(self._record).encode('utf-8')
         baseline = self._state.get('fileBaselines', {}).get(str(path))
         if path.is_symlink(): fail('FILE_CONFLICT', 'source destination is a symbolic link', str(path))
-        if baseline is not None:
+        if overwrite is not True and baseline is None and path.exists():
+            fail('OUTPUT_EXISTS', 'a file already exists there; replace it or choose another name', str(path))
+        if baseline is not None and overwrite is not True:
             try: current = hashlib.sha256(path.read_bytes()).hexdigest()
             except OSError: current = None
             if current != baseline:
@@ -445,7 +447,7 @@ class AdaptorConsoleSession:
         # session commits. Source saving does not change the authored revision.
         error = None
         try:
-            atomic(path, payload, exclusive=baseline is None)
+            atomic(path, payload, exclusive=baseline is None and overwrite is not True)
         except AtomicPublicationError as caught:
             if path.read_bytes() != payload: raise
             error = caught

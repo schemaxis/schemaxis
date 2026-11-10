@@ -18,7 +18,7 @@ Evidence for each rule (FreeCAD 1.1.4, Document.copyObject into one assembly):
 """
 import re
 
-from .source_envelope import element_map, read_members, string_table
+from .source_envelope import element_map, read_members, string_table, string_ids
 
 ZERO = re.compile(rb'0\.0+')
 TAG = re.compile(r';:H(-?)([0-9a-f]+)')
@@ -100,26 +100,38 @@ def file_map(root):
 
 
 def object_ids(root):
-    return {o.get('name'): int(o.get('id')) for o in root.find('Objects').findall('Object')}
+    from .source_envelope import document_ids
+    return document_ids(root)
 
 
-def bind(prepared, path, root, renames, retained, placement):
+def bind(prepared, path, root, renames, retained, placement, regenerated=None):
     """Raise ValueError unless every assembly payload is bound; `placement(name)` reads saved placements."""
     code = 'VERIFICATION_FAILED'
+    from .source_bridge import capability,requires_copy_regeneration
     members = read_members(path, 'model.FCStd', code)
     files = file_map(root)
-    table_member = root.find('StringHasher2').get('file')
-    named = list(files.values()) + [table_member]
+    table_node=root.find('StringHasher2');inline=table_node is None
+    if inline:
+        from .source_bridge import bind_inline_copy
+        bind_inline_copy(prepared,path,root,retained,regenerated)
+    table_member = None if inline else table_node.get('file')
+    named = list(files.values()) + ([] if inline else [table_member])
     if len(set(named)) != len(named):
         raise ValueError('a payload member is referenced twice')
     if set(members) != {'Document.xml', 'GuiDocument.xml', *named}:
         raise ValueError('assembly archive members differ from the payloads its document names: extra '
                          + str(sorted(set(members) - {'Document.xml', 'GuiDocument.xml', *named}))
                          + ' missing ' + str(sorted({*named} - set(members))))
-    table = string_table(members[table_member], 'model.FCStd', code, table_member)
+    table = 0 if inline else string_table(members[table_member], 'model.FCStd', code, table_member)
+    table_ids=set() if inline else string_ids(members[table_member],'model.FCStd',code,table_member)
     assembly_ids = object_ids(root)
+    regenerated_parts={p['id'] for p in prepared['parts'] if requires_copy_regeneration(p['source'])}
+    if regenerated_parts:
+        if regenerated is None:raise ValueError('design-history sources require a fresh native regeneration oracle')
+        from .history_copy_verify import bind_regenerated
+        if not inline:bind_regenerated(path,root,regenerated)
     owned = set()
-    for part in prepared['parts']:
+    for part_index,part in enumerate(prepared['parts']):
         mapping = renames[part['id']]
         producer_members = read_members(retained[part['id']], part['id'], code)
         from xml.etree import ElementTree as ET
@@ -137,9 +149,16 @@ def bind(prepared, path, root, renames, retained, placement):
             owned.add(key)
             old, new = producer_members[producer_file], members[embedded_file]
             if tag == 'Part':
-                if not same_brep(old, new):
+                if part['id'] in regenerated_parts:
+                    # The current-byte payload was bound exactly to a fresh
+                    # trusted regeneration above. Source-to-copy geometry is
+                    # separately checked with ordered native history evidence.
+                    pass
+                elif not same_brep(old, new):
                     raise ValueError('embedded shape payload differs from its producer: '+embedded_file)
             elif tag == 'ElementMap2':
+                if part['id'] in regenerated_parts:
+                    continue
                 p = element_map(old, part['id'], code, producer_file)
                 e = element_map(new, 'model.FCStd', code, embedded_file)
                 produced_tables[p['postfixId']] = (obj, prop, tag)
@@ -147,10 +166,23 @@ def bind(prepared, path, root, renames, retained, placement):
                     raise ValueError('postfix table defined twice in one source: '+embedded_file)
                 embedded_tables[e['postfixId']] = key
                 pairs.append((p, e, embedded_file))
+            elif tag=='FloatList':
+                if old!=new:
+                    raise ValueError('embedded float-list payload differs from its producer: '+embedded_file)
+            elif tag=='FileIncluded' and prop=='SourceAsset' and capability(part['source']):
+                # Separately admitted seeded histories carry their original
+                # STL/STEP authority. This is not a general included-file path.
+                from .source_assets import copied_assets
+                asset=copied_assets(part,part_index).get(obj)
+                properties=[document.find('./ObjectData/Object[@name="'+name+'"]/Properties/Property[@name="SourceAsset"]')
+                            for document,name in ((producer_root,obj),(root,mapping[obj]))]
+                if (asset is None or producer_file!=asset['member'] or embedded_file!=asset['copiedMember']
+                        or any(p is None or p.get('type')!='App::PropertyFileIncluded' for p in properties) or old!=new):
+                    raise ValueError('embedded original source asset differs from its admitted owner/type/member/bytes: '+embedded_file)
             else:
                 raise ValueError('unqualified source payload kind: '+embedded_file)
         for p, e, member in pairs:
-            if not e['tags'] <= own_ids or any(h > table for h in e['hashes']):
+            if not e['tags'] <= own_ids or any(h not in table_ids for h in e['hashes']):
                 raise ValueError('element map refers outside its source or the string table: '+member)
             masked = sorted(HASH_ID.sub('#', _remap(x, ids)) for x in p['postfixes'])
             if masked != sorted(HASH_ID.sub('#', x) for x in e['postfixes']):

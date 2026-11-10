@@ -196,6 +196,24 @@ export function createModel(ctx, documentId) {
     return true;
   });
 
+  /** Validate and save a structured edit against its captured revision, preserving source format. */
+  model.saveDocument = (document, revision) => serial(async () => {
+    inFlight += 1;
+    store.set({busy: true});
+    try {
+      const result = await ctx.api.post('/api/authoring', {action: 'patch', document: documentId, revision,
+        edits: [{op: 'replace', path: '', value: document}]});
+      documentCache = null;
+      await load();
+      await ctx.refresh();
+      return result;
+    } finally {
+      inFlight -= 1;
+      store.set({busy: inFlight > 0});
+      if (!inFlight && externalPending) { externalPending = false; model.load(); }
+    }
+  });
+
   /** Apply complete source using its editing baseline, retaining conflicting local drafts. */
   model.saveSource = (source, revision, format = "json") => serial(async () => {
     store.set({busy: true});

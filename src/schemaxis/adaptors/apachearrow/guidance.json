@@ -3,13 +3,15 @@
   "operations": {
     "prepareTable": {
       "status": "reviewed",
-      "explanation": "Filter, select, rename and prepare an explicitly typed nullable table as independently verified Parquet and a readable report.",
+      "explanation": "Filter, select, rename and prepare an explicitly typed nullable table as independently verified Parquet and a readable report; with publishCSV true, also publish the identical rows as a canonical typed CSV that a consumer reads only by declaring the same schema.",
       "sources": [
-        "docs/apachearrow.md"
+        "docs/apachearrow.md",
+        "docs/apachearrow.md#typed-csv-publication"
       ],
       "pitfalls": [
         "Keep source row order, exact wide integers, Unicode text, null masks and UTC microseconds.",
-        "Only declared int32-to-int64 widening and explicit null replacement; no arbitrary expressions or metadata."
+        "Only declared int32-to-int64 widening and explicit null replacement; no arbitrary expressions or metadata.",
+        "table.csv is opt-in, has no type metadata and treats formula-looking text as literal data; a consumer must declare the identical schema, and nothing is inferred or turned into a workbook."
       ],
       "examples": [
         {
@@ -19,6 +21,10 @@
         {
           "reference": "examples/schemaxis/apachearrow-selection.json",
           "purpose": "Filter accepted rows and prepare selected columns."
+        },
+        {
+          "reference": "examples/schemaxis/apachearrow-csv-publication.json",
+          "purpose": "Publish a filtered, renamed nullable table as typed CSV beside Parquet."
         }
       ]
     }
@@ -28,7 +34,7 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "Prepare one explicitly typed nullable CSV table as Parquet and a complete JSON report. Declare all source fields, then filter and select output columns. Types and missing values are explicit; no metadata, units or arbitrary expressions are inferred.",
+          "explanation": "Prepare one explicitly typed nullable CSV table as Parquet and a complete JSON report, and optionally also publish the same prepared rows as a canonical typed CSV. Declare all source fields, then filter and select output columns. Types and missing values are explicit; no metadata, units or arbitrary expressions are inferred.",
           "sources": [
             "docs/apachearrow.md#csv-contract-and-types"
           ]
@@ -59,7 +65,7 @@
         },
         "/properties/columns": {
           "status": "reviewed",
-          "explanation": "Declare every source field in CSV header order, 1\u201332 columns and at most 200000 cells/10000 rows. Names are unique. Missing/extra source cells fail even in rows later filtered out. No field metadata or units are accepted.",
+          "explanation": "Declare every source field in CSV header order, 1–32 columns and at most 200000 cells/10000 rows. Names are unique. Missing/extra source cells fail even in rows later filtered out. No field metadata or units are accepted.",
           "sources": [
             "docs/apachearrow.md#csv-contract-and-types"
           ]
@@ -122,14 +128,14 @@
         },
         "/properties/where/items/properties/value": {
           "status": "reviewed",
-          "explanation": "Required only for comparisons and forbidden for isNull/isValid. Supply a nonnull string with the source type\u2019s exact CSV spelling, for example 9007199254740993 or true. Strings protect wide integers from JSON rounding; \\N is reserved and cannot be a literal.",
+          "explanation": "Required only for comparisons and forbidden for isNull/isValid. Supply a nonnull string with the source type’s exact CSV spelling, for example 9007199254740993 or true. Strings protect wide integers from JSON rounding; \\N is reserved and cannot be a literal.",
           "sources": [
             "docs/apachearrow.md#selection-filters-and-missing-values"
           ]
         },
         "/properties/select": {
           "status": "reviewed",
-          "explanation": "Required ordered list of 1\u201332 distinct source columns. Each maps column to a unique output name. Omitted source columns are deliberately excluded; output rows retain source order.",
+          "explanation": "Required ordered list of 1–32 distinct source columns. Each maps column to a unique output name. Omitted source columns are deliberately excluded; output rows retain source order.",
           "sources": [
             "docs/apachearrow.md#selection-filters-and-missing-values"
           ]
@@ -167,6 +173,13 @@
           "explanation": "Optional nonnull lexical string, valid only on a nullable source, parsed as the output type after any widening. Replaces nulls alone and marks output nonnullable. Omit to preserve nulls; an empty string can fill text but \\N cannot. No default replacement is inferred.",
           "sources": [
             "docs/apachearrow.md#selection-filters-and-missing-values"
+          ]
+        },
+        "/properties/publishCSV": {
+          "status": "reviewed",
+          "explanation": "Optional boolean, default false. Omit it or give false and the output is exactly Parquet then report. Give true to append table.csv as artifact index 2: the same selected, renamed, widened and filled rows as typed CSV, in a fixed canonical form (UTF-8, LF, comma, bare header, null as bare \\N, text and timestamps quoted, shortest binary64 text). The file carries no types: a consumer must declare the identical column types and nullability from table-report.json, nothing is inferred, and no workbook is created. Formula-looking text such as =1+1 is literal data; declare it as text, it is not sanitised. The encoded file must be at most 8 MiB, and nonnull text equal to \\N is refused, so shorten the table or set false. There are no writer, delimiter, quoting or compression options.",
+          "sources": [
+            "docs/apachearrow.md#typed-csv-publication"
           ]
         }
       }

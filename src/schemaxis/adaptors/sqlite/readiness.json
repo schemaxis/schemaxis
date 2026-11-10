@@ -8,7 +8,7 @@
         "assumptions": "SQLite 3.54.1 CLI; local JSON row arrays, printable ASCII text, exact bounded integers, parent tables before children.",
         "constraints": "1\u20134 tables, 0\u20132048 rows/table, 1\u201312 columns, 1\u20133 group fields; one declared FK inner join, integer >= filter and SUM/COUNT. No authored SQL, existing databases, network or extensions.",
         "inspection": "Compare raw query.stdout, summary.json/CSV and schema.sql; the verifier checks every native table row and literal nested-loop join/group semantics through an independent standard-library reopen.",
-        "recovery": "INVALID_TABLE_KEY: choose an earlier primary key with the same declared type. INVALID_TABLE_QUERY: choose qualified active columns and a declared FK join. INVALID_TABLE_DATA: fix exact column membership, null/type/key violations. INTERPRETER_NOT_FOUND: configure sqlite3."
+        "recovery": "INVALID_TABLE_KEY: choose an earlier primary key with the same declared type. INVALID_TABLE_QUERY: choose qualified active columns and a declared FK join. INVALID_TABLE_SOURCE/INVALID_TABLE_DATA: read observed.reason, table, row and column, then fix the named source, column membership, null/type/key violation or orphan foreign key. INCOMPLETE_EXECUTION: a failed run was not verified; fix the recorded faultCode and rerun in a fresh directory. INTERPRETER_NOT_FOUND: configure sqlite3."
       },
       "examples": [
         {
@@ -334,7 +334,8 @@
       "completion": {
         "scope": "Initial summarise route including every nested field, native typed imports, keys, join/filter/group semantics and exact exports.",
         "review": [
-          "verification/2026-10-17-sqlite-completion.md"
+          "verification/2026-10-17-sqlite-completion.md",
+          "verification/2026-10-24-sqlite-allocation.md"
         ],
         "notApplicable": {
           "native-inspection": "This serial fresh-database summary route does not implement native-inspection; edit declared inputs and execute a new verified run.",

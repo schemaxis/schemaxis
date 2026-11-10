@@ -56,7 +56,23 @@ def populate(mesh, kind, values):
                                       depth=values['depth'])
             else:
                 raise ValueError('undeclared primitive: ' + kind)
-            bm.to_mesh(mesh)
+            if kind == 'uvSphere':
+                # The native sphere operator's face/edge order depends on
+                # BMesh allocation. Preserve its exact vertices and oriented
+                # topology, but publish stable indices for selections, UVs and
+                # mandatory fresh-source material verification.
+                bm.verts.index_update()
+                points = [tuple(vertex.co) for vertex in bm.verts]
+                edges = sorted(tuple(sorted(vertex.index for vertex in edge.verts))
+                               for edge in bm.edges)
+                faces = []
+                for face in bm.faces:
+                    cycle = tuple(vertex.index for vertex in face.verts)
+                    first = cycle.index(min(cycle))
+                    faces.append(cycle[first:] + cycle[:first])
+                mesh.from_pydata(points, edges, sorted(faces))
+            else:
+                bm.to_mesh(mesh)
         finally:
             bm.free()
     for face in mesh.polygons:

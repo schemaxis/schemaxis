@@ -1,0 +1,597 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "id": "reusable-node-groups",
+  "prepareOnly": false,
+  "size": [
+    64,
+    64
+  ],
+  "render": {
+    "samples": 2,
+    "threads": 1
+  },
+  "production": {
+    "frameStart": 1,
+    "frameEnd": 25,
+    "currentFrame": 1,
+    "units": "millimetres",
+    "objects": [
+      {
+        "id": "housing",
+        "kind": "mesh",
+        "material": "finish",
+        "vertices": [
+          [
+            -40,
+            -25,
+            0
+          ],
+          [
+            40,
+            -25,
+            0
+          ],
+          [
+            40,
+            25,
+            0
+          ],
+          [
+            -40,
+            25,
+            0
+          ],
+          [
+            -40,
+            -25,
+            20
+          ],
+          [
+            40,
+            -25,
+            20
+          ],
+          [
+            40,
+            25,
+            20
+          ],
+          [
+            -40,
+            25,
+            20
+          ]
+        ],
+        "faces": [
+          [
+            3,
+            2,
+            1,
+            0
+          ],
+          [
+            4,
+            5,
+            6,
+            7
+          ],
+          [
+            0,
+            1,
+            5,
+            4
+          ],
+          [
+            1,
+            2,
+            6,
+            5
+          ],
+          [
+            2,
+            3,
+            7,
+            6
+          ],
+          [
+            3,
+            0,
+            4,
+            7
+          ]
+        ]
+      },
+      {
+        "id": "anchor",
+        "kind": "empty"
+      },
+      {
+        "id": "otherAnchor",
+        "kind": "empty"
+      }
+    ],
+    "materialGraphs": [
+      {
+        "id": "finish",
+        "nodes": [
+          {
+            "id": "group",
+            "kind": "group",
+            "group": "Surface",
+            "values": {
+              "tint": [
+                0.7,
+                0.1,
+                0.2,
+                1
+              ]
+            }
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "group",
+              "socket": "surface"
+            },
+            "to": {
+              "node": "output",
+              "socket": "surface"
+            }
+          }
+        ]
+      }
+    ],
+    "intents": [],
+    "renderFrames": [],
+    "exports": [
+      {
+        "id": "lifted",
+        "format": "ply",
+        "objects": [
+          "housing"
+        ]
+      }
+    ],
+    "nodeGroups": [
+      {
+        "id": "Surface",
+        "family": "material",
+        "inputs": [
+          {
+            "id": "tint",
+            "kind": "colour",
+            "default": [
+              0.1,
+              0.4,
+              0.7,
+              1
+            ]
+          },
+          {
+            "id": "roughness",
+            "kind": "number",
+            "default": 0.3,
+            "minimum": 0,
+            "maximum": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "surface",
+            "kind": "shader"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "input",
+            "kind": "input"
+          },
+          {
+            "id": "pbr",
+            "kind": "principled"
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "input",
+              "socket": "tint"
+            },
+            "to": {
+              "node": "pbr",
+              "socket": "colour"
+            }
+          },
+          {
+            "from": {
+              "node": "input",
+              "socket": "roughness"
+            },
+            "to": {
+              "node": "pbr",
+              "socket": "roughness"
+            }
+          },
+          {
+            "from": {
+              "node": "pbr",
+              "socket": "shader"
+            },
+            "to": {
+              "node": "output",
+              "socket": "surface"
+            }
+          }
+        ]
+      },
+      {
+        "id": "Lift",
+        "family": "geometry",
+        "inputs": [
+          {
+            "id": "shape",
+            "kind": "geometry"
+          },
+          {
+            "id": "lift",
+            "kind": "vector",
+            "default": [
+              0,
+              0,
+              3
+            ]
+          },
+          {
+            "id": "referenceObject",
+            "kind": "object",
+            "default": "anchor"
+          },
+          {
+            "id": "referenceMaterial",
+            "kind": "material",
+            "default": "finish"
+          },
+          {
+            "id": "twist",
+            "kind": "rotation",
+            "default": [
+              0,
+              0,
+              0
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "id": "result",
+            "kind": "geometry"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "input",
+            "kind": "input"
+          },
+          {
+            "id": "move",
+            "kind": "transform"
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "input",
+              "socket": "shape"
+            },
+            "to": {
+              "node": "move",
+              "socket": "geometry"
+            }
+          },
+          {
+            "from": {
+              "node": "input",
+              "socket": "lift"
+            },
+            "to": {
+              "node": "move",
+              "socket": "translation"
+            }
+          },
+          {
+            "from": {
+              "node": "move",
+              "socket": "geometry"
+            },
+            "to": {
+              "node": "output",
+              "socket": "result"
+            }
+          },
+          {
+            "from": {
+              "node": "input",
+              "socket": "twist"
+            },
+            "to": {
+              "node": "move",
+              "socket": "rotation"
+            }
+          }
+        ]
+      },
+      {
+        "id": "Grade",
+        "family": "compositor",
+        "inputs": [
+          {
+            "id": "image",
+            "kind": "image"
+          },
+          {
+            "id": "exposure",
+            "kind": "number",
+            "default": -1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "image",
+            "kind": "image"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "input",
+            "kind": "input"
+          },
+          {
+            "id": "exposure",
+            "kind": "exposure"
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "input",
+              "socket": "image"
+            },
+            "to": {
+              "node": "exposure",
+              "socket": "image"
+            }
+          },
+          {
+            "from": {
+              "node": "input",
+              "socket": "exposure"
+            },
+            "to": {
+              "node": "exposure",
+              "socket": "exposure"
+            }
+          },
+          {
+            "from": {
+              "node": "exposure",
+              "socket": "image"
+            },
+            "to": {
+              "node": "output",
+              "socket": "image"
+            }
+          }
+        ]
+      },
+      {
+        "id": "LiftTwice",
+        "family": "geometry",
+        "inputs": [
+          {
+            "id": "shape",
+            "kind": "geometry"
+          },
+          {
+            "id": "lift",
+            "kind": "vector",
+            "default": [
+              0,
+              0,
+              2.5
+            ]
+          }
+        ],
+        "outputs": [
+          {
+            "id": "result",
+            "kind": "geometry"
+          }
+        ],
+        "nodes": [
+          {
+            "id": "input",
+            "kind": "input"
+          },
+          {
+            "id": "first",
+            "kind": "group",
+            "group": "Lift"
+          },
+          {
+            "id": "second",
+            "kind": "group",
+            "group": "Lift"
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "input",
+              "socket": "shape"
+            },
+            "to": {
+              "node": "first",
+              "socket": "shape"
+            }
+          },
+          {
+            "from": {
+              "node": "first",
+              "socket": "result"
+            },
+            "to": {
+              "node": "second",
+              "socket": "shape"
+            }
+          },
+          {
+            "from": {
+              "node": "input",
+              "socket": "lift"
+            },
+            "to": {
+              "node": "first",
+              "socket": "lift"
+            }
+          },
+          {
+            "from": {
+              "node": "input",
+              "socket": "lift"
+            },
+            "to": {
+              "node": "second",
+              "socket": "lift"
+            }
+          },
+          {
+            "from": {
+              "node": "second",
+              "socket": "result"
+            },
+            "to": {
+              "node": "output",
+              "socket": "result"
+            }
+          }
+        ]
+      }
+    ],
+    "geometryGraphs": [
+      {
+        "id": "lifted",
+        "nodes": [
+          {
+            "id": "input",
+            "kind": "input"
+          },
+          {
+            "id": "lift",
+            "kind": "group",
+            "group": "LiftTwice",
+            "values": {
+              "lift": [
+                0,
+                0,
+                2.5
+              ]
+            }
+          },
+          {
+            "id": "output",
+            "kind": "output"
+          }
+        ],
+        "links": [
+          {
+            "from": {
+              "node": "input",
+              "socket": "geometry"
+            },
+            "to": {
+              "node": "lift",
+              "socket": "shape"
+            }
+          },
+          {
+            "from": {
+              "node": "lift",
+              "socket": "result"
+            },
+            "to": {
+              "node": "output",
+              "socket": "geometry"
+            }
+          }
+        ]
+      }
+    ],
+    "geometryBindings": [
+      {
+        "object": "housing",
+        "graph": "lifted"
+      }
+    ],
+    "compositor": {
+      "id": "graded",
+      "nodes": [
+        {
+          "id": "render",
+          "kind": "render"
+        },
+        {
+          "id": "grade",
+          "kind": "group",
+          "group": "Grade"
+        },
+        {
+          "id": "output",
+          "kind": "output"
+        }
+      ],
+      "links": [
+        {
+          "from": {
+            "node": "render",
+            "socket": "image"
+          },
+          "to": {
+            "node": "grade",
+            "socket": "image"
+          }
+        },
+        {
+          "from": {
+            "node": "grade",
+            "socket": "image"
+          },
+          "to": {
+            "node": "output",
+            "socket": "image"
+          }
+        }
+      ]
+    }
+  }
+}

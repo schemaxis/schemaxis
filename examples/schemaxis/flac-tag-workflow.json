@@ -1,0 +1,40 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "speech",
+      "document": {
+        "version": "schemaxis.sox/1",
+        "operation": "conform",
+        "source": "/replace/with/stereo-48000.wav",
+        "channelPolicy": "average"
+      }
+    },
+    {
+      "id": "archive",
+      "document": {
+        "version": "schemaxis.flac/1",
+        "operation": "encodeLossless",
+        "source": {
+          "$artifact": "speech",
+          "index": 0
+        },
+        "metadata": {
+          "title": "Conformed speech take",
+          "artist": "A. Reviewer"
+        }
+      }
+    },
+    {
+      "id": "reuse",
+      "document": {
+        "version": "schemaxis.flac/1",
+        "operation": "decodePCM16",
+        "source": {
+          "$artifact": "archive",
+          "index": 0
+        }
+      }
+    }
+  ]
+}

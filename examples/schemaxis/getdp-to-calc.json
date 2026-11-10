@@ -1,0 +1,47 @@
+{
+  "version": "schemaxis.workflow/1",
+  "operations": [
+    {
+      "id": "wall",
+      "document": {
+        "version": "schemaxis.getdp/1",
+        "operation": "steadyHeat",
+        "layers": [
+          {
+            "name": "slab",
+            "thickness_m": 0.1,
+            "conductivity": 10,
+            "cells": 10
+          }
+        ],
+        "left": {
+          "kind": "value",
+          "value": 400
+        },
+        "right": {
+          "kind": "value",
+          "value": 300
+        },
+        "area_m2": 0.5
+      }
+    },
+    {
+      "id": "workbook",
+      "document": {
+        "version": "schemaxis.calc/1",
+        "nodes": [
+          {
+            "id": "temperatures",
+            "filter": "readCSV",
+            "options": {
+              "file": {
+                "$artifact": "wall",
+                "index": 0
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

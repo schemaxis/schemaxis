@@ -1,0 +1,714 @@
+{
+  "version": "schemaxis.studio-guidance/1",
+  "operations": {
+    "transcribe": {
+      "status": "reviewed",
+      "explanation": "Transcribe one pinned local PCM16 mono 16000 Hz recording with one pinned local ggml model into millisecond segments, plain text, SRT and WebVTT. Optionally add a caption review report of per-cue duration and text-density flags, and optionally ask whisper.cpp to split cues toward a target length at word boundaries. The run is offline and serial; structure and hashes are verified, but recognition accuracy is not, so a person must review the result.",
+      "sources": [
+        "docs/whispercpp.md#document-fields",
+        "docs/whispercpp.md#accuracy-and-human-review",
+        "docs/whispercpp.md#caption-review",
+        "docs/whispercpp.md#caption-segmentation-target"
+      ],
+      "pitfalls": [
+        "The model and audio SHA-256 values pin exact bytes; changing either file requires a deliberate new pin.",
+        "A well-formed result can still contain wrong, missing or invented words. Review captions against the audio before use.",
+        "Silence or no detected speech publishes nothing and fails with TRANSCRIPT_EMPTY.",
+        "A caption review report is optional editorial triage with fixed thresholds of our own, not a standard or certification; no flags does not mean the captions are good.",
+        "maxSegmentLength is a native target, not a guarantee: a word longer than the target, or text in a script written without spaces, stays in one longer cue, and the cue boundary times come from experimental native token timestamps. Over-target cues are published and counted, not refused."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/whispercpp-jfk.json",
+          "purpose": "Transcribe an 11 second public English speech sample with a pinned base.en model."
+        },
+        {
+          "reference": "examples/schemaxis/whispercpp-excerpt.json",
+          "purpose": "Transcribe a pinned eight second excerpt of the same sample."
+        },
+        {
+          "reference": "examples/schemaxis/whispercpp-caption-review.json",
+          "purpose": "Transcribe the 11 second public sample and publish the optional caption review report, which flags the single long cue."
+        },
+        {
+          "reference": "examples/schemaxis/whispercpp-short-cues.json",
+          "purpose": "Transcribe the 11 second public sample with a 42 code point segmentation target; the native run splits the one long cue into three."
+        }
+      ],
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?"
+    }
+  },
+  "routes": {
+    "schemaxis.whispercpp/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Declare one offline transcription: a local speech WAV, a local ggml model pinned by SHA-256, the spoken language and, optionally, a caption review report and a cue segmentation target. The route produces checked segments, transcript text, SRT and WebVTT. It does not download models, translate, label speakers or certify accuracy.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.whispercpp/1 for this input contract. This version identifies the document schema, not the whisper.cpp release, which is checked separately at run time.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "Choose transcribe, the only operation. It publishes segments.json, transcript.txt, captions.srt and captions.vtt for human review, plus caption-review.json when captionReview is true.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ]
+        },
+        "/properties/audio": {
+          "status": "reviewed",
+          "explanation": "Names the recording to transcribe and may pin its exact bytes. The runner captures the bytes before native execution, so later edits to the original do not change that run.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ]
+        },
+        "/properties/audio/properties/path": {
+          "status": "reviewed",
+          "explanation": "Choose an existing absolute local .wav file with canonical little-endian PCM16 mono audio at 16000 Hz, at most 600 seconds and 32MiB. Resample or mix down beforehand; no conversion happens here.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ],
+          "pitfalls": [
+            "Relative paths, parent references, symlinks, devices, other rates/channels, compressed WAV, streams and network sources are rejected."
+          ],
+          "fileExtensions": [
+            ".wav"
+          ]
+        },
+        "/properties/audio/properties/sha256": {
+          "status": "reviewed",
+          "explanation": "Optional lowercase hexadecimal SHA-256 of the exact WAV bytes. When present, any difference stops the run with AUDIO_HASH_MISMATCH; when omitted the captured hash is only recorded.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ],
+          "pitfalls": [
+            "Uppercase digits or a wrong length are rejected before any file is read."
+          ]
+        },
+        "/properties/model": {
+          "status": "reviewed",
+          "explanation": "Names the local ggml model and pins its exact bytes. The model is never downloaded or copied; it is hashed before launch, passed to the native tool by the hashed file descriptor and hashed again afterwards.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ]
+        },
+        "/properties/model/properties/path": {
+          "status": "reviewed",
+          "explanation": "Choose an existing absolute local ggml .bin model file of at most 4GiB, for example a base.en model for English. A symlink to the model is accepted because the SHA-256 pin binds the bytes actually read.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ],
+          "pitfalls": [
+            "English-only models (.en) cannot transcribe other languages; choose a multilingual model and matching language."
+          ],
+          "fileExtensions": [
+            ".bin"
+          ]
+        },
+        "/properties/model/properties/sha256": {
+          "status": "reviewed",
+          "explanation": "Required lowercase hexadecimal SHA-256 of the exact model file. A mismatch stops the run with MODEL_HASH_MISMATCH before native transcription; a change during the run is reported as MODEL_CHANGED.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ],
+          "pitfalls": [
+            "Take the digest from a trusted record of the model you intend to use; this field does not decide which model is scientifically suitable."
+          ]
+        },
+        "/properties/language": {
+          "status": "reviewed",
+          "explanation": "One lowercase language code from the 100 canonical codes of whisper.cpp 1.9.5, default en. Anything else (an unknown code such as zz, a full name, uppercase, auto, a number or null) is refused as INVALID_LANGUAGE at $.language before any file is read. A listed code means only that whisper.cpp knows it: it does not certify that the chosen model is multilingual (an English-only .en model cannot transcribe other languages) or that recognition in that language is accurate. The native run must report the same language; translation and language detection are not used.",
+          "sources": [
+            "docs/whispercpp.md#document-fields"
+          ],
+          "pitfalls": [
+            "A recording in another language than declared may yield poor or invented text without any structural error.",
+            "Aliases are not mapped: whisper.cpp 1.9.5 lists he for Hebrew (not iw), jw for Javanese and yue for Cantonese."
+          ],
+          "defaultMeaning": "English (en)"
+        },
+        "/properties/captionReview": {
+          "status": "reviewed",
+          "explanation": "Optional boolean, default false. When true, one more file, caption-review.json, lists each cue's duration, Unicode code point count and code points per second, with three fixed editorial flags: under 1000 ms, over 7000 ms, or more than 20 code points per second. It never changes words or timing. The thresholds are this adaptor's own editorial defaults, not SRT, WebVTT or accessibility requirements, and the report certifies nothing.",
+          "sources": [
+            "docs/whispercpp.md#caption-review"
+          ],
+          "pitfalls": [
+            "No flags is not a pass: a person must still review every caption against the audio.",
+            "Length counts Unicode code points, not graphemes or display width, so emoji sequences, combining marks and wide scripts are measured crudely.",
+            "Only the literal true or false is accepted; text such as \"yes\" or the number 1 is rejected."
+          ],
+          "defaultMeaning": "false: no caption review report is produced and the run publishes exactly the four standard files.",
+          "examples": [
+            true
+          ]
+        },
+        "/properties/maxSegmentLength": {
+          "status": "reviewed",
+          "explanation": "Optional integer from 16 to 200. When present, whisper.cpp is asked to split cues toward this length at word boundaries (native options -ml N -sow), so a long single cue can become several shorter ones. It is a target, not a limit: whisper.cpp counts Unicode code points per token, including each leading space, and only splits before a token that starts with a space, so a word longer than the target or text in a script written without spaces can still produce a longer cue. Cues that exceed it are published unchanged, and segments.json and the result record how many did. Cue boundary times come from whisper.cpp's experimental token-level timestamps and are observed, not certified, and turning the option on can also change the timing of cues that are not split.",
+          "sources": [
+            "docs/whispercpp.md#caption-segmentation-target"
+          ],
+          "pitfalls": [
+            "Do not treat the value as a guaranteed maximum or as a readability or accessibility standard; the run records cuesOverTarget instead of refusing long cues.",
+            "Unspaced scripts (for example Chinese, Japanese or Thai) rarely offer a space-led token to split at, so expect cues much longer than the target.",
+            "Counting is in Unicode code points, not bytes, grapheme clusters or display width.",
+            "Boundaries use experimental native timing; listen to the audio and review the words and timing before publishing.",
+            "Only whole numbers from 16 to 200 are accepted; text, decimals, booleans and null are rejected."
+          ],
+          "defaultMeaning": "Omitted: whisper.cpp keeps its own default cues, no -ml or -sow is passed, and the plan and receipts are exactly those of earlier runs.",
+          "examples": [
+            42
+          ]
+        }
+      }
+    },
+    "schemaxis.whispercpp.correct/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Declare one host-only correction of a retained machine segments.json: the pinned draft, an explicit review status and note, and per-cue replacement text. The route publishes a reviewed transcript, captions and a correction ledger. It never runs speech recognition, edits timings or verifies who reviewed the text. Use it after a person has read the draft against the audio; it runs on the host only, has no native qualification of its own, preserves timings, language and provenance, and never modifies the original draft.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections",
+            "docs/whispercpp.md#accuracy-and-human-review"
+          ],
+          "pitfalls": [
+            "The review status is a declaration by the author of the document. Schemaxis does not verify who reviewed the transcript, that the audio was heard or that any word is right; it is not accuracy, identity or accessibility certification.",
+            "basisSha256 pins the exact draft you reviewed. If the draft changes, the run fails with CORRECTIONS_STALE instead of applying edits to different words; re-read the new draft and copy its digest.",
+            "Only text replacements by cue index are supported. Timing edits, splits, merges and insertions are not, and cues cannot be deleted here (use schemaxis.whispercpp.correct/2 for explicit deletion); a reviewed document cannot be used as a draft, so a second round starts again from the machine draft.",
+            "A correction that equals the existing text, repeats an index, names a missing cue, or is blank or contains markup brackets or the caption arrow is refused with a located fault, never repaired."
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.whispercpp.correct/1 for this input contract. It identifies the document schema of this host-only route, not a whisper.cpp release; transcription uses schemaxis.whispercpp/1.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ]
+        },
+        "/properties/draft": {
+          "status": "reviewed",
+          "explanation": "Names the retained machine-draft segments.json to correct. The run captures its bytes once; later changes to the original do not alter that run. Planning never opens it.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ]
+        },
+        "/properties/draft/properties/path": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute local .json path of an unedited whisper.cpp segments.json, or supply an earlier job's text artifact with {\"$artifact\":\"transcribe\",\"index\":0}. A reviewed document is refused as a draft.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ],
+          "pitfalls": [
+            "Relative paths, parent references, links and files over 4MiB are refused (INVALID_DRAFT_SOURCE); a file or directory that does not exist is a different fault, DRAFT_SOURCE_MISSING.",
+            "Draft documents beyond 512 cues, 256 characters per cue or 32768 characters in total are refused, never truncated."
+          ]
+        },
+        "/properties/basisSha256": {
+          "status": "reviewed",
+          "explanation": "The lowercase SHA-256 of the exact draft bytes you reviewed. The corrections apply only if the captured draft hashes to it; otherwise the run fails with CORRECTIONS_STALE. It is recorded in the reviewed document and the ledger.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ],
+          "pitfalls": [
+            "Copy the digest from the draft you actually read, not from a newer re-transcription."
+          ]
+        },
+        "/properties/review": {
+          "status": "reviewed",
+          "explanation": "Your declaration about the review of this draft: a status and a note. The host records it as provenance and cannot verify it.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ]
+        },
+        "/properties/review/properties/status": {
+          "status": "reviewed",
+          "explanation": "Choose human-corrected when at least one cue text is replaced, or human-reviewed-unchanged when you declare you reviewed the draft and no cue needs a change (then give no corrections). The two must agree with the corrections list or planning fails with CORRECTIONS_STATUS_CONFLICT.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ],
+          "pitfalls": [
+            "Neither value certifies accuracy or the reviewer's identity."
+          ]
+        },
+        "/properties/review/properties/note": {
+          "status": "reviewed",
+          "explanation": "A required plain-text note of 1 to 500 characters saying what was reviewed and how, for example against which source. It is published in the reviewed document, the ledger and the Pandoc provenance paragraph. Use plain single spaces only (no tab, no-break or ideographic space); no line breaks, controls, format controls such as zero-width joiners, markup brackets or the caption arrow, because the note is also published as Pandoc plain text. The examples' notes are illustrative declarations, not evidence that a person reviewed anything.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ],
+          "pitfalls": [
+            "Do not put secrets or personal data in the note; it is published with the transcript."
+          ]
+        },
+        "/properties/corrections": {
+          "status": "reviewed",
+          "explanation": "The authored edits: zero or more per-cue text replacements, at most 512, each with a unique index. Omit the list (or leave it empty) only with human-reviewed-unchanged. Timings cannot be edited.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ]
+        },
+        "/properties/corrections/items": {
+          "status": "reviewed",
+          "explanation": "One replacement: exactly an index and the new text. Any other key, such as a time, is an unknown argument.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ]
+        },
+        "/properties/corrections/items/properties/index": {
+          "status": "reviewed",
+          "explanation": "Zero-based index of the draft cue to replace, unique across the list and less than the draft cue count (checked at run time as CORRECTION_INDEX_INVALID). Cue indexes follow the draft segments array.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ],
+          "pitfalls": [
+            "Indexes are not renumbered; the reviewed document keeps the same cue count and timings."
+          ]
+        },
+        "/properties/corrections/items/properties/text": {
+          "status": "reviewed",
+          "explanation": "The replacement cue text, 1 to 256 characters of visible plain text with no surrounding space, control or line-separator characters, markup brackets, bidirectional overrides or the caption arrow. It must differ from the existing cue text (CORRECTION_NOOP otherwise).",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ],
+          "pitfalls": [
+            "Blank-looking text is refused, never dropped; a cue is replaced, not deleted (correct/2 has an explicit deletions list)."
+          ]
+        },
+        "/properties/captionReview": {
+          "status": "reviewed",
+          "explanation": "Optional. When true, also publish caption-review.json recomputed on the corrected cue text with the same fixed editorial duration and density thresholds as transcription. It never alters words or timing and no flags does not mean the captions are accurate or accessible.",
+          "sources": [
+            "docs/whispercpp.md#human-corrections"
+          ],
+          "pitfalls": [
+            "Thresholds are editorial defaults, not standards."
+          ]
+        }
+      }
+    },
+    "schemaxis.whispercpp.correct/2": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Declare one host-only editorial pass over a retained machine segments.json: the pinned draft, an explicit review status and note, per-cue replacement text and whole-cue deletions by source index. The route publishes a separately versioned reviewed transcript (schemaxis.timedtext.reviewed/2), captions and a ledger that maps every published cue back to its source cue. Use it instead of correct/1 when a cue must be removed, for example a recognition artefact such as \"You\" in a silent recording that text replacement cannot blank. It never runs speech recognition, edits timings or verifies who reviewed the text; it has no native qualification of its own and never modifies the original draft.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion",
+            "docs/whispercpp.md#accuracy-and-human-review"
+          ],
+          "pitfalls": [
+            "The review status is a declaration by the author of the document. Schemaxis does not verify who reviewed the transcript, that the audio was heard, or that a deletion was right; it is not accuracy, identity or accessibility certification, and an empty result is not evidence that the recording holds no speech.",
+            "basisSha256 pins the exact draft you reviewed. If the draft changes, the run fails with CORRECTIONS_STALE; deletion and replacement indices are always source indices of that draft.",
+            "Only text replacement and whole-cue deletion are supported. Timing edits, splits, merges, insertions and importing edited transcripts are not; a reviewed document (either version) cannot be used as a draft, so a second round starts again from the machine draft.",
+            "Deleting every cue of a nonempty draft is allowed and publishes an empty transcript, an empty SRT and a bare WEBVTT header; a draft that had no cues to begin with is still refused, and captionReview is refused when nothing is retained."
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.whispercpp.correct/2 for this input contract. It adds explicit cue deletion to the text-only correct/1 and publishes the separately versioned reviewed/2 document; correct/1 and its reviewed/1 output are unchanged. It identifies the document schema of this host-only route, not a whisper.cpp release; transcription uses schemaxis.whispercpp/1.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ]
+        },
+        "/properties/draft": {
+          "status": "reviewed",
+          "explanation": "Names the retained machine-draft segments.json to correct. The run captures its bytes once; later changes to the original do not alter that run. Planning never opens it.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ]
+        },
+        "/properties/draft/properties/path": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute local .json path of an unedited whisper.cpp segments.json, or supply an earlier job's text artifact with {\"$artifact\":\"transcribe\",\"index\":0}. A reviewed document of either version is refused as a draft, and a draft with no cues is refused.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ],
+          "pitfalls": [
+            "Relative paths, parent references, links and files over 4MiB are refused (INVALID_DRAFT_SOURCE); a file or directory that does not exist is a different fault, DRAFT_SOURCE_MISSING.",
+            "Draft documents beyond 512 cues, 256 characters per cue or 32768 characters in total are refused, never truncated."
+          ]
+        },
+        "/properties/basisSha256": {
+          "status": "reviewed",
+          "explanation": "The lowercase SHA-256 of the exact draft bytes you reviewed. The corrections apply only if the captured draft hashes to it; otherwise the run fails with CORRECTIONS_STALE. It is recorded in the reviewed document and the ledger.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ],
+          "pitfalls": [
+            "Copy the digest from the draft you actually read, not from a newer re-transcription."
+          ]
+        },
+        "/properties/review": {
+          "status": "reviewed",
+          "explanation": "Your declaration about the review of this draft: a status and a note. The host records it as provenance and cannot verify it.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ]
+        },
+        "/properties/review/properties/status": {
+          "status": "reviewed",
+          "explanation": "Choose human-corrected when at least one cue text is replaced or at least one cue is deleted, or human-reviewed-unchanged when you declare you reviewed the draft and nothing needs to change (then give no corrections and no deletions). The two must agree with the edits or planning fails with CORRECTIONS_STATUS_CONFLICT.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ],
+          "pitfalls": [
+            "Neither value certifies accuracy or the reviewer's identity."
+          ]
+        },
+        "/properties/review/properties/note": {
+          "status": "reviewed",
+          "explanation": "A required plain-text note of 1 to 500 characters saying what was reviewed and how, for example against which source. It is published in the reviewed document, the ledger and the Pandoc provenance paragraph. Use plain single spaces only (no tab, no-break or ideographic space); no line breaks, controls, format controls such as zero-width joiners, markup brackets or the caption arrow, because the note is also published as Pandoc plain text. The examples' notes are illustrative declarations, not evidence that a person reviewed anything.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ],
+          "pitfalls": [
+            "Do not put secrets or personal data in the note; it is published with the transcript."
+          ]
+        },
+        "/properties/corrections": {
+          "status": "reviewed",
+          "explanation": "The authored replacements: zero or more per-cue text replacements by source index, at most 512, each with a unique index that is not also listed in deletions. Timings cannot be edited.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ]
+        },
+        "/properties/corrections/items": {
+          "status": "reviewed",
+          "explanation": "One replacement: exactly an index and the new text. Any other key, such as a time, is an unknown argument.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ]
+        },
+        "/properties/corrections/items/properties/index": {
+          "status": "reviewed",
+          "explanation": "Zero-based source index of the draft cue to replace, unique across the list, not also deleted (CORRECTION_DELETION_CONFLICT) and less than the draft cue count (checked at run time as CORRECTION_INDEX_INVALID). Cue indexes follow the draft segments array, not the published numbering.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ],
+          "pitfalls": [
+            "Source indexes are never renumbered by earlier deletions; the published cues are renumbered contiguously but every edit names a source cue."
+          ]
+        },
+        "/properties/corrections/items/properties/text": {
+          "status": "reviewed",
+          "explanation": "The replacement cue text, 1 to 256 characters of visible plain text with no surrounding space, control or line-separator characters, markup brackets, bidirectional overrides or the caption arrow. It must differ from the existing cue text (CORRECTION_NOOP otherwise).",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ],
+          "pitfalls": [
+            "Blank-looking text is refused, never dropped. To remove a cue, list its source index in deletions instead."
+          ]
+        },
+        "/properties/captionReview": {
+          "status": "reviewed",
+          "explanation": "Optional. When true, also publish caption-review.json recomputed on the retained, corrected cue text with the same fixed editorial duration and density thresholds as transcription. It never alters words or timing and no flags does not mean the captions are accurate or accessible. It is refused (CAPTION_REVIEW_EMPTY) when every cue is deleted, because a report of no cues would read as a pass.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ],
+          "pitfalls": [
+            "Thresholds are editorial defaults, not standards."
+          ]
+        },
+        "/properties/deletions": {
+          "status": "reviewed",
+          "explanation": "Optional list of whole cues to remove, as bare unique source indices from the pinned draft (for example [1] or [0, 2]). Omit it, or leave it empty, when no cue is removed. Each deleted cue disappears from reviewed-segments.json, transcript.txt and the captions; the retained cues keep their times and are renumbered contiguously from zero as published. The ledger keeps the original text and timing of every deleted cue and the source-to-published mapping.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ],
+          "pitfalls": [
+            "Listing every source index deletes every cue and publishes an empty transcript, an empty SRT and a bare WEBVTT header. That is your declaration that nothing remains to publish, not proof that the recording is silent.",
+            "A duplicate index is DELETION_DUPLICATE, an index beyond the draft is DELETION_INDEX_INVALID at run time, and an index that is also replaced is CORRECTION_DELETION_CONFLICT."
+          ]
+        },
+        "/properties/deletions/items": {
+          "status": "reviewed",
+          "explanation": "One source cue index to delete: a non-negative integer less than the draft cue count, not an object. Replacement and deletion are different members so a replacement can never silently mean deletion.",
+          "sources": [
+            "docs/whispercpp.md#cue-deletion"
+          ]
+        }
+      }
+    },
+    "schemaxis.whispercpp.correct/3": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Declare one host-only editorial pass over a retained machine segments.json: the pinned draft, an explicit review status and note, per-cue replacement text, whole-cue deletions and author-edited cue times, all by source index. The route publishes a separately versioned reviewed transcript (schemaxis.timedtext.reviewed/3), captions and a ledger that maps every published cue to its source cue and records the original and the edited time of every retimed cue. Use it instead of correct/2 when the machine timing of a cue is wrong and you will state the right interval yourself. It never runs speech recognition, measures or corrects timing against the audio, or verifies who reviewed the text; it has no native qualification of its own and never modifies the original draft.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits",
+            "docs/whispercpp.md#accuracy-and-human-review"
+          ],
+          "pitfalls": [
+            "The review status and every edited time are declarations by the author of the document. Schemaxis does not listen to the audio, so it neither verifies who reviewed the transcript nor that an edited interval is better aligned; none of it is accuracy, identity, audio-synchronization or accessibility certification.",
+            "basisSha256 pins the exact draft you reviewed. If the draft changes, the run fails with CORRECTIONS_STALE; replacement, deletion and timing indices are always source indices of that draft and never shift after a deletion.",
+            "A timing edit states both ends of the whole new interval as integer elapsed milliseconds. The finished cue set must be ordered, nonoverlapping and inside the audio duration; a violation is refused naming the edit (TIMING_OVERLAP, TIMING_AFTER_AUDIO) and is never clamped, reordered or rounded. Splits, merges, insertions and audio edits are not supported.",
+            "A reviewed document of any version cannot be used as a draft, so a second round starts again from the machine draft. Deleting every cue of a nonempty draft is allowed and publishes empty captions; captionReview is refused when nothing is retained."
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.whispercpp.correct/3 for this input contract. It adds author-edited cue times to correct/2 and publishes the separately versioned reviewed/3 document, because correct/1 and correct/2 and their reviewed/1 and reviewed/2 output promise the original machine timestamps and are unchanged. It identifies the document schema of this host-only route, not a whisper.cpp release; transcription uses schemaxis.whispercpp/1.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ]
+        },
+        "/properties/draft": {
+          "status": "reviewed",
+          "explanation": "Names the retained machine-draft segments.json to correct. The run captures its bytes once; later changes to the original do not alter that run. Planning never opens it.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ]
+        },
+        "/properties/draft/properties/path": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute local .json path of an unedited whisper.cpp segments.json, or supply an earlier job's text artifact with {\"$artifact\":\"transcribe\",\"index\":0}. A reviewed document of either version is refused as a draft, and a draft with no cues is refused.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "Relative paths, parent references, links and files over 4MiB are refused (INVALID_DRAFT_SOURCE); a file or directory that does not exist is a different fault, DRAFT_SOURCE_MISSING.",
+            "Draft documents beyond 512 cues, 256 characters per cue or 32768 characters in total are refused, never truncated."
+          ]
+        },
+        "/properties/basisSha256": {
+          "status": "reviewed",
+          "explanation": "The lowercase SHA-256 of the exact draft bytes you reviewed. The corrections apply only if the captured draft hashes to it; otherwise the run fails with CORRECTIONS_STALE. It is recorded in the reviewed document and the ledger.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "Copy the digest from the draft you actually read, not from a newer re-transcription."
+          ]
+        },
+        "/properties/review": {
+          "status": "reviewed",
+          "explanation": "Your declaration about the review of this draft: a status and a note. The host records it as provenance and cannot verify it.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ]
+        },
+        "/properties/review/properties/status": {
+          "status": "reviewed",
+          "explanation": "Choose human-corrected when at least one cue text is replaced, one cue is deleted or one cue time is edited (a timing-only pass is human-corrected), or human-reviewed-unchanged when you declare you reviewed the draft and nothing needs to change (then give no corrections, deletions or timings). The two must agree with the edits or planning fails with CORRECTIONS_STATUS_CONFLICT.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "Neither value certifies accuracy or the reviewer's identity."
+          ]
+        },
+        "/properties/review/properties/note": {
+          "status": "reviewed",
+          "explanation": "A required plain-text note of 1 to 500 characters saying what was reviewed and how, for example against which source. It is published in the reviewed document, the ledger and the Pandoc provenance paragraph. Use plain single spaces only (no tab, no-break or ideographic space); no line breaks, controls, format controls such as zero-width joiners, markup brackets or the caption arrow, because the note is also published as Pandoc plain text. The examples' notes are illustrative declarations, not evidence that a person reviewed anything.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "Do not put secrets or personal data in the note; it is published with the transcript."
+          ]
+        },
+        "/properties/corrections": {
+          "status": "reviewed",
+          "explanation": "The authored replacements: zero or more per-cue text replacements by source index, at most 512, each with a unique index that is not also listed in deletions. Times are changed in timings, not here.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ]
+        },
+        "/properties/corrections/items": {
+          "status": "reviewed",
+          "explanation": "One replacement: exactly an index and the new text. Any other key, such as a time, is an unknown argument; edit a time with a timings entry.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ]
+        },
+        "/properties/corrections/items/properties/index": {
+          "status": "reviewed",
+          "explanation": "Zero-based source index of the draft cue to replace, unique across the list, not also deleted (CORRECTION_DELETION_CONFLICT) and less than the draft cue count (checked at run time as CORRECTION_INDEX_INVALID). Cue indexes follow the draft segments array, not the published numbering.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "Source indexes are never renumbered by earlier deletions; the published cues are renumbered contiguously but every edit names a source cue."
+          ]
+        },
+        "/properties/corrections/items/properties/text": {
+          "status": "reviewed",
+          "explanation": "The replacement cue text, 1 to 256 characters of visible plain text with no surrounding space, control or line-separator characters, markup brackets, bidirectional overrides or the caption arrow. It must differ from the existing cue text (CORRECTION_NOOP otherwise).",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "Blank-looking text is refused, never dropped. To remove a cue, list its source index in deletions instead."
+          ]
+        },
+        "/properties/deletions": {
+          "status": "reviewed",
+          "explanation": "Optional list of whole cues to remove, as bare unique source indices from the pinned draft (for example [1] or [0, 2]). Omit it, or leave it empty, when no cue is removed. Each deleted cue disappears from reviewed-segments.json, transcript.txt and the captions; the retained cues keep their times (unless retimed in timings) and are renumbered contiguously from zero as published. The ledger keeps the original text and timing of every deleted cue and the source-to-published mapping.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "Listing every source index deletes every cue and publishes an empty transcript, an empty SRT and a bare WEBVTT header. That is your declaration that nothing remains to publish, not proof that the recording is silent.",
+            "A duplicate index is DELETION_DUPLICATE, an index beyond the draft is DELETION_INDEX_INVALID at run time, and an index that is also replaced is CORRECTION_DELETION_CONFLICT."
+          ]
+        },
+        "/properties/deletions/items": {
+          "status": "reviewed",
+          "explanation": "One source cue index to delete: a non-negative integer less than the draft cue count, not an object. Replacement and deletion are different members so a replacement can never silently mean deletion.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ]
+        },
+        "/properties/timings": {
+          "status": "reviewed",
+          "explanation": "Optional list of author-edited cue times, at most 512: one entry per cue to retime, each naming the ORIGINAL source index and stating the whole new interval. Omit it when no time changes. The ledger and reviewed document keep the original and the new interval of every retimed cue. The status of a pass that only retimes cues is human-corrected. The edited times are your declaration, not a measurement and not a synchronization certificate.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "Each index appears once (TIMING_DUPLICATE) and is not also deleted (TIMING_DELETION_CONFLICT).",
+            "An entry equal to the cue's existing interval is TIMING_NOOP; an index beyond the draft is TIMING_INDEX_INVALID at run time.",
+            "The retained cues are checked together after all edits, so the order of entries never matters and a cue may move into time a deleted cue held; touching intervals (one cue ending where the next starts) are allowed."
+          ]
+        },
+        "/properties/timings/items": {
+          "status": "reviewed",
+          "explanation": "One timing edit: exactly an index, a startMs and an endMs. A shift or duration is not a member; state both ends of the final interval. Any other key is an unknown argument.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ]
+        },
+        "/properties/timings/items/properties/index": {
+          "status": "reviewed",
+          "explanation": "Zero-based source index of the draft cue to retime, unique across timings and not deleted. It names the cue in the draft segments array, never the published numbering, which is renumbered after deletions.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "After deleting cue 0, the draft cue 2 is still index 2 even though it is published as cue 1."
+          ]
+        },
+        "/properties/timings/items/properties/startMs": {
+          "status": "reviewed",
+          "explanation": "The new start of the cue as an integer number of elapsed milliseconds from the start of the recording, 0 or more and before endMs. Floats, booleans and text are refused, never rounded.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "The cue may not start before the previous retained cue ends (TIMING_OVERLAP)."
+          ]
+        },
+        "/properties/timings/items/properties/endMs": {
+          "status": "reviewed",
+          "explanation": "The new end of the cue as an integer number of elapsed milliseconds, after startMs and at most the audio duration of the draft (rounded up to a whole millisecond). The audio is never extended.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "An end past the audio is TIMING_AFTER_AUDIO; it is never clamped to the duration."
+          ]
+        },
+        "/properties/captionReview": {
+          "status": "reviewed",
+          "explanation": "Optional. When true, also publish caption-review.json recomputed on the retained, corrected cue text and the published (possibly edited) times, with the same fixed editorial duration and density thresholds as transcription. It never alters words or timing and no flags does not mean the captions are accurate, readable or accessible. It is refused (CAPTION_REVIEW_EMPTY) when every cue is deleted, because a report of no cues would read as a pass.",
+          "sources": [
+            "docs/whispercpp.md#cue-timing-edits"
+          ],
+          "pitfalls": [
+            "Thresholds are editorial defaults, not standards."
+          ]
+        }
+      }
+    },
+    "schemaxis.whispercpp.captions/1": {
+      "fields": {
+        "": {
+          "status": "reviewed",
+          "explanation": "Declare one host-only layout pass over a retained timed transcript: the pinned source document and two line bounds. The route publishes captions.srt and captions.vtt in which each cue's text is broken into explicit lines, plus caption-layout.json recording the original text, the lines and the code-point length of every line. Use it when a cue is one long line even after correction, or before handing an SRT to a consumer that wants a few short lines. It replaces isolated single spaces between words with line breaks and nothing else (a run of two or more adjacent spaces is never broken or normalised): every word, cue index and millisecond is unchanged, no cue is split, merged or retimed, and the review status of the source is carried unchanged. It never runs speech recognition, listens to the audio or certifies readability, accessibility or synchronization; it has no native qualification of its own.",
+          "sources": [
+            "docs/whispercpp.md#caption-line-layout",
+            "docs/whispercpp.md#accuracy-and-human-review"
+          ],
+          "pitfalls": [
+            "A line break is not a readability guarantee. Length is counted in Unicode code points (spaces, punctuation and combining marks once each), not grapheme clusters, display width or font metrics, and there is no cue positioning, styling or speaker label.",
+            "Nothing is ever split inside an unbreakable run (a word, or words joined by a no-break space or by two or more adjacent ordinary spaces), truncated or allowed past a bound. A run longer than maxLineCodePoints (LAYOUT_WORD_TOO_LONG) or a cue needing more than maxLines lines (LAYOUT_TOO_MANY_LINES) is refused naming the cue; text in a script written without spaces can be refused although it looks narrow.",
+            "Only an isolated single ordinary space can become a line break. A run of two or more adjacent ordinary spaces is kept exactly as it is inside its unbreakable run, never trimmed or normalised, so a cue that fits is published unchanged and a long run can make a cue refuse. A no-break or ideographic space is not a break opportunity.",
+            "The status, language and digests in the result are the source author's declarations, carried unchanged. The route cannot promote machine-draft to reviewed, and it says nothing about who reviewed the recording.",
+            "A consumer may be stricter than this route: the FFmpeg review movie accepts plain SRT of at most four lines per cue and refuses the characters < > { } and backslash and format or separator characters; this route does not loosen that, and WebVTT player rendering is not certified."
+          ]
+        },
+        "/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.whispercpp.captions/1 for this input contract. It is a separate document from correct/1, correct/2 and correct/3, which edit words, cues and times and are unchanged; this one only moves line breaks. It identifies the document schema of this host-only route, not a whisper.cpp release.",
+          "sources": [
+            "docs/whispercpp.md#caption-line-layout"
+          ]
+        },
+        "/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The one operation of this route is layout: break each cue of the pinned source into at most maxLines lines of at most maxLineCodePoints code points and publish SRT, WebVTT and a layout summary.",
+          "sources": [
+            "docs/whispercpp.md#caption-line-layout"
+          ]
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Names the retained timed transcript to lay out. The run holds its bytes once, checks them against sourceSha256, derives every publication from those held bytes and rechecks the file at the end; later changes to the original do not alter a finished run. Planning never opens it.",
+          "sources": [
+            "docs/whispercpp.md#caption-line-layout"
+          ]
+        },
+        "/properties/source/properties/path": {
+          "status": "reviewed",
+          "explanation": "Choose an absolute local .json path of a whisper.cpp segments.json or of a reviewed-segments.json published by correct/1, correct/2 or correct/3, or supply an earlier job's text artifact with {\"$artifact\":\"correct\",\"index\":0}. The document is read by the shared closed timed-text validator, so a layout never launders an invalid transcript. A reviewed/2 or reviewed/3 document with every cue deleted is accepted and publishes an empty SRT and a WebVTT header.",
+          "sources": [
+            "docs/whispercpp.md#caption-line-layout"
+          ],
+          "pitfalls": [
+            "Relative paths, parent references, a link or device or FIFO or directory in place of a file, and files over 4MiB are refused (INVALID_SOURCE); a file or directory that does not exist is a different fault, SOURCE_MISSING.",
+            "Documents beyond 512 cues, 256 characters per cue or 32768 characters in total are refused by the validator, never truncated."
+          ]
+        },
+        "/properties/sourceSha256": {
+          "status": "reviewed",
+          "explanation": "The lowercase SHA-256 of the exact source bytes you reviewed. The layout applies only if the held bytes hash to it; otherwise the run fails with LAYOUT_SOURCE_STALE. In a workflow the pin of an upstream artifact is the digest of that artifact's bytes, so changing the upstream job invalidates the pin until you review the new output and update it. It is recorded in the summary and the result.",
+          "sources": [
+            "docs/whispercpp.md#caption-line-layout"
+          ],
+          "pitfalls": [
+            "Copy the digest from the document you actually read, not from a newer export.",
+            "If the file changes while the layout runs, the run fails with LAYOUT_SOURCE_CHANGED and nothing is reported as verified."
+          ]
+        },
+        "/properties/maxLineCodePoints": {
+          "status": "reviewed",
+          "explanation": "The most Unicode code points one line may hold, from 8 to 80 inclusive. A cue that already fits stays on one line; otherwise the fewest lines are used, then the most even lines the words allow, then the earliest breaks. Spaces, punctuation and combining marks count once each, so this is not a grapheme, display-width or readability limit.",
+          "units": "Unicode code points of the source cue text, not bytes, UTF-16 units, grapheme clusters or display columns.",
+          "sources": [
+            "docs/whispercpp.md#caption-line-layout"
+          ],
+          "pitfalls": [
+            "Raising it above the longest unbreakable run is the usual remedy for LAYOUT_WORD_TOO_LONG; a larger value is never applied automatically."
+          ]
+        },
+        "/properties/maxLines": {
+          "status": "reviewed",
+          "explanation": "The most lines a cue may be broken into, from 1 to 3 inclusive. maxLines 1 asserts that every cue already fits one line and refuses any that does not; there is no way to ask for more than three lines.",
+          "sources": [
+            "docs/whispercpp.md#caption-line-layout"
+          ],
+          "pitfalls": [
+            "A cue that needs more lines than this is refused (LAYOUT_TOO_MANY_LINES), naming the cue and how many lines it needs; raise maxLines or maxLineCodePoints yourself."
+          ]
+        }
+      }
+    }
+  }
+}

@@ -22,6 +22,14 @@ has one through-bore. This is suitable for dimension studies and downstream
 geometry exchange; no mechanical strength, manufacturability or printer
 suitability is certified.
 
+The 0.5 mm and 1 mm minimums are inclusive: a nominal clearance of exactly the
+minimum is accepted even when typed decimals such as `4.6 - 3.6` fall a few units
+in the last place below it in binary floating point. Planning forgives only a
+1e-9 mm rounding artefact; a real shortfall such as 0.9999 mm still fails with
+`INVALID_CAD_CLEARANCE`, whose message and `observed` fields give the `measured`
+clearance, the `required` minimum and `units`, so the dimension can be corrected
+by the reported amount.
+
 Both operations require `units: "mm"`. Dimensions range from 0.5 to 200 mm;
 height is at most 100 mm. `translation` defaults to `[0,0,0]`; its three mm offsets
 are limited to [-100,100] each. Rotation, scaling, unions, freeform solids,

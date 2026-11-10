@@ -1,0 +1,3159 @@
+{
+  "protocol": "schemaxis.adaptor-qualification/1",
+  "routes": {
+    "schemaxis.hdf5/1": {
+      "protocol": "schemaxis.adaptor-qualification/1",
+      "provider": "hdf5",
+      "documentVersion": "schemaxis.hdf5/1",
+      "mode": "native",
+      "verified": true,
+      "sourceDigest": "sha256:1a05c62b501f52cc4c03ce71ac4e085391ec3ef109573b5b187976302a668855",
+      "recordedAt": "2026-11-05T19:49:39.766449+00:00",
+      "scope": "Only named cases, recorded runtimes and tested lifecycle paths; no qualification beyond these records.",
+      "cases": [
+        {
+          "id": "sensor-run",
+          "scope": "Baseline typed file: counts are range(-5, 3) in a 6x2 big-endian int16 array, so rows 1-3 are [1,4],[7,10],[13,16]; the attached time scale is linspace(0, 2.5, 6) giving 0.5, 1.0, 1.5 s.",
+          "verified": true,
+          "documentDigest": "sha256:e2817891bc727d17400e4b9cf5b171a833ab14bbaa0ef45a5dd56fbe4265e118",
+          "authoredDigest": "sha256:e2817891bc727d17400e4b9cf5b171a833ab14bbaa0ef45a5dd56fbe4265e118",
+          "caseDigest": "sha256:ac482e09e4dbf053a886b277f80dc0cc5cd7dee05741283bcc6c261cbfca0d6b",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "counts_window.csv",
+              "pointer": "/rows",
+              "observed": [
+                [
+                  0.5,
+                  1.0,
+                  4.0
+                ],
+                [
+                  1.0,
+                  7.0,
+                  10.0
+                ],
+                [
+                  1.5,
+                  13.0,
+                  16.0
+                ]
+              ],
+              "expected": [
+                [
+                  0.5,
+                  1,
+                  4
+                ],
+                [
+                  1.0,
+                  7,
+                  10
+                ],
+                [
+                  1.5,
+                  13,
+                  16
+                ]
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "55304217660271e502cc494fa5184473b3bc76b016992c344d5a7372a8a4c6c2"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/datasets/~1run~1raw~1counts/shape",
+              "observed": [
+                6,
+                2
+              ],
+              "expected": [
+                6,
+                2
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "e9c3d8833668c4dad084e0d5c0ec4aca45307559cd3e59b5e39bd1e89080ccaf"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/superblock",
+              "observed": 3,
+              "expected": 3,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "e9c3d8833668c4dad084e0d5c0ec4aca45307559cd3e59b5e39bd1e89080ccaf"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing sensor-run.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered sensor-run.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing counts_window.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered counts_window.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing pressure.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered pressure.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing event_levels.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered event_levels.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing counts_points.npy",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered counts_points.npy",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "campaign",
+          "scope": "Materially different project: run A /signal = 0.5..3.5 fills slots 0-3, run B /signal[1:4] = 5.5..7.5 fills slots 5-7, fill -999 elsewhere; float32 temperatures 293.15..294.5 within float32 relative precision 1e-7.",
+          "verified": true,
+          "documentDigest": "sha256:eec1e11d1da26fa6e9cd9570943e956885f4ad0bc4db30dc65e52c34973efeec",
+          "authoredDigest": "sha256:ef0cc59fbe8b62f07c4b2dde9e7079e0a3d0419247526af0f2df9d39b87af62a",
+          "caseDigest": "sha256:7c2471aecfe5096892640d8d5f1e8a86df6f5a6e431e10b628fa04135a7b3db7",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "stitched.json",
+              "pointer": "/values",
+              "observed": [
+                0.5,
+                1.5,
+                2.5,
+                3.5,
+                -999.0,
+                5.5,
+                6.5,
+                7.5,
+                -999.0,
+                -999.0
+              ],
+              "expected": [
+                0.5,
+                1.5,
+                2.5,
+                3.5,
+                -999.0,
+                5.5,
+                6.5,
+                7.5,
+                -999.0,
+                -999.0
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4a15b99623f0d8023b0cb0cbea47fbcce2f62af4da65ef41f79aee924919f6a5"
+            },
+            {
+              "file": "temperature.csv",
+              "pointer": "/rows",
+              "observed": [
+                [
+                  0.0,
+                  293.1499938964844
+                ],
+                [
+                  0.5,
+                  293.3999938964844
+                ],
+                [
+                  1.0,
+                  294.04998779296875
+                ],
+                [
+                  1.5,
+                  294.5
+                ]
+              ],
+              "expected": [
+                [
+                  0.0,
+                  293.15
+                ],
+                [
+                  0.5,
+                  293.4
+                ],
+                [
+                  1.0,
+                  294.05
+                ],
+                [
+                  1.5,
+                  294.5
+                ]
+              ],
+              "relative": 1e-07,
+              "absolute": 0,
+              "sha256": "4cbfc0cd448857630dc1ffee9ee31f17137d77876b49f9029c9050e8737820d4"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing campaign.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered campaign.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing run-a.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered run-a.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing run-b.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered run-b.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing probe-counts.bin",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered probe-counts.bin",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing stitched.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered stitched.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing temperature.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered temperature.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "inspect-vendor",
+          "scope": "Adoption of a plain-h5py vendor export (superblock 0): six expectations hold and frames_kelvin is unmet because the frames are in counts. Storage audit: the 4 gzip chunks of 12 logical bytes are stored as 20 bytes each (48 logical, 80 allocated per h5py and h5ls), so frames_compressed is unmet at ratio 0.6.",
+          "verified": true,
+          "documentDigest": "sha256:8ce9adae55d699d5022340487b76b95398be2365477f2ff6a149d9fdbd6f11c8",
+          "authoredDigest": "sha256:058125e4ebd582b923a600d8a5c429b5041d0bcd882df0f44f0a64edf3a6cdc2",
+          "caseDigest": "sha256:afc7cbaf243d5cdf150260cf4c93131b985242d2dbe866df3ff7d678885e34f1",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "expectations.json",
+              "pointer": "/met",
+              "observed": 6,
+              "expected": 6,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4cb7d0960fae9f03bc91e50e5a8d311b9a3c5f301424d5ea5bc91e74d352292d"
+            },
+            {
+              "file": "expectations.json",
+              "pointer": "/unmet",
+              "observed": 2,
+              "expected": 2,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4cb7d0960fae9f03bc91e50e5a8d311b9a3c5f301424d5ea5bc91e74d352292d"
+            },
+            {
+              "file": "expectations.json",
+              "pointer": "/decisions/6/reasons",
+              "observed": [
+                "units are ['counts']"
+              ],
+              "expected": [
+                "units are ['counts']"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4cb7d0960fae9f03bc91e50e5a8d311b9a3c5f301424d5ea5bc91e74d352292d"
+            },
+            {
+              "file": "expectations.json",
+              "pointer": "/indeterminate",
+              "observed": 0,
+              "expected": 0,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4cb7d0960fae9f03bc91e50e5a8d311b9a3c5f301424d5ea5bc91e74d352292d"
+            },
+            {
+              "file": "expectations.json",
+              "pointer": "/decisions/7/reasons",
+              "observed": [
+                "compression ratio 0.6"
+              ],
+              "expected": [
+                "compression ratio 0.6"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4cb7d0960fae9f03bc91e50e5a8d311b9a3c5f301424d5ea5bc91e74d352292d"
+            },
+            {
+              "file": "inventory.json",
+              "pointer": "/objects/~1acquisition~1frames/storage",
+              "observed": {
+                "logicalBytes": 48,
+                "allocatedBytes": 80,
+                "chunks": {
+                  "count": 4,
+                  "maxBytes": 20,
+                  "minBytes": 20,
+                  "skippedFilters": 0
+                }
+              },
+              "expected": {
+                "logicalBytes": 48,
+                "allocatedBytes": 80,
+                "chunks": {
+                  "count": 4,
+                  "minBytes": 20,
+                  "maxBytes": 20,
+                  "skippedFilters": 0
+                }
+              },
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "951051ad9ccaaf37e66869b76c1e88e77a47689c7ca4c0c0b0e9f018aca3599b"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing inventory.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered inventory.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing expectations.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered expectations.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "extract-vendor",
+          "scope": "frames = 10*(6t+3y+x); hyperslab t in {1,3}, y in {0,1}, x in {1,2} gives 70,80,100,110,190,200,220,230; the first-pixel column is 0,60,120,180 against time 0..0.75 ms.",
+          "verified": true,
+          "documentDigest": "sha256:94533479a82091835e1ca766a4653b12abe7d88be68b37e6e84809ddcf9547f2",
+          "authoredDigest": "sha256:acbcd0716ea261785d775a8d7f5775d04103a3cbc88f62493ff7f6b79b21c697",
+          "caseDigest": "sha256:d4de41fd4eb01fb42e6c4dfbfed6ad52d6b31994bc034d868005edca007ab801",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "frame_pixels.json",
+              "pointer": "/values",
+              "observed": [
+                70,
+                80,
+                100,
+                110,
+                190,
+                200,
+                220,
+                230
+              ],
+              "expected": [
+                70,
+                80,
+                100,
+                110,
+                190,
+                200,
+                220,
+                230
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4f0ea8ee37fe565cf0dd9f00830fdf8c5f46feafc418eda91bdbf783c0aeae01"
+            },
+            {
+              "file": "first_column.csv",
+              "pointer": "/rows",
+              "observed": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.25,
+                  60.0
+                ],
+                [
+                  0.5,
+                  120.0
+                ],
+                [
+                  0.75,
+                  180.0
+                ]
+              ],
+              "expected": [
+                [
+                  0.0,
+                  0
+                ],
+                [
+                  0.25,
+                  60
+                ],
+                [
+                  0.5,
+                  120
+                ],
+                [
+                  0.75,
+                  180
+                ]
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "b15a7f00d8f731a9ed1d172b36331b59a8f362d2262114b6d8551bea2493eefc"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing frame_pixels.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered frame_pixels.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing first_column.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered first_column.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing log_events.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered log_events.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing time.npy",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered time.npy",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "edit-vendor",
+          "scope": "Edited copy: the created mean series 25,85,145,205 is attached to the time scale (0..0.75 ms) and extracted with those coordinates.",
+          "verified": true,
+          "documentDigest": "sha256:9edf40d51fd532558a47c765766dbfd09810ec1489aab285476d9f556db99b73",
+          "authoredDigest": "sha256:bd5248bff5306881ddf29e8a4541470ec4c120151b92cc34aad4e372e71a4194",
+          "caseDigest": "sha256:d534986ff205e7b0d6f08e6862609005d7c2594282d9de4a0e9a91bb76f6437c",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "mean_counts.csv",
+              "pointer": "/rows",
+              "observed": [
+                [
+                  0.0,
+                  25.0
+                ],
+                [
+                  0.25,
+                  85.0
+                ],
+                [
+                  0.5,
+                  145.0
+                ],
+                [
+                  0.75,
+                  205.0
+                ]
+              ],
+              "expected": [
+                [
+                  0.0,
+                  25
+                ],
+                [
+                  0.25,
+                  85
+                ],
+                [
+                  0.5,
+                  145
+                ],
+                [
+                  0.75,
+                  205
+                ]
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "afc8a1b21095c11ef0d30fc669a0fa17a0ef9d452da43daac16178ef30875985"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/edits",
+              "observed": [
+                "setAttribute",
+                "write",
+                "create",
+                "attachScale",
+                "copy",
+                "move",
+                "relayout",
+                "renameAttribute"
+              ],
+              "expected": [
+                "setAttribute",
+                "write",
+                "create",
+                "attachScale",
+                "copy",
+                "move",
+                "relayout",
+                "renameAttribute"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "659e086f29251c81361d561479903ad9fdcef1ad946a4929471660927cf7bfeb"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing vendor-export-annotated.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered vendor-export-annotated.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing mean_counts.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered mean_counts.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "mesh-fields",
+          "scope": "Two tetrahedra in a 0.1 m cube corner: volumes 1/6 and 1/3 of 0.001 m^3 sum to 5e-4 m^3 with no inverted cell; three XDMF steps.",
+          "verified": true,
+          "documentDigest": "sha256:e68fd3b4e8d85a1f476cb47be0066c19e6871cdf78b806bcf7de7343255b78a4",
+          "authoredDigest": "sha256:e68fd3b4e8d85a1f476cb47be0066c19e6871cdf78b806bcf7de7343255b78a4",
+          "caseDigest": "sha256:71718a550538da32b26633f65b6c524a3ac3b15d97eb227fc0f48e3573254ad2",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/mesh/measures/solid/volume",
+              "observed": 0.0005000000000000001,
+              "expected": 0.0005,
+              "relative": 1e-12,
+              "absolute": 0,
+              "sha256": "4058df1f744a85667a0b869d4bc2a753058bef08caa98f58680f9465b4ed3959"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/mesh/measures/solid/negativeCells",
+              "observed": 0,
+              "expected": 0,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4058df1f744a85667a0b869d4bc2a753058bef08caa98f58680f9465b4ed3959"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/xdmf/steps",
+              "observed": 3,
+              "expected": 3,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4058df1f744a85667a0b869d4bc2a753058bef08caa98f58680f9465b4ed3959"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing cooling-block.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered cooling-block.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing cooling-block.xdmf",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered cooling-block.xdmf",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "swmr-monitor",
+          "scope": "Batches of 2, 1 and 3 rows of width 3 give cumulative 2, 3 and 6 rows, each observed by both concurrent readers.",
+          "verified": true,
+          "documentDigest": "sha256:fac78e10e714e478edfc89c0e9208edc223c28312d24b91c4bc348e95460f42d",
+          "authoredDigest": "sha256:fac78e10e714e478edfc89c0e9208edc223c28312d24b91c4bc348e95460f42d",
+          "caseDigest": "sha256:185effcd1b84099a5852a72d1241a6cd23c928a28ba262896187d359c9d1b305",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/rows",
+              "observed": 6,
+              "expected": 6,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "09a5f09a33455ec96a044a7c78862ee77b130f04fe167a9444ac8bf63babb38b"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/writerTimeline",
+              "observed": [
+                {
+                  "batch": 0,
+                  "rows": 2
+                },
+                {
+                  "batch": 1,
+                  "rows": 3
+                },
+                {
+                  "batch": 2,
+                  "rows": 6
+                }
+              ],
+              "expected": [
+                {
+                  "batch": 0,
+                  "rows": 2
+                },
+                {
+                  "batch": 1,
+                  "rows": 3
+                },
+                {
+                  "batch": 2,
+                  "rows": 6
+                }
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "09a5f09a33455ec96a044a7c78862ee77b130f04fe167a9444ac8bf63babb38b"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/observations",
+              "observed": [
+                {
+                  "reader": 0,
+                  "batchesObserved": 3
+                },
+                {
+                  "reader": 1,
+                  "batchesObserved": 3
+                }
+              ],
+              "expected": [
+                {
+                  "reader": 0,
+                  "batchesObserved": 3
+                },
+                {
+                  "reader": 1,
+                  "batchesObserved": 3
+                }
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "09a5f09a33455ec96a044a7c78862ee77b130f04fe167a9444ac8bf63babb38b"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing monitor.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered monitor.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "compare-runs",
+          "scope": "Run A signal 0.5..3.5 and run B 4.5..7.5 differ by 4 V in all four samples (> 0.5 V tolerance); the run attribute differs (a vs b).",
+          "verified": true,
+          "documentDigest": "sha256:d4a2cef019e9bd6a25b01e96885c5163afd97c52f10c6d09dff1453f07ffdd8d",
+          "authoredDigest": "sha256:8e699cb8ccfb4b22d70a0b4639feb773f84c33af39b21e2923f9b42c4b2d954c",
+          "caseDigest": "sha256:ba4ed206ace9642c1a18d9e3a6f6efd5663dc677a60bb4b8120f0611490d3323",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "comparison.json",
+              "pointer": "/equal",
+              "observed": false,
+              "expected": false,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "0a7fb87dfba6ad9f111f3f27e347dc62cb94b0e9dd199f4228a7ac2c514c84ce"
+            },
+            {
+              "file": "comparison.json",
+              "pointer": "/differences",
+              "observed": [
+                {
+                  "path": "/meta",
+                  "kind": "attributes"
+                },
+                {
+                  "path": "/signal",
+                  "kind": "values",
+                  "count": 4
+                }
+              ],
+              "expected": [
+                {
+                  "path": "/meta",
+                  "kind": "attributes"
+                },
+                {
+                  "path": "/signal",
+                  "kind": "values",
+                  "count": 4
+                }
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "0a7fb87dfba6ad9f111f3f27e347dc62cb94b0e9dd199f4228a7ac2c514c84ce"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing comparison.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered comparison.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "raw-export",
+          "scope": "New external raw file: big-endian uint16 range(1000, 250) over two 8-byte segments reads back 1000..2750; float16 keeps 0.5, 1.0, 1.5 and the half-precision maximum 65504; N-bit + gzip chunking on uint32.",
+          "verified": true,
+          "documentDigest": "sha256:2599b37fb9e23a6f950d5fbf6801863c557c891e3a1e7b2bc3dc2914c8c24092",
+          "authoredDigest": "sha256:2599b37fb9e23a6f950d5fbf6801863c557c891e3a1e7b2bc3dc2914c8c24092",
+          "caseDigest": "sha256:3164060036fd1be4437936b340d9ed224a58b7ff59b5a1793a4991e77d5962d1",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "adc.json",
+              "pointer": "/values",
+              "observed": [
+                1000,
+                1250,
+                1500,
+                1750,
+                2000,
+                2250,
+                2500,
+                2750
+              ],
+              "expected": [
+                1000,
+                1250,
+                1500,
+                1750,
+                2000,
+                2250,
+                2500,
+                2750
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "6455448f39f9f761280c3ff9daa54601aa5b6e98379eebb4783dc477c4701c70"
+            },
+            {
+              "file": "gain.json",
+              "pointer": "/values",
+              "observed": [
+                0.5,
+                1.0,
+                1.5,
+                65504.0
+              ],
+              "expected": [
+                0.5,
+                1.0,
+                1.5,
+                65504.0
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "12fa72ef88cb311ba4bc752bca9e83a4d320f9ce392a3ef063abe4d89f0941a6"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing detector.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered detector.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing adc-frames.bin",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered adc-frames.bin",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing adc.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered adc.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing gain.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered gain.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "import-group",
+          "scope": "Cross-file copy of a vendor acquisition group: the copied frames keep their copied time scale, so the first-pixel profile 0,60,120,180 carries time 0..0.75 ms.",
+          "verified": true,
+          "documentDigest": "sha256:c28f6cbd982633cd76afcec2c52a8c95f16a364bd2f81ab06b0b471443854c82",
+          "authoredDigest": "sha256:8fa70924ede05392007946cefd7b5d18dd8ce78e0ffe89d5f690cba997e8329b",
+          "caseDigest": "sha256:4a9111787232cb24bd89857b82f3a9a2bc14effc4edf92c65275be59bb79ff65",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "imported_first.csv",
+              "pointer": "/rows",
+              "observed": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.25,
+                  60.0
+                ],
+                [
+                  0.5,
+                  120.0
+                ],
+                [
+                  0.75,
+                  180.0
+                ]
+              ],
+              "expected": [
+                [
+                  0.0,
+                  0
+                ],
+                [
+                  0.25,
+                  60
+                ],
+                [
+                  0.5,
+                  120
+                ],
+                [
+                  0.75,
+                  180
+                ]
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "b15a7f00d8f731a9ed1d172b36331b59a8f362d2262114b6d8551bea2493eefc"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing run-a-with-acquisition.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered run-a-with-acquisition.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing imported_first.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered imported_first.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "parallel-write",
+          "scope": "Two MPI ranks: linspace 300..317 K over 6x3 elements sums to 5553 K (min 300, max 317); cell ids 100+7i for i<7 sum to 847; rank 0 writes rows 0-2 and rank 1 rows 3-5 (temperature) / 3-6 (ids).",
+          "verified": true,
+          "documentDigest": "sha256:ee94055a5458d55409a26e6495cf299fe37a7aafc9c8e1eda2f2c9768c4ece6c",
+          "authoredDigest": "sha256:ee94055a5458d55409a26e6495cf299fe37a7aafc9c8e1eda2f2c9768c4ece6c",
+          "caseDigest": "sha256:b39f98650f4eaeb3b4335b409539dc02c1d19044c618546105fdb66727397452",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/parallel/reduction",
+              "observed": {
+                "/field/temperature": {
+                  "count": 18,
+                  "sum": 5553.0,
+                  "minimum": 300.0,
+                  "maximum": 317.0
+                },
+                "/field/cell_id": {
+                  "count": 7,
+                  "sum": 847,
+                  "minimum": 100,
+                  "maximum": 142
+                }
+              },
+              "expected": {
+                "/field/temperature": {
+                  "count": 18,
+                  "sum": 5553.0,
+                  "minimum": 300.0,
+                  "maximum": 317.0
+                },
+                "/field/cell_id": {
+                  "count": 7,
+                  "sum": 847,
+                  "minimum": 100,
+                  "maximum": 142
+                }
+              },
+              "relative": 1e-12,
+              "absolute": 0,
+              "sha256": "d7fabc92757fd13b823e0b84d7575dcb202f4b8019ff2b4328f9a9c020c1994d"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/parallel/partitions",
+              "observed": {
+                "/field/temperature": [
+                  [
+                    0,
+                    3
+                  ],
+                  [
+                    3,
+                    6
+                  ]
+                ],
+                "/field/cell_id": [
+                  [
+                    0,
+                    3
+                  ],
+                  [
+                    3,
+                    7
+                  ]
+                ]
+              },
+              "expected": {
+                "/field/temperature": [
+                  [
+                    0,
+                    3
+                  ],
+                  [
+                    3,
+                    6
+                  ]
+                ],
+                "/field/cell_id": [
+                  [
+                    0,
+                    3
+                  ],
+                  [
+                    3,
+                    7
+                  ]
+                ]
+              },
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "d7fabc92757fd13b823e0b84d7575dcb202f4b8019ff2b4328f9a9c020c1994d"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing parallel-field.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered parallel-field.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "streamed-grid",
+          "scope": "grid = 0.5*(200i+j) over 3000x200 float64 (1600-byte rows); memoryBytes 65536 gives 40-row blocks, so the full extraction streams in 75 blocks; corner hyperslab rows 2990 and 2999, columns 198-199 = 0.5*(200i+j): 299099, 299099.5, 299999, 299999.5.",
+          "verified": true,
+          "documentDigest": "sha256:1e311fa2284ebe1970142de66aac457224e66064a4d20a54346ce8c64274fa56",
+          "authoredDigest": "sha256:1e311fa2284ebe1970142de66aac457224e66064a4d20a54346ce8c64274fa56",
+          "caseDigest": "sha256:74151e3bb739d1b52555a22902c8b27df42be2a1ebf030ab4997f2b6d2cc1099",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/extracts/0/blocks",
+              "observed": 75,
+              "expected": 75,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "2fa703db899f44b1cbf2807fd9c5be3b622422989041dbe2e21ffbb343014cc7"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/extracts/0/count",
+              "observed": 600000,
+              "expected": 600000,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "2fa703db899f44b1cbf2807fd9c5be3b622422989041dbe2e21ffbb343014cc7"
+            },
+            {
+              "file": "corner.json",
+              "pointer": "/values",
+              "observed": [
+                299099.0,
+                299099.5,
+                299999.0,
+                299999.5
+              ],
+              "expected": [
+                299099.0,
+                299099.5,
+                299999.0,
+                299999.5
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "aa83b7f9b7d1558813f578b8f1b257bf511e9fc4731eca295d2e381ff9e17b9c"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing grid.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered grid.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing grid.npy",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered grid.npy",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing corner.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered corner.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "parallel-extract",
+          "scope": "Two MPI ranks each read two of the four frames (10*(6t+3y+x)); the gathered extraction equals the serial values 0..230 and the first-pixel column 0,60,120,180.",
+          "verified": true,
+          "documentDigest": "sha256:17bba39290ea02b99bcc8b4892d9472e0e683844119170d3cde5dccedea6545e",
+          "authoredDigest": "sha256:f644a1f9c4098350972dcd3b85e45c743e831f6d7d54f7f75a1ac6689e71425a",
+          "caseDigest": "sha256:624cda0d90dc4cec4a94c6c4f976fa90e650c35a36aaa77752b3b040ad176c1c",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "frames.json",
+              "pointer": "/values",
+              "observed": [
+                0,
+                10,
+                20,
+                30,
+                40,
+                50,
+                60,
+                70,
+                80,
+                90,
+                100,
+                110,
+                120,
+                130,
+                140,
+                150,
+                160,
+                170,
+                180,
+                190,
+                200,
+                210,
+                220,
+                230
+              ],
+              "expected": [
+                0,
+                10,
+                20,
+                30,
+                40,
+                50,
+                60,
+                70,
+                80,
+                90,
+                100,
+                110,
+                120,
+                130,
+                140,
+                150,
+                160,
+                170,
+                180,
+                190,
+                200,
+                210,
+                220,
+                230
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "3a84939f87fb685569bf9431cfc66981225ba198149d92ed2b6af58c8f2516cd"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/extracts/0/rankRows",
+              "observed": [
+                2,
+                2
+              ],
+              "expected": [
+                2,
+                2
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "da7efde5f57d34a168b0ce2535840f30c337c3061ded911df1ae296f00a9f8e8"
+            },
+            {
+              "file": "first_column.csv",
+              "pointer": "/rows",
+              "observed": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  0.25,
+                  60.0
+                ],
+                [
+                  0.5,
+                  120.0
+                ],
+                [
+                  0.75,
+                  180.0
+                ]
+              ],
+              "expected": [
+                [
+                  0.0,
+                  0
+                ],
+                [
+                  0.25,
+                  60
+                ],
+                [
+                  0.5,
+                  120
+                ],
+                [
+                  0.75,
+                  180
+                ]
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "b15a7f00d8f731a9ed1d172b36331b59a8f362d2262114b6d8551bea2493eefc"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing frames.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered frames.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing first_column.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered first_column.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "human-names",
+          "scope": "Ordinary HDF5 link names with spaces, Unicode (\u00b0C, \u03bc), punctuation (# , \" & < >) and a leading dot: temperature 4x2 float32 [20.5,21; 22.25,23; 24.5,25; 26.75,27] under /Experiment 1 with scale Zeit (s) = 0,0.5,1,1.5; CSV headers quoted where they hold commas or quotes. Compound /Run #2, \"warm\" & <dry>/Messwerte fields \"Zeit (s)\" and \"Druck, kPa\" = (0, 101.25), (0.5, 101.5), extracted in requested (reversed) field order; /Kanal[2] = Druck = 1.5, 2.5, 3.5 kPa, sliced from index 1 through h5dump --no-compact-subset.",
+          "verified": true,
+          "documentDigest": "sha256:a426eb0c30416acf630e9feb74c63c91ff90985724aeef47af9627f2f022681c",
+          "authoredDigest": "sha256:a426eb0c30416acf630e9feb74c63c91ff90985724aeef47af9627f2f022681c",
+          "caseDigest": "sha256:7bcc508544ff5ac7e4a63e8558eff1db1d4b209cf56071f92e58e5c9a5f26bc4",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "temperature.csv",
+              "pointer": "/columns",
+              "observed": [
+                "Zeit (s) [s]",
+                "left, \u00b0C",
+                "right \"\u00b0C\""
+              ],
+              "expected": [
+                "Zeit (s) [s]",
+                "left, \u00b0C",
+                "right \"\u00b0C\""
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "c609b3f3746639210c350d49df549abcc27616b2ebe268c4e1b890916984f165"
+            },
+            {
+              "file": "temperature.csv",
+              "pointer": "/rows",
+              "observed": [
+                [
+                  0.0,
+                  20.5,
+                  21.0
+                ],
+                [
+                  0.5,
+                  22.25,
+                  23.0
+                ],
+                [
+                  1.0,
+                  24.5,
+                  25.0
+                ],
+                [
+                  1.5,
+                  26.75,
+                  27.0
+                ]
+              ],
+              "expected": [
+                [
+                  0.0,
+                  20.5,
+                  21.0
+                ],
+                [
+                  0.5,
+                  22.25,
+                  23.0
+                ],
+                [
+                  1.0,
+                  24.5,
+                  25.0
+                ],
+                [
+                  1.5,
+                  26.75,
+                  27.0
+                ]
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "c609b3f3746639210c350d49df549abcc27616b2ebe268c4e1b890916984f165"
+            },
+            {
+              "file": "readings.csv",
+              "pointer": "/columns",
+              "observed": [
+                "Druck, kPa",
+                "Zeit (s)"
+              ],
+              "expected": [
+                "Druck, kPa",
+                "Zeit (s)"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "3052ca16c8591c3143f1cf80929f8974408031f9bd01f80b762d058357c896c6"
+            },
+            {
+              "file": "readings.csv",
+              "pointer": "/rows",
+              "observed": [
+                [
+                  101.25,
+                  0.0
+                ],
+                [
+                  101.5,
+                  0.5
+                ]
+              ],
+              "expected": [
+                [
+                  101.25,
+                  0.0
+                ],
+                [
+                  101.5,
+                  0.5
+                ]
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "3052ca16c8591c3143f1cf80929f8974408031f9bd01f80b762d058357c896c6"
+            },
+            {
+              "file": "channel.json",
+              "pointer": "/values",
+              "observed": [
+                2.5,
+                3.5
+              ],
+              "expected": [
+                2.5,
+                3.5
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "2c65c558884923379738f316a263e11388972d8c2fee9e50ade013fef12752de"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing lab-notebook.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered lab-notebook.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing temperature.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered temperature.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing channel.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered channel.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing readings.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered readings.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "filter-rows",
+          "scope": "sensor-run.h5: state = IDLE, ACQUIRE, ACQUIRE, ACQUIRE, FAULT, IDLE; pressure (float32) = 101.325, 101.3, 101.27, 101.31, NaN, 101.4; counts (6x2, big-endian int16) = -5+3k. Rows in {ACQUIRE, FAULT} with finite pressure are 1-3: time 0.5/1.0/1.5 s, counts (1,4), (7,10), (13,16). Pressure > 101.305 compares stored float32 values: rows 0, 3, 5 (101.325, 101.31 stored as 101.30999755859375 > 101.305, 101.4). Events with level >= 100: sample 1, code OVR. FAULT rows with finite pressure: none (shape [0, 2]).",
+          "verified": true,
+          "documentDigest": "sha256:1bb697d185e8f197c445e352663ed6e58cf0a46bfc959feae3c1b605cde805a6",
+          "authoredDigest": "sha256:aabebba8b37fca2842493530845934a999295704807242c36e863edb89c8444c",
+          "caseDigest": "sha256:dc2ecfca849c831315bbb4ca02f72a0cb5efb20cc1d141f7327ea68b6bf59478",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "acquiring.csv",
+              "pointer": "/rows",
+              "observed": [
+                [
+                  0.5,
+                  1.0,
+                  4.0
+                ],
+                [
+                  1.0,
+                  7.0,
+                  10.0
+                ],
+                [
+                  1.5,
+                  13.0,
+                  16.0
+                ]
+              ],
+              "expected": [
+                [
+                  0.5,
+                  1,
+                  4
+                ],
+                [
+                  1.0,
+                  7,
+                  10
+                ],
+                [
+                  1.5,
+                  13,
+                  16
+                ]
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "ae4e72b38238b5f29b4c5cb96f558337728494505d94f6bb954518cd22a76a63"
+            },
+            {
+              "file": "high_pressure.json",
+              "pointer": "/values",
+              "observed": [
+                101.32499694824219,
+                101.30999755859375,
+                101.4000015258789
+              ],
+              "expected": [
+                101.325,
+                101.31,
+                101.4
+              ],
+              "relative": 1e-06,
+              "absolute": 0,
+              "sha256": "502e0030912ec26e2fcafde67dd6d580290a758c9c68b53a36df3d2ca8c2a357"
+            },
+            {
+              "file": "overloads.json",
+              "pointer": "/values",
+              "observed": [
+                [
+                  1,
+                  "OVR"
+                ]
+              ],
+              "expected": [
+                [
+                  1,
+                  "OVR"
+                ]
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "fd2de6b32cc91774f17e8fa3ac2c02773c0e8a0a0351d485872c34cfdbb39f18"
+            },
+            {
+              "file": "faults_with_pressure.json",
+              "pointer": "/shape",
+              "observed": [
+                0,
+                2
+              ],
+              "expected": [
+                0,
+                2
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "31d8685de3ed84a5eafb7ab4a74210f88917ba0d244375c56bf5a60e9726b86c"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/extracts/0/where",
+              "observed": {
+                "rows": 3,
+                "of": 6
+              },
+              "expected": {
+                "rows": 3,
+                "of": 6
+              },
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "f783073afafe7db28a3bf4e88e773428331b2a3231e2850ff8f3c996107f3c67"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing acquiring.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered acquiring.csv",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing high_pressure.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered high_pressure.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing overloads.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered overloads.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing faults_with_pressure.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered faults_with_pressure.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "chunk-index",
+          "scope": "sensor-run.h5 /run/raw/counts: 6x2 big-endian int16 -5+3k in 3x2 chunks with shuffle, gzip 6 and Fletcher-32: two allocated chunks at offsets [0,0] and [3,0] whose stored bytes the host checksums, inflates and unshuffles to -5..10 and 13..28; their sizes add up to the 44 allocated bytes h5ls reports.",
+          "verified": true,
+          "documentDigest": "sha256:14a440bd4bf0adbbc16f1d47791ff578cc70ec10545b41a43a9648759c317a66",
+          "authoredDigest": "sha256:b83ed7ef342104c60944474a72dfbdb8f3825f63c3baf4935008dc09361fa036",
+          "caseDigest": "sha256:de1d613d734cfc14d2ed665d07bf0ac2feeadb3e9e57449c27c2f9015a47e7ba",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "counts.chunks.json",
+              "pointer": "/chunkShape",
+              "observed": [
+                3,
+                2
+              ],
+              "expected": [
+                3,
+                2
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "485c2ea282e3d2aeece9126c43ca7dfe86c2e552fc5261f1cf82cd9886f933e3"
+            },
+            {
+              "file": "counts.chunks.json",
+              "pointer": "/filters",
+              "observed": [
+                "shuffle",
+                "gzip",
+                "fletcher32"
+              ],
+              "expected": [
+                "shuffle",
+                "gzip",
+                "fletcher32"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "485c2ea282e3d2aeece9126c43ca7dfe86c2e552fc5261f1cf82cd9886f933e3"
+            },
+            {
+              "file": "counts.chunks.json",
+              "pointer": "/chunks/1/offset",
+              "observed": [
+                3,
+                0
+              ],
+              "expected": [
+                3,
+                0
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "485c2ea282e3d2aeece9126c43ca7dfe86c2e552fc5261f1cf82cd9886f933e3"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/extracts/0/chunks",
+              "observed": {
+                "count": 2,
+                "bytes": 44
+              },
+              "expected": {
+                "count": 2,
+                "bytes": 44
+              },
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "4633ab49b0e5e0612b284cad0ff6c3d3f5b8bbac50be6bd8cd5ada6a6d2f7371"
+            },
+            {
+              "file": "counts_values.json",
+              "pointer": "/values",
+              "observed": [
+                -5,
+                -2,
+                1,
+                4,
+                7,
+                10,
+                13,
+                16,
+                19,
+                22,
+                25,
+                28
+              ],
+              "expected": [
+                -5,
+                -2,
+                1,
+                4,
+                7,
+                10,
+                13,
+                16,
+                19,
+                22,
+                25,
+                28
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "050fb6c2a49bf73e114f90449f89726612b60c5e3640c090105489e62717558a"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing counts.chunks.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered counts.chunks.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing counts_values.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered counts_values.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "copy-chunks",
+          "scope": "A new /archive/counts with the layout of /run/raw/counts (6x2 big-endian int16, 3x2 chunks, shuffle+gzip 6+Fletcher-32) receives both stored chunks unchanged: values -5+3k, and a fresh HDF5 chunk listing shows the same chunk digests and masks as the captured source.",
+          "verified": true,
+          "documentDigest": "sha256:fcf2d738b49ec0f9c06cbbb679e48a411794f8677881c36837dc4d5b9870054d",
+          "authoredDigest": "sha256:a3a0b185078ea564598f73fb343128b8a3be54891253b019b1f21b053671b3fb",
+          "caseDigest": "sha256:3baeeda1500f19fd6e1d7981ece67c0ad408ff96bb3426dd3d85876f48c1b59d",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "archived.json",
+              "pointer": "/values",
+              "observed": [
+                -5,
+                -2,
+                1,
+                4,
+                7,
+                10,
+                13,
+                16,
+                19,
+                22,
+                25,
+                28
+              ],
+              "expected": [
+                -5,
+                -2,
+                1,
+                4,
+                7,
+                10,
+                13,
+                16,
+                19,
+                22,
+                25,
+                28
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "050fb6c2a49bf73e114f90449f89726612b60c5e3640c090105489e62717558a"
+            },
+            {
+              "file": "archived_chunks.chunks.json",
+              "pointer": "/chunks/0/size",
+              "observed": 23,
+              "expected": 23,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "7f6dc52096b5aef97815bd6e3ea6c24fa35dc4a166ae58c61503b58221019757"
+            },
+            {
+              "file": "archived_chunks.chunks.json",
+              "pointer": "/chunks/1/size",
+              "observed": 21,
+              "expected": 21,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "7f6dc52096b5aef97815bd6e3ea6c24fa35dc4a166ae58c61503b58221019757"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/edits",
+              "observed": [
+                "create",
+                "copyChunks"
+              ],
+              "expected": [
+                "create",
+                "copyChunks"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "c1f2c3a4cf858aa0588ea75ccbeca30d64030d5768eff2736abb397c1c3902dc"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing sensor-mirrored.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered sensor-mirrored.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing archived.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered archived.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing archived_chunks.chunks.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered archived_chunks.chunks.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "sieve-columns",
+          "scope": "Contiguous 2000x64 float64 grid g[i,j] = 64i + j read with a 1 MiB data sieve buffer: the strided column rows 0, 500, 1000, 1500 at column 5 are 5, 32005, 64005, 96005; the band rows 1000-1499 x columns 8-11 starts 64008; the extraction open reports the declared sieve size from its file access property list.",
+          "verified": true,
+          "documentDigest": "sha256:179574b66dc8692541bd1c50ae64a166156ad8d6ffed1f8d8196e4bfd43360ec",
+          "authoredDigest": "sha256:179574b66dc8692541bd1c50ae64a166156ad8d6ffed1f8d8196e4bfd43360ec",
+          "caseDigest": "sha256:c7cd1ad4ec446a1efc43243a0173d7640414c49a52c9af73e7b5facffa770817",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "column.json",
+              "pointer": "/values",
+              "observed": [
+                5.0,
+                32005.0,
+                64005.0,
+                96005.0
+              ],
+              "expected": [
+                5,
+                32005,
+                64005,
+                96005
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "b89520e7464b1fddef67afffb67bd497fc6495f8becd24e75b961c8da1b8e050"
+            },
+            {
+              "file": "extract-result.json",
+              "pointer": "/access/sieveBufferBytes",
+              "observed": 1048576,
+              "expected": 1048576,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "eff455287feef8ee33bff8db049613797bf699fa784ac01f356cb2b8a83548b8"
+            },
+            {
+              "file": "readback-result.json",
+              "pointer": "/access/sieveBufferBytes",
+              "observed": 1048576,
+              "expected": 1048576,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "0c1d88f27cb17d0bbec6d004952500a3474639a409271664f9aa45048a23f649"
+            },
+            {
+              "file": "hdf5-report.json",
+              "pointer": "/extracts/1/count",
+              "observed": 2000,
+              "expected": 2000,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "6777d08ab95da7ea959f491ee37514c5fee8ca9d423dcf1847589c645f2f2a7f"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing profiles.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered profiles.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing column.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered column.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing band.npy",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered band.npy",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "large-attributes",
+          "scope": "Attributes above the 64 KiB compact limit on the root (128x160 float32 pixel gains, 80 KiB), a group (256x160 uint16 dark frame 100+k, 80 KiB) and a dataset (9000 float64 lookup table 0..8999, 72 KiB), all objects tracking creation order: the dataset attributes read back as zeta, lookup table, alpha, units in creation order.",
+          "verified": true,
+          "documentDigest": "sha256:3e9bd4d0fb282d624eae16e4aab772bd1b23298a8ee3b22e8ed03dc2bec3ba2c",
+          "authoredDigest": "sha256:3e9bd4d0fb282d624eae16e4aab772bd1b23298a8ee3b22e8ed03dc2bec3ba2c",
+          "caseDigest": "sha256:93dceade178b9f82ad92f70bd37c3afb1a7f7ca07884706a42076a930d8bca9a",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "readback-result.json",
+              "pointer": "/result/objects/~1detector~1counts/attributeOrder",
+              "observed": [
+                "zeta",
+                "lookup table",
+                "alpha",
+                "units"
+              ],
+              "expected": [
+                "zeta",
+                "lookup table",
+                "alpha",
+                "units"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "5163b1c93b5d3b3c763b71d9b7400ca51b1df50d77f6adf1631cb09eedebda9b"
+            },
+            {
+              "file": "readback-result.json",
+              "pointer": "/result/objects/~1detector/attributeOrder",
+              "observed": [
+                "serial",
+                "dark frame",
+                "model"
+              ],
+              "expected": [
+                "serial",
+                "dark frame",
+                "model"
+              ],
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "5163b1c93b5d3b3c763b71d9b7400ca51b1df50d77f6adf1631cb09eedebda9b"
+            },
+            {
+              "file": "readback-result.json",
+              "pointer": "/result/objects/~1detector~1counts/trackOrder",
+              "observed": true,
+              "expected": true,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "5163b1c93b5d3b3c763b71d9b7400ca51b1df50d77f6adf1631cb09eedebda9b"
+            },
+            {
+              "file": "counts.json",
+              "pointer": "/values/31",
+              "observed": 93,
+              "expected": 93,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "f7cf8d207c3f048eb850ca50027fbace30404b2572e0adb9a9299249947710da"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing calibrated.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered calibrated.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing counts.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered counts.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        },
+        {
+          "id": "edit-fields",
+          "scope": "sensor-run.h5 /run/events records (sample uint32, level float64 kPa, code ascii[4], position float32[3]) = (1, 101.3, OVR, [0,0.5,1]), (4, 99.5, LOW, [1,1,1]). Field writes: level of record 1 -> 98.25; code+sample of both -> FIX/10, FIX/40; position of record 0 -> [0.25, 0.5, 0.75]; untouched members keep their stored values. A null-dataspace float64 /run/pending with units kPa is created (no shape, no values).",
+          "verified": true,
+          "documentDigest": "sha256:a2657c913efa3074483f9c9b2498bff355b30f21481da2a8f3c2b1b14ed2621d",
+          "authoredDigest": "sha256:b9862eb92a3c562dbaf10e63265f043c262af4f484d46ef0f7bf6c007ecfe11b",
+          "caseDigest": "sha256:99407812c8a32c5dd814a5001c0e275c73bb3a3b443302aea2750c5fc03475da",
+          "runtime": "h5py 3.16.0 / HDF5 2.0.0 / NumPy 2.5.4",
+          "checks": [
+            {
+              "file": "events.json",
+              "pointer": "/values",
+              "observed": [
+                [
+                  10,
+                  101.3,
+                  "FIX",
+                  [
+                    0.25,
+                    0.5,
+                    0.75
+                  ]
+                ],
+                [
+                  40,
+                  98.25,
+                  "FIX",
+                  [
+                    1.0,
+                    1.0,
+                    1.0
+                  ]
+                ]
+              ],
+              "expected": [
+                [
+                  10,
+                  101.3,
+                  "FIX",
+                  [
+                    0.25,
+                    0.5,
+                    0.75
+                  ]
+                ],
+                [
+                  40,
+                  98.25,
+                  "FIX",
+                  [
+                    1.0,
+                    1.0,
+                    1.0
+                  ]
+                ]
+              ],
+              "relative": 1e-12,
+              "absolute": 0,
+              "sha256": "e37af14bac6e2741287e823d380e86caa0d9c83c299c721e627bacc39deba0c1"
+            },
+            {
+              "file": "readback-result.json",
+              "pointer": "/result/objects/~1run~1pending/null",
+              "observed": true,
+              "expected": true,
+              "relative": 0,
+              "absolute": 0,
+              "sha256": "8c15f0f4510414352c4dec2a0b0931e1678fd8ccd3f3cdbcf5bd9e5782354979"
+            }
+          ],
+          "integrity": [
+            {
+              "check": "missing events-corrected.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered events-corrected.h5",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing events.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered events.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered hdf5-report.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing authored.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered authored.json",
+              "fault": "INVALID_SCHEMA_SNAPSHOT",
+              "verified": true
+            },
+            {
+              "check": "missing plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered plan.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "missing verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            },
+            {
+              "check": "tampered verification.json",
+              "fault": "VERIFICATION_FAILED",
+              "verified": true
+            }
+          ]
+        }
+      ],
+      "lifecycle": [
+        {
+          "check": "native runner timeout",
+          "fault": "RUNNER_TIMED_OUT",
+          "verified": true
+        },
+        {
+          "check": "pre-launch cancellation",
+          "fault": "RUNNER_CANCELLED",
+          "verified": true
+        }
+      ],
+      "host": {
+        "verified": true,
+        "scope": "Fixture schema/planner agreement, deterministic validation and typed defaults; not exhaustive input equivalence.",
+        "checks": [
+          "schema expectation: sensor-run",
+          "valid plan: sensor-run",
+          "deterministic planning: sensor-run",
+          "planner preserves caller input: sensor-run",
+          "schema expectation: campaign",
+          "valid plan: campaign",
+          "deterministic planning: campaign",
+          "planner preserves caller input: campaign",
+          "schema expectation: inspect",
+          "valid plan: inspect",
+          "deterministic planning: inspect",
+          "planner preserves caller input: inspect",
+          "schema expectation: extract",
+          "valid plan: extract",
+          "deterministic planning: extract",
+          "planner preserves caller input: extract",
+          "schema expectation: edit",
+          "valid plan: edit",
+          "deterministic planning: edit",
+          "planner preserves caller input: edit",
+          "schema expectation: compare",
+          "valid plan: compare",
+          "deterministic planning: compare",
+          "planner preserves caller input: compare",
+          "schema expectation: mesh-fields",
+          "valid plan: mesh-fields",
+          "deterministic planning: mesh-fields",
+          "planner preserves caller input: mesh-fields",
+          "schema expectation: swmr-monitor",
+          "valid plan: swmr-monitor",
+          "deterministic planning: swmr-monitor",
+          "planner preserves caller input: swmr-monitor",
+          "schema expectation: raw-export",
+          "valid plan: raw-export",
+          "deterministic planning: raw-export",
+          "planner preserves caller input: raw-export",
+          "schema expectation: import-group",
+          "valid plan: import-group",
+          "deterministic planning: import-group",
+          "planner preserves caller input: import-group",
+          "schema expectation: streamed-grid",
+          "valid plan: streamed-grid",
+          "deterministic planning: streamed-grid",
+          "planner preserves caller input: streamed-grid",
+          "schema expectation: parallel-extract",
+          "valid plan: parallel-extract",
+          "deterministic planning: parallel-extract",
+          "planner preserves caller input: parallel-extract",
+          "schema expectation: human-names",
+          "valid plan: human-names",
+          "deterministic planning: human-names",
+          "planner preserves caller input: human-names",
+          "schema expectation: filter-rows",
+          "valid plan: filter-rows",
+          "deterministic planning: filter-rows",
+          "planner preserves caller input: filter-rows",
+          "schema expectation: chunk-index",
+          "valid plan: chunk-index",
+          "deterministic planning: chunk-index",
+          "planner preserves caller input: chunk-index",
+          "schema expectation: copy-chunks",
+          "valid plan: copy-chunks",
+          "deterministic planning: copy-chunks",
+          "planner preserves caller input: copy-chunks",
+          "schema expectation: sieve-columns",
+          "valid plan: sieve-columns",
+          "deterministic planning: sieve-columns",
+          "planner preserves caller input: sieve-columns",
+          "schema expectation: large-attributes",
+          "valid plan: large-attributes",
+          "deterministic planning: large-attributes",
+          "planner preserves caller input: large-attributes",
+          "schema expectation: edit-fields",
+          "valid plan: edit-fields",
+          "deterministic planning: edit-fields",
+          "planner preserves caller input: edit-fields",
+          "schema expectation: parallel-write",
+          "valid plan: parallel-write",
+          "deterministic planning: parallel-write",
+          "planner preserves caller input: parallel-write",
+          "schema expectation: invalid-scale-length",
+          "exact invalid fault: invalid-scale-length",
+          "planner preserves caller input: invalid-scale-length",
+          "schema expectation: invalid-int-range",
+          "exact invalid fault: invalid-int-range",
+          "planner preserves caller input: invalid-int-range",
+          "schema rejects an undeclared root field",
+          "planner rejects an undeclared root field with a structured fault",
+          "acceptance case matches authored schema: sensor-run",
+          "acceptance case matches authored schema: campaign",
+          "acceptance case matches authored schema: inspect-vendor",
+          "acceptance case matches authored schema: extract-vendor",
+          "acceptance case matches authored schema: edit-vendor",
+          "acceptance case matches authored schema: mesh-fields",
+          "acceptance case matches authored schema: swmr-monitor",
+          "acceptance case matches authored schema: compare-runs",
+          "acceptance case matches authored schema: raw-export",
+          "acceptance case matches authored schema: import-group",
+          "acceptance case matches authored schema: parallel-write",
+          "acceptance case matches authored schema: streamed-grid",
+          "acceptance case matches authored schema: parallel-extract",
+          "acceptance case matches authored schema: human-names",
+          "acceptance case matches authored schema: filter-rows",
+          "acceptance case matches authored schema: chunk-index",
+          "acceptance case matches authored schema: copy-chunks",
+          "acceptance case matches authored schema: sieve-columns",
+          "acceptance case matches authored schema: large-attributes",
+          "acceptance case matches authored schema: edit-fields",
+          "baseline and held-out case produce distinct effective plans",
+          "typed default: createFile.inputs",
+          "typed default: createFile.dependencies",
+          "typed default: createFile.links",
+          "typed default: createFile.extracts",
+          "typed default: editFile.inputs",
+          "typed default: editFile.dependencies",
+          "typed default: editFile.repack",
+          "typed default: editFile.extracts",
+          "typed default: inspectFile.dependencies",
+          "typed default: inspectFile.expectations",
+          "typed default: inspectFile.preview",
+          "typed default: extractData.dependencies",
+          "typed default: writeMeshFields.inputs",
+          "typed default: writeMeshFields.dependencies",
+          "typed default: writeMeshFields.fields",
+          "typed default: writeMeshFields.timeUnits",
+          "typed default: appendSeries.inputs",
+          "typed default: appendSeries.dependencies",
+          "typed default: appendSeries.swmr",
+          "typed default: appendSeries.readers",
+          "typed default: compareFiles.dependencies",
+          "typed default: parallelWrite.ranks",
+          "typed default: parallelWrite.io",
+          "typed default: parallelWrite.reduce"
+        ]
+      }
+    }
+  }
+}

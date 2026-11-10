@@ -150,7 +150,7 @@ def _value(value, spec, location):
         fail('INVALID_PARAMETER', 'string length is outside the declared limits', location)
 
 
-def _validate(manifest, body, *, allow_unfilled=False):
+def _validate(manifest, body, *, allow_unfilled=False, allow_empty_design=False):
     keys(manifest, ('version', 'id', 'revision', 'title', 'workflow', 'parameters', 'outputs', 'requirements'), '$.template')
     if manifest.get('version') != TEMPLATE_VERSION:
         fail('UNSUPPORTED_VERSION', 'expected ' + TEMPLATE_VERSION, '$.template.version')
@@ -193,7 +193,9 @@ def _validate(manifest, body, *, allow_unfilled=False):
     from .unfilled import reject_unfilled
     if not allow_unfilled:
         reject_unfilled(body, allowed=[spec['target']['pointer'] for spec in parameters.values()])
-    operations = workflow.validate(body, allow_unfilled=True)
+    # A design can declare shared parameters before it contains operations.
+    # Exported templates and executable workflows retain their nonempty contract.
+    operations = [] if allow_empty_design and body.get('operations') == [] else workflow.validate(body, allow_unfilled=True)
     providers = sorted({registry.resolve(operation['document'], legacy=True)[0] for operation in operations})
     outputs = manifest.get('outputs')
     keys(outputs, outputs if isinstance(outputs, dict) else (), '$.template.outputs')

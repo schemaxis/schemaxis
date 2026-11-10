@@ -8,7 +8,7 @@
         "assumptions": "Integer constant fps, matching source/timeline pixel dimensions and square progressive frames; Shotcut-bundled melt with matching ffmpeg and ffprobe beside it. Named source files are captured before rendering.",
         "constraints": "One contiguous video track, no gaps/transitions/audio/subtitles/rotation/resizing. At most 16 assets, 128 cuts, 600 frames and 192 MiB of retained/decoded source RGB. Each source must begin at timestamp zero. MLT colour conversion has fixed pixel error bounds.",
         "inspection": "Read back native reloaded MLT profile, asset identities and ordered inclusive ranges; compare every rendered frame with the source-frame selection and require identical original/reloaded render RGB. Inspect verification.json, stages and actual video.",
-        "recovery": "INVALID_SELECTION means an unknown asset name. INVALID_RANGE means a selected range exceeds retained source frames. INVALID_MEDIA needs matching fps/dimensions, silent progressive square pixels and zero-based constant timestamps. INTERPRETER_NOT_FOUND requires Shotcut bundled tools. Preserve failed logs and retry in a fresh directory."
+        "recovery": "INVALID_SELECTION means an unknown asset name. INVALID_RANGE means a selected range exceeds the probed source frame count; the fault reports the asset, clip, requested end and actual source frames and is raised before that asset is decoded and before rendering. VERIFICATION_FAILED naming result publication membership means result.json no longer lists this directory's video, project and project bundle; rerun in a fresh directory rather than editing it. INVALID_MEDIA needs matching fps/dimensions, silent progressive square pixels and zero-based constant timestamps. INTERPRETER_NOT_FOUND requires Shotcut bundled tools. Preserve failed logs and retry in a fresh directory."
       },
       "examples": [
         {
@@ -23,7 +23,8 @@
         }
       ],
       "conformance": [
-        "tests/unit/test_shotcut.py"
+        "tests/unit/test_shotcut.py",
+        "tests/unit/test_shotcut_allocation.py"
       ],
       "acceptance": [
         "tools/qualify_shotcut.py"
@@ -311,6 +312,19 @@
             ]
           }
         ]
+      },
+      "completion": {
+        "scope": "Strengthening of the existing editTimeline route: result.json must name exactly the verified video, project and project bundle of its run directory, and a clip beyond the probed source frame count fails at that asset's probe with structured details. No new operation, native option, format or mapping; GUI editing remains out of scope.",
+        "review": [
+          "verification/2026-10-24-shotcut-allocation.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "The bounded batch timeline route does not implement native-inspection.",
+          "mpi": "The bounded batch timeline route does not implement mpi.",
+          "time-batches": "The bounded batch timeline route does not implement time-batches.",
+          "live-editing": "The bounded batch timeline route does not implement live-editing.",
+          "native-save": "The bounded batch timeline route does not implement native-save."
+        }
       }
     }
   }

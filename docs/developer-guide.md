@@ -46,7 +46,7 @@ parameters change, and evaluate upstream modifiers before copying geometry.
 
 Run the host suite from the quick reference. Native acceptance examples include
 `source-coverage.json`, `extended-coverage.json`, `blender-gallery.json` and
-`blender-showcase.json`. Run `check_gallery.py RUN` and `check_blender.py RUN` for
+`blender-primitives.json`. Run `check_gallery.py RUN` and `check_blender.py RUN` for
 independent geometry checks. The reader fixture script is run with `pvbatch` and
 creates a runnable reader job. Keep bulk evidence in ignored `evidence/`; record a
 compact dated summary in `verification/`.

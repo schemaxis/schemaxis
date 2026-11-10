@@ -123,7 +123,7 @@ class ConsoleApplication:
                     getattr(self.session, action)()
                     return self.session.draft()
                 if action == 'write':
-                    return self.session.write_source(document, revision, value.get('filename'))
+                    return self.session.write_source(document, revision, value.get('filename'), value.get('overwrite') is True)
                 fail('INVALID_REQUEST', 'choose read, source, patch, locate, undo, redo or write')
 
     def inspect_evidence(self, request):

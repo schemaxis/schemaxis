@@ -283,6 +283,7 @@ qualification does not run native QGIS or LibreOffice. Note the consumer limits:
 | `INVALID_ROUTE_CSV`, `ROUTE_WAYPOINT_LIMIT`, `ROUTE_FILE_LIMIT`, `ROUTE_COINCIDENT_WAYPOINTS` | CSV line | Fix the capture as described |
 | `UNSUPPORTED_GEOGRAPHY` | CSV line or `leg i` | Keep within the band; split at the antimeridian |
 | `UNSUPPORTED_ELLIPSOID`, `INVALID_ARGUMENT`, `INVALID_REQUIREMENT`, `REQUIREMENT_NOT_APPLICABLE` | document field | Correct the declaration |
+| `INVALID_ARGUMENT` for a distance that is an integer too large for binary64 | `$.spacing_m` or `$.requirements.*` | Declare a number within the field's range; the document is refused at planning, before any file or native work |
 | `ROUTE_CLOSURE_AMBIGUOUS` | `$.source` | Omit the repeated first waypoint; set `closed` |
 | `ROUTE_LEG_TOO_LONG`, `ROUTE_LEG_TOO_SHORT`, `ROUTE_LATITUDE_EXCURSION`, `ROUTE_TOTAL_TOO_LONG`, `ROUTE_ROW_LIMIT` | `leg i`, `$`, `$.spacing_m` | Add or merge waypoints, split, or increase spacing |
 | `ENDPOINT_GAP_OUTSIDE_DOMAIN` | `$.requirements.endpointGap_m` | Remove the gap requirement or add the closing path as legs |

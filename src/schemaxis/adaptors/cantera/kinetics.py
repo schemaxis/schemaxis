@@ -1,11 +1,11 @@
 # Copyright (C) 2026 David L F Gaden
-"""Independent h2o2 mass-action kinetics and adiabatic closed-reactor histories.
+"""Independent h2o2 mass-action kinetics and closed-reactor thermal histories.
 
 Rate parameters are the public upstream mechanism data retained unchanged in
 kinetics.json. The host evaluates elementary, three-body and Troe falloff rates,
-reverse rates from NASA7 equilibrium constants and the adiabatic constant-pressure
-or constant-volume energy equation, then integrates them with its own L-stable
-Rosenbrock method. No Cantera, NumPy, SUNDIALS or YAML parser is imported here.
+reverse rates from NASA7 equilibrium constants and the constant-pressure
+or constant-volume energy equation including optional fixed-bath heat exchange,
+then integrates them with its own L-stable Rosenbrock method. No Cantera, NumPy, SUNDIALS or YAML parser is imported here.
 """
 import json
 import math
@@ -122,7 +122,7 @@ def production(t,concentrations):
 
 def state(model,constant,y):
     """Return density, pressure, mean weight and concentrations for [T, Y...]."""
-    t = y[0]; fractions = y[1:]
+    t = y[0]; fractions = y[1:N+1]
     weight = 1/sum(v/w for v,w in zip(fractions,WEIGHTS))
     if model == 'constantPressure':
         pressure = constant; density = pressure*weight/(R*t)
@@ -131,20 +131,22 @@ def state(model,constant,y):
     return density,pressure,weight,[density*v/w for v,w in zip(fractions,WEIGHTS)]
 
 
-def derivative(model,constant,y,coefficient=None):
-    """Adiabatic closed ideal-gas reactor: d[T, Y_k]/dt."""
+def derivative(model,constant,y,coefficient=None,thermal=None):
+    """Closed ideal-gas reactor: d[T, Y_k, optional bath heat J/kg]/dt."""
     t = y[0]
     density,_,weight,concentrations = state(model,constant,y)
     coefficient = coefficient or coefficients(t)
     cp,h,_ = coefficient
     production,_ = rates(coefficient,concentrations)
-    heat = R*sum(v/w*c for v,w,c in zip(y[1:],WEIGHTS,cp))
+    heat = R*sum(v/w*c for v,w,c in zip(y[1:N+1],WEIGHTS,cp))
     if model == 'constantPressure':
         release = R*t*sum(e*w for e,w in zip(h,production))
     else:
         heat -= R/weight
         release = R*t*sum((e-1)*w for e,w in zip(h,production))
-    return [-release/(density*heat)]+[w*m/density for w,m in zip(production,WEIGHTS)]
+    heat_input_rate = 0.0 if thermal is None else thermal[0]*(thermal[1]-t)/thermal[2]
+    result = [-release/(density*heat)+heat_input_rate/heat]+[w*m/density for w,m in zip(production,WEIGHTS)]
+    return result if thermal is None else result+[heat_input_rate]
 
 
 def _factor(matrix):
@@ -276,10 +278,13 @@ def _history(prepared):
     settings = prepared['nodes'][1]['options']; model = settings['model']
     t0,pressure,x0,y0 = initial(prepared)
     constant = pressure if model == 'constantPressure' else pressure*math.fsum(v*w for v,w in zip(x0,WEIGHTS))/(R*t0)
-    function = lambda value,frozen=None: derivative(model,constant,value,frozen)
-    trajectory = [(0.0,[t0]+y0)]
+    mass = pressure*math.fsum(v*w for v,w in zip(x0,WEIGHTS))/(R*t0)*prepared['reactor']['volume_m3']
+    thermal = (settings.get('thermalConductance',0),settings.get('bathTemperature',300),mass) if settings.get('thermalConductance',0) > 0 else None
+    function = lambda value,frozen=None: derivative(model,constant,value,frozen,thermal)
+    initial_state = [t0]+y0+([] if thermal is None else [0.0])
+    trajectory = [(0.0,initial_state)]
     stops = sorted({t*(1+s*SHIFT) for t in settings['times'] for s in (-1,0,1) if t > 0})
-    integrate(function,[t0]+y0,0.0,stops,rtol=RTOL,atol=ATOL,max_steps=MAX_STEPS,
+    integrate(function,initial_state,0.0,stops,rtol=RTOL,atol=ATOL,max_steps=MAX_STEPS,
               observe=lambda previous,current:trajectory.append(current),
               freeze=lambda value:coefficients(value[0]))
     return {'trajectory':trajectory,'ignition':crossing([(t,y[0]) for t,y in trajectory],
@@ -314,7 +319,7 @@ def _equilibrium(t,p,x,initial_x):
 
 TOLERANCES = {'elementRelative':1e-9,'energyRelative_cpT0':1e-7,'densityRelative':1e-10,
               'massRelative':1e-10,'rateRelative_grossRate':1e-10,'sampleTimeWindowRelative':SHIFT,
-              'temperature_K':0.5,'moleFraction':1e-6,'ignitionDelayRelative':SHIFT}
+              'thermalEnergyRelative_cpT0':1e-6,'temperature_K':0.5,'moleFraction':1e-6,'ignitionDelayRelative':SHIFT}
 
 
 def verify_history(prepared,rows,native,reopened=None):
@@ -333,7 +338,7 @@ def verify_history(prepared,rows,native,reopened=None):
           'native reactor sample, mass, volume or rate evidence is not a finite real table')
     check(isinstance(reactor.get('initial'),dict) and real(reactor['initial'].get('mass'),reactor['initial'].get('volume')),
           'native initial reactor mass or volume is not a finite real')
-    check(isinstance(reactor.get('steps'),list) and all(isinstance(s,list) and len(s) == 2 and real(*s) for s in reactor['steps']),
+    check(isinstance(reactor.get('steps'),list) and all(isinstance(s,list) and len(s) == 2 and real(*s) and 300 <= s[1] <= 3500 for s in reactor['steps']),
           'native integrator step record is not a finite real table')
     check(reactor['solver'] == {'reactorType':MODELS[model],'rtol':settings['relativeTolerance'],
           'atol':settings['absoluteTolerance'],'maxSteps':settings['maxSteps'],'energy':True,'chemistry':True},
@@ -345,6 +350,16 @@ def verify_history(prepared,rows,native,reopened=None):
     mass = reactor['initial']['mass']
     check(abs(reactor['initial']['volume']-prepared['reactor']['volume_m3']) <= 1e-12 and
           abs(mass/(start[2]*prepared['reactor']['volume_m3'])-1) <= TOLERANCES['massRelative'],'initial reactor volume or mass differs')
+    conductance = settings.get('thermalConductance',0)
+    bath = settings.get('bathTemperature',300)
+    if conductance > 0:
+        wall = reactor.get('thermal')
+        check(isinstance(wall,dict) and real(*wall.values()) and
+              wall == {'conductance_W_K':conductance,'area_m2':1.0,
+              'bathTemperature_K':bath,'emissivity':0.0,'expansionRateCoeff':0.0},
+              'native thermal wall readback differs from the plan')
+    else:
+        check('thermal' not in reactor,'adiabatic reactor has unexpected thermal exchange')
     independent = history(prepared); trajectory = independent['trajectory']
     results = []
     for index,(time,row,sample) in enumerate(zip(times,rows,samples)):
@@ -363,13 +378,25 @@ def verify_history(prepared,rows,native,reopened=None):
         if model == 'constantPressure':
             check(thermo.close(p,pressure),'constant-pressure reactor changed pressure')
             energy_error = abs(row[4]-start[3])
-            check(energy_error <= energy_bound,'adiabatic constant-pressure reactor changed specific enthalpy')
+            if not conductance: check(energy_error <= energy_bound,'adiabatic constant-pressure reactor changed specific enthalpy')
             density_error = 0.0
         else:
             density_error = abs(row[3]/start[2]-1)
             check(density_error <= TOLERANCES['densityRelative'],'constant-volume reactor changed density')
             energy_error = abs(row[5]-start[4])
-            check(energy_error <= energy_bound,'adiabatic constant-volume reactor changed specific internal energy')
+            if not conductance: check(energy_error <= energy_bound,'adiabatic constant-volume reactor changed specific internal energy')
+        heat_input = 0.0
+        if conductance > 0:
+            check(real(sample.get('heatRateOut_W'),sample.get('bathTemperature_K'),sample.get('expansionRate_m3_s')) and
+                  thermo.close(sample['heatRateOut_W'],conductance*(t-bath),absolute=1e-7) and
+                  sample['bathTemperature_K'] == bath and sample['expansionRate_m3_s'] == 0,
+                  'native thermal heat-rate or reservoir readback differs')
+            exact = next((v for stamp,v in trajectory if stamp == time),None)
+            check(exact is not None,'independent heat balance did not reach sample time')
+            heat_input = exact[-1]
+            energy_error = abs(row[4 if model == 'constantPressure' else 5]-start[3 if model == 'constantPressure' else 4]-heat_input)
+            thermal_bound = TOLERANCES['thermalEnergyRelative_cpT0']*start[6]*t0+_jump(min(temperatures),max(temperatures))
+            check(energy_error <= thermal_bound,'reactor energy change differs from independently integrated bath heat')
         check(abs(sample['mass']/mass-1) <= TOLERANCES['massRelative'] and
               abs(sample['mass']/(row[3]*sample['volume'])-1) <= TOLERANCES['massRelative'],'reactor mass is not conserved')
         if model == 'constantVolume':
@@ -380,7 +407,7 @@ def verify_history(prepared,rows,native,reopened=None):
             check(len(observed_rates) == N and all(abs(a-b) <= TOLERANCES['rateRelative_grossRate']*scale+1e-300
                   for a,b in zip(observed_rates,independent_rates)),'native net production rates differ from independent kinetics')
         low,high = time*(1-SHIFT),time*(1+SHIFT)
-        window = [(v[0],_moles(v[1:])) for s,v in trajectory if low <= s <= high]
+        window = [(v[0],_moles(v[1:N+1])) for s,v in trajectory if low <= s <= high]
         check(window,'independent reactor history did not reach a sample window')
         deviation = _outside(t,[w[0] for w in window],TOLERANCES['temperature_K'])
         for k in range(N):
@@ -388,7 +415,7 @@ def verify_history(prepared,rows,native,reopened=None):
             check(deviation_x == 0,'reactor composition differs from independent kinetics near t='+repr(time))
         check(deviation == 0,'reactor temperature differs from independent kinetics near t='+repr(time))
         results.append({'row':index,'elementError_relative':element_error,'energyError_J_kg':energy_error,
-                        'densityError_relative':density_error})
+                        'densityError_relative':density_error,**({} if not conductance else {'independentHeatInput_J_kg':heat_input,'nativeHeatRateOut_W':sample['heatRateOut_W']})})
     threshold = t0+settings['ignitionTemperatureRise']
     steps = reactor['steps']
     check(isinstance(steps,list) and len(steps) >= 2 and steps[0] == [0.0,t0] and
@@ -401,6 +428,7 @@ def verify_history(prepared,rows,native,reopened=None):
         check(abs(delay/reference-1) <= TOLERANCES['ignitionDelayRelative'],'ignition delay differs from independent kinetics')
     final = rows[-1]
     return results,{'criterion':'first time T >= initial T + ignitionTemperatureRise, linear in time between consecutive native integrator steps',
+                    'interpretation':'Temperature-rise crossing; external bath heating can trigger it even for inert gas, so it does not by itself prove chemical ignition.',
                     'rise_K':settings['ignitionTemperatureRise'],'threshold_K':threshold,'delay_s':delay},{
         'finalEquilibriumResidual_RT':_equilibrium(final[1],final[2],final[10:20],x0),
         'independentIgnitionDelay_s':reference}

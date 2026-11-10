@@ -1,8 +1,11 @@
 # Copyright (C) 2026 David L F Gaden
-"""Static, bounded Cycles rendering contract (no Blender imports)."""
+"""Static, bounded rendering contract (no Blender imports)."""
 from schemaxis.core.declarations import validate_arguments
+from .render_policy import RENDERER, COLOUR_MANAGEMENT
 
 RENDER_OPTIONS = {
+    'renderer': RENDERER,
+    'colourManagement': COLOUR_MANAGEMENT,
     'device': {'type': 'enum', 'values': ['CPU', 'CUDA', 'OPTIX'], 'default': 'CPU'},
     'samples': {'type': 'integer', 'minimum': 1, 'maximum': 4096, 'default': 8},
     'threads': {'type': 'integer', 'minimum': 1, 'maximum': 64, 'default': 4},
@@ -20,7 +23,8 @@ RENDER_OPTIONS = {
 
 
 def render_settings(value):
-    return validate_arguments(RENDER_OPTIONS, value, location='$.scenes[0].render')
+    from .render_policy import validate
+    return validate(validate_arguments(RENDER_OPTIONS, value, location='$.scenes[0].render'))
 
 
 def matching(actual, expected):

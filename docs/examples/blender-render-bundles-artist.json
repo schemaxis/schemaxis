@@ -1,0 +1,420 @@
+{
+  "version": "schemaxis.blender.production/1",
+  "id": "artist-bundle",
+  "size": [
+    192,
+    128
+  ],
+  "render": {
+    "renderer": {
+      "kind": "cycles"
+    },
+    "samples": 8,
+    "threads": 2,
+    "worldStrength": 0,
+    "lightEnergy": 0,
+    "colourManagement": {
+      "view": {
+        "kind": "standard"
+      }
+    }
+  },
+  "production": {
+    "units": "metres",
+    "frameStart": 1,
+    "frameEnd": 12,
+    "currentFrame": 1,
+    "objects": [
+      {
+        "id": "panel",
+        "kind": "mesh",
+        "material": "finish",
+        "vertices": [
+          [
+            -1.5,
+            -1,
+            0
+          ],
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            -1.5,
+            1,
+            0
+          ],
+          [
+            1.5,
+            -1,
+            0
+          ],
+          [
+            1.5,
+            1,
+            0
+          ]
+        ],
+        "faces": [
+          [
+            0,
+            1,
+            2,
+            3
+          ],
+          [
+            1,
+            4,
+            5,
+            2
+          ]
+        ]
+      },
+      {
+        "id": "shot",
+        "kind": "camera",
+        "location": [
+          0,
+          0,
+          5
+        ],
+        "projection": "orthographic",
+        "orthographicSize": 4
+      },
+      {
+        "id": "key",
+        "kind": "light",
+        "type": "SUN",
+        "energy": 1
+      }
+    ],
+    "camera": "shot",
+    "surfaceMaterials": [
+      {
+        "id": "finish",
+        "baseColour": {
+          "kind": "constant",
+          "value": [
+            0.04,
+            0.1,
+            0.4
+          ]
+        },
+        "roughness": {
+          "kind": "constant",
+          "value": 0.375
+        }
+      },
+      {
+        "id": "accent",
+        "baseColour": {
+          "kind": "constant",
+          "value": [
+            0.6,
+            0.12,
+            0.03
+          ]
+        },
+        "roughness": {
+          "kind": "constant",
+          "value": 0.75
+        }
+      },
+      {
+        "id": "inspection",
+        "baseColour": {
+          "kind": "constant",
+          "value": [
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "roughness": {
+          "kind": "constant",
+          "value": 0.25
+        }
+      }
+    ],
+    "materialAssignments": [
+      {
+        "id": "panelLayout",
+        "kind": "layout",
+        "object": "panel",
+        "slots": [
+          {
+            "id": "paint",
+            "material": "finish"
+          },
+          {
+            "id": "trim",
+            "material": "accent"
+          }
+        ],
+        "defaultSlot": "paint",
+        "regions": [
+          {
+            "slot": "trim",
+            "selection": {
+              "kind": "faceIndices",
+              "indices": [
+                1
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "worlds": [
+      {
+        "id": "studio",
+        "lighting": {
+          "kind": "colour",
+          "colour": [
+            0.15,
+            0.2,
+            0.25
+          ],
+          "strength": 0.1
+        }
+      },
+      {
+        "id": "warm",
+        "lighting": {
+          "kind": "colour",
+          "colour": [
+            1,
+            0.8,
+            0.6
+          ],
+          "strength": 0.1
+        }
+      }
+    ],
+    "sceneWorld": "studio",
+    "viewLayers": [
+      {
+        "id": "beauty",
+        "passes": [
+          "combined",
+          "depth"
+        ],
+        "aovs": [
+          "roughness",
+          "worldTag"
+        ],
+        "lightgroups": [
+          "keyContribution",
+          "worldContribution"
+        ],
+        "cryptomatte": {
+          "object": true,
+          "material": true,
+          "levels": 4
+        }
+      },
+      {
+        "id": "inspection",
+        "materialOverride": "inspection",
+        "worldOverride": "warm",
+        "passes": [
+          "combined",
+          "normal"
+        ],
+        "aovs": [
+          "roughness",
+          "worldTag"
+        ],
+        "cryptomatte": {
+          "material": true,
+          "levels": 4
+        }
+      }
+    ],
+    "renderAovs": [
+      {
+        "id": "roughness",
+        "type": "value"
+      },
+      {
+        "id": "worldTag",
+        "type": "value"
+      }
+    ],
+    "materialAovs": [
+      {
+        "id": "paintRoughness",
+        "aov": "roughness",
+        "target": {
+          "kind": "material",
+          "material": "finish"
+        },
+        "source": {
+          "kind": "surfaceChannel",
+          "channel": "roughness"
+        }
+      },
+      {
+        "id": "trimRoughness",
+        "aov": "roughness",
+        "target": {
+          "kind": "material",
+          "material": "accent"
+        },
+        "source": {
+          "kind": "surfaceChannel",
+          "channel": "roughness"
+        }
+      },
+      {
+        "id": "overrideRoughness",
+        "aov": "roughness",
+        "target": {
+          "kind": "material",
+          "material": "inspection"
+        },
+        "source": {
+          "kind": "surfaceChannel",
+          "channel": "roughness"
+        }
+      },
+      {
+        "id": "studioTag",
+        "aov": "worldTag",
+        "target": {
+          "kind": "world",
+          "world": "studio"
+        },
+        "source": {
+          "kind": "value",
+          "value": 0.125
+        }
+      },
+      {
+        "id": "warmTag",
+        "aov": "worldTag",
+        "target": {
+          "kind": "world",
+          "world": "warm"
+        },
+        "source": {
+          "kind": "value",
+          "value": 0.875
+        }
+      }
+    ],
+    "renderLightgroups": [
+      {
+        "id": "keyContribution",
+        "lights": [
+          "key"
+        ]
+      },
+      {
+        "id": "worldContribution",
+        "world": true
+      }
+    ],
+    "renderBundles": [
+      {
+        "id": "finishes",
+        "frames": [
+          1
+        ],
+        "camera": "shot",
+        "outputs": [
+          {
+            "kind": "image",
+            "id": "preview",
+            "source": {
+              "kind": "pass",
+              "layer": "beauty",
+              "pass": "combined"
+            },
+            "encoding": {
+              "kind": "png"
+            }
+          },
+          {
+            "kind": "multilayer",
+            "id": "layers",
+            "precision": "float",
+            "compression": "zip",
+            "layers": [
+              {
+                "id": "beauty",
+                "source": {
+                  "kind": "pass",
+                  "layer": "beauty",
+                  "pass": "combined"
+                }
+              },
+              {
+                "id": "roughness",
+                "source": {
+                  "kind": "aov",
+                  "layer": "beauty",
+                  "aov": "roughness"
+                }
+              },
+              {
+                "id": "overrideRoughness",
+                "source": {
+                  "kind": "aov",
+                  "layer": "inspection",
+                  "aov": "roughness"
+                }
+              },
+              {
+                "id": "studioTag",
+                "source": {
+                  "kind": "aov",
+                  "layer": "beauty",
+                  "aov": "worldTag"
+                }
+              },
+              {
+                "id": "warmTag",
+                "source": {
+                  "kind": "aov",
+                  "layer": "inspection",
+                  "aov": "worldTag"
+                }
+              },
+              {
+                "id": "key",
+                "source": {
+                  "kind": "lightgroup",
+                  "layer": "beauty",
+                  "lightgroup": "keyContribution"
+                }
+              },
+              {
+                "id": "world",
+                "source": {
+                  "kind": "lightgroup",
+                  "layer": "beauty",
+                  "lightgroup": "worldContribution"
+                }
+              },
+              {
+                "id": "materials",
+                "source": {
+                  "kind": "cryptomatte",
+                  "layer": "beauty",
+                  "matte": "material"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

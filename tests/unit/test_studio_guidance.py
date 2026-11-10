@@ -251,6 +251,22 @@ class GuidanceToolTests(unittest.TestCase):
 
 
 class SharedDocumentGuidanceTests(unittest.TestCase):
+    def test_choice_reordering_preserves_route_meaning_and_leaves_new_routes_pending(self):
+        path=Path(__file__).resolve().parents[2]/'tools/studio_guidance.py'
+        spec=importlib.util.spec_from_file_location('choice_guidance_tool',path)
+        tool=importlib.util.module_from_spec(spec);spec.loader.exec_module(tool)
+        prefix='/properties/operations/items/properties/document/oneOf/'
+        a={'status':'reviewed','explanation':'Choose A (route a/1) for its reviewed purpose.'}
+        b={'status':'reviewed','explanation':'Choose B (route b/1) for its reviewed purpose.'}
+        guide={'routes':{'schemaxis.workflow/1':{'fields':{prefix+'0':a,prefix+'1':b,'/properties/id':{'status':'pending'}}}}}
+        tool.workflow_choices(guide,['b/1','new/1','a/1'])
+        records=guide['routes']['schemaxis.workflow/1']['fields']
+        self.assertEqual(records[prefix+'0'],b);self.assertEqual(records[prefix+'2'],a)
+        self.assertEqual(records[prefix+'1']['status'],'pending')
+        self.assertIn('new/1',records[prefix+'1']['question'])
+        before=copy.deepcopy(guide);tool.workflow_choices(guide,['b/1','new/1','a/1'])
+        self.assertEqual(guide,before)
+
     def test_workflow_choice_guidance_matches_route_after_provider_insertion(self):
         from schemaxis.schema_authoring import WORKFLOW_VERSIONS
         from schemaxis.studio_guidance import load

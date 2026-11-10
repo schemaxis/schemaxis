@@ -154,6 +154,43 @@ def metadata(meta,prepared,rendered=False):
     if text_count>4194304:fail('VERIFICATION_FAILED','combined native text exceeds four million characters')
 
 
+def _number(value):
+    return type(value) in (int,float) and math.isfinite(value)
+
+
+def _span(box):
+    """Normalized (x0,y0,x1,y1) of a finite raw four-number box, else None; structure is left to metadata()."""
+    if not isinstance(box,list) or len(box)!=4 or not all(_number(v) for v in box): return None
+    return min(box[0],box[2]),min(box[1],box[3]),max(box[0],box[2]),max(box[1],box[3])
+
+
+def preflight_geometry(meta,prepared):
+    """Classify malformed source page boxes before any render, from retained raw values only.
+
+    MuPDF rounds odd /Rotate values, scales by the magnitude of a negative UserUnit and silently
+    substitutes US Letter for a missing/empty MediaBox or a disjoint CropBox. Those are source
+    defects, not evidence defects. Structural/type problems are left to metadata().
+    Live runs only: offline verification of previously retained evidence is unchanged."""
+    pages=meta.get('pages') if isinstance(meta,dict) else None
+    if not isinstance(pages,list) or len(pages)!=len(prepared['pages']): return
+    for index,(number,page) in enumerate(zip(prepared['pages'],pages)):
+        if not isinstance(page,dict): continue
+        def invalid(key,reason):
+            fail('PDF_GEOMETRY_INVALID',f'PDF page {number} has an invalid {key}: {reason}; repair or re-export the source PDF page geometry',
+                 f'$.pages[{index}]',page=number,key=key.split()[0])
+        turn=page.get('inheritedRotation')
+        if _number(turn) and (turn!=int(turn) or turn%90 or abs(turn)>36000):
+            invalid('/Rotate',f'{turn!r} is not a quarter-turn multiple of 90 degrees')
+        unit=page.get('userUnit')
+        if _number(unit) and not 0<unit<=75000: invalid('/UserUnit',f'{unit!r} must be positive and at most 75000')
+        media=_span(page.get('mediaBox'))
+        if 'mediaBox' in page and page['mediaBox'] is None: invalid('/MediaBox','it is missing, so MuPDF would silently substitute US Letter')
+        if media and not (media[2]>media[0] and media[3]>media[1]): invalid('/MediaBox','it has no area, so MuPDF would silently substitute US Letter')
+        crop=_span(page.get('cropBox'))
+        if media and crop and not (min(media[2],crop[2])>max(media[0],crop[0]) and min(media[3],crop[3])>max(media[1],crop[1])):
+            invalid('/CropBox','it does not overlap the MediaBox, so MuPDF would silently substitute US Letter')
+
+
 def geometry(meta,prepared):
     metadata(meta,prepared)
     total=0; dimensions=[]
@@ -230,7 +267,8 @@ def run(document,directory,*,executable=None,timeout=300):
         if runtime!='mutool version 1.28.5': fail('UNSUPPORTED_RUNTIME','this route is qualified against MuPDF 1.28.5; configure that stable runtime')
         for stage in ('inspect','render','readback'):
             (directory/(stage+'.js')).write_text(source(prepared,stage));launch(directory,stage,native[stage],deadline)
-            if stage=='inspect': geometry(read(directory,'inspect.stdout'),prepared)
+            if stage=='inspect':
+                preflight=read(directory,'inspect.stdout');preflight_geometry(preflight,prepared);geometry(preflight,prepared)
         for i,page in enumerate(read(directory,'render.stdout')['pages'],1):
             (directory/f'page-{i:03d}.txt').write_text(page['text'],encoding='utf-8')
         atomic_json(directory/'review-summary.json',inspect(directory,prepared))

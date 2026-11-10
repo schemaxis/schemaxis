@@ -128,6 +128,68 @@ export function expand(context, schema, instance, includeMarkers = false, out = 
   return out;
 }
 
+/** Offer controls only from a uniquely selected literal-discriminator arm.
+ * Ambiguous/undiscriminated alternatives keep their union available. This is a
+ * conservative authoring projection; validation owns the full schema contract.
+ */
+export function excludedFields(nodes, instance, rootSchema) {
+  const result = new Set();
+  if (!isObject(instance)) return result;
+  const assertionKeys = schema => Object.keys(schema).filter(key => !key.startsWith('x-')
+    && !['title','description','default','examples','deprecated','readOnly','writeOnly','$comment'].includes(key));
+  const constant = schema => {
+    if (!isObject(schema)) return undefined;
+    if (hasOwn(schema, 'const') && !isObject(schema.const) && !Array.isArray(schema.const)) return schema.const;
+    // Canonical authored discriminator condition: literal or a composition marker.
+    if (Array.isArray(schema.anyOf) && schema.anyOf.length === 2
+      && isObject(schema.anyOf[0]) && hasOwn(schema.anyOf[0], 'const')
+      && isObject(schema.anyOf[1]) && schema.anyOf[1].type === 'object'
+      && assertionKeys(schema.anyOf[1]).length === 1
+      && !isObject(schema.anyOf[0].const) && !Array.isArray(schema.anyOf[0].const)) return schema.anyOf[0].const;
+    return undefined;
+  };
+  const context = rootSchema ? contextFor(rootSchema) : null;
+  const seen = new Set();
+  function visit(node) {
+    if (!isObject(node) || seen.has(node)) return;
+    seen.add(node);
+    const negative = node.not;
+    if (isObject(negative) && assertionKeys(negative).length === 1) {
+      for (const guard of negative.anyOf || [negative]) {
+        if (isObject(guard) && assertionKeys(guard).length === 1
+          && Array.isArray(guard.required) && guard.required.length === 1
+          && typeof guard.required[0] === 'string') result.add(guard.required[0]);
+      }
+    }
+    if (node.$ref && context) visit(context.resolve(node));
+    for (const branch of node.allOf || []) visit(branch);
+    if (node.if && context) {
+      const selected = evaluateIf(context, node.if, instance);
+      if (selected === true) visit(node.then);
+      if (selected === false) visit(node.else);
+    }
+    for (const keyword of ['anyOf','oneOf']) {
+      const branches = node[keyword];
+      if (!Array.isArray(branches) || branches.length < 2 || branches.some(branch => !isObject(branch))) continue;
+      const arms = branches.map(branch => branch.if !== undefined && branch.else === false
+        ? {condition:branch.if, body:branch.then} : {condition:branch, body:branch});
+      if (arms.some(arm => !isObject(arm.condition) || !isObject(arm.body))) continue;
+      const selections = new Set();
+      for (const key of Object.keys(arms[0].condition.properties || {})) {
+        const values = arms.map(arm => constant(arm.condition.properties?.[key]));
+        if (values.some(value => value === undefined) || new Set(values.map(value => JSON.stringify(value))).size !== arms.length) continue;
+        const index = values.findIndex(value => deepEqual(value, instance[key]));
+        if (index >= 0) selections.add(index);
+      }
+      // Preserve ancestry: an unresolved outer alternative cannot make one of
+      // its resolved nested alternatives authoritative over its siblings.
+      if (selections.size === 1) visit(arms[[...selections][0]].body);
+    }
+  }
+  visit(nodes[0]);
+  return result;
+}
+
 /** Child schemas of a set of nodes for one pointer segment. */
 export function childSchemas(context, nodes, segment) {
   const result = [];
@@ -236,6 +298,13 @@ function matchesArray(context, schema, instance) {
   }
   if (schema.maxItems !== undefined && instance.length > schema.maxItems) {
     return false;
+  }
+  if (schema.contains !== undefined) {
+    const condition = context.adopt(schema, schema.contains);
+    const count = instance.reduce((total, value) => total + (matches(context, condition, value) ? 1 : 0), 0);
+    if (count < (schema.minContains ?? 1) || (schema.maxContains !== undefined && count > schema.maxContains)) {
+      return false;
+    }
   }
   const prefix = Array.isArray(schema.prefixItems) ? schema.prefixItems : [];
   for (let index = 0; index < instance.length; index += 1) {

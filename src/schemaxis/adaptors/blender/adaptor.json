@@ -1,17 +1,23 @@
 {
   "version": "schemaxis.blender/1",
   "declarations": "schemaxis.adaptors.blender.adaptor:DECLARATIONS",
-  "runtimeFamily": "5.2.2",
+  "runtimeFamily": "5.2.3",
   "executables": [
     "blender"
   ],
-  "execution": "background Blender; prepare-only scenes and saved-scene render groups",
+  "execution": "background Blender; editable scene production, rigged motion, procedural nodes and verified frame/geometry outputs",
   "keywords": [
     "meshes",
     "materials",
     "modifiers",
     "rendering",
-    "glTF"
+    "glTF",
+    "view layers",
+    "AOV",
+    "Cryptomatte",
+    "render bundles",
+    "Freestyle",
+    "simulation caches"
   ],
   "id": "blender",
   "adaptor": "schemaxis.adaptors.blender.adaptor",
@@ -78,7 +84,9 @@
         "validateHandoff": "schemaxis.adaptors.blender.integration:validateHandoff",
         "query": "schemaxis.adaptors.blender.integration:query",
         "inspectionSetup": "schemaxis.adaptors.blender.integration:inspectionSetup",
-        "nativeInspection": "schemaxis.adaptors.blender.integration:nativeInspection"
+        "nativeInspection": "schemaxis.adaptors.blender.integration:nativeInspection",
+        "acceptResource": "schemaxis.adaptors.blender.captured_inputs:accept_resource",
+        "capturedInputSchema": "schemaxis.adaptors.blender.captured_inputs:captured_schema"
       },
       "schemaOrder": 1
     },
@@ -99,15 +107,45 @@
         "provisionalResources": "schemaxis.adaptors.blender.integration:provisionalResources",
         "reusableInputs": "schemaxis.adaptors.blender.integration:reusableInputs",
         "validateHandoff": "schemaxis.adaptors.blender.integration:validateHandoff",
-        "query": "schemaxis.adaptors.blender.integration:query"
+        "query": "schemaxis.adaptors.blender.integration:query",
+        "acceptResource": "schemaxis.adaptors.blender.captured_inputs:accept_resource",
+        "capturedInputSchema": "schemaxis.adaptors.blender.captured_inputs:captured_schema"
       },
       "schema": "schemaxis.adaptors.blender.schema:saved_scene_schema",
       "schemaOrder": 4
+    },
+    "schemaxis.blender.production/1": {
+      "module": "schemaxis.adaptors.blender.adaptor",
+      "workflow": true,
+      "scheduled": true,
+      "compose": true,
+      "schemaName": "scene-production",
+      "acceptedArtifacts": [
+        "scene",
+        "gltf",
+        "geometry"
+      ],
+      "planIndex": 2,
+      "schema": "schemaxis.adaptors.blender.production_job:document_schema",
+      "hooks": {
+        "resources": "schemaxis.adaptors.blender.integration:resources",
+        "provisionalResources": "schemaxis.adaptors.blender.integration:provisionalResources",
+        "reusableInputs": "schemaxis.adaptors.blender.integration:reusableInputs",
+        "validateHandoff": "schemaxis.adaptors.blender.integration:validateHandoff",
+        "query": "schemaxis.adaptors.blender.integration:query",
+        "acceptResource": "schemaxis.adaptors.blender.captured_inputs:accept_resource",
+        "capturedInputSchema": "schemaxis.adaptors.blender.captured_inputs:captured_schema"
+      },
+      "schemaOrder": 3,
+      "referenceName": "blender-production",
+      "graphEditing": false,
+      "expand": "identity"
     }
   },
   "sections": {
     "render": "schemaxis.adaptors.blender.schema:render_schema",
-    "saved-scene-render": "schemaxis.adaptors.blender.schema:saved_scene_schema"
+    "saved-scene-render": "schemaxis.adaptors.blender.schema:saved_scene_schema",
+    "scene-production": "schemaxis.adaptors.blender.production_job:document_schema"
   },
   "referenceSettings": {
     "Blender render": "schemaxis.adaptors.blender.settings:RENDER_OPTIONS"

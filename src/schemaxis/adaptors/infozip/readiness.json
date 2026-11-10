@@ -1,0 +1,361 @@
+{
+  "version": "schemaxis.readiness/1",
+  "routes": {
+    "schemaxis.infozip/1": {
+      "guide": "docs/infozip.md",
+      "context": {
+        "purpose": "Package one to sixteen individually selected publication files (captions, transcripts, audio, reports, images) under safe flat names into one portable stored ZIP with an unsigned manifest.json inventory, and prove by an independent host reader that every archive byte equals the captured files. Unsuitable for whole-case preservation or restore (use the core storage preservation action), compression, encryption, sanitising or validating content, or proving who produced the bundle.",
+        "assumptions": "Absolute local regular files, each at most 32 MiB and 64 MiB in total, with flat lowercase ASCII member names and one of the allowed extensions. A configured Info-ZIP Zip 3.0 zip executable creates the archive; verification needs no native program. File bytes are opaque.",
+        "constraints": "Stored members only (method 0): no compression, ZIP64, encryption, extra fields, comments, data descriptors, prefixes or self-extractors. Fixed time 1980-01-01 and mode 0600; original paths, times and permissions are not published. manifest.json is reserved, added last and unsigned. No directory, glob, recursive or symbolic-link input and no authored native flags.",
+        "inspection": "Inspect bundle.zip and bundle-summary.json (archive size and SHA-256, per-member name, bytes, SHA-256, CRC-32 and offsets, manifest record). verify re-reads the whole archive with the strict host reader and the standard zipfile module and compares every member byte with the retained captures in pack/; it runs no native program and does not read the original sources.",
+        "recovery": "INVALID_INFOZIP_NAME: use a flat lowercase name with an allowed extension, not manifest.json, no duplicates. INVALID_INFOZIP_SOURCE: absolute regular local files only (no symlink, directory, FIFO or device), stable while bundling. INFOZIP_BUDGET: at most 32 MiB per file and 64 MiB in total. INVALID_INFOZIP_ARCHIVE: the native archive was not the canonical stored ZIP; rerun. INTERPRETER_NOT_FOUND: configure zip (--infozip, SCHEMAXIS_INFOZIP or a stored location). UNSUPPORTED_RUNTIME: use Info-ZIP Zip 3.0. NATIVE_EXECUTION_FAILED: inspect the stage logs. VERIFICATION_FAILED: the published bytes, retained captures, evidence or JSON types changed; rerun into a fresh directory."
+      },
+      "examples": [
+        {
+          "id": "baseline",
+          "reference": "examples/schemaxis/infozip-baseline.json"
+        },
+        {
+          "id": "variant",
+          "reference": "examples/schemaxis/infozip-variant.json"
+        },
+        {
+          "id": "invalid-source",
+          "reference": "examples/schemaxis/infozip-invalid-source.json",
+          "expect": "invalid",
+          "fault": "INVALID_INFOZIP_SOURCE",
+          "schemaValid": true
+        },
+        {
+          "id": "invalid-name",
+          "reference": "examples/schemaxis/infozip-invalid-name.json",
+          "expect": "invalid",
+          "fault": "INVALID_INFOZIP_NAME",
+          "schemaValid": true
+        }
+      ],
+      "conformance": [
+        "tests/unit/test_infozip.py",
+        "tests/unit/test_infozip_native_boundary.py"
+      ],
+      "acceptance": [
+        "tools/qualify_infozip.py"
+      ],
+      "profiles": {
+        "workflow": {
+          "scope": "Verified file, text and image artifacts from earlier steps (narration, FLAC, summaries, reports) can be bound to member sources; bundle.zip and bundle-summary.json publish through the normal scheduler with provenance.",
+          "references": [
+            "docs/infozip.md",
+            "tools/qualify_infozip.py"
+          ]
+        },
+        "composition": {
+          "scope": "Shared document references, pure expressions and finite studies resolve before the native recipe.",
+          "references": [
+            "docs/infozip.md",
+            "tools/qualify_infozip.py"
+          ]
+        }
+      },
+      "development": {
+        "api": [
+          "https://infozip.sourceforge.net/Zip.html",
+          "https://sourceforge.net/projects/infozip/files/Zip%203.x%20(latest)/3.0/",
+          "https://infozip.sourceforge.net/"
+        ],
+        "lifecycle": {
+          "timeout": "One total deadline covers the version probe and the zip stage; each child has CPU 180 s, address space 2 GiB, output size capped at the archive bound plus 1 MiB and 64 open files. Verification is host-only with a 300 s budget.",
+          "cancellation": "Shared owned process-group cancellation; serial children and a final cancellation/deadline check before publication. A failed run removes bundle.zip, the summary and the receipt and records a failed result.",
+          "logs": "Authored/effective plan, capture record, captured members and manifest in pack/, exact launchers, input bindings, process records (pid and argument array), stage stdout/stderr/submissions and an independently computed summary.",
+          "verification": "Strict stored-ZIP physical reader plus the standard zipfile reader over the complete archive, every member byte compared with the retained capture and manifest.json regenerated from the captures. Native-free: the recorded native recipe is checked, never executed."
+        },
+        "data": [
+          {
+            "id": "member-input",
+            "direction": "input",
+            "kind": "file",
+            "format": "opaque bytes",
+            "traits": {
+              "count": "1-16",
+              "name": "flat lowercase ASCII with one allowed extension"
+            },
+            "losses": [
+              "Original path, timestamp and permissions are not published; the bytes are stored unchanged and are neither validated nor sanitised."
+            ],
+            "scope": "Absolute regular local file or a verified file, text or image artifact, at most 32 MiB each and 64 MiB in total."
+          },
+          {
+            "id": "text-input",
+            "direction": "input",
+            "kind": "text",
+            "format": "opaque bytes",
+            "traits": {
+              "count": "1-16",
+              "examples": "captions, transcripts, JSON summaries, HTML"
+            },
+            "losses": [
+              "A verified text publication is stored as its exact bytes under the chosen name; it is neither re-encoded nor validated."
+            ],
+            "scope": "Text artifact from an earlier workflow step, at most 32 MiB each and 64 MiB in total."
+          },
+          {
+            "id": "image-input",
+            "direction": "input",
+            "kind": "image",
+            "format": "opaque bytes",
+            "traits": {
+              "count": "1-16"
+            },
+            "losses": [
+              "A verified image publication is stored as its exact bytes under the chosen name; pixels are not decoded or checked and metadata is not removed."
+            ],
+            "scope": "Image artifact from an earlier workflow step, at most 32 MiB each and 64 MiB in total."
+          },
+          {
+            "id": "bundle-output",
+            "direction": "output",
+            "kind": "file",
+            "format": "ZIP",
+            "traits": {
+              "compression": "stored",
+              "timestamp": "1980-01-01 00:00:00",
+              "manifest": "manifest.json last, unsigned"
+            },
+            "losses": [
+              "No compression and no signature; the archive is larger than its contents."
+            ],
+            "scope": "One bundle.zip then a text summary."
+          }
+        ],
+        "inspection": [
+          {
+            "panel": "text",
+            "scope": "JSON archive size and SHA-256, per-member names, byte counts, SHA-256, CRC-32 and offsets, and the manifest record.",
+            "limits": "Host-authored summary recomputed during verification; contents are not displayed or interpreted."
+          }
+        ],
+        "authoring": {
+          "model": "document",
+          "example": "baseline",
+          "reuse": "Change the absolute sources. Retain source bytes for provenance; same-path byte changes invalidate scheduler reuse."
+        },
+        "features": {
+          "workflow": {
+            "status": "supported",
+            "scope": "Verified file, text and image artifacts from earlier steps can be bound to member sources through the normal scheduler."
+          },
+          "composition": {
+            "status": "supported",
+            "scope": "Shared document references, pure expressions and finite studies resolve before the native recipe."
+          },
+          "reusable-inputs": {
+            "status": "supported",
+            "scope": "Each absolute source path and its captured byte digest participate in reuse identity."
+          },
+          "source-authoring": {
+            "status": "supported",
+            "scope": "Editable JSON source with common undo and validation."
+          },
+          "property-authoring": {
+            "status": "supported",
+            "scope": "Common pointer forms expose the files list; the contract has no other authored properties."
+          },
+          "conversion": {
+            "status": "unsupported",
+            "scope": "Packaging only: no format conversion, compression or extraction."
+          },
+          "native-inspection": {
+            "status": "unsupported",
+            "scope": "No interactive native inspection; the audio file and its JSON summary are ordinary publications."
+          },
+          "mpi": {
+            "status": "unsupported",
+            "scope": "The recipe is serial; each native process is a single thread."
+          },
+          "time-batches": {
+            "status": "unsupported",
+            "scope": "No temporal batching; common finite studies remain available."
+          },
+          "live-editing": {
+            "status": "unsupported",
+            "scope": "No persistent native session; edit JSON then create a new bounded run."
+          },
+          "native-save": {
+            "status": "unsupported",
+            "scope": "FLAC and WAV publications are supported; there is no application session or project save."
+          }
+        },
+        "cases": [
+          {
+            "id": "baseline",
+            "example": "baseline",
+            "edits": [],
+            "resources": {
+              "/files/0/source": "examples/schemaxis/fixtures/infozip/report.txt",
+              "/files/1/source": "examples/schemaxis/fixtures/infozip/captions.srt",
+              "/files/2/source": "examples/schemaxis/fixtures/infozip/notes.json"
+            },
+            "scope": "Three hand-written fixture files (a text report, an SRT caption file and a JSON note). Byte counts and SHA-256 values are literal expectations computed with sha256sum from the fixture recipe, independent of the adaptor. The decision is the strict host reader comparing every archive byte with the captured files; an independent unzip -p extraction is part of tools/qualify_infozip.py.",
+            "checks": [
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/archive/members",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/archive/compression",
+                "expected": "stored",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/0/bytes",
+                "expected": 107,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/0/sha256",
+                "expected": "007bfc49139426279c66ca79e2b9331b6c627db9ddd01eb672a1830a440cb068",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/1/bytes",
+                "expected": 126,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/1/sha256",
+                "expected": "99b51029522ab9b124e972ad6c80b5d4b515d78257c6706a97691c7ff8bd1035",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/2/bytes",
+                "expected": 67,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/2/sha256",
+                "expected": "8dfa98ba84e3ac0beea6eb00f20c7944f0b44a2cbd8bb88ccd1d5f6644ec806c",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          },
+          {
+            "id": "variant",
+            "example": "variant",
+            "edits": [],
+            "resources": {
+              "/files/0/source": "examples/schemaxis/fixtures/infozip/tone.wav",
+              "/files/1/source": "examples/schemaxis/fixtures/infozip/empty.txt",
+              "/files/2/source": "examples/schemaxis/fixtures/infozip/page.html"
+            },
+            "scope": "A 60-byte hand-built mono WAV (binary), a genuinely empty text file and an HTML page with Unicode content (the content, not the names, is non-ASCII). Literal counts and digests; the empty SHA-256 is the well-known empty-input digest.",
+            "checks": [
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/archive/members",
+                "expected": 4,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/archive/compression",
+                "expected": "stored",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/0/bytes",
+                "expected": 60,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/0/sha256",
+                "expected": "64b5cba2aa161ffde8ca8193b63da2fc4c60b6d0f9a47443d79acf52e9c04fdd",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/1/bytes",
+                "expected": 0,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/1/sha256",
+                "expected": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/2/bytes",
+                "expected": 81,
+                "absolute": 0,
+                "relative": 0
+              },
+              {
+                "file": "bundle-summary.json",
+                "format": "json",
+                "pointer": "/members/2/sha256",
+                "expected": "e90809f8b59770fe68ec455f9fe467cec15b064ceb21f1b7016bed40cc999ade",
+                "absolute": 0,
+                "relative": 0
+              }
+            ]
+          }
+        ]
+      },
+      "completion": {
+        "scope": "New adaptor 2026-10-25: schemaxis.infozip/1 bundle route, independent strict stored-ZIP reader, fixed native Info-ZIP 3.0 stages, native-free byte-for-byte verification against retained captures, discovery, guidance, Studio starter, examples and bounded native acceptance.",
+        "review": [
+          "verification/2026-10-25-infozip-60.md"
+        ],
+        "notApplicable": {
+          "native-inspection": "No interactive native inspection; the archive and its JSON summary are ordinary publications.",
+          "mpi": "The recipe is serial; each native process is a single thread.",
+          "time-batches": "No temporal batching; common finite studies remain available.",
+          "live-editing": "No persistent native session; edit JSON then create a new bounded run.",
+          "native-save": "ZIP and JSON publications are supported; there is no application session or project save.",
+          "conversion": "Packaging only; there is no format conversion, compression or extraction."
+        }
+      }
+    }
+  }
+}

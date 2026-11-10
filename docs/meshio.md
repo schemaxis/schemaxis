@@ -17,11 +17,11 @@ Coordinates are multiplied by source metres-per-unit divided by target
 metres-per-unit, including the origin. For example mm to m multiplies XYZ by
 0.001. Point/cell scalar and vector arrays retain their numeric values: vector
 fields are **not** implicitly displacement, velocity or length. Convert their
-physical units separately when needed. The summary labels tetrahedral volumes
+physical units separately when needed. The summary labels tetrahedral and hexahedral volumes
 in target length units cubed. A unit declaration is a user assertion, not an
 independently measured property of the file.
 
-Only triangle (VTK type 5) and tetra (type 10) cells are accepted, with exactly
+Only triangle (VTK type 5), tetra (type 10) and eight-node hexahedron (type 12) cells are accepted, with exactly
 three coordinates per point. Triangle cross-product magnitude must exceed
 1e-12 times squared maximum vertex distance from its first vertex. A tetra's
 signed determinant `(b-a)·((c-a)×(d-a))` must exceed 1e-12 times that distance
@@ -30,6 +30,9 @@ is a bounded orientation/degeneracy check, not a general mesh quality metric.
 Point order and flattened cell order/connectivity must remain exact, including
 interleaved triangle/tetra blocks. XML comments, block grouping and numeric storage dtypes may
 change. No points are merged, reordered, repaired or remeshed.
+
+Hexahedra use VTK node order and positive sampled trilinear Jacobians; see the
+[geometry contract](meshio-hexahedron.md#geometry-contract) before use.
 
 Data arrays require distinct names `[A-Za-z_][A-Za-z0-9_]{0,63}` and scalar or
 three-vector tuples associated with every point/cell. Finite numbers are
@@ -40,6 +43,11 @@ also compare at relative 1e-8 without an absolute floor, so small cells at a
 large origin cannot pass from coordinate-relative tolerance alone. Float32 input values are interpreted at their declared IEEE
 precision by the independent reader; integer values must fit the declared type.
 meshio VTU ASCII uses about twelve significant digits, motivating the tolerance. XYZ magnitudes are at most 1e9 in both coordinate systems.
+
+ASCII numbers use plain decimal syntax separated only by space, tab, CR or LF.
+Digit-group underscores (`1_0`), hexadecimal, `nan`/`inf` words and other
+control or Unicode separators are malformed content, refused before native
+execution as `INVALID_MESH_CONTENT`; re-export the mesh as ordinary ASCII.
 
 VTU XML bytes must be ASCII (no UTF-16 or NULs), containing a single `UnstructuredGrid/Piece` with inline ASCII DataArrays.
 VTK must be 4.2 ASCII `UNSTRUCTURED_GRID`, using FIELD/FieldData point/cell
@@ -57,7 +65,7 @@ Install meshio 5.3.5 plus NumPy in an isolated environment and configure its
 absolute Python executable under application `meshio`, or pass `--meshio`.
 The Schemaxis host does not import NumPy or meshio. The latest stable meshio
 version is 5.3.5, checked against [PyPI](https://pypi.org/project/meshio/) on
-17 October 2026. Native read/write uses the public
+4 November 2026. Native read/write uses the public
 [meshio API](https://github.com/nschloe/meshio#python-library).
 
 Start from [baseline](../examples/schemaxis/meshio-convert.json) or
@@ -70,7 +78,7 @@ starters, source forms and contextual Help.
 The output includes `mesh.vtk` or `mesh.vtu`, `mesh-summary.json`, captured source,
 authored/effective plans, native scripts/configuration, stdout/stderr/submissions,
 consumed-input digests and a verification record. Inspect bounds, ordered counts,
-array names and signed tetra volumes in the summary; use a compatible viewer for
+array names and signed tetra/hexahedron volumes in the summary; use a compatible viewer for
 geometry. Two isolated native processes perform conversion and fresh reopening.
 Standard-library reference readers independently parse original and output bytes
 and check the unit transform, ordered topology and data. Fresh meshio reopening
@@ -99,3 +107,5 @@ Qualification uses literal fixtures with nonzero origin, interleaved cells,
 positive tetra volume 4 mm³, distinct scalar IDs/regions and three-vector point
 and cell arrays. Baseline converts mm to m; the reverse variant restores mm.
 The bounded release does not claim other meshio formats or binary-file support.
+See [hexahedral volume interchange](meshio-hexahedron.md) for the complete added
+CAE volume scope, geometry checks, native mapping, examples and handoff.

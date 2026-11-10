@@ -5,11 +5,13 @@
       "status": "reviewed",
       "explanation": "Assemble PCM WAV audio excerpts with frame-accurate trim, gain and linear fade envelopes, concatenating processed clips into a verified recording.",
       "sources": [
-        "docs/sox.md#edit-decisions-and-timing"
+        "docs/sox.md#edit-decisions-and-timing",
+        "docs/sox.md#transcription-handoff-and-timeline"
       ],
       "pitfalls": [
         "Integer sample frames give exact half-open source selections; linear amplitude gain precedes nonoverlapping fades.",
-        "Independent PCM reopening checks each processed sample and exact concatenation; source hashes invalidate stale reuse."
+        "Independent PCM reopening checks each processed sample and exact concatenation; source hashes invalidate stale reuse.",
+        "Output time starts at the first frame of audio.wav. Original recording timestamps do not survive trimming or joining; use the summary's rate, exact duration and half-open source/output segment frames to map transcript times back. Assemble never resamples or changes channels; use the conform operation to prepare the result for speech recognition tools that need 16 kHz mono. Speech recognition itself is outside this adaptor."
       ],
       "examples": [
         {
@@ -21,6 +23,85 @@
           "purpose": "Assemble two stereo takes with explicit frame envelopes."
         }
       ]
+    },
+    "conform": {
+      "status": "reviewed",
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
+      "explanation": "Prepare one recording for speech recognition: resample a PCM16 mono or stereo WAV (8000–192000 Hz) to 16000 Hz and reduce it to one channel by an explicit channelPolicy (average, left or right). SoX runs a fixed high-quality chain with dither and normalisation disabled, and the host verifies the output: same-rate samples exactly, the independently low-pass-projected source and resampled output at bounded interior instants within a declared limit. The output keeps the recording time axis.",
+      "sources": [
+        "docs/sox.md#speech-conform",
+        "docs/sox.md#verification-and-its-limit"
+      ],
+      "pitfalls": [
+        "Choose channelPolicy deliberately: average of out-of-phase channels is silence (the summary warns), and right is refused for a mono recording.",
+        "Resampled samples are not claimed bit-exact; only the band below 0.6 of the lower Nyquist (4800 Hz for 16 kHz and above) is compared with the source at bounded interior instants within a declared limit. Higher frequencies, rate-dependent edge margins, very short sources and instants touching native clipping are not compared. Changed passages between sampled windows or below the peak-relative margin can be missed.",
+        "Resampling can saturate full-scale audio; saturated samples are counted and reported, never corrected. No gain, normalisation, denoising, other rate or trimming is offered; use assemble for excerpts or normalise to set the peak level.",
+        "Output frames are round-half-up(source frames*16000/rate), so a transcript made from the output uses the original recording timestamps."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/sox-conform-speech.json",
+          "purpose": "Prepare a 44.1 kHz stereo recording for transcription by averaging channels and resampling to 16 kHz."
+        },
+        {
+          "reference": "examples/schemaxis/sox-conform-left.json",
+          "purpose": "Keep only the left channel of a 48 kHz recording."
+        }
+      ]
+    },
+    "normalise": {
+      "status": "reviewed",
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
+      "explanation": "Scale one PCM16 mono or stereo WAV (8000–192000 Hz) by a single measured gain so that its largest absolute sample equals an explicit targetPeak, leaving predictable headroom for later recording, publishing or encoding steps without calculating a gain by hand. The host measures the peak over every channel, derives the exact gain targetPeak/peak, refuses silence or a boost above maxGain before SoX starts, and then checks every output sample against the exact rational value.",
+      "sources": [
+        "docs/sox.md#peak-headroom",
+        "docs/sox.md#normalise-verification-and-its-limit"
+      ],
+      "pitfalls": [
+        "targetPeak is an integer PCM16 sample magnitude from 1 to 32767, not decibels; 32767 is full scale and 29491 is about 90 percent of it. The level is a sample peak: this is not RMS or loudness normalisation, EBU R128, true-peak or inter-sample control, and says nothing about speech quality or perceived volume.",
+        "maxGain is an explicit ceiling on boost, not a target. A recording that would need more gain is refused with AUDIO_GAIN_LIMIT before SoX starts; the gain is never capped, the target is never lowered and nothing is clipped. A silent recording is refused with AUDIO_SILENT_SOURCE. Attenuation is always allowed.",
+        "Boosting raises the noise floor, hum and quantisation noise by the same ratio as the signal, and maxGain only protects your policy: it cannot tell signal from noise. A NOISE_FLOOR_AMPLIFIED warning marks every boost.",
+        "One common gain keeps the balance between channels; nothing is mixed, resampled, trimmed, faded, dithered, limited or compressed, and sample time is preserved (frame f stays at f/rate; the output is a bare 44-byte WAV, so LIST/INFO metadata of the source is not carried over). A peak reached only by a -32768 sample is attenuated, because PCM16 has no +32768."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/sox-normalise-boost.json",
+          "purpose": "Boost a quiet stereo recording to a peak of 20000 with a maxGain of 8."
+        },
+        {
+          "reference": "examples/schemaxis/sox-normalise-attenuate.json",
+          "purpose": "Attenuate a loud mono recording to a peak of 16384."
+        },
+        {
+          "reference": "examples/schemaxis/sox-normalise-flac-workflow.json",
+          "purpose": "Normalise a recording, then archive the verified result as FLAC."
+        }
+      ]
+    },
+    "mix": {
+      "status": "reviewed",
+      "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
+      "explanation": "Overlay a background recording under a narration to produce one PCM16 WAV: each track has an explicit gain and a sample-frame placement, both recordings must already share rate and channels, and durationPolicy says whether the result ends with the later track or with the narration. SoX pads and sums the tracks; the host recomputes every output sample from the captured sources with exact integer arithmetic and refuses any mix that would clip.",
+      "sources": [
+        "docs/sox.md#two-track-mix",
+        "docs/sox.md#mix-verification-and-its-limit"
+      ],
+      "pitfalls": [
+        "The mix is a plain sample-wise sum with explicit gains: there is no ducking, loudness matching, crossfade, looping, resampling or channel conversion, and nothing is claimed about intelligibility or listening quality.",
+        "Clipping is refused, not repaired: lower a gain or the source level. Each gained term and every exact sum must lie within PCM16, including background frames that durationPolicy narration would cut.",
+        "Output time zero is the first output frame; the narration appears at its offsetFrames, so a transcript of the mix is shifted by that offset relative to the narration recording (the summary states the offsets).",
+        "Gains are decimals with at most four places; mismatched rate or channels are refused (use conform first); rounding is nearest PCM16 with exact ties either way."
+      ],
+      "examples": [
+        {
+          "reference": "examples/schemaxis/sox-mix-baseline.json",
+          "purpose": "Lay a quarter-level mono background under a narration that starts 200 frames in, ending with the longer background."
+        },
+        {
+          "reference": "examples/schemaxis/sox-mix-narration-policy.json",
+          "purpose": "Stereo mix with fractional gains that ends where the narration ends."
+        }
+      ]
     }
   },
   "routes": {
@@ -28,23 +109,32 @@
       "fields": {
         "": {
           "status": "reviewed",
-          "explanation": "Declare an ordered programme of PCM16 recording excerpts. Each clip selects a half-open interval of sample frames, applies amplitude gain and optional linear edge fades, then joins the next clip without overlap. Source rate/channels must match; no resampling or implicit normalisation occurs.",
+          "explanation": "Declare one SoX job. Choose assemble to join trimmed, gained and faded PCM16 excerpts into one recording, conform to turn one recording into PCM16 mono 16000 Hz for speech recognition, normalise to scale one recording to an explicit peak level, or mix to overlay a background recording under a narration with explicit gains and placements. The operation decides which other fields apply; assemble never resamples, conform never edits, normalise changes only the level and mix only sums two tracks.",
           "sources": [
-            "docs/sox.md#edit-decisions-and-timing"
+            "docs/sox.md#edit-decisions-and-timing",
+            "docs/sox.md#speech-conform",
+            "docs/sox.md#peak-headroom",
+            "docs/sox.md#two-track-mix"
           ]
         },
         "/properties/version": {
           "status": "reviewed",
-          "explanation": "Use schemaxis.sox/1 for this bounded edit-decision input contract. This version identifies the document schema, while the native release is SoX 14.4.2.",
+          "explanation": "Use schemaxis.sox/1 for this bounded input contract; it covers assemble, conform, normalise and mix. The version identifies the document schema, while the native release is SoX 14.4.2.",
           "sources": [
             "docs/sox.md#edit-decisions-and-timing"
           ]
         },
         "/properties/operation": {
           "status": "reviewed",
-          "explanation": "Choose assemble to trim, gain and fade excerpts, then concatenate them in list order. This fixed operation publishes one PCM16 WAV and an independently checked summary. It does not mix tracks.",
+          "explanation": "Choose assemble to trim, gain and fade excerpts and concatenate them in list order, conform to resample one recording to 16 kHz and reduce it to one channel, normalise to scale one recording to a targetPeak with a measured gain, or mix to sum a narration and a background track with explicit gains and frame offsets. Each publishes one PCM16 WAV and an independently checked summary.",
           "sources": [
-            "docs/sox.md#edit-decisions-and-timing"
+            "docs/sox.md#edit-decisions-and-timing",
+            "docs/sox.md#speech-conform",
+            "docs/sox.md#peak-headroom",
+            "docs/sox.md#two-track-mix"
+          ],
+          "pitfalls": [
+            "Fields of the other operations are refused: clips belong to assemble, source and channelPolicy to conform, source, targetPeak and maxGain to normalise, narration, background and durationPolicy to mix."
           ]
         },
         "/properties/clips": {
@@ -63,7 +153,7 @@
         },
         "/properties/clips/items/properties/source": {
           "status": "reviewed",
-          "explanation": "Choose an existing absolute local .wav path containing canonical signed PCM16 little-endian mono or stereo audio, 8000\u2013192000 Hz. Every clip must share rate/channels. The runner captures bytes and verifies the capture; the original file is not modified and later source changes invalidate workflow reuse.",
+          "explanation": "Choose an existing absolute local .wav path containing canonical signed PCM16 little-endian mono or stereo audio, 8000–192000 Hz. Every clip must share rate/channels. The runner captures bytes and verifies the capture; the original file is not modified and later source changes invalidate workflow reuse.",
           "sources": [
             "docs/sox.md#edit-decisions-and-timing"
           ],
@@ -125,6 +215,502 @@
             "A one-frame fade-out retains that frame unchanged. Fade-in and fade-out may touch but never overlap."
           ],
           "units": "sample frames"
+        },
+        "/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose the existing absolute local .wav file to conform or normalise: canonical signed PCM16 little-endian, one or two channels, 8000–192000 Hz, at most 32 MiB and 600 seconds. The runner captures its bytes and verifies the capture; the original is not modified and later changes invalidate workflow reuse. A workflow handoff {\"$artifact\":\"earlier\",\"index\":0} supplies a verified earlier WAV.",
+          "sources": [
+            "docs/sox.md#speech-conform",
+            "docs/sox.md#bounds",
+            "docs/sox.md#target-peak-and-boost-ceiling"
+          ],
+          "pitfalls": [
+            "Relative paths, symlinks, devices, compressed, 24-bit, float or three-channel WAV and network sources are rejected.",
+            "conform only: a recording shorter than the resampler needs to give one 16 kHz frame (6 frames at 192000 Hz) is refused.",
+            "normalise only: a silent recording has no peak and is refused with AUDIO_SILENT_SOURCE."
+          ],
+          "fileExtensions": [
+            ".wav"
+          ]
+        },
+        "/properties/channelPolicy": {
+          "status": "reviewed",
+          "explanation": "Required choice of how the recording becomes one channel. average mixes each stereo frame as (left+right+1)>>1, without clipping; left copies channel 1; right copies channel 2. A mono recording accepts average or left and refuses right. There is no default because choosing a channel is a decision about the recording.",
+          "sources": [
+            "docs/sox.md#channel-policy"
+          ],
+          "defaultMeaning": "Omission is refused with MISSING_ARGUMENT; no channel is chosen implicitly.",
+          "pitfalls": [
+            "Averaging channels that are out of phase cancels the sound; the summary warns with CHANNEL_CANCELLATION or SILENT_OUTPUT, and left or right is then the right choice.",
+            "right on a mono source is refused with AUDIO_CHANNEL_POLICY."
+          ]
+        },
+        "/oneOf/0": {
+          "status": "reviewed",
+          "explanation": "Assemble variant of the document: version, operation assemble and one to eight clips. Sources must share rate and channels and no resampling occurs.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/oneOf/0/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.sox/1 for this bounded input contract; it covers assemble, conform, normalise and mix. The version identifies the document schema, while the native release is SoX 14.4.2.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/oneOf/0/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The assemble variant: trim, gain and fade excerpts, then concatenate them in list order. It publishes one PCM16 WAV and never resamples or converts channels.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/oneOf/0/properties/clips": {
+          "status": "reviewed",
+          "explanation": "List one to eight recording excerpts in playback order. Each clip is processed separately before joining, so boundaries remain exact and clips never overlap. Total output may not exceed 262144 frames; the whole-job byte/sample budget also applies.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/oneOf/0/properties/clips/items": {
+          "status": "reviewed",
+          "explanation": "One excerpt from a recording: select source frames, scale amplitude and optionally taper its edges. Reusing the same source in multiple clips is allowed and each capture participates in the aggregate resource budget.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/oneOf/0/properties/clips/items/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose an existing absolute local .wav path containing canonical signed PCM16 little-endian mono or stereo audio, 8000–192000 Hz. Every clip must share rate/channels. The runner captures bytes and verifies the capture; the original file is not modified and later source changes invalidate workflow reuse.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "Relative paths, symlinks, devices, compressed WAV and network sources are rejected."
+          ],
+          "fileExtensions": [
+            ".wav"
+          ]
+        },
+        "/oneOf/0/properties/clips/items/properties/startFrame": {
+          "status": "reviewed",
+          "explanation": "Zero-based source frame where the excerpt begins, default zero. A frame includes one sample for each channel. Together with frameCount it selects [startFrame,startFrame+frameCount), and 48000 frames represent one second at 48000 Hz.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "Do not multiply the frame index by the channel count."
+          ],
+          "units": "sample frames"
+        },
+        "/oneOf/0/properties/clips/items/properties/frameCount": {
+          "status": "reviewed",
+          "explanation": "Number of sample frames to retain, required and positive. The half-open interval must fit inside the recording; the runner rejects an overrun before launching SoX. At 48000 Hz, a value of 48000 selects one second regardless of mono/stereo channels.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "units": "sample frames"
+        },
+        "/oneOf/0/properties/clips/items/properties/gain": {
+          "status": "reviewed",
+          "explanation": "Linear amplitude multiplier between zero and four, default one. For example 0.5 halves amplitude and zero produces silence. It runs before fades and clips that would exceed [-32768,32767] PCM16 at this stage are refused.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "This is an amplitude ratio, not decibels. A later fade does not permit gain clipping."
+          ],
+          "units": "unitless amplitude ratio"
+        },
+        "/oneOf/0/properties/clips/items/properties/fadeInFrames": {
+          "status": "reviewed",
+          "explanation": "Length of the linear fade-in in sample frames, default zero for no fade. For N>0, zero-based frame i<N receives multiplier i/N: the first stored frame is silent and full gain begins at frame N. Its length plus fadeOutFrames must not exceed frameCount.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "A one-frame fade-in silences only the first frame; envelopes apply identically to both channels."
+          ],
+          "units": "sample frames"
+        },
+        "/oneOf/0/properties/clips/items/properties/fadeOutFrames": {
+          "status": "reviewed",
+          "explanation": "Length of the linear fade-out over the end of this excerpt in sample frames, default zero. For M>0, multiplier is (frameCount-i)/M over the last M frames. The final stored frame retains multiplier 1/M; zero lies just after the excerpt.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ],
+          "pitfalls": [
+            "A one-frame fade-out retains that frame unchanged. Fade-in and fade-out may touch but never overlap."
+          ],
+          "units": "sample frames"
+        },
+        "/oneOf/1": {
+          "status": "reviewed",
+          "explanation": "Conform variant of the document: version, operation conform, one source recording and an explicit channelPolicy. The output is always PCM16 mono 16000 Hz.",
+          "sources": [
+            "docs/sox.md#speech-conform"
+          ]
+        },
+        "/oneOf/1/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.sox/1 for this bounded input contract; it covers assemble, conform, normalise and mix. The version identifies the document schema, while the native release is SoX 14.4.2.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/oneOf/1/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The conform variant: resample one recording to 16000 Hz and reduce it to one channel by an explicit policy. It publishes one PCM16 mono WAV that keeps the recording time axis, and it has no editing controls.",
+          "sources": [
+            "docs/sox.md#speech-conform"
+          ]
+        },
+        "/oneOf/1/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose the existing absolute local .wav file to conform: canonical signed PCM16 little-endian, one or two channels, 8000–192000 Hz, at most 32 MiB and 600 seconds. The runner captures its bytes and verifies the capture; the original is not modified and later changes invalidate workflow reuse. A workflow handoff {\"$artifact\":\"earlier\",\"index\":0} supplies a verified earlier WAV.",
+          "sources": [
+            "docs/sox.md#speech-conform",
+            "docs/sox.md#bounds"
+          ],
+          "pitfalls": [
+            "Relative paths, symlinks, devices, compressed, 24-bit, float or three-channel WAV and network sources are rejected.",
+            "A recording shorter than the resampler needs to give one 16 kHz frame (6 frames at 192000 Hz) is refused."
+          ],
+          "fileExtensions": [
+            ".wav"
+          ]
+        },
+        "/oneOf/1/properties/channelPolicy": {
+          "status": "reviewed",
+          "explanation": "Required choice of how the recording becomes one channel. average mixes each stereo frame as (left+right+1)>>1, without clipping; left copies channel 1; right copies channel 2. A mono recording accepts average or left and refuses right. There is no default because choosing a channel is a decision about the recording.",
+          "sources": [
+            "docs/sox.md#channel-policy"
+          ],
+          "defaultMeaning": "Omission is refused with MISSING_ARGUMENT; no channel is chosen implicitly.",
+          "pitfalls": [
+            "Averaging channels that are out of phase cancels the sound; the summary warns with CHANNEL_CANCELLATION or SILENT_OUTPUT, and left or right is then the right choice.",
+            "right on a mono source is refused with AUDIO_CHANNEL_POLICY."
+          ]
+        },
+        "/properties/targetPeak": {
+          "status": "reviewed",
+          "explanation": "Required absolute PCM16 sample magnitude, an integer from 1 to 32767, that the loudest output sample will have. The host measures the largest absolute sample over every channel and scales by the exact fraction targetPeak/peak. 32767 is full scale; 29491 is about 90 percent of full scale and leaves 3276 sample units of headroom for later steps.",
+          "sources": [
+            "docs/sox.md#target-peak-and-boost-ceiling"
+          ],
+          "defaultMeaning": "Omission is refused with MISSING_ARGUMENT; no level is chosen implicitly.",
+          "pitfalls": [
+            "This is not decibels or a loudness target: a value of -3 or 0.9 is refused, and nothing measures RMS, EBU R128 loudness, true peak or perceived volume.",
+            "Values above 32767 are refused because PCM16 has no larger positive sample. A recording whose only largest-magnitude sample is -32768 is always attenuated."
+          ],
+          "units": "PCM16 sample units"
+        },
+        "/properties/maxGain": {
+          "status": "reviewed",
+          "explanation": "Required finite number from 1 to 16: the largest boost you accept. If targetPeak divided by the measured peak exceeds maxGain, the job is refused with AUDIO_GAIN_LIMIT before SoX starts; the gain is never capped and the target is never lowered. A gain exactly equal to maxGain is accepted, and attenuation is always allowed whatever the value. maxGain is compared as an exact fraction of the parsed JSON number's shortest round-trip decimal: 6.6 is 33/5, not the nearby binary float, with no epsilon. JSON parsing first rounds a literal with more digits than a double holds to that double, so 6.59999999999999999999999 is read as 6.6 and compared as 33/5; the exact digits written beyond a double's precision are not preserved.",
+          "sources": [
+            "docs/sox.md#target-peak-and-boost-ceiling"
+          ],
+          "defaultMeaning": "Omission is refused with MISSING_ARGUMENT; no amount of boost is allowed implicitly.",
+          "pitfalls": [
+            "maxGain protects your policy about how far a quiet recording may be amplified. It cannot tell signal from noise: boosting raises the noise floor, hum and quantisation noise by the same ratio as the signal.",
+            "A value below 1 or above 16 is refused; it is an amplitude ratio, not decibels."
+          ],
+          "units": "unitless amplitude ratio"
+        },
+        "/oneOf/2": {
+          "status": "reviewed",
+          "explanation": "Normalise variant of the document: version, operation normalise, one source recording, a required targetPeak and a required maxGain. The output keeps the source rate, channels and frames and is scaled by one measured gain.",
+          "sources": [
+            "docs/sox.md#peak-headroom"
+          ]
+        },
+        "/oneOf/2/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.sox/1 for this bounded input contract; it covers assemble, conform, normalise and mix. The version identifies the document schema, while the native release is SoX 14.4.2.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/oneOf/2/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The normalise variant: scale one recording so its largest absolute sample equals targetPeak. It publishes one PCM16 WAV with the source rate and channels, keeps the recording time axis and has no editing, resampling or mixing controls.",
+          "sources": [
+            "docs/sox.md#peak-headroom"
+          ]
+        },
+        "/oneOf/2/properties/source": {
+          "status": "reviewed",
+          "explanation": "Choose the existing absolute local .wav file to normalise: canonical signed PCM16 little-endian, one or two channels, 8000–192000 Hz, at most 32 MiB and 600 seconds. The runner captures its bytes and verifies the capture; the original is not modified and later changes invalidate workflow reuse. A workflow handoff {\"$artifact\":\"earlier\",\"index\":0} supplies a verified earlier WAV.",
+          "sources": [
+            "docs/sox.md#speech-conform",
+            "docs/sox.md#bounds",
+            "docs/sox.md#target-peak-and-boost-ceiling"
+          ],
+          "pitfalls": [
+            "Relative paths, symlinks, devices, compressed, 24-bit, float or three-channel WAV and network sources are rejected.",
+            "conform only: a recording shorter than the resampler needs to give one 16 kHz frame (6 frames at 192000 Hz) is refused.",
+            "normalise only: a silent recording has no peak and is refused with AUDIO_SILENT_SOURCE."
+          ],
+          "fileExtensions": [
+            ".wav"
+          ]
+        },
+        "/oneOf/2/properties/targetPeak": {
+          "status": "reviewed",
+          "explanation": "Required absolute PCM16 sample magnitude, an integer from 1 to 32767, that the loudest output sample will have. The host measures the largest absolute sample over every channel and scales by the exact fraction targetPeak/peak. 32767 is full scale; 29491 is about 90 percent of full scale and leaves 3276 sample units of headroom for later steps.",
+          "sources": [
+            "docs/sox.md#target-peak-and-boost-ceiling"
+          ],
+          "defaultMeaning": "Omission is refused with MISSING_ARGUMENT; no level is chosen implicitly.",
+          "pitfalls": [
+            "This is not decibels or a loudness target: a value of -3 or 0.9 is refused, and nothing measures RMS, EBU R128 loudness, true peak or perceived volume.",
+            "Values above 32767 are refused because PCM16 has no larger positive sample. A recording whose only largest-magnitude sample is -32768 is always attenuated."
+          ],
+          "units": "PCM16 sample units"
+        },
+        "/oneOf/2/properties/maxGain": {
+          "status": "reviewed",
+          "explanation": "Required finite number from 1 to 16: the largest boost you accept. If targetPeak divided by the measured peak exceeds maxGain, the job is refused with AUDIO_GAIN_LIMIT before SoX starts; the gain is never capped and the target is never lowered. A gain exactly equal to maxGain is accepted, and attenuation is always allowed whatever the value. maxGain is compared as an exact fraction of the parsed JSON number's shortest round-trip decimal: 6.6 is 33/5, not the nearby binary float, with no epsilon. JSON parsing first rounds a literal with more digits than a double holds to that double, so 6.59999999999999999999999 is read as 6.6 and compared as 33/5; the exact digits written beyond a double's precision are not preserved.",
+          "sources": [
+            "docs/sox.md#target-peak-and-boost-ceiling"
+          ],
+          "defaultMeaning": "Omission is refused with MISSING_ARGUMENT; no amount of boost is allowed implicitly.",
+          "pitfalls": [
+            "maxGain protects your policy about how far a quiet recording may be amplified. It cannot tell signal from noise: boosting raises the noise floor, hum and quantisation noise by the same ratio as the signal.",
+            "A value below 1 or above 16 is refused; it is an amplitude ratio, not decibels."
+          ],
+          "units": "unitless amplitude ratio"
+        },
+        "/properties/narration": {
+          "status": "reviewed",
+          "explanation": "The narration track: the primary recording, normally the spoken voice. A mono or stereo PCM16 WAV with its own gain and placement on the output timeline. Both tracks must share the sample rate and channel count; nothing is resampled or channel-converted.",
+          "sources": [
+            "docs/sox.md#mix-tracks"
+          ],
+          "pitfalls": [
+            "Both tracks must match in rate and channels (AUDIO_FORMAT_MISMATCH otherwise); use conform on one of them first."
+          ]
+        },
+        "/properties/narration/properties/source": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the narration recording: a canonical local PCM16 little-endian WAV, mono or stereo, 8000–192000 Hz, with the same rate and channels as the other track. A workflow handoff {\"$artifact\":\"earlier\",\"index\":0} is accepted here. The file is captured once; changing it later invalidates reuse.",
+          "sources": [
+            "docs/sox.md#mix-tracks"
+          ],
+          "pitfalls": [
+            "Relative paths, non-.wav suffixes, compressed or float WAV, RF64 and extensible formats are refused."
+          ]
+        },
+        "/properties/narration/properties/gain": {
+          "status": "reviewed",
+          "explanation": "Amplitude multiplier applied to the narration track, from 0 to 4 with at most four decimal places, default 1. 0.25 is a quarter of the amplitude; 0 mutes the track. The exact mixed value of every sample, and each gained term, must stay within PCM16 (-32768..32767) or the job is refused with AUDIO_CLIPPING before SoX starts.",
+          "sources": [
+            "docs/sox.md#mix-gain-and-clipping"
+          ],
+          "defaultMeaning": "Omission means 1: the track is mixed at its recorded level.",
+          "pitfalls": [
+            "This is an amplitude ratio, not decibels, and is applied sample by sample; it is not ducking or levelling.",
+            "A gain with five or more decimal places such as 0.12345 is refused with INVALID_ARGUMENT, because the exact check depends on a finite decimal."
+          ],
+          "units": "unitless amplitude ratio"
+        },
+        "/properties/narration/properties/offsetFrames": {
+          "status": "reviewed",
+          "explanation": "Placement of the narration track: the number of silent output frames before its first frame, from 0 to 262144, default 0. Source frame k appears at output frame offsetFrames+k, so 8000 frames at 8000 Hz is one second. Whole sample frames only; nothing is trimmed from the source.",
+          "sources": [
+            "docs/sox.md#mix-placement-and-duration"
+          ],
+          "defaultMeaning": "Omission means 0: the track starts at the first output frame.",
+          "pitfalls": [
+            "Frames, not seconds: multiply seconds by the shared sample rate yourself.",
+            "Under durationPolicy narration, a background offsetFrames at or after the narration end is refused (AUDIO_SOURCE_BOUNDS)."
+          ],
+          "units": "sample frames (1/rate seconds)"
+        },
+        "/properties/background": {
+          "status": "reviewed",
+          "explanation": "The background track: the second recording, normally music or room tone laid under the narration. A mono or stereo PCM16 WAV with its own gain and placement on the output timeline. Both tracks must share the sample rate and channel count; nothing is resampled or channel-converted.",
+          "sources": [
+            "docs/sox.md#mix-tracks"
+          ],
+          "pitfalls": [
+            "Both tracks must match in rate and channels (AUDIO_FORMAT_MISMATCH otherwise); use conform on one of them first."
+          ]
+        },
+        "/properties/background/properties/source": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the background recording: a canonical local PCM16 little-endian WAV, mono or stereo, 8000–192000 Hz, with the same rate and channels as the other track. A workflow handoff {\"$artifact\":\"earlier\",\"index\":0} is accepted here. The file is captured once; changing it later invalidates reuse.",
+          "sources": [
+            "docs/sox.md#mix-tracks"
+          ],
+          "pitfalls": [
+            "Relative paths, non-.wav suffixes, compressed or float WAV, RF64 and extensible formats are refused."
+          ]
+        },
+        "/properties/background/properties/gain": {
+          "status": "reviewed",
+          "explanation": "Amplitude multiplier applied to the background track, from 0 to 4 with at most four decimal places, default 1. 0.25 is a quarter of the amplitude; 0 mutes the track. The exact mixed value of every sample, and each gained term, must stay within PCM16 (-32768..32767) or the job is refused with AUDIO_CLIPPING before SoX starts.",
+          "sources": [
+            "docs/sox.md#mix-gain-and-clipping"
+          ],
+          "defaultMeaning": "Omission means 1: the track is mixed at its recorded level.",
+          "pitfalls": [
+            "This is an amplitude ratio, not decibels, and is applied sample by sample; it is not ducking or levelling.",
+            "A gain with five or more decimal places such as 0.12345 is refused with INVALID_ARGUMENT, because the exact check depends on a finite decimal."
+          ],
+          "units": "unitless amplitude ratio"
+        },
+        "/properties/background/properties/offsetFrames": {
+          "status": "reviewed",
+          "explanation": "Placement of the background track: the number of silent output frames before its first frame, from 0 to 262144, default 0. Source frame k appears at output frame offsetFrames+k, so 8000 frames at 8000 Hz is one second. Whole sample frames only; nothing is trimmed from the source.",
+          "sources": [
+            "docs/sox.md#mix-placement-and-duration"
+          ],
+          "defaultMeaning": "Omission means 0: the track starts at the first output frame.",
+          "pitfalls": [
+            "Frames, not seconds: multiply seconds by the shared sample rate yourself.",
+            "Under durationPolicy narration, a background offsetFrames at or after the narration end is refused (AUDIO_SOURCE_BOUNDS)."
+          ],
+          "units": "sample frames (1/rate seconds)"
+        },
+        "/properties/durationPolicy": {
+          "status": "reviewed",
+          "explanation": "Required choice of output length. longest ends the output with the later of the two tracks and pads the earlier one with silence; narration ends the output exactly where the narration ends (its offsetFrames plus its frames) and cuts any background beyond it. A background that starts at or after the narration end is refused with AUDIO_SOURCE_BOUNDS under narration.",
+          "sources": [
+            "docs/sox.md#mix-placement-and-duration"
+          ],
+          "defaultMeaning": "Omission is refused with MISSING_ARGUMENT: the length of the result is a decision about the recordings.",
+          "pitfalls": [
+            "Under narration, the clipping check still covers background frames that are cut, so a loud cut tail can refuse the job.",
+            "Neither policy fades, loops or stretches the background: a shorter background simply ends and leaves silence under the rest."
+          ]
+        },
+        "/oneOf/3": {
+          "status": "reviewed",
+          "explanation": "Mix variant of the document: version, operation mix, a narration track, a background track and a required durationPolicy. Each track has a source, a gain and a frame offset; the output is one PCM16 WAV in the shared rate and channel layout.",
+          "sources": [
+            "docs/sox.md#two-track-mix"
+          ]
+        },
+        "/oneOf/3/properties/version": {
+          "status": "reviewed",
+          "explanation": "Use schemaxis.sox/1 for this bounded input contract; it covers assemble, conform, normalise and mix. The version identifies the document schema, while the native release is SoX 14.4.2.",
+          "sources": [
+            "docs/sox.md#edit-decisions-and-timing"
+          ]
+        },
+        "/oneOf/3/properties/operation": {
+          "status": "reviewed",
+          "explanation": "The mix variant: overlay a background track under a narration with explicit gains and frame placements. It publishes one PCM16 WAV in the tracks' shared rate and channels, refuses any mix that would clip, and has no ducking, resampling, channel conversion or crossfade controls.",
+          "sources": [
+            "docs/sox.md#two-track-mix"
+          ]
+        },
+        "/oneOf/3/properties/narration": {
+          "status": "reviewed",
+          "explanation": "The narration track: the primary recording, normally the spoken voice. A mono or stereo PCM16 WAV with its own gain and placement on the output timeline. Both tracks must share the sample rate and channel count; nothing is resampled or channel-converted.",
+          "sources": [
+            "docs/sox.md#mix-tracks"
+          ],
+          "pitfalls": [
+            "Both tracks must match in rate and channels (AUDIO_FORMAT_MISMATCH otherwise); use conform on one of them first."
+          ]
+        },
+        "/oneOf/3/properties/narration/properties/source": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the narration recording: a canonical local PCM16 little-endian WAV, mono or stereo, 8000–192000 Hz, with the same rate and channels as the other track. A workflow handoff {\"$artifact\":\"earlier\",\"index\":0} is accepted here. The file is captured once; changing it later invalidates reuse.",
+          "sources": [
+            "docs/sox.md#mix-tracks"
+          ],
+          "pitfalls": [
+            "Relative paths, non-.wav suffixes, compressed or float WAV, RF64 and extensible formats are refused."
+          ]
+        },
+        "/oneOf/3/properties/narration/properties/gain": {
+          "status": "reviewed",
+          "explanation": "Amplitude multiplier applied to the narration track, from 0 to 4 with at most four decimal places, default 1. 0.25 is a quarter of the amplitude; 0 mutes the track. The exact mixed value of every sample, and each gained term, must stay within PCM16 (-32768..32767) or the job is refused with AUDIO_CLIPPING before SoX starts.",
+          "sources": [
+            "docs/sox.md#mix-gain-and-clipping"
+          ],
+          "defaultMeaning": "Omission means 1: the track is mixed at its recorded level.",
+          "pitfalls": [
+            "This is an amplitude ratio, not decibels, and is applied sample by sample; it is not ducking or levelling.",
+            "A gain with five or more decimal places such as 0.12345 is refused with INVALID_ARGUMENT, because the exact check depends on a finite decimal."
+          ],
+          "units": "unitless amplitude ratio"
+        },
+        "/oneOf/3/properties/narration/properties/offsetFrames": {
+          "status": "reviewed",
+          "explanation": "Placement of the narration track: the number of silent output frames before its first frame, from 0 to 262144, default 0. Source frame k appears at output frame offsetFrames+k, so 8000 frames at 8000 Hz is one second. Whole sample frames only; nothing is trimmed from the source.",
+          "sources": [
+            "docs/sox.md#mix-placement-and-duration"
+          ],
+          "defaultMeaning": "Omission means 0: the track starts at the first output frame.",
+          "pitfalls": [
+            "Frames, not seconds: multiply seconds by the shared sample rate yourself.",
+            "Under durationPolicy narration, a background offsetFrames at or after the narration end is refused (AUDIO_SOURCE_BOUNDS)."
+          ],
+          "units": "sample frames (1/rate seconds)"
+        },
+        "/oneOf/3/properties/background": {
+          "status": "reviewed",
+          "explanation": "The background track: the second recording, normally music or room tone laid under the narration. A mono or stereo PCM16 WAV with its own gain and placement on the output timeline. Both tracks must share the sample rate and channel count; nothing is resampled or channel-converted.",
+          "sources": [
+            "docs/sox.md#mix-tracks"
+          ],
+          "pitfalls": [
+            "Both tracks must match in rate and channels (AUDIO_FORMAT_MISMATCH otherwise); use conform on one of them first."
+          ]
+        },
+        "/oneOf/3/properties/background/properties/source": {
+          "status": "reviewed",
+          "explanation": "Absolute path of the background recording: a canonical local PCM16 little-endian WAV, mono or stereo, 8000–192000 Hz, with the same rate and channels as the other track. A workflow handoff {\"$artifact\":\"earlier\",\"index\":0} is accepted here. The file is captured once; changing it later invalidates reuse.",
+          "sources": [
+            "docs/sox.md#mix-tracks"
+          ],
+          "pitfalls": [
+            "Relative paths, non-.wav suffixes, compressed or float WAV, RF64 and extensible formats are refused."
+          ]
+        },
+        "/oneOf/3/properties/background/properties/gain": {
+          "status": "reviewed",
+          "explanation": "Amplitude multiplier applied to the background track, from 0 to 4 with at most four decimal places, default 1. 0.25 is a quarter of the amplitude; 0 mutes the track. The exact mixed value of every sample, and each gained term, must stay within PCM16 (-32768..32767) or the job is refused with AUDIO_CLIPPING before SoX starts.",
+          "sources": [
+            "docs/sox.md#mix-gain-and-clipping"
+          ],
+          "defaultMeaning": "Omission means 1: the track is mixed at its recorded level.",
+          "pitfalls": [
+            "This is an amplitude ratio, not decibels, and is applied sample by sample; it is not ducking or levelling.",
+            "A gain with five or more decimal places such as 0.12345 is refused with INVALID_ARGUMENT, because the exact check depends on a finite decimal."
+          ],
+          "units": "unitless amplitude ratio"
+        },
+        "/oneOf/3/properties/background/properties/offsetFrames": {
+          "status": "reviewed",
+          "explanation": "Placement of the background track: the number of silent output frames before its first frame, from 0 to 262144, default 0. Source frame k appears at output frame offsetFrames+k, so 8000 frames at 8000 Hz is one second. Whole sample frames only; nothing is trimmed from the source.",
+          "sources": [
+            "docs/sox.md#mix-placement-and-duration"
+          ],
+          "defaultMeaning": "Omission means 0: the track starts at the first output frame.",
+          "pitfalls": [
+            "Frames, not seconds: multiply seconds by the shared sample rate yourself.",
+            "Under durationPolicy narration, a background offsetFrames at or after the narration end is refused (AUDIO_SOURCE_BOUNDS)."
+          ],
+          "units": "sample frames (1/rate seconds)"
+        },
+        "/oneOf/3/properties/durationPolicy": {
+          "status": "reviewed",
+          "explanation": "Required choice of output length. longest ends the output with the later of the two tracks and pads the earlier one with silence; narration ends the output exactly where the narration ends (its offsetFrames plus its frames) and cuts any background beyond it. A background that starts at or after the narration end is refused with AUDIO_SOURCE_BOUNDS under narration.",
+          "sources": [
+            "docs/sox.md#mix-placement-and-duration"
+          ],
+          "defaultMeaning": "Omission is refused with MISSING_ARGUMENT: the length of the result is a decision about the recordings.",
+          "pitfalls": [
+            "Under narration, the clipping check still covers background frames that are cut, so a loud cut tail can refuse the job.",
+            "Neither policy fades, loops or stretches the background: a shorter background simply ends and leaves silence under the rest."
+          ]
         }
       }
     }

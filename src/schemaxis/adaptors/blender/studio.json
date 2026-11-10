@@ -191,6 +191,110 @@
           "default": 5
         }
       }
+    },
+    {
+      "id": "animated-product-production",
+      "title": "Animated product production",
+      "file": "studio/templates/animated-product.json",
+      "description": "Create instanced product assets, collection hierarchy, checker shader, linear motion and three frame renders with GLB/OBJ publications."
+    },
+    {
+      "id": "product-presentation",
+      "title": "Product turntable presentation",
+      "file": "studio/templates/product-presentation.json",
+      "description": "Compose a product and material directly, infer its turntable pivot, render three frames and export physical GLB geometry without mesh DAG scaffolding."
+    },
+    {
+      "id": "scientific-mesh-fields",
+      "title": "Scientific fields and named UV maps",
+      "file": "studio/templates/mesh-fields.json",
+      "description": "Author vector displacement, scientific scalar and colour fields; project and pack two UV sets; publish deformed physical GLB geometry."
+    },
+    {
+      "id": "geometry-resources",
+      "title": "Reusable geometry resources",
+      "file": "studio/templates/geometry-resources.json",
+      "description": "Select typed Object/Collection geometry, preserve relative placement, realise instances and publish physical geometry."
+    },
+    {
+      "id": "mesh-editing",
+      "title": "Editable enclosure mesh",
+      "file": "studio/templates/mesh-editing.json",
+      "description": "Build an open enclosure and separate lid with finite extrusion/inset stages, scientific temperature and a named UV map."
+    },
+    {
+      "id": "editable-splines",
+      "title": "Editable gasket and curved hose",
+      "file": "studio/templates/splines.json",
+      "description": "Combine planar nested gasket contours and a controlled Bezier hose; retain native controls and export the gasket in physical metres."
+    },
+    {
+      "id": "technical-render",
+      "title": "Technical rendering of an enclosure",
+      "file": "studio/templates/technical-render.json",
+      "description": "Compose editable enclosure geometry and scientific fields with distinct object colours, Studio lighting, cavity, shadows and an explicit display transform."
+    },
+    {
+      "id": "image-preview",
+      "title": "Captured image on a scientific surface",
+      "description": "Choose an image file, select its independent Workbench preview and retain named active/render UV maps and a temperature field.",
+      "file": "studio/templates/image-preview.json",
+      "fields": {
+        "imageFile": {
+          "label": "Image file",
+          "type": "path",
+          "required": true
+        }
+      },
+      "testValues": {
+        "imageFile": "examples/schemaxis/blender-image-preview.png"
+      }
+    },
+    {
+      "id": "material-assignments",
+      "title": "Linked products with independent material palettes",
+      "description": "Assign shell and label regions once, then give a linked edition different Object materials while keeping shared editable geometry.",
+      "file": "studio/templates/material-assignments.json"
+    },
+    {
+      "id": "layered-surfaces",
+      "title": "Layered finishes on linked enclosures",
+      "description": "Coat, brushed metal and rubber on named face regions, with shared geometry and independent linked edition colours.",
+      "file": "studio/templates/layered-surfaces.json"
+    },
+    {
+      "id": "textured-pbr-enclosure",
+      "title": "Shared base, ORM and normal UV mapping",
+      "description": "Choose three captured image files and reuse a mirrored, rotated and scaled stored UV set for colour, packed numeric channels and tangent normals.",
+      "file": "studio/templates/textured-pbr-enclosure.json",
+      "fields": {
+        "colourFile": {
+          "label": "Base colour image",
+          "type": "path",
+          "required": true
+        },
+        "ormFile": {
+          "label": "Packed ORM data image",
+          "type": "path",
+          "required": true
+        },
+        "normalFile": {
+          "label": "Normal vector image",
+          "type": "path",
+          "required": true
+        }
+      },
+      "testValues": {
+        "colourFile": "examples/schemaxis/blender-pbr-colour.png",
+        "ormFile": "examples/schemaxis/blender-pbr-orm.png",
+        "normalFile": "examples/schemaxis/blender-pbr-normal.png"
+      }
+    },
+    {
+      "id": "surface-gallery",
+      "title": "Resin, fabric and glass study",
+      "description": "Compare layered skin-like scattering, fabric sheen and solid glass on editable spheres with a native text label.",
+      "file": "studio/templates/surface-gallery.json"
     }
   ],
   "snippets": [
@@ -207,7 +311,7 @@
           "default": "newMaterial"
         },
         "colour": {
-          "label": "Colour (RGBA, 0\u20131)",
+          "label": "Colour (RGBA, 0–1)",
           "type": "json",
           "required": true,
           "default": [
@@ -1946,7 +2050,7 @@
       "id": "add-subdivision",
       "title": "Subdivision",
       "category": "modifiers",
-      "description": "Refine a mesh using smooth Catmull\u2013Clark or topology-preserving simple subdivision.",
+      "description": "Refine a mesh using smooth Catmull–Clark or topology-preserving simple subdivision.",
       "fields": {
         "id": {
           "label": "Node ID",
@@ -3374,6 +3478,527 @@
         }
       ],
       "complexity": "composite"
+    },
+    {
+      "id": "layered-surface",
+      "title": "Layered physical finish",
+      "category": "materials",
+      "complexity": "composite",
+      "requires": "Use a schemaxis.blender.production/1 document. This adds a reusable finish and a small material sample Object.",
+      "description": "Create a reusable coat-over-base finish, with linear colour, roughness and metallic intent.",
+      "baseDocument": {
+        "version": "schemaxis.blender.production/1",
+        "prepareOnly": true,
+        "production": {}
+      },
+      "fields": {
+        "id": {
+          "label": "Material ID",
+          "type": "id",
+          "default": "newFinish",
+          "required": true
+        },
+        "colour": {
+          "label": "Base linear RGB",
+          "type": "colour",
+          "default": [
+            0.08,
+            0.16,
+            0.3
+          ],
+          "required": true
+        },
+        "roughness": {
+          "label": "Base roughness",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.35,
+          "required": true
+        }
+      },
+      "inserts": [
+        {
+          "at": "/production/surfaceMaterials/-",
+          "values": [
+            {
+              "id": {
+                "$fill": "id"
+              },
+              "baseColour": {
+                "kind": "constant",
+                "value": {
+                  "$fill": "colour"
+                }
+              },
+              "roughness": {
+                "kind": "constant",
+                "value": {
+                  "$fill": "roughness"
+                }
+              },
+              "coat": {
+                "weight": {
+                  "kind": "constant",
+                  "value": 0.6
+                }
+              }
+            }
+          ]
+        },
+        {
+          "at": "/production/objects/-",
+          "values": [
+            {
+              "id": "${id}Sample",
+              "kind": "mesh",
+              "vertices": [
+                [
+                  -0.5,
+                  -0.5,
+                  0
+                ],
+                [
+                  0.5,
+                  -0.5,
+                  0
+                ],
+                [
+                  0.5,
+                  0.5,
+                  0
+                ],
+                [
+                  -0.5,
+                  0.5,
+                  0
+                ]
+              ],
+              "faces": [
+                [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              ],
+              "material": {
+                "$fill": "id"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stored-finish-uv",
+      "title": "Shared colour and normal UV transform",
+      "category": "materials",
+      "requires": "Place the caret on a UV map item in production.meshData. The source must be an original or earlier stored UV map.",
+      "description": "Copy a stored UV set, then rotate/mirror/scale it once for base, ORM and tangent-normal sampling.",
+      "baseDocument": {
+        "version": "schemaxis.blender.production/1",
+        "id": "layered-finishes",
+        "size": [
+          480,
+          240
+        ],
+        "cameras": [
+          {
+            "direction": [
+              1,
+              -3,
+              2
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ],
+            "focalPoint": [
+              0,
+              0,
+              0
+            ],
+            "scale": 6
+          }
+        ],
+        "render": {
+          "samples": 32,
+          "threads": 2,
+          "worldStrength": 0.35,
+          "lightEnergy": 500,
+          "colourManagement": {
+            "view": {
+              "kind": "agx"
+            }
+          }
+        },
+        "production": {
+          "objects": [
+            {
+              "id": "housing",
+              "kind": "mesh",
+              "vertices": [
+                [
+                  -1,
+                  -0.6,
+                  -0.25
+                ],
+                [
+                  1,
+                  -0.6,
+                  -0.25
+                ],
+                [
+                  1,
+                  0.6,
+                  -0.25
+                ],
+                [
+                  -1,
+                  0.6,
+                  -0.25
+                ],
+                [
+                  -1,
+                  -0.6,
+                  0.25
+                ],
+                [
+                  1,
+                  -0.6,
+                  0.25
+                ],
+                [
+                  1,
+                  0.6,
+                  0.25
+                ],
+                [
+                  -1,
+                  0.6,
+                  0.25
+                ]
+              ],
+              "faces": [
+                [
+                  3,
+                  2,
+                  1,
+                  0
+                ],
+                [
+                  4,
+                  5,
+                  6,
+                  7
+                ],
+                [
+                  0,
+                  1,
+                  5,
+                  4
+                ],
+                [
+                  1,
+                  2,
+                  6,
+                  5
+                ],
+                [
+                  2,
+                  3,
+                  7,
+                  6
+                ],
+                [
+                  3,
+                  0,
+                  4,
+                  7
+                ]
+              ],
+              "material": "bluePaint",
+              "location": [
+                -1.3,
+                0,
+                0
+              ]
+            },
+            {
+              "id": "edition",
+              "kind": "instance",
+              "source": "housing",
+              "location": [
+                1.3,
+                0,
+                0
+              ]
+            },
+            {
+              "id": "sun",
+              "kind": "light",
+              "type": "SUN",
+              "energy": 1,
+              "angle": 0.15,
+              "rotation": [
+                0.5,
+                -0.5,
+                -0.5
+              ]
+            }
+          ],
+          "surfaceMaterials": [
+            {
+              "id": "bluePaint",
+              "baseColour": {
+                "kind": "constant",
+                "value": [
+                  0.04,
+                  0.09,
+                  0.25
+                ]
+              },
+              "roughness": {
+                "kind": "constant",
+                "value": 0.35
+              },
+              "coat": {
+                "weight": {
+                  "kind": "constant",
+                  "value": 0.8
+                },
+                "roughness": {
+                  "kind": "constant",
+                  "value": 0.15
+                }
+              },
+              "viewportColour": [
+                0.04,
+                0.09,
+                0.25
+              ]
+            },
+            {
+              "id": "warmPaint",
+              "baseColour": {
+                "kind": "constant",
+                "value": [
+                  0.3,
+                  0.04,
+                  0.015
+                ]
+              },
+              "roughness": {
+                "kind": "constant",
+                "value": 0.25
+              },
+              "coat": {
+                "weight": {
+                  "kind": "constant",
+                  "value": 1
+                },
+                "roughness": {
+                  "kind": "constant",
+                  "value": 0.1
+                }
+              },
+              "viewportColour": [
+                0.3,
+                0.04,
+                0.015
+              ]
+            },
+            {
+              "id": "brushedMetal",
+              "baseColour": {
+                "kind": "constant",
+                "value": [
+                  0.65,
+                  0.68,
+                  0.72
+                ]
+              },
+              "metallic": {
+                "kind": "constant",
+                "value": 1
+              },
+              "roughness": {
+                "kind": "constant",
+                "value": 0.24
+              },
+              "specular": {
+                "anisotropy": {
+                  "kind": "constant",
+                  "value": 0.6
+                },
+                "tangent": {
+                  "kind": "uv",
+                  "set": {
+                    "kind": "named",
+                    "name": "FinishUV"
+                  }
+                }
+              },
+              "viewportColour": [
+                0.65,
+                0.68,
+                0.72
+              ]
+            },
+            {
+              "id": "rubber",
+              "baseColour": {
+                "kind": "constant",
+                "value": [
+                  0.01,
+                  0.012,
+                  0.015
+                ]
+              },
+              "roughness": {
+                "kind": "constant",
+                "value": 0.85
+              },
+              "diffuse": {
+                "roughness": {
+                  "kind": "constant",
+                  "value": 0.4
+                }
+              },
+              "viewportColour": [
+                0.01,
+                0.012,
+                0.015
+              ]
+            }
+          ],
+          "meshData": [
+            {
+              "object": "housing",
+              "sharing": "shared",
+              "renderUV": "FinishUV",
+              "uvMaps": [
+                {
+                  "name": "FinishUV",
+                  "method": "box",
+                  "origin": [
+                    -1,
+                    -0.6,
+                    -0.25
+                  ],
+                  "size": [
+                    2,
+                    1.2,
+                    0.5
+                  ]
+                }
+              ]
+            }
+          ],
+          "materialAssignments": [
+            {
+              "id": "surfaceLayout",
+              "kind": "layout",
+              "object": "housing",
+              "sharing": "shared",
+              "slots": [
+                {
+                  "id": "body",
+                  "material": "bluePaint"
+                },
+                {
+                  "id": "lid",
+                  "material": "brushedMetal"
+                }
+              ],
+              "defaultSlot": "body",
+              "regions": [
+                {
+                  "slot": "lid",
+                  "selection": {
+                    "kind": "faceNormal",
+                    "direction": [
+                      0,
+                      0,
+                      1
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "editionPalette",
+              "kind": "override",
+              "object": "edition",
+              "layout": "surfaceLayout",
+              "slots": [
+                {
+                  "id": "lid",
+                  "material": "rubber"
+                },
+                {
+                  "id": "body",
+                  "material": "warmPaint"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "testCursor": "/production/meshData/0/uvMaps/1",
+      "fields": {
+        "source": {
+          "label": "Source UV map",
+          "type": "string",
+          "default": "FinishUV",
+          "required": true
+        },
+        "name": {
+          "label": "Target UV map",
+          "type": "string",
+          "default": "MappedFinish",
+          "required": true
+        },
+        "angle": {
+          "label": "Counterclockwise degrees",
+          "type": "number",
+          "minimum": -360,
+          "maximum": 360,
+          "default": 45,
+          "required": true
+        }
+      },
+      "inserts": [
+        {
+          "at": "@cursor",
+          "values": [
+            {
+              "name": {
+                "$fill": "name"
+              },
+              "method": "copy",
+              "source": {
+                "$fill": "source"
+              },
+              "transform": {
+                "pivot": [
+                  0.5,
+                  0.5
+                ],
+                "rotationDegrees": {
+                  "$fill": "angle"
+                },
+                "scale": [
+                  -2,
+                  3
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "viewers": [

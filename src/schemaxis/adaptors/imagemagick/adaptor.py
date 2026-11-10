@@ -16,7 +16,7 @@ from xml.sax.saxutils import escape
 
 from schemaxis.artifacts import atomic_json
 from schemaxis.core.declarations import validate_arguments
-from schemaxis.core.faults import SchemaxisError
+from schemaxis.core.faults import Fault,SchemaxisError
 from schemaxis.dispatch import cancellation_requested
 from schemaxis.errors import fail,keys
 from schemaxis.native_command import execute
@@ -85,7 +85,9 @@ def bounded(path,code='VERIFICATION_FAILED',limit=png.BYTES):
 
 
 def source_image(data,p,at):
-    im=png.decode(data)
+    try: im=png.decode(data)
+    except SchemaxisError as error:
+        f=error.fault;raise SchemaxisError(Fault(f.code,f.message,at,f.phase,f.retryable,f.observed,f.recovery)) from None
     if p['colourPolicy']=='require-srgb' and im[3].startswith('untagged'): fail('RASTER_COLOUR_REQUIRED','PNG needs sRGB or standard gAMA+cHRM; explicitly choose assume-srgb for untagged encoded samples',at)
     return im
 
@@ -263,7 +265,11 @@ def verify(directory,require_result=True):
         if require_result and read(directory,'result.json').get('status')!='succeeded':fail('INCOMPLETE_EXECUTION','raster did not complete')
         captures=[{'source':item['source'],'sha256':digest(directory,f'captured-{i:02}.png'),'bytes':len(bounded(directory/f'captured-{i:02}.png'))} for i,item in enumerate(p['images'])]
         if read(directory,'captures.json')!=captures:fail('VERIFICATION_FAILED','PNG source/capture binding differs')
-        summary=inspect(directory,p)
+        try:
+            summary=inspect(directory,p)
+        except SchemaxisError as error:
+            if error.fault.code not in ('INVALID_RASTER_PNG','UNSUPPORTED_RASTER_PNG'):raise
+            fail('VERIFICATION_FAILED','retained raster source is invalid',cause=error.fault.to_dict())
         if read(directory,'raster-summary.json')!=summary:fail('VERIFICATION_FAILED','raster summary differs')
         if bounded(directory/'config/policy.xml').decode()!=policy(directory,p):fail('VERIFICATION_FAILED','isolated native security policy differs')
         executable=receipt['executable']

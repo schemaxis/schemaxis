@@ -215,7 +215,7 @@ entries remain. `schemaxis readiness --admission` treats conceptual-help gaps as
 required unknown. Existing runtime support remains available during this migration.
 A new adaptor is not admitted as GUI-ready with pending conceptual guidance.
 
-Users can open a question mark and **Improve this explanation → Copy help request**
+Users can open a question mark and **Suggest a correction → Copy help request**
 in a form. Their prose, examples and questions can be saved to the identified
 adaptor/route/address record and reviewed without changing the executable contract.
 Keep qualifications and evidence separate from conceptual-help completeness.

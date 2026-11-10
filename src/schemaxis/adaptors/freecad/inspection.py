@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from schemaxis.core.runners import Interpreter
 from schemaxis.artifacts import atomic_json
-from schemaxis.dispatch import SubprocessRunner
+from .process import SubprocessRunner
 from schemaxis.errors import fail
 from .adaptor import plan, run
 

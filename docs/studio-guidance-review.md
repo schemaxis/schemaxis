@@ -83,7 +83,7 @@ from the exported copy, add `explanation`, `units`, `defaultMeaning`, `pitfalls`
 subset with `--apply-review PATH`; unknown operations, routes and schema addresses
 are rejected before files change. Existing adaptor guidance is preserved.
 
-A form's question mark also offers **Improve this explanation → Copy help request**.
+A form's question mark also offers **Suggest a correction → Copy help request**.
 Send that record with your prose in the chat; its adaptor, route and schema address
 identify where the explanation belongs. For an operation, include the operation
 name and adaptor. Native defaults and validation constraints remain authoritative.

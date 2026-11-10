@@ -1,0 +1,1158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "connection": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "userVariable": {
+          "type": "string",
+          "minLength": 18,
+          "maxLength": 80
+        },
+        "passwordVariable": {
+          "type": "string",
+          "minLength": 18,
+          "maxLength": 80
+        },
+        "dsnVariable": {
+          "type": "string",
+          "minLength": 18,
+          "maxLength": 80
+        },
+        "connectTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120,
+          "default": 20
+        },
+        "callTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 900,
+          "default": 60
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "profile"
+      ]
+    },
+    "table": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "external": {
+          "type": "boolean",
+          "default": false
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/column"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        "primaryKey": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true
+        },
+        "unique": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/unique"
+          },
+          "minItems": 0,
+          "maxItems": 8,
+          "default": []
+        },
+        "foreignKeys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/foreignKey"
+          },
+          "minItems": 0,
+          "maxItems": 8,
+          "default": []
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "minItems": 0,
+          "maxItems": 8,
+          "default": []
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "columns",
+        "primaryKey"
+      ]
+    },
+    "column": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "type": {
+          "enum": [
+            "number",
+            "varchar2",
+            "date",
+            "timestamp",
+            "timestampTz",
+            "raw",
+            "boolean",
+            "clob",
+            "blob",
+            "json"
+          ]
+        },
+        "precision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 38
+        },
+        "scale": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 38
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        },
+        "fraction": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "nullable": {
+          "type": "boolean",
+          "default": false
+        },
+        "emptyText": {
+          "enum": [
+            "reject",
+            "null"
+          ],
+          "default": "reject"
+        },
+        "scalePolicy": {
+          "enum": [
+            "reject",
+            "round"
+          ],
+          "default": "reject"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+    "unique": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "columns"
+      ]
+    },
+    "foreignKey": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true
+        },
+        "table": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true
+        },
+        "onDelete": {
+          "enum": [
+            "noAction",
+            "cascade",
+            "setNull"
+          ],
+          "default": "noAction"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "columns",
+        "table",
+        "references"
+      ]
+    },
+    "condition": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "combine": {
+          "enum": [
+            "and",
+            "or"
+          ],
+          "default": "and"
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/term"
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "negate": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "terms"
+      ]
+    },
+    "term": {
+      "type": "object",
+      "properties": {
+        "left": {
+          "$ref": "#/$defs/operand"
+        },
+        "operator": {
+          "enum": [
+            "equals",
+            "notEquals",
+            "lessThan",
+            "lessOrEqual",
+            "greaterThan",
+            "greaterOrEqual",
+            "between",
+            "in",
+            "isNull",
+            "startsWith",
+            "contains"
+          ]
+        },
+        "right": {
+          "$ref": "#/$defs/operand"
+        },
+        "upper": {
+          "$ref": "#/$defs/operand"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operand"
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "negate": {
+          "type": "boolean",
+          "default": false
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        }
+      },
+      "additionalProperties": false
+    },
+    "operand": {
+      "type": "object",
+      "properties": {
+        "column": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 49
+        },
+        "literal": {
+          "$ref": "#/$defs/literal"
+        },
+        "derived": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "measure": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        }
+      },
+      "additionalProperties": false
+    },
+    "literal": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "number",
+            "varchar2",
+            "date",
+            "timestamp",
+            "timestampTz",
+            "raw",
+            "boolean",
+            "clob",
+            "blob",
+            "json"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "enum": [
+                null
+              ]
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer",
+              "minimum": -100000000000000000000000000000000000000,
+              "maximum": 100000000000000000000000000000000000000
+            },
+            {
+              "type": "string",
+              "maxLength": 524288
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "value"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "format": {
+          "enum": [
+            "json",
+            "csv"
+          ],
+          "default": "json"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ]
+    },
+    "setup": {
+      "type": "object",
+      "properties": {
+        "retain": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "inspection": {
+      "type": "object",
+      "properties": {
+        "kinds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "tables",
+              "views",
+              "sequences",
+              "indexes"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "default": [
+            "tables",
+            "views",
+            "sequences",
+            "indexes"
+          ]
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "minItems": 0,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "default": []
+        },
+        "drift": {
+          "enum": [
+            "report",
+            "fail"
+          ],
+          "default": "fail"
+        }
+      },
+      "additionalProperties": false
+    },
+    "report": {
+      "type": "object",
+      "properties": {
+        "selects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/select"
+          },
+          "minItems": 1,
+          "maxItems": 4
+        },
+        "combine": {
+          "enum": [
+            "unionAll",
+            "union",
+            "intersect",
+            "except"
+          ],
+          "default": "unionAll"
+        },
+        "windows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/window"
+          },
+          "minItems": 0,
+          "maxItems": 4,
+          "default": []
+        },
+        "distinct": {
+          "type": "boolean",
+          "default": false
+        },
+        "orderBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/orderTerm"
+          },
+          "minItems": 0,
+          "maxItems": 6,
+          "default": []
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "numbers": {
+          "enum": [
+            "decimalString",
+            "jsonNumber"
+          ],
+          "default": "decimalString"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "selects"
+      ]
+    },
+    "select": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/tableReference"
+        },
+        "joins": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/join"
+          },
+          "minItems": 0,
+          "maxItems": 6,
+          "default": []
+        },
+        "computed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/derived"
+          },
+          "minItems": 0,
+          "maxItems": 16,
+          "default": []
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "minItems": 0,
+          "maxItems": 16,
+          "default": []
+        },
+        "where": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "groupBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operand"
+          },
+          "minItems": 0,
+          "maxItems": 6,
+          "default": []
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/measure"
+          },
+          "minItems": 0,
+          "maxItems": 8,
+          "default": []
+        },
+        "having": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/output"
+          },
+          "minItems": 1,
+          "maxItems": 16
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "columns"
+      ]
+    },
+    "tableReference": {
+      "type": "object",
+      "properties": {
+        "table": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "table"
+      ]
+    },
+    "join": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "inner",
+            "left",
+            "right",
+            "full"
+          ],
+          "default": "inner"
+        },
+        "table": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/joinKey"
+          },
+          "minItems": 1,
+          "maxItems": 4
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "table",
+        "on"
+      ]
+    },
+    "joinKey": {
+      "type": "object",
+      "properties": {
+        "left": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 49
+        },
+        "right": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 49
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "left",
+        "right"
+      ]
+    },
+    "derived": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "function": {
+          "enum": [
+            "add",
+            "subtract",
+            "multiply",
+            "divide",
+            "modulo",
+            "negate",
+            "abs",
+            "floor",
+            "ceiling",
+            "round",
+            "truncate",
+            "upper",
+            "lower",
+            "trim",
+            "concat",
+            "substring",
+            "length",
+            "coalesce",
+            "nullIf",
+            "conditional",
+            "addDays",
+            "truncateDay",
+            "extractYear",
+            "extractMonth",
+            "extractDay",
+            "jsonNumber",
+            "jsonText",
+            "jsonBoolean"
+          ]
+        },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operand"
+          },
+          "minItems": 1,
+          "maxItems": 4
+        },
+        "digits": {
+          "type": "integer",
+          "minimum": -30,
+          "maximum": 30,
+          "default": 0
+        },
+        "zero": {
+          "enum": [
+            "error",
+            "null"
+          ],
+          "default": "error"
+        },
+        "when": {
+          "$ref": "#/$defs/condition"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "function",
+        "arguments"
+      ]
+    },
+    "measure": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "function": {
+          "enum": [
+            "count",
+            "countAll",
+            "countDistinct",
+            "sum",
+            "average",
+            "minimum",
+            "maximum"
+          ]
+        },
+        "argument": {
+          "$ref": "#/$defs/operand"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "function"
+      ]
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "operand": {
+          "$ref": "#/$defs/operand"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "operand"
+      ]
+    },
+    "window": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "function": {
+          "enum": [
+            "rowNumber",
+            "rank",
+            "denseRank",
+            "runningSum",
+            "runningCount"
+          ]
+        },
+        "argument": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "partitionBy": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "minItems": 0,
+          "maxItems": 4,
+          "default": []
+        },
+        "orderBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/orderTerm"
+          },
+          "minItems": 0,
+          "maxItems": 4,
+          "default": []
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "function"
+      ]
+    },
+    "orderTerm": {
+      "type": "object",
+      "properties": {
+        "column": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "direction": {
+          "enum": [
+            "ascending",
+            "descending"
+          ],
+          "default": "ascending"
+        },
+        "nulls": {
+          "enum": [
+            "first",
+            "last"
+          ],
+          "default": "last"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "column"
+      ]
+    },
+    "transaction": {
+      "type": "object",
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "finish": {
+          "enum": [
+            "commit",
+            "rollback"
+          ],
+          "default": "commit"
+        },
+        "isolation": {
+          "enum": [
+            "readCommitted",
+            "serializable"
+          ],
+          "default": "readCommitted"
+        },
+        "enforcement": {
+          "enum": [
+            "predict",
+            "database"
+          ],
+          "default": "predict"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/idempotency"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "steps"
+      ]
+    },
+    "step": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "insert",
+            "update",
+            "delete",
+            "merge",
+            "savepoint",
+            "rollbackTo",
+            "check"
+          ]
+        },
+        "table": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "enum": [
+                    null
+                  ]
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer",
+                  "minimum": -100000000000000000000000000000000000000,
+                  "maximum": 100000000000000000000000000000000000000
+                },
+                {
+                  "type": "string",
+                  "maxLength": 524288
+                }
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 32
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "set": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/assignment"
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "computed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/derived"
+          },
+          "minItems": 0,
+          "maxItems": 8,
+          "default": []
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "minItems": 0,
+          "maxItems": 8,
+          "default": []
+        },
+        "where": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true
+        },
+        "onMatched": {
+          "enum": [
+            "update",
+            "ignore"
+          ],
+          "default": "update"
+        },
+        "onNotMatched": {
+          "enum": [
+            "insert",
+            "ignore"
+          ],
+          "default": "insert"
+        },
+        "expectRows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ]
+    },
+    "assignment": {
+      "type": "object",
+      "properties": {
+        "column": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "value": {
+          "$ref": "#/$defs/operand"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "column",
+        "value"
+      ]
+    },
+    "idempotency": {
+      "type": "object",
+      "properties": {
+        "table": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "keyColumn": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "default": "idempotency_key"
+        },
+        "digestColumn": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24,
+          "default": "plan_digest"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "table",
+        "key"
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "schemaxis.oracle/1"
+    },
+    "operation": {
+      "enum": [
+        "inspect",
+        "load",
+        "report",
+        "mutate"
+      ]
+    },
+    "connection": {
+      "$ref": "#/$defs/connection"
+    },
+    "tables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/table"
+      },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "setup": {
+      "$ref": "#/$defs/setup"
+    },
+    "inspection": {
+      "$ref": "#/$defs/inspection"
+    },
+    "report": {
+      "$ref": "#/$defs/report"
+    },
+    "transaction": {
+      "$ref": "#/$defs/transaction"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "operation",
+    "connection"
+  ]
+}

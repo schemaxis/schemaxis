@@ -1,0 +1,441 @@
+{
+ "addField": {
+  "capturedLocalE3": {
+   "description": "The capture wall time as the E3 time workflows read it: EXIF DateTimeOriginal, XMP photoshop:DateCreated, XMP exif:DateTimeOriginal and IPTC 2:55 with 2:60, so a correction can rewrite every copy it would otherwise leave stale. A different meaning from capturedLocal only in having more sources.",
+   "label": "Capture time (local wall time, every source)",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [
+    {
+     "codec": "exifDateTime",
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "native": "EXIF:ExifIFD:DateTimeOriginal",
+     "tag": "0x9003"
+    },
+    {
+     "codec": "xmpDateLocal",
+     "family": "xmp",
+     "native": "XMP:XMP-photoshop:DateCreated",
+     "property": "photoshop:DateCreated"
+    },
+    {
+     "codec": "xmpDateLocal",
+     "family": "xmp",
+     "native": "XMP:XMP-exif:DateTimeOriginal",
+     "property": "exif:DateTimeOriginal"
+    },
+    {
+     "codec": "iptcDateLocal",
+     "companion": {
+      "time": [
+       2,
+       60
+      ]
+     },
+     "companionNative": {
+      "time": "IPTC:TimeCreated"
+     },
+     "dataset": 55,
+     "family": "iptc",
+     "native": "IPTC:DateCreated",
+     "record": 2
+    }
+   ],
+   "type": "localDateTime",
+   "unit": null
+  },
+  "capturedOffsetE3": {
+   "description": "The UTC offset recorded for the capture time, as +HH:MM within -12:00 to +14:00, from EXIF OffsetTimeOriginal, both XMP date suffixes and the IPTC 2:60 suffix. -00:00 is unreadable rather than UTC. Absent means no offset is recorded and none is inferred.",
+   "label": "Recorded UTC offset of the capture time (every source)",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [
+    {
+     "codec": "exifOffset",
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "native": "EXIF:ExifIFD:OffsetTimeOriginal",
+     "tag": "0x9011"
+    },
+    {
+     "codec": "xmpDateOffset",
+     "family": "xmp",
+     "native": "XMP:XMP-photoshop:DateCreated",
+     "property": "photoshop:DateCreated"
+    },
+    {
+     "codec": "xmpDateOffset",
+     "family": "xmp",
+     "native": "XMP:XMP-exif:DateTimeOriginal",
+     "property": "exif:DateTimeOriginal"
+    },
+    {
+     "codec": "iptcTimeOffset",
+     "dataset": 60,
+     "family": "iptc",
+     "native": "IPTC:TimeCreated",
+     "record": 2
+    }
+   ],
+   "type": "offset",
+   "unit": "hours:minutes from UTC"
+  },
+  "capturedSubSecondE3": {
+   "description": "The decimal digits after the second of the capture time (EXIF SubSecTimeOriginal and the XMP fractions), kept as text so leading zeros survive. Absent when no source records a fraction. IPTC cannot hold a fraction.",
+   "label": "Capture time fraction of a second (every source)",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [
+    {
+     "codec": "exifSubSecond",
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "native": "EXIF:ExifIFD:SubSecTimeOriginal",
+     "tag": "0x9291"
+    },
+    {
+     "codec": "xmpDateFraction",
+     "family": "xmp",
+     "native": "XMP:XMP-photoshop:DateCreated",
+     "property": "photoshop:DateCreated"
+    },
+    {
+     "codec": "xmpDateFraction",
+     "family": "xmp",
+     "native": "XMP:XMP-exif:DateTimeOriginal",
+     "property": "exif:DateTimeOriginal"
+    }
+   ],
+   "type": "digits",
+   "unit": "decimal fraction of a second"
+  },
+  "capturedUtcE3": {
+   "derive": {
+    "from": [
+     "capturedLocalE3",
+     "capturedOffsetE3"
+    ],
+    "rule": "utcFromLocalOffset"
+   },
+   "description": "The capture instant in UTC, derived by exact arithmetic only when capturedLocalE3 and capturedOffsetE3 are both present and agree across every source. It inherits the doubts of a camera clock and proves nothing about when the photograph was really taken.",
+   "label": "Capture instant in UTC (derived, every source)",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [],
+   "type": "utcInstant",
+   "unit": null
+  },
+  "digitizedLocalE3": {
+   "description": "When the file says it was digitized, as wall time without a zone, from EXIF DateTimeDigitized, XMP xmp:CreateDate and IPTC 2:62 with 2:63. It can differ from the capture time for scans. Independent proof.",
+   "label": "Digitization time (local wall time, every source)",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [
+    {
+     "codec": "exifDateTime",
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "native": "EXIF:ExifIFD:CreateDate",
+     "tag": "0x9004"
+    },
+    {
+     "codec": "xmpDateLocal",
+     "family": "xmp",
+     "native": "XMP:XMP-xmp:CreateDate",
+     "property": "xmp:CreateDate"
+    },
+    {
+     "codec": "iptcDateLocal",
+     "companion": {
+      "time": [
+       2,
+       63
+      ]
+     },
+     "companionNative": {
+      "time": "IPTC:DigitalCreationTime"
+     },
+     "dataset": 62,
+     "family": "iptc",
+     "native": "IPTC:DigitalCreationDate",
+     "record": 2
+    }
+   ],
+   "type": "localDateTime",
+   "unit": null
+  },
+  "digitizedOffset": {
+   "description": "The UTC offset recorded for the digitization time (EXIF OffsetTimeDigitized, the XMP xmp:CreateDate suffix and the IPTC 2:63 suffix) as +HH:MM. Absent means none is recorded and none is inferred.",
+   "label": "Recorded UTC offset of the digitization time",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [
+    {
+     "codec": "exifOffset",
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "native": "EXIF:ExifIFD:OffsetTimeDigitized",
+     "tag": "0x9012"
+    },
+    {
+     "codec": "xmpDateOffset",
+     "family": "xmp",
+     "native": "XMP:XMP-xmp:CreateDate",
+     "property": "xmp:CreateDate"
+    },
+    {
+     "codec": "iptcTimeOffset",
+     "dataset": 63,
+     "family": "iptc",
+     "native": "IPTC:DigitalCreationTime",
+     "record": 2
+    }
+   ],
+   "type": "offset",
+   "unit": "hours:minutes from UTC"
+  },
+  "digitizedSubSecond": {
+   "description": "The decimal digits after the second of the digitization time (EXIF SubSecTimeDigitized and the XMP xmp:CreateDate fraction), kept as text so leading zeros survive.",
+   "label": "Digitization time fraction of a second",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [
+    {
+     "codec": "exifSubSecond",
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "native": "EXIF:ExifIFD:SubSecTimeDigitized",
+     "tag": "0x9292"
+    },
+    {
+     "codec": "xmpDateFraction",
+     "family": "xmp",
+     "native": "XMP:XMP-xmp:CreateDate",
+     "property": "xmp:CreateDate"
+    }
+   ],
+   "type": "digits",
+   "unit": "decimal fraction of a second"
+  },
+  "digitizedUtc": {
+   "derive": {
+    "from": [
+     "digitizedLocalE3",
+     "digitizedOffset"
+    ],
+    "rule": "utcFromLocalOffset"
+   },
+   "description": "The digitization instant in UTC, derived by exact arithmetic only when digitizedLocalE3 and digitizedOffset are both present and agree. It inherits the doubts of a device clock.",
+   "label": "Digitization instant in UTC (derived)",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [],
+   "type": "utcInstant",
+   "unit": null
+  },
+  "gpsDatumE3": {
+   "description": "The geodetic datum text recorded by EXIF GPSMapDatum and XMP exif:GPSMapDatum, exactly as written. Absent means unspecified: Schemaxis never infers WGS-84 and never converts datums.",
+   "label": "Recorded geodetic datum (EXIF and XMP)",
+   "privacy": "location",
+   "profile": "location",
+   "sources": [
+    {
+     "codec": "exifText",
+     "family": "exif",
+     "ifd": "GPS",
+     "native": "EXIF:GPS:GPSMapDatum",
+     "tag": "0x0012"
+    },
+    {
+     "codec": "xmpText",
+     "family": "xmp",
+     "native": "XMP:XMP-exif:GPSMapDatum",
+     "property": "exif:GPSMapDatum"
+    }
+   ],
+   "type": "text",
+   "unit": null
+  },
+  "gpsHorizontalError": {
+   "description": "The horizontal positioning error in metres that the file records (EXIF GPSHPositioningError), as a non-negative rational. It is what was written, never derived from a satellite count or track data, and it is not a measurement made here.",
+   "label": "GPS horizontal positioning error",
+   "privacy": "location",
+   "profile": "location",
+   "sources": [
+    {
+     "codec": "exifRational",
+     "family": "exif",
+     "ifd": "GPS",
+     "native": "EXIF:GPS:GPSHPositioningError",
+     "tag": "0x001F"
+    }
+   ],
+   "type": "meters",
+   "unit": "metres"
+  },
+  "gpsLatitudeE3": {
+   "concordance": {
+    "within": "1/5000000000"
+   },
+   "description": "Latitude in signed decimal degrees from the EXIF GPS rationals with the N/S reference, and from XMP exif:GPSLatitude. The stored seconds may be exactly 60 (a non-canonical but exact form ExifTool writes) and are summed exactly; minutes of 60 or more are unreadable, never carried. Location class; the datum is separate and nothing is converted.",
+   "label": "GPS latitude (every source, seconds of 60 accepted)",
+   "privacy": "location",
+   "profile": "location",
+   "sources": [
+    {
+     "anchorAbsolute": true,
+     "codec": "exifDmsSumE3Latitude",
+     "companion": {
+      "ref": "0x0001"
+     },
+     "companionNative": {
+      "ref": "EXIF:GPS:GPSLatitudeRef"
+     },
+     "family": "exif",
+     "ifd": "GPS",
+     "native": "EXIF:GPS:GPSLatitude",
+     "tag": "0x0002"
+    },
+    {
+     "codec": "xmpGpsCoordinateLatitude",
+     "family": "xmp",
+     "native": "XMP:XMP-exif:GPSLatitude",
+     "property": "exif:GPSLatitude"
+    }
+   ],
+   "type": "degrees",
+   "unit": "signed decimal degrees (north positive)"
+  },
+  "gpsLongitudeE3": {
+   "concordance": {
+    "within": "1/5000000000"
+   },
+   "description": "Longitude in signed decimal degrees from the EXIF GPS rationals with the E/W reference, and from XMP exif:GPSLongitude. The stored seconds may be exactly 60 and are summed exactly; minutes of 60 or more are unreadable, never carried. Location class; the datum is separate and nothing is converted.",
+   "label": "GPS longitude (every source, seconds of 60 accepted)",
+   "privacy": "location",
+   "profile": "location",
+   "sources": [
+    {
+     "anchorAbsolute": true,
+     "codec": "exifDmsSumE3Longitude",
+     "companion": {
+      "ref": "0x0003"
+     },
+     "companionNative": {
+      "ref": "EXIF:GPS:GPSLongitudeRef"
+     },
+     "family": "exif",
+     "ifd": "GPS",
+     "native": "EXIF:GPS:GPSLongitude",
+     "tag": "0x0004"
+    },
+    {
+     "codec": "xmpGpsCoordinateLongitude",
+     "family": "xmp",
+     "native": "XMP:XMP-exif:GPSLongitude",
+     "property": "exif:GPSLongitude"
+    }
+   ],
+   "type": "degrees",
+   "unit": "signed decimal degrees (east positive)"
+  },
+  "gpsUtcExact": {
+   "derive": {
+    "from": [
+     "gpsUtcDate",
+     "gpsUtcTimeExact"
+    ],
+    "rule": "utcFromDateTime"
+   },
+   "description": "The GPS UTC instant, derived only when gpsUtcDate and gpsUtcTimeExact are both present, keeping an exact fraction of a second. It is the receiver clock, which can differ from the camera clock.",
+   "label": "GPS UTC instant with an exact fraction (derived)",
+   "privacy": "location",
+   "profile": "location",
+   "sources": [],
+   "type": "utcInstant",
+   "unit": null
+  },
+  "gpsUtcTimeExact": {
+   "description": "The GPS time stamp (EXIF GPSTimeStamp, UTC) as HH:MM:SS with an exact decimal fraction of at most 9 digits when the stored seconds have one; denominators that are not a divisor of 10^9 are unsupported rather than rounded. Location class.",
+   "label": "GPS UTC time of day with an exact fraction",
+   "privacy": "location",
+   "profile": "location",
+   "sources": [
+    {
+     "codec": "gpsTimeExact",
+     "family": "exif",
+     "ifd": "GPS",
+     "native": "EXIF:GPS:GPSTimeStamp",
+     "tag": "0x0007"
+    }
+   ],
+   "type": "time",
+   "unit": null
+  },
+  "modifiedOffset": {
+   "description": "The UTC offset recorded for the file modification time (EXIF OffsetTime and the XMP xmp:ModifyDate suffix) as +HH:MM. An edit time, not a capture time. Absent means none is recorded.",
+   "label": "Recorded UTC offset of the modification time",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [
+    {
+     "codec": "exifOffset",
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "native": "EXIF:ExifIFD:OffsetTime",
+     "tag": "0x9010"
+    },
+    {
+     "codec": "xmpDateOffset",
+     "family": "xmp",
+     "native": "XMP:XMP-xmp:ModifyDate",
+     "property": "xmp:ModifyDate"
+    }
+   ],
+   "type": "offset",
+   "unit": "hours:minutes from UTC"
+  },
+  "modifiedSubSecond": {
+   "description": "The decimal digits after the second of the modification time (EXIF SubSecTime and the XMP xmp:ModifyDate fraction), kept as text so leading zeros survive.",
+   "label": "Modification time fraction of a second",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [
+    {
+     "codec": "exifSubSecond",
+     "family": "exif",
+     "ifd": "ExifIFD",
+     "native": "EXIF:ExifIFD:SubSecTime",
+     "tag": "0x9290"
+    },
+    {
+     "codec": "xmpDateFraction",
+     "family": "xmp",
+     "native": "XMP:XMP-xmp:ModifyDate",
+     "property": "xmp:ModifyDate"
+    }
+   ],
+   "type": "digits",
+   "unit": "decimal fraction of a second"
+  },
+  "modifiedUtc": {
+   "derive": {
+    "from": [
+     "modifiedLocal",
+     "modifiedOffset"
+    ],
+    "rule": "utcFromLocalOffset"
+   },
+   "description": "The modification instant in UTC, derived by exact arithmetic only when modifiedLocal and modifiedOffset are both present and agree. An edit time, not a capture time.",
+   "label": "Modification instant in UTC (derived)",
+   "privacy": "capture-time",
+   "profile": "capture",
+   "sources": [],
+   "type": "utcInstant",
+   "unit": null
+  }
+ },
+ "base": "schemaxis.exiftool.fields/2",
+ "version": "schemaxis.exiftool.fields/3-additions"
+}

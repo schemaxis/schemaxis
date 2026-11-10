@@ -1,0 +1,100 @@
+{
+  "version": "schemaxis.freecad/1",
+  "units": "mm",
+  "nodes": [
+    {
+      "id": "cup",
+      "filter": "body"
+    },
+    {
+      "id": "outline",
+      "filter": "circle",
+      "options": {
+        "radius": 15,
+        "origin": [
+          7,
+          -4,
+          3
+        ]
+      },
+      "inputs": {
+        "body": "cup"
+      }
+    },
+    {
+      "id": "stock",
+      "filter": "pad",
+      "options": {
+        "length": 20
+      },
+      "inputs": {
+        "body": "cup",
+        "profile": "outline"
+      }
+    },
+    {
+      "id": "pullAxis",
+      "filter": "datumAxis",
+      "options": {
+        "origin": [
+          7,
+          -4,
+          3
+        ],
+        "direction": [
+          0,
+          0,
+          1
+        ]
+      },
+      "inputs": {
+        "body": "cup"
+      }
+    },
+    {
+      "id": "release",
+      "filter": "bodyDraft",
+      "options": {
+        "angle": 5,
+        "reversed": true,
+        "faces": [
+          {
+            "surface": "cylinder",
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "axisPoint": [
+              7,
+              -4,
+              3
+            ],
+            "radius": 15
+          }
+        ]
+      },
+      "inputs": {
+        "base": "stock",
+        "neutralPlane": "outline",
+        "axis": "pullAxis"
+      }
+    },
+    {
+      "id": "housing",
+      "filter": "shell",
+      "options": {
+        "thickness": 2,
+        "openings": [
+          {
+            "face": "top"
+          }
+        ]
+      },
+      "inputs": {
+        "base": "release"
+      }
+    }
+  ],
+  "output": "housing"
+}

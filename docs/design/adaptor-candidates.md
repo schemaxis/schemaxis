@@ -2,6 +2,11 @@
 
 Updated: 2026-10-16. Status: design direction and candidate backlog.
 
+Historical catalogue: use the [25 October workflow roadmap](workflow-candidates-2026-10.md)
+for the current prioritised research. This earlier inventory and its priorities
+are retained as context; they are not the current complete provider list or an
+implementation queue.
+
 This document records the design discussion about broadening Schemaxis beyond
 its current application coverage. Candidate operations, converters and templates
 below are proposals unless explicitly linked to existing implementation. Their
@@ -41,6 +46,8 @@ does not by itself establish redistribution terms or integration readiness.
 | Area | Candidate | Priority | Proposed first slice and useful connection |
 | --- | --- | --- | --- |
 | Meshing | [Gmsh](https://gmsh.info/doc/texinfo/) | Qualified first slice | [FreeCAD STEP → Gmsh → ParaView](../gmsh.md): one solid, linear tetrahedra, authored volume, planar face and remainder groups with verified MSH/VTU. Arbitrary/nonplanar selection, high-order meshes and solver setup remain candidates. |
+| Structural networks | [OpenSees](https://opensees.berkeley.edu/) | Bounded native product | [Planar elastic trusses](../opensees.md), mixed member stiffnesses, signed loads, supports and measured serviceability, with independent stiffness/equilibrium checks. Frames, buckling, nonlinear materials and dynamics remain candidates. |
+| Solid thermal analysis | [Elmer](https://www.elmerfem.org/blog/) | Bounded native product | [Layered steady solid conduction](../elmer.md), uniform sources, value/flux/film ends and sampled requirements, with saved-field reopening and independent balances. Transient, general geometry and coupled physics remain candidates. |
 | Structural analysis | [CalculiX](https://calculix.de/) | Qualified first slice | [Rectangular elastic cantilevers](../calculix.md) with explicit SI material/load intent, separate axial/transverse refinement, native force/moment equilibrium, beam-theory and interior stress checks. [Stress tables into Calc](../beam-workbook.md) are qualified; general geometry, imported Gmsh groups and ParaView handoffs remain candidates. |
 | Circuits | [ngspice](https://ngspice.sourceforge.io/) | Qualified first slice | [Declared DC networks, AC RLC responses and first-order RC transients](../ngspice.md), independent nodal/analytic checks, named sampled voltage/gain requirements and numeric tables into Calc. KiCad import, nonlinear models, general transients and continuous/all-tolerance guarantees remain candidates. |
 | PCB design | [KiCad](https://www.kicad.org/about/kicad/) | Bounded native slice | [Inspect existing two-layer boards, run DRC and export Excellon drills](../kicad.md), with independent geometry and drill checks. Board authoring, general multilayer routing, Gerber export and circuit-simulation linkage remain candidates. |
@@ -52,7 +59,7 @@ does not by itself establish redistribution terms or integration readiness.
 | System dynamics and controls | [OpenModelica](https://openmodelica.org/) | Next | Parameterise a known model, simulate and compare response curves; later introduce connected mechanical/electrical/thermal systems. |
 | Robotics | [Gazebo](https://gazebosim.org/libs/sim/) | Next | Load a declared world/robot, run a bounded scenario and inspect sensor/state outputs. |
 | Process engineering | [DWSIM](https://dwsim.org/) | Next | Parameterise a small flowsheet and publish stream/equipment results; independently check selected mass and energy balances. |
-| Reaction chemistry | [Cantera](https://cantera.org/stable/examples/python/index.html) | Bounded native slices | [Ideal-gas h2o2 thermodynamic, TP/HP equilibrium and closed adiabatic reactor histories](../cantera.md), independently checked properties, kinetics, composition, conservation and declared ignition delay. Verified numeric tables connect to Calc, including both reactor models. Broader mechanisms, flames and general reactor networks remain candidates. |
+| Reaction chemistry | [Cantera](https://cantera.org/stable/examples/python/index.html) | Bounded native slices | [Ideal-gas h2o2 thermodynamic, TP/HP equilibrium and closed reactor histories with optional fixed-bath heat exchange](../cantera.md), independently checked properties, kinetics, composition, conservation and declared ignition delay. Verified numeric tables connect to Calc, including both reactor models. Broader mechanisms, flames and general reactor networks remain candidates. |
 | Sparse numerical computing | [SuiteSparse](https://github.com/DrTimothyAldenDavis/SuiteSparse) | Next | Import a sparse matrix and right-hand side, solve with an explicitly selected compatible backend and publish residual diagnostics. |
 | Surveying and inspection | [CloudCompare](https://www.cloudcompare.org/presentation.html) | Next | Register scans and measure cloud-to-cloud or cloud-to-mesh distances; connect with QGIS and CAD. |
 | Technical illustration | [Inkscape](https://inkscape.org/acerca-de/) | Qualified first slice | [Named technical diagrams](../inkscape.md), editable SVG, native geometry/text-fit checks and measured PNG publication. General imported-document editing and arbitrary routing remain candidates. |
@@ -129,7 +136,7 @@ promising arbitrary format-to-format conversion.
 | Tables | Existing bounded Octave/Calc paths; a small table provider if justified | CSV/TSV and typed JSON tables; explicit column selection, renaming, units and missing-value rules. Extend beyond today's finite numeric CSV contract deliberately. |
 | Larger typed tables | [Apache Arrow](https://arrow.apache.org/docs/python/parquet.html) | Selected CSV/Parquet/Arrow exchanges; preserve types, nulls and timestamps without forcing data into numeric-only CSV. |
 | Multidimensional scientific data | [xarray and its I/O backends](https://docs.xarray.dev/en/stable/user-guide/io.html) | Selected NetCDF/Zarr datasets, preserving named dimensions, coordinates, units and masks. Define the dataset schema; a container format alone is not a semantic contract. |
-| Scientific meshes | [meshio](https://github.com/nschloe/meshio), native Gmsh/VTK readers and writers | Gmsh MSH to VTU for inspection; selected solver mesh formats with node/cell sets and physical-group mappings. |
+| Scientific meshes | [meshio](https://github.com/nschloe/meshio), native Gmsh/VTK readers and writers | Strict ASCII VTU/VTK triangle, tetrahedral and hexahedral interchange is implemented. Gmsh MSH to VTU and selected solver formats with physical groups remain candidates. |
 | CAD and surfaces | Existing FreeCAD/Blender/ParaView exporters | STEP to tessellated STL/PLY; explicit units, tolerances, normals and axes. Tessellation does not preserve an editable CAD feature tree. |
 | Geographic data | [GDAL/OGR](https://gdal.org/en/stable/programs/index.html), QGIS | GeoTIFF reprojection/resampling; GeoJSON/GeoPackage exchange with explicit CRS and attributes. |
 | Raster images | [ImageMagick](https://imagemagick.org/), native scientific-image tools | PNG/TIFF/JPEG variants with declared bit depth, colour space and compression; retain a separate scientific-volume contract. |
