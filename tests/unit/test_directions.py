@@ -38,7 +38,7 @@ class AxisTokenTests(unittest.TestCase):
 
     def test_an_unknown_token_lists_what_is_accepted(self) -> None:
         fault = fault_of(self, "up")
-        self.assertEqual(fault.code, "UNKNOWN_AXIS_TOKEN")
+        self.assertEqual(fault.code, "UNKNOWN_SWEEP_TOKEN")
         self.assertIn("x+", fault.recovery)
 
     def test_the_object_spelling_agrees_with_the_shorthand(self) -> None:

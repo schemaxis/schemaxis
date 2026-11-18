@@ -47,7 +47,7 @@ _LIMITATIONS = [
     'units, coordinate frames and native project dependencies are not inferred',
     'every operation is rerun; selective continuation is not implemented',
 ]
-_UNSUPPORTED_TOP = ('dimensions', 'definitions', 'settings', 'axes', 'maxStates', 'execution')
+_UNSUPPORTED_TOP = ('dimensions', 'definitions', 'settings', 'sweeps', 'maxStates', 'execution')
 _HEX = re.compile('[0-9a-f]{64}')
 _SCHEDULED = 2
 

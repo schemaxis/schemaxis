@@ -653,8 +653,8 @@ def workflows(directory, locations):
     study = json.loads((EXAMPLES / 'numpy-sensors.json').read_text())
     study['source'] = str(source)
     study.pop('requirements')
-    study['axes'] = [{'name': 'k', 'values': [1, 2]}]
-    study['retention'] = {'components': {'$axis': 'k'}}
+    study['sweeps'] = [{'name': 'k', 'values': [1, 2]}]
+    study['retention'] = {'components': {'$sweep': 'k'}}
     states = a.run(study, directory / 'study', executable=locations['numpy'], timeout=60)
     assert a.verify(directory / 'study')['verified'] and len(states['states']) == 2
     return {'nativeHandoffRank2': lam, 'unchangedReused': True, 'savedVerifyAfterSourceChange': after_change,

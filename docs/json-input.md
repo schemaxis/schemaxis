@@ -21,8 +21,8 @@ schemas.
 
 | `version` | Application / purpose | Main document fields |
 | --- | --- | --- |
-| `schemaxis/1` | ParaView data pipeline | `nodes`, `scenes`; optional axes, times and authoring data |
-| `schemaxis.blender/1` | Blender mesh/material pipeline | `nodes`, `scenes`; optional axes, times and authoring data |
+| `schemaxis/1` | ParaView data pipeline | `nodes`, `scenes`; optional sweeps, times and authoring data |
+| `schemaxis.blender/1` | Blender mesh/material pipeline | `nodes`, `scenes`; optional sweeps, times and authoring data |
 | `schemaxis.blender.render/1` | Render cameras from a saved Schemaxis Blender scene | `sceneFile`, `cameras`; optional `size`, `render` |
 | `schemaxis.freecad/1` | FreeCAD features and solids | `nodes`, `output`; optional `units`, `linearDeflection`, `dimensions`, `definitions`, `settings` |
 | `schemaxis.freecad.assembly/1` | FreeCAD fixed-joint assembly | `parts`, `components`, `grounded`, `joints`; optional `units`, `dimensions`, `definitions`, `settings` |
@@ -54,7 +54,7 @@ schemas.
 | `schemaxis.meshio/1` | ASCII VTU/VTK mesh interchange | `operation: "convert"`, `source`, explicit source/target formats and coordinate units, strict loss policy; see [mesh interchange guide](meshio.md) |
 | `schemaxis.gdal/1` | Georeferenced raster windows | `operation: "window"`, `source`, source window and output grid dimensions, matching CRS/units/nodata assertions; see [raster window guide](gdal.md) |
 | `schemaxis.openscad/1` | Dimensioned plates and spacers | `operation: "plate"` or `"spacer"`, matching dimensions, `units: "mm"`, optional polygon segments and translation; see [part guide](openscad.md) |
-| `schemaxis.workflow/1` | Verified artifact/value handoffs between supported pipelines | `operations`; optional `execution`, `dimensions`, `definitions`, `settings`, `axes`, `maxStates` |
+| `schemaxis.workflow/1` | Verified artifact/value handoffs between supported pipelines | `operations`; optional `execution`, `dimensions`, `definitions`, `settings`, `sweeps`, `maxStates` |
 
 The shared graph format below applies to **ParaView and Blender pipelines**.
 FreeCAD, Godot and Aseprite have their own ordering and output rules, described
@@ -66,7 +66,7 @@ adaptor support; see [section 12](#12-workflows-files-and-verification).
 | `version` | `schemaxis/1` for ParaView; `schemaxis.blender/1` for Blender |
 | `nodes` | Required nonempty list of sources, materials and processing operations |
 | `scenes` | Required nonempty list: what to show/export, and how to photograph it |
-| `axes` | Optional parameter sweeps |
+| `sweeps` | Optional parameter sweeps |
 | `definitions` | Optional reusable JSON data, accessed with `$document` |
 | `dimensions`, `views`, `settings` | Optional named authoring data for dimension-driven inputs |
 | `times` | Optional ParaView simulation times, e.g. `[0, 1, 2]` |
@@ -160,7 +160,7 @@ STLs. See [CAD and mesh workflows](cad-and-mesh-workflows.md).
 
 `schemaxis.blender.render/1` takes `sceneFile` (a saved Schemaxis batch `.blend`),
 1–1000 literal `cameras`, optional `[width,height]` `size` (default `[320,240]`,
-each dimension 32–2048), and optional `render`. It has no `nodes`, `scenes`, axes
+each dimension 32–2048), and optional `render`. It has no `nodes`, `scenes`, sweeps
 or time visits. Within a workflow, `sceneFile` may be an `$artifact` reference to
 a scene publication. This contract renders images without rebuilding geometry;
 it is not a general importer for arbitrary Blender files or console live saves.
@@ -231,17 +231,17 @@ native readback with an independent host raster model. See the
 For a ParaView or Blender pipeline, add this top-level field:
 
 ```json
-"axes": [{"name":"height", "values":[-2, 0, 2]}]
+"sweeps": [{"name":"height", "values":[-2, 0, 2]}]
 ```
 
 Then replace the slice's `origin` option with:
 
 ```json
-"origin": [0, 0, {"$axis":"height"}]
+"origin": [0, 0, {"$sweep":"height"}]
 ```
 
-This produces three states. Options referencing the **same axis** change together;
-different axes produce combinations. A regular sequence can use
+This produces three states. Options referencing the **same sweep** change together;
+different sweeps produce combinations. A regular sequence can use
 `"series":{"start":-2,"end":2,"count":3}` instead of `values`.
 
 Alternatively, put a sequence directly in an option:
@@ -257,7 +257,7 @@ advance them together. See [the synchronized Blender example](../examples/schema
 
 | Value | Meaning |
 | --- | --- |
-| `{"$axis":"height"}` | Current value of a named axis |
+| `{"$sweep":"height"}` | Current value of a named sweep |
 | `{"$time":true}` | Current selected time |
 | `{"$observe":"box","path":["bounds",0]}` | Upstream minimum X coordinate |
 | `{"$calc":"midpoint","args":[{"$observe":"box","path":["bounds"]}]}` | Upstream bounding-box centre |
@@ -313,9 +313,9 @@ option names shown, not native GUI labels. For example ParaView transform uses
 
 ### Names, types and connections
 
-In the shared ParaView/Blender graph, node, scene, writer and axis names match
+In the shared ParaView/Blender graph, node, scene, writer and sweep names match
 `[A-Za-z][A-Za-z0-9_-]*`; names are
-case-sensitive. Nodes and axes are unique within the pipeline; scene names are
+case-sensitive. Nodes and sweeps are unique within the pipeline; scene names are
 unique; image-writer names are unique within their scene. Nodes may refer forward
 to later nodes, but cycles and missing references fail. Input kinds must match:
 a Blender material cannot be used where a mesh is expected.
@@ -343,7 +343,7 @@ an explicit ID requires an identical construction. Inline inputs can nest.
 
 Unknown keys are errors. `null` does not request a default. Numbers must be finite;
 booleans are not numbers. Integer options require integer JSON tokens (`3`, not
-`3.0`). Constructor options such as reader filenames cannot vary with axes,
+`3.0`). Constructor options such as reader filenames cannot vary with sweeps,
 observations or time; authored document references may resolve them to constants.
 
 ### Direction and colour spellings
@@ -415,14 +415,14 @@ requires equal endpoints. Synchronized option sequences must have equal lengths.
 
 ### Expansion and ordering
 
-Only axes used by active node options execute. Multiple independent active axes
-form a Cartesian product; the first declared axis varies fastest. Presentation
-expressions may reference an axis only if an active node already uses it. Use a
+Only sweeps used by active node options execute. Multiple independent active sweeps
+form a Cartesian product; the first declared sweep varies fastest. Presentation
+expressions may reference a sweep only if an active node already uses it. Use a
 camera sequence for camera-only variation. Observation references add dependencies
 and can activate otherwise-unused upstream nodes.
 
 Default budgets: `maxStates:10000`, `maxPublications:10000`. State count is selected
-times × active-axis combinations. Publication counts per state:
+times × active-sweep combinations. Publication counts per state:
 
 - ParaView: geometry outputs + measurements + appearances × (glTF output + all
   camera views across all image writers) + declared writer exports. The publication
@@ -467,7 +467,7 @@ available-time semantics, not an implicit restriction to outer publication times
 The [common adaptor runtime](adaptor-runtime.md) supplies document references,
 closed expressions and finite analytics across registered application routes.
 Workflow envelopes accept shared `dimensions`, `definitions` and `settings`,
-plus bounded `axes` and `maxStates`. A reference with `"scope":"workflow"`
+plus bounded `sweeps` and `maxStates`. A reference with `"scope":"workflow"`
 selects this shared context. Arbitrary authoring containers remain unsupported.
 
 Top-level `definitions` stores reusable JSON. A marker replaces a complete value:
@@ -508,12 +508,12 @@ Named collections reject duplicate names. These names are a composition conventi
 they are not automatically node `id` values. Neither expression mechanism executes
 Python, imports code, or reads external documents.
 
-### Regular axis series
+### Regular sweep series
 
-An axis `series` supports `start`, `end`, `spacing`, `count`, `padding` and
+A sweep `series` supports `start`, `end`, `spacing`, `count`, `padding` and
 `paddingFraction`. Normally supply exactly three of the first four to derive the
 fourth; all four is an error. A one-position series can use one endpoint and
-`count:1`. Schemaxis's explicit axes supply no dataset bounds: missing endpoints
+`count:1`. Schemaxis's explicit sweeps supply no dataset bounds: missing endpoints
 cannot be inferred from geometry, and the padding controls have no bounds to inset.
 `padding` and `paddingFraction` are alternatives. With start/end/spacing, spacing
 is oriented towards the end and the last sample stops short if the interval is
@@ -569,7 +569,7 @@ check. Degenerate, overlapping or open meshes require care interpreting it.
 ## 12. Workflows, files and verification
 
 A workflow accepts `version`, `operations` and optional `execution`, `dimensions`,
-`definitions`, `settings`, `axes` and `maxStates`. Every
+`definitions`, `settings`, `sweeps` and `maxStates`. Every
 operation accepts `id`, a complete `document`, and optional per-operation
 `execution`. Permitted application versions are derived from each registry route's
 `workflow` flag; this includes FreeCAD assemblies. Nested workflows are unsupported. Registration does not establish
@@ -612,7 +612,7 @@ one are supported only for qualified ParaView pipelines and require `mpiexec`.
 Memory and CPU reservations guide admission; they are not OS-enforced memory or
 affinity limits. `timeChunkSize` splits explicit ParaView/Blender geometry times
 into contiguous batches after checking the full expansion budget. It does not
-split analytic axes, inspect times automatically, or apply to CAD/saved-scene
+split analytic sweeps, inspect times automatically, or apply to CAD/saved-scene
 render jobs.
 
 On failure, the scheduler stops admitting jobs and cancels running siblings,
@@ -685,7 +685,7 @@ workflow children.
 
 Without `--all`, the compatibility default is expanded input; `--expanded` makes
 that choice explicit. Expanded input has document composition, inline construction
-and analytics resolved, but retains runtime markers such as `$axis` and `$observe`.
+and analytics resolved, but retains runtime markers such as `$sweep` and `$observe`.
 
 ```bash
 schemaxis schema --expanded --provider paraview > paraview-expanded.schema.json
@@ -704,7 +704,7 @@ For integer options, write `3`, not `3.0`: JSON Schema's integer semantics are
 broader than the parser's integer-token requirement.
 
 Schemas check structure and declared values. `plan` remains authoritative for
-dependency graphs, kinds, axis membership, uniqueness, cross-option relationships
+dependency graphs, kinds, sweep membership, uniqueness, cross-option relationships
 and budgets. `run` checks actual devices, files, native properties and output data.
 No generated schema can establish those native facts.
 

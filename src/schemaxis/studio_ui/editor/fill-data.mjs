@@ -1,4 +1,5 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
+import {readSpatialInput, spatialField, expressionValue} from './spatial-input.mjs';
 // Durable field markers, choices and literal validation shared by the fill UI.
 import {escapeSegment, parsePointer, rangeOfPointer} from './json-pointer.mjs';
 import {documentValue} from './json-parse.mjs';
@@ -43,20 +44,21 @@ export function replacing(value, pointer, replacement) {
 
 export function parseField(text, field) {
   if (field.type === 'string' && /^\s*".*"\s*,/.test(text)) throw Error('This is one text entry. Use Add item for another name, or edit the parent list as ["U", "p"].');
-  if (['string', 'id', 'path', 'nodeRef', 'axisRef', 'field'].includes(field.type)) return text;
-  return JSON.parse(text);
+  if (['string', 'id', 'path', 'nodeRef', 'sweepRef', 'field'].includes(field.type)) return text;
+  return spatialField(field) ? readSpatialInput(text) : JSON.parse(text);
 }
 
 export function checkField(value, field) {
   const type = field.type || 'json';
+  if (expressionValue(value) && spatialField(field)) return '';
   if (type === 'integer' && !Number.isInteger(value)) return 'Enter an integer.';
   if (type === 'number' && (typeof value !== 'number' || !Number.isFinite(value))) return 'Enter a finite number.';
   if (type === 'boolean' && typeof value !== 'boolean') return 'Choose true or false.';
-  if (['string', 'id', 'path', 'nodeRef', 'axisRef', 'field'].includes(type) && typeof value !== 'string') {
+  if (['string', 'id', 'path', 'nodeRef', 'sweepRef', 'field'].includes(type) && typeof value !== 'string') {
     return 'Enter text.';
   }
-  if (['id', 'nodeRef', 'axisRef', 'path'].includes(type) && !value) return 'Enter a value.';
-  if (type === 'id' && !/^[A-Za-z][A-Za-z0-9_-]*$/.test(value)) {
+  if (['id', 'nodeRef', 'sweepRef', 'path'].includes(type) && !value) return 'Enter a value.';
+  if (type === 'id' && !field.pattern && !/^[A-Za-z][A-Za-z0-9_-]*$/.test(value)) {
     return 'Use a letter, then letters, numbers, _ or -.';
   }
   const length = {vector3: 3, colour: 3, bounds: 6}[type];
@@ -106,14 +108,14 @@ export function fieldChoices(field, document, options = {}) {
       const kinds = options.nodeKinds?.[node.id] || node.outputKinds || (node.kind ? [node.kind] : []);
       return !field.acceptsKinds?.length || !kinds.length || kinds.some((kind) => field.acceptsKinds.includes(kind));
     }).map((node) => node.id);
-  } else if (field.type === 'axisRef') {
-    choices = (Array.isArray(document?.axes) ? document.axes : []).map((axis) => axis?.name).filter(isIdentity);
+  } else if (field.type === 'sweepRef') {
+    choices = (Array.isArray(document?.sweeps) ? document.sweeps : []).map((axis) => axis?.name).filter(isIdentity);
   } else if (field.type === 'field') {
     choices = (options.observations || []).map((field) => typeof field === 'string' ? field : field?.name)
       .filter(isIdentity);
   }
   const values = [...choices, ...(options.recent || [])];
-  const filtered = ['nodeRef', 'axisRef', 'field'].includes(field.type) ? values.filter(isIdentity) : values;
+  const filtered = ['nodeRef', 'sweepRef', 'field'].includes(field.type) ? values.filter(isIdentity) : values;
   return [...new Map(filtered.map((value) => [JSON.stringify(value), value])).values()];
 }
 

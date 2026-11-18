@@ -102,7 +102,7 @@ def execute(document, directory):
                     state['samples'].append({'node': source, 'association': association, 'field': field,
                                              'index': index, 'component': component, 'block': block, 'value': value})
                     return value
-                settings = {**output, 'options': evaluate(output['options'], visit['axes'], state['observations'], visit['time'], output['id'], export_sample)}
+                settings = {**output, 'options': evaluate(output['options'], visit['sweeps'], state['observations'], visit['time'], output['id'], export_sample, master.scope)}
                 export_path = sequence.path(directory, {'kind': 'export', 'scene': scene['id'],
                                                         'name': output['id'], 'time': visit['time']})
                 artifact = publish(backend, active.handles[output['node']], master.declarations[output['writer']],
@@ -122,7 +122,7 @@ def execute(document, directory):
                                                  'index': index, 'component': component, 'block': block, 'value': value})
                         return value
                     def resolved(value):
-                        return evaluate(value, visit['axes'], state['observations'], visit['time'], scene['id'], sample)
+                        return evaluate(value, visit['sweeps'], state['observations'], visit['time'], scene['id'], sample, master.scope)
                     effective_appearance = {k: style(resolved(v), scene['id'] + '.' + k, text=k in text)
                                             for k, v in appearance.items()}
                     observed = renderer.prepare(active.handles, effective_appearance, time=visit['time'], text=text)
@@ -168,6 +168,8 @@ def execute(document, directory):
         if len(receipt['artifacts']) != planned['expectedPublications']:
             from schemaxis.errors import fail
             fail('VERIFICATION_FAILED', 'publication count mismatch')
+        from schemaxis import spatial_results
+        receipt.update(spatialVersion=spatial_results.VERSION, spatial=spatial_results.record(master, receipt['states']))
         receipt.update(status='succeeded', verified=True)
         save()
     except Exception as error:

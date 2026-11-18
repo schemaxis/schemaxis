@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {mkdir, writeFile} from 'node:fs/promises';
@@ -26,7 +26,7 @@ test('foam form explains concepts, browses a case marker, and pipeline reference
     })()`);
     await session.wait('document.querySelector("[data-add=inputs]")', 'Add input');
     assert.equal(await session.evaluate(`document.querySelector('.wb-comprehension').open`), true);
-    assert.ok(await session.evaluate(`document.querySelector('.wb-left > .wb-comprehension') && !document.querySelector('.wb-left').hidden`));
+    assert.ok(await session.evaluate(`document.querySelector('.wb-left .wb-comprehension') && !document.querySelector('.wb-left').hidden`));
     await session.clickSelector('[data-add=inputs]');
     await session.evaluate(`(() => {const e=document.querySelector('[aria-label="Search Add Input"]');e.value='foam';e.dispatchEvent(new Event('input',{bubbles:true}));})()`);
     await session.wait(`document.querySelector('[data-library="operation:foam"]')`, 'foam card');
@@ -34,7 +34,8 @@ test('foam form explains concepts, browses a case marker, and pipeline reference
     await session.wait('document.querySelector(".operation-form")', 'foam form');
     const text = await session.evaluate(`document.querySelector('.operation-form').textContent`);
     assert.match(text, /Assigned automatically/); assert.match(text, /marker can be empty/); assert.match(text, /not from the JSON file/);
-    await session.evaluate(`document.querySelector('[aria-label="foam.id"]').value='case'`);
+    await session.evaluate(`(() => {const input=document.querySelector('[aria-label="foam.id"]');
+      input.value='case';input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
     await session.evaluate(`document.querySelector('[aria-label="Browse for foam.options.file"]').scrollIntoView({block:'center'})`);
     await session.clickSelector('[aria-label="Browse for foam.options.file"]');
     try { await session.wait(`document.querySelector('.operation-file-list')?.textContent.includes('Folder: coupe')`, 'folder listing'); }

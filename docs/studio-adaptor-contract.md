@@ -18,6 +18,11 @@ starter recipes are not complete operation coverage. This extends the
 - Supply a validated `studio.json` with categories, starters, curated snippets,
   viewer support, descriptions and prerequisites. Test each recipe with filled
   host-plan values and ensure unfilled recipes report every placeholder address.
+  Templates, and snippet `values` at the empty pointer (or an `@cursor` value
+  that resolves to the document), replace the existing input: Studio reviews
+  every such replacement before committing it, whatever the item's label.
+  Root `merge` and ordinary insertions are not reviewed. Prefer narrower targets
+  when a recipe should extend rather than replace user work.
 - The optional `studio.json` `helpGuide` selects an adaptor-owned default Help guide
   when it differs from the primary readiness route guide. Both must resolve locally.
 - Cover every declared operation in the Add catalogue. Graph schemas with node
@@ -27,7 +32,7 @@ starter recipes are not complete operation coverage. This extends the
   Other document models must extend the projection to cover their model; do not
   pretend that an empty catalogue meets this requirement.
 - Cover non-operation authoring features: publications, scenes, cameras/styles,
-  scheduling, axes, settings, commands and any application-specific structures.
+  scheduling, sweeps, settings, commands and any application-specific structures.
 - Supply an application guide plus a complete generated operation reference in
   `docs/generated/<adaptor>-operations.md`. Include purpose, native identity,
   input/output kinds, every option, nested constraints, defaults, commands,
@@ -57,6 +62,33 @@ Literal values are checked before insertion; native/semantic constraints remain
 with the planner. Forms recursively expose objects, arrays, alternatives and enum
 choices; free-form values retain JSON editing and schema Help.
 
+For append entries, the host derives optional closed `collectionLimit` metadata
+`{"path":"/nodes","maxItems":1}` from the **parent array** in the route's literal
+schema. Hooks cannot supply or override this metadata. Literal property paths,
+array indices/target placeholders and local `$defs` references are supported.
+Reference siblings containing only annotations and `maxItems` preserve the tighter
+of referenced and sibling bounds. Structural siblings (for example `properties`,
+`items` or `type`) refuse with `INVALID_STUDIO_CATALOGUE`; they are not merged as
+if one constraint replaced the other. Other composed/unknown schema paths carry
+no projected bound. Finite integral numeric bounds such as `1.0` normalize to
+integers; booleans, fractional/nonfinite values and bounds beyond JavaScript's
+safe integer range refuse. An absent bound is not a claim of unrestricted native
+semantics. The planner remains authoritative.
+
+Add checks a projected bound before opening (or after choosing a nested target),
+against the complete proposed collection and again immediately before insertion.
+A stale form, non-array collection or unavailable parent refuses without editing.
+A missing optional array under an existing object starts empty. A full singleton
+points to its existing item's **Edit settings**; other capacities give neutral
+collection-count recovery. Add never replaces an existing item. Settings edits
+remain available and must leave the resulting collection within its bound. An
+already-overcapacity draft receives a precise refusal to correct the count in
+the input; Settings does not silently remove extra items. These checks
+are independent of the singular item's schema validation and do not qualify
+reference-aware Name changes or native operations. A literal node schema's `title`
+is the automatic operation card's readable title; native identity stays in the
+declaration and operation reference.
+
 For an insertion into an existing object, use placeholders in `at`, for example
 `/scenes/{scene}/images/{image}/cameras/-`. Declare ordered `targets`:
 
@@ -74,7 +106,7 @@ literal primary document schema and returns additional item dictionaries; it mus
 belong to the adaptor package. ParaView's implementation is
 `schemaxis.adaptors.paraview.studio:catalogue`.
 
-Shared forms assign unique IDs (and axis names), infer the primary required
+Shared forms assign unique IDs (and sweep names), infer the primary required
 input from selection/declaration kinds, and project `x-studio-reference` controls
 from declared ports. Do not add application-name branches to shared form code.
 The default name stays editable. Additional required ports remain explicit.
@@ -219,3 +251,31 @@ Users can open a question mark and **Suggest a correction → Copy help request*
 in a form. Their prose, examples and questions can be saved to the identified
 adaptor/route/address record and reviewed without changing the executable contract.
 Keep qualifications and evidence separate from conceptual-help completeness.
+
+## Element authoring policies
+
+An operation guidance record may declare `authoring.naming` independently of
+`authoring.multiMode`. The catalogue validates policy paths against the literal
+node schema and projects them to the common settings dialog. Studio uses
+`authoring.instanceFields` for both suggested Names and compact controls. A node
+field selects an input or option. A scene or nested member field selects a
+setting directly. Guidance attached to a referenced member definition applies
+where the catalogue exposes that member. A member can declare
+`identityField: false` when it has no separate Name.
+
+Multi-mode creates ordinary elements in one undoable transaction. Policies can
+require `multiMode.validatePlan` when references, shared ownership or
+publication paths depend on other elements. In that case Apply uses the same
+host planner as Workbench Validate and shows its fault in Settings.
+ParaView `extractBlock` is the reference for one declared Batch list.
+
+Adaptors whose planners require earlier input nodes can declare
+`studioInputOrder: "preceding"` in their manifest. Compact input pickers then
+offer only preceding nodes when editing a saved row.
+
+Follow [the element multi-mode rubric](design/element-multi-mode.md) for suitability,
+shared and per-row settings, grouping, names, validation and reference stability.
+Use [the adaptor audit prompt](../tools/agent-prompts/adaptor-element-authoring.md)
+for subsequent adaptor work. Naming should be assessed even for nodes that are
+unsuitable for multi-mode. Unreviewed operations remain unclassified, rather than
+being labelled unsupported.

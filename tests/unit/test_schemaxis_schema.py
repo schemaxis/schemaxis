@@ -51,7 +51,7 @@ class SchemaProjectionTests(unittest.TestCase):
         self.assertEqual(source, original)
         self.assertNotIn('$analytic', json.dumps(expanded))
         self.assertNotIn('$object', json.dumps(expanded))
-        self.assertIn('$axis', json.dumps(expanded))
+        self.assertIn('$sweep', json.dumps(expanded))
 
     def test_generated_reference_has_no_drift(self):
         spec = importlib.util.spec_from_file_location('export_input_reference', ROOT/'tools/export_input_reference.py')
@@ -114,11 +114,11 @@ class SchemaConformanceTests(unittest.TestCase):
         schema = export_schema()
         validator = Draft202012Validator(schema)
         document = {'version':'schemaxis/1','nodes':[{'id':'sphere','filter':'sphere',
-            'options':{'radius':{'$axis':'size'}}}], 'axes':[{'name':'size','values':[1,2]}],
+            'options':{'radius':{'$sweep':'size'}}}], 'sweeps':[{'name':'size','values':[1,2]}],
             'scenes':[{'id':'output','geometry':['sphere']}]}
         validator.validate(document)
         document['nodes'][0] = {'id':'sphere','filter':'readSurface',
-            'options':{'files':[{'$axis':'size'}]}}
+            'options':{'files':[{'$sweep':'size'}]}}
         self.assertFalse(validator.is_valid(document))
 
     def test_document_schema_does_not_claim_graph_semantics(self):

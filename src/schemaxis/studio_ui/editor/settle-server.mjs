@@ -37,8 +37,9 @@ export function backgroundValidation(editor, validate, {delay = 1000} = {}) {
   };
 }
 
-export function reportDiagnostics(ctx, editor, {title = 'Input needs attention', document, show = () => {}} = {}) {
-  const diagnostics = editor.flushDiagnostics();
+export function reportDiagnostics(ctx, editor, {title = 'Input needs attention', document, show = () => {},
+  filter = () => true} = {}) {
+  const diagnostics = editor.flushDiagnostics().filter(filter);
   const version = editor.getTextVersion();
   if (diagnostics.length) {
     ctx.notify.group(diagnostics, {title, source: {document}, actions: (item) => [{label: 'Show in input', run: () => {

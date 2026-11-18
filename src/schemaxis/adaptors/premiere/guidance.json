@@ -207,6 +207,21 @@
           ]
         },
         "/properties/tracks/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/clips",
+                "label": "Clips",
+                "style": "lastSegment",
+                "nameField": "sourcePath"
+              }
+            ],
+            "naming": {
+              "prefix": "track"
+            },
+            "identityField": "name",
+            "identityStyle": "label"
+          },
           "status": "reviewed",
           "explanation": "One native video track identified by its exact name and its position in the complete track list, with all its clips. An empty clips list explicitly requires an empty track.",
           "sources": [
@@ -300,6 +315,16 @@
           "defaultMeaning": "No coverage requirements; exact declared layout still must match."
         },
         "/properties/requirements/items": {
+          "authoring": {
+            "instanceFields": [
+              {"path": "/tracks", "label": "Tracks"},
+              {"path": "/startFrame", "label": "Start frame"},
+              {"path": "/frameCount", "label": "Frame count"}
+            ],
+            "identityStyle": "label",
+            "naming": {"prefix": "coverage"},
+            "multiMode": {"rationale": "Each requirement is checked independently for its own tracks and time window."}
+          },
           "status": "reviewed",
           "explanation": "One named frame-range coverage gate. Uncovered frame numbers are retained in layout.json and cause REQUIREMENT_FAILED. Coverage counts occupied unmuted tracks, never visible pixels.",
           "sources": [
@@ -319,6 +344,7 @@
           ]
         },
         "/properties/requirements/items/properties/tracks": {
+          "control": {"kind": "document-entries", "collection": "/tracks", "field": "name"},
           "status": "reviewed",
           "explanation": "Required nonempty list of distinct names from the complete tracks declaration. Only these tracks contribute to this requirement. Each contributes at most one active interval at a frame; there is no wildcard.",
           "sources": [

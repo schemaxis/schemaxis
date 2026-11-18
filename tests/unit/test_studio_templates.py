@@ -7,6 +7,7 @@ import unittest
 
 from schemaxis.adaptors import registry
 from schemaxis.studio_library import load_library, instantiate_item
+from schemaxis.adaptors.paraview.console import validate as validate_paraview
 
 
 ROOT = Path(__file__).resolve().parents[2] / 'src' / 'schemaxis' / 'adaptors'
@@ -32,7 +33,12 @@ class StudioTemplatesTest(unittest.TestCase):
                 before = copy.deepcopy(metadata)
                 for entry in metadata['templates']:
                     document = instantiate_item(metadata, entry, provider=application)
-                    self.assertIsNotNone(registry.plan(document))
+                    if application == 'paraview' and isinstance(document.get('times'), dict):
+                        self.assertEqual(document['times'], {'source': 'case', 'select': {'latest': 1}})
+                        self.assertTrue(validate_paraview(document)['deferred'])
+                        self.assertNotIn('skipZero', document['nodes'][0]['options'])
+                    else:
+                        self.assertIsNotNone(registry.plan(document))
                 self.assertEqual(metadata, before, 'Instantiation must not modify the library')
 
     def test_snippets_and_starters_have_distinct_identifiers(self):

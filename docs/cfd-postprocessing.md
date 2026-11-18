@@ -414,7 +414,7 @@ inside each other; their resolved values still undergo typed option validation.
 | `$call` | Invoke a typed function with named runtime arguments. |
 | `$calc` | Positional runtime arithmetic/vector calculations. |
 | `$sample` | Read a field tuple from an upstream dataset, with explicit association/index. An index is not a persistent physical point. |
-| `$axis` / `$time` | Current variation value / selected simulation time. |
+| `$sweep` / `$time` | Current variation value / selected simulation time. |
 | `$artifact` | In `schemaxis.workflow/1`, reference a prior operation's published file by receipt index. |
 
 For a slice whose centre should follow native mesh bounds, an option can be:
@@ -473,10 +473,10 @@ endpoints; it differs from the spatial `slicePositions` helper's centre rule.
 ### A specified physical spacing
 
 Use [03-spaced-slices.json](../examples/cfd-postprocess/03-spaced-slices.json).
-It declares this top-level axis:
+It declares this top-level sweep:
 
 ```json
-"axes": [{
+"sweeps": [{
   "name": "sliceZ",
   "series": {
     "start": {"$document": "/dimensions/sliceBounds/min/2"},
@@ -486,11 +486,11 @@ It declares this top-level axis:
 }]
 ```
 
-The slice uses `"origin":[0,0,{"$axis":"sliceZ"}]`. The template's example values
+The slice uses `"origin":[0,0,{"$sweep":"sliceZ"}]`. The template's example values
 0.2 to 0.8 with spacing 0.2 give four positions. With start/end/spacing, the sequence
 stops short if the interval is not an exact multiple. Do not also give `count`:
 the regular-series contract derives the missing member. `spacing` belongs to
-`axes[].series`, not to the built-in `linear` `$analytic` syntax.
+`sweeps[].series`, not to the built-in `linear` `$analytic` syntax.
 
 ### Synchronise related variations; separate independent studies
 
@@ -500,7 +500,7 @@ same scene. With no synchronisation, three origins and four contour levels used
 in one scene can mean twelve states. Separate scenes whose dependencies use only
 one variation each avoid that cross-product.
 
-Camera-only variations belong in `images[].cameras`. Do not add a geometry axis
+Camera-only variations belong in `images[].cameras`. Do not add a geometry sweep
 just to orbit a camera. A camera analytic replaces the **whole cameras list**:
 
 ```json
@@ -751,7 +751,7 @@ With the supplied one-time settings, `02-reusable.json` plans:
 | **Total** | | **22 artifacts: 4 geometry, 16 PNGs, 2 CSVs** |
 
 The iso-surface is not repeated at each slice position, because its scene does
-not depend on the slice axis. Two selected times double these counts. The
+not depend on the slice sweep. Two selected times double these counts. The
 fixed-spacing template produces four slice positions with its sample settings:
 4 geometry + 16 PNGs = 20 artifacts. `maxStates` and `maxPublications` bound
 expansion; they do not constrain the memory cost of reading a large case.

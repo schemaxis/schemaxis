@@ -58,7 +58,7 @@ flowchart TD
   B --> C[Compile inline objects and analytics]
   C --> D[Validate graph and publication declarations]
   D --> E[Select scene roots and dependency closure]
-  E --> F[Expand active axes and selected times]
+  E --> F[Expand active sweeps and selected times]
   F --> G[Run frozen runtime in native pvbatch]
   G --> H[Update and observe upstream data]
   H --> I[Resolve runtime values and assign validated properties]
@@ -77,7 +77,7 @@ JSON uses double quotes, no comments, no trailing commas, no duplicate keys and 
 | `version` | `"schemaxis/1"` | Required ParaView document contract. |
 | `nodes` | Nonempty array of node objects | Required definitions; dependencies determine execution order. |
 | `scenes` | Nonempty array of scene objects | Required publication selections; each scene must request an output. |
-| `axes` | `[{"name":"offset","values":[0,1]}]` | Optional named sweep sequences. Each axis has either `values` or `series`, never both. |
+| `sweeps` | `[{"name":"offset","values":[0,1]}]` | Optional named sweep sequences. Each sweep has either `values` or `series`, never both. |
 | `times` | `[0,1]` or `{"source":"case","select":"latest"}` | Explicit simulation times, default `[0.0]`, or selection from native source metadata. |
 | `definitions` | JSON data | Reusable authored values addressed with `$document`. |
 | `dimensions` | JSON data | Named design dimensions; values do not automatically set node options. |
@@ -109,13 +109,13 @@ Nested proxy values contain `type` (a declared choice) and `options` (that choic
 
 Constructor options, especially reader filenames, are fixed across visits. Native resources preserve identity and participate in invalidation, but cannot be selected for dataset geometry or measurement publication. Data type and array requirements are checked after upstream data updates; host schema validity alone cannot establish those requirements.
 
-### Axes and series
+### Sweeps and series
 
 ```json
-{"axes":[{"name":"offset","series":{"start":-2,"end":2,"count":5}}]}
+{"sweeps":[{"name":"offset","series":{"start":-2,"end":2,"count":5}}]}
 ```
 
-Use `{"$axis":"offset"}` in a varying option, e.g. inside a three-element slice origin. `values` can hold scalars, vectors or objects; select object members with `path`. Independent active axes form a Cartesian product. Unused axes do not expand a scene's geometry selection. Scene-only expressions may use active geometry axes, not introduce an unrelated presentation axis; use explicit camera lists for camera-only variation.
+Use `{"$sweep":"offset"}` in a varying option, e.g. inside a three-element slice origin. `values` can hold scalars, vectors or objects; select object members with `path`. Independent active sweeps form a Cartesian product. Unused sweeps do not expand a scene's geometry selection. Scene-only expressions may use active geometry sweeps, not introduce an unrelated presentation sweep; use explicit camera lists for camera-only variation.
 
 Series keys: `start` and `end` are numeric endpoints, `spacing` is distance between positions, `count` is a positive integer, `padding` is a nonnegative absolute bounds inset, and `paddingFraction` is a bounds inset fraction from 0 to 0.5. The general series resolver accepts any consistent combination of three of start/end/spacing/count, with optional bounds-derived endpoints. Ordinary standalone axes have no native bounds supplied, so provide enough explicit values. Example: `{"start":0,"spacing":0.5,"count":3}` produces `[0,0.5,1]`.
 
@@ -168,7 +168,7 @@ The relocated copy is checked again after the fresh process consumes it, before 
 
 Open the bundle in ParaView with **File > Load State...**, select `state.pvsm`, set **Load State Data File Options** to *Search files under specified directory*, set **Data Directory** to the bundle's `data/` folder and tick **Only Use Files In Data Directory**. ParaView then lists each relocated reader under its file name (for example `plate.vtp`) in the Pipeline Browser. The default *Use File Names From State* reads the absolute paths recorded at save time, which no longer name the bundle after it moves. Verification uses the same load options through `paraview.simple.LoadState`; the GUI dialog itself is not exercised.
 
-This first slice is deliberately bounded and refused at planning otherwise (`UNSUPPORTED_STATE_BUNDLE`): one scene, one visit (one time, no axes), one appearance, exactly one image writer with one camera, no glTF, exports or text labels, no dynamic option or presentation values, no plugins, resources or visit commands, and serial runs only. Generator sources, filters without file options and the self-contained single-file readers (absolute paths to regular files without symbolic links in their path) `readSurface`, `readUnstructuredGrid`, `readImageData`, `readStructuredGrid`, `readRectilinearGrid`, `readSTL` and `readPLY` are supported; OpenFOAM cases, multiblock and parallel VTK files are not yet bundled. Each copied file is at most 64 MiB, with at most 16 files and 256 MiB per bundle. Units and coordinate frames are recorded as unknown, and the state is verified only with the ParaView version that saved it. Schemaxis never loads externally authored state files or scripts: the only state loading is the internal reload of the run's own bundle.
+This first slice is deliberately bounded and refused at planning otherwise (`UNSUPPORTED_STATE_BUNDLE`): one scene, one visit (one time, no sweeps), one appearance, exactly one image writer with one camera, no glTF, exports or text labels, no dynamic option or presentation values, no plugins, resources or visit commands, and serial runs only. Generator sources, filters without file options and the self-contained single-file readers (absolute paths to regular files without symbolic links in their path) `readSurface`, `readUnstructuredGrid`, `readImageData`, `readStructuredGrid`, `readRectilinearGrid`, `readSTL` and `readPLY` are supported; OpenFOAM cases, multiblock and parallel VTK files are not yet bundled. Each copied file is at most 64 MiB, with at most 16 files and 256 MiB per bundle. Units and coordinate frames are recorded as unknown, and the state is verified only with the ParaView version that saved it. Schemaxis never loads externally authored state files or scripts: the only state loading is the internal reload of the run's own bundle.
 
 ### Appearance keys
 
@@ -314,7 +314,7 @@ The ordinary serial runner retains these named files. Common runtime studies and
 | `authored.json` | Original submitted input. |
 | `document-resolution.json` | Document references and pure-value resolution provenance. |
 | `input.json` | Effective expanded pipeline input. |
-| `analytic-bindings.json` | Member-to-axis/synchronisation bindings. |
+| `analytic-bindings.json` | Member-to-sweep/synchronisation bindings. |
 | `plan.json` | Pipeline, selected scenes and expected publication count. |
 | `runtime.zip` | Frozen execution code. |
 | `submission.json` | Native subprocess submission evidence. |
@@ -339,6 +339,10 @@ flowchart LR
 ```
 
 A file's existence or successful process exit alone is insufficient. Host verification checks publication order/membership, plan digest, states, effective settings, object reuse, update invalidation, commands and file hashes. Do not edit outputs and expect old hashes to remain valid. See [native job implementation](../src/schemaxis/adaptors/paraview/job.py) and [publication implementation](../src/schemaxis/adaptors/paraview/publication.py).
+
+Outputs read from a decomposed case are not byte-identical between two native runs because of how ParaView joins processor boundaries; this is ParaView's behaviour, so compare counts, bounds, ranges and recorded spatial values in tests, never digests between runs.
+Verification checks each run against its own receipt, so this does not affect verification.
+
 
 ### Automatic geometry formats
 
@@ -381,6 +385,7 @@ Example observation access: `{"$observe":"data","path":["fields","POINTS","RTDat
 
 | Example | What to inspect |
 | --- | --- |
+| [Car](../examples/paraview-car/README.md) | A model box read from loaded data with `extents`; the zoom, wake box, cut plane, cameras and a line-source sweep derived from it by expressions; one ParaView session. Needs a car case of your own. |
 | [Catalogue mesh](../examples/schemaxis/paraview-catalogue.json) | Generated filter and nested native properties. |
 | [Table](../examples/schemaxis/paraview-catalogue-table.json) | CSV reader, table round trip, row samples. |
 | [Output ports](../examples/schemaxis/paraview-output-ports.json) | Selecting a non-default producer port. |

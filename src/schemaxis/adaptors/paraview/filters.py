@@ -104,7 +104,7 @@ FOAM = {'id': 'foam', 'native': 'OpenFOAMReader', 'inputs': {}, 'options': {
     'caseType': {**choice('CaseType', ['Decomposed Case', 'Reconstructed Case'], 'Decomposed Case'), 'constructor': True},
     'regions': reader_selection('MeshRegions', ['internalMesh']),
     'cellArrays': reader_selection('CellArrays'),
-    'skipZero': option('boolean', 'SkipZeroTime', False),
+    'skipZero': option('boolean', 'SkipZeroTime', True),
 }}
 class Foam(NativeFilter):
     declaration = FOAM
@@ -305,4 +305,16 @@ def catalogue():
     from .catalogue import enrich_curated, generated_declarations
     enrich_curated(result)
     result.update(generated_declarations())
+    for declaration in result.values():
+        if loads_data(declaration):
+            declaration['loadsData'] = True
     return result
+
+
+def loads_data(declaration):
+    """A reader: a source without inputs that is given the files it opens."""
+    if declaration['inputs'] or declaration.get('role') in ('writer', 'resource'):
+        return False
+    return any('vtkSMFileListDomain' in option.get('nativeDomains', ())
+               or (option.get('path') or [None])[-1] in ('FileName', 'FileNames')
+               for option in declaration['options'].values())

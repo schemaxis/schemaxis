@@ -1,0 +1,109 @@
+{
+  "version": "schemaxis/1",
+  "settings": {
+    "case": "cases/coupe/coupe_AMI.foam",
+    "patches": {
+      "body": ["//body_upper", "//enginebay_engine"],
+      "tyres": ["//wheels_FL_Tyre", "//wheels_FR_Tyre", "//wheels_RL_Tyre", "//wheels_RR_Tyre",
+                 "//wheels_FL_movingPatch", "//wheels_FR_movingPatch", "//wheels_RL_movingPatch", "//wheels_RR_movingPatch"]
+    },
+    "zoom": 0.52,
+    "seedPositions": 5,
+    "imageSize": [1280, 720],
+    "aspect": [16, 9],
+    "speed": {
+      "field": ["POINTS", "U"],
+      "component": -1,
+      "range": [0, 50],
+      "preset": "Viridis (matplotlib)",
+      "legend": true,
+      "legendTitle": "Velocity magnitude"
+    }
+  },
+  "definitions": {
+    "model": {"$expr": "union(extents(body), extents(wheels))"},
+    "wake": {"$expr": "model.push('x+', 2.5).pushAbs('x-', 0.25 * model.deltaX).inflateY(1).push('z+', 0.5)"},
+    "seedX": {"$expr": "model.min.x - 0.1 * model.deltaX"},
+    "seedY": {"$expr": "sweep(model.min.y, model.max.y, seedPositions)"}
+  },
+  "times": {"source": "case", "select": {"latest": 1}},
+  "nodes": [
+    {
+      "id": "case",
+      "filter": "foam",
+      "options": {
+        "file": {"$document": "/settings/case"},
+        "regions": {"$value": "foamRegions", "args": {"groups": {"$document": "/settings/patches"}}},
+        "cellArrays": ["p", "U"],
+        "skipZero": true
+      }
+    },
+    {"id": "body", "filter": "extractBlock", "inputs": {"input": "case"},
+     "options": {"selectors": {"$document": "/settings/patches/body"}}},
+    {"id": "wheels", "filter": "extractBlock", "inputs": {"input": "case"},
+     "options": {"selectors": {"$document": "/settings/patches/tyres"}}},
+    {"id": "internal", "filter": "extractBlock", "inputs": {"input": "case"},
+     "options": {"selectors": ["//internalMesh"]}},
+    {"id": "fluid", "filter": "merge", "inputs": {"input": "internal"}},
+    {"id": "velocityAtPoints", "filter": "cellToPoint", "inputs": {"input": "fluid"},
+     "options": {"allArrays": false, "arrays": ["U"]}},
+
+    {"id": "plane", "filter": "slice", "inputs": {"input": "velocityAtPoints"},
+     "options": {"normal": "z+", "origin": {"$expr": "model.mid"}}},
+    {"id": "cropXmin", "filter": "clip", "inputs": {"input": "plane"},
+     "options": {"normal": "x+", "origin": {"$expr": "wake.min"}}},
+    {"id": "cropXmax", "filter": "clip", "inputs": {"input": "cropXmin"},
+     "options": {"normal": "x-", "origin": {"$expr": "wake.max"}}},
+    {"id": "cropYmin", "filter": "clip", "inputs": {"input": "cropXmax"},
+     "options": {"normal": "y+", "origin": {"$expr": "wake.min"}}},
+    {"id": "wakePlane", "filter": "clip", "inputs": {"input": "cropYmin"},
+     "options": {"normal": "y-", "origin": {"$expr": "wake.max"}}},
+
+    {"id": "seed", "filter": "line",
+     "options": {
+       "start": {"$expr": "vector(seedX, seedY, model.min.z)"},
+       "end": {"$expr": "vector(seedX, seedY, model.max.z)"},
+       "resolution": 24
+     }},
+    {"id": "stream", "filter": "streamTracer", "inputs": {"input": "velocityAtPoints", "seed": "seed"},
+     "options": {"vectors": ["POINTS", "U"], "direction": "FORWARD",
+                 "maximumLength": {"$expr": "wake.deltaX"}, "maximumSteps": 3000}},
+    {"id": "tubes", "filter": "tube", "inputs": {"input": "stream"},
+     "options": {"radius": {"$expr": "0.002 * model.deltaX"}, "sides": 8}}
+  ],
+  "scenes": [
+    {
+      "id": "model",
+      "visible": {"body": {"colour": "grey"}, "wheels": {"colour": "black"}},
+      "images": [
+        {"id": "zoom", "size": {"$document": "/settings/imageSize"},
+         "cameras": [{"$expr": "fitCamera(bounds = model.inflate(zoom), direction = vector(-1, -2, 1), up = 'z+', aspect = aspect)"}]}
+      ]
+    },
+    {
+      "id": "wake",
+      "visible": {
+        "wakePlane": {"$document": "/settings/speed"},
+        "body": {"colour": "grey"},
+        "wheels": {"colour": "black"}
+      },
+      "images": [
+        {"id": "top", "size": {"$document": "/settings/imageSize"},
+         "cameras": [{"$expr": "fitCamera(bounds = wake, direction = 'z+', up = 'y+', aspect = aspect)"}]}
+      ]
+    },
+    {
+      "id": "streamlines",
+      "visible": {
+        "tubes": {"$document": "/settings/speed"},
+        "body": {"colour": "grey"},
+        "wheels": {"colour": "black"}
+      },
+      "geometry": ["tubes"],
+      "images": [
+        {"id": "side", "size": {"$document": "/settings/imageSize"},
+         "cameras": [{"$expr": "fitCamera(bounds = wake, direction = vector(1, -2, 1), up = 'z+', aspect = aspect)"}]}
+      ]
+    }
+  ]
+}

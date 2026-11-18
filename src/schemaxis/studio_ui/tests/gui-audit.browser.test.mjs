@@ -41,12 +41,12 @@ test('golden path keeps drafts while inspecting headers, inserting section recip
     await s.evaluate(`document.querySelector('.wb-controls-toggle').click()`);
     assert.equal(await s.evaluate(`document.querySelector('.wb-authoring-tools').hidden`),false);
     assert.equal(await s.evaluate(`document.querySelectorAll('.window:not([hidden]) > .window-body > .tree-tools').length`),0);
-    await s.evaluate(`document.querySelector('[data-right=case]').click();${active}.editor.revealPointer('/nodes/0/options/cellArrays');${active}.editor.focus()`);
+    await s.evaluate(`${active}.editor.revealPointer('/nodes/0/options/cellArrays');${active}.editor.focus()`);
     await s.evaluate(`document.querySelector('.wb-case-data').querySelector('summary').parentElement.open=true`);
-    assert.deepEqual(await s.evaluate(`[...document.querySelectorAll('.wb-case-data .wb-case-name')].map(b=>b.textContent)`),['internalMesh','patch/walls','U','p','1']);
+    assert.deepEqual(await s.evaluate(`[...document.querySelectorAll('.wb-case-data .wb-case-name')].map(b=>b.textContent)`),['internalMesh','patch/walls','p','U','1']);
     await s.evaluate(`[...document.querySelectorAll('.wb-case-data .wb-case-name')].find(b=>b.textContent==='patch/walls').click()`);
     assert.deepEqual(await s.evaluate(`${active}.editor.getDocument().nodes[0].options.cellArrays`),['U','p','patch/walls']);
-    await s.evaluate(`${active}.editor.undo();document.querySelector('[data-right=properties]').click()`);
+    await s.evaluate(`${active}.editor.undo();`);
     assert.equal(await s.evaluate(`${active}.editor.getValue()`),original);
     // A section button must survive focus and commit its preview in one undo step.
     await s.evaluate(`${active}.editor.revealPointer('/scenes');${active}.editor.focus()`);

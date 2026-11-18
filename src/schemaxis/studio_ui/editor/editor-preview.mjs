@@ -68,21 +68,28 @@ export class Preview {
     return {...preview.display, map, ghost, ghosts: preview.ghosts};
   }
 
-  /** Show a preview: {at: offset | pointer, text} or {at: pointer, value | values}. */
-  show({at, text, value, values, inserts, fields}) {
+  /** Plan a preview request against the current text and caret without displaying it; throws when invalid. */
+  plan({at, text, value, values, inserts}) {
     const core = this.core;
+    if (inserts) {
+      return planInserts(core.ensureAst(), inserts, {indent: core.state.options.indent,
+        caret: core.textarea.selectionStart});
+    }
+    if (typeof at === 'number') {
+      return {from: at, to: at, text: String(text)};
+    }
+    const list = values ?? (value !== undefined ? [value] : [JSON.parse(text)]);
+    return planInsert(core.ensureAst(), at, list, {indent: core.state.options.indent});
+  }
+
+  /** Show a preview: {at: offset | pointer, text} or {at: pointer, value | values}. */
+  show(request) {
+    const core = this.core;
+    const {fields} = request;
     this.clear();
     let edit;
     try {
-      if (inserts) {
-        edit = planInserts(core.ensureAst(), inserts, {indent: core.state.options.indent,
-          caret: core.textarea.selectionStart});
-      } else if (typeof at === 'number') {
-        edit = {from: at, to: at, text: String(text)};
-      } else {
-        const list = values ?? (value !== undefined ? [value] : [JSON.parse(text)]);
-        edit = planInsert(core.ensureAst(), at, list, {indent: core.state.options.indent});
-      }
+      edit = this.plan(request);
     } catch (error) {
       console.warn('Preview failed', error);
       return null;
@@ -111,11 +118,12 @@ export class Preview {
     return true;
   }
 
-  clear() {
+  /** Remove the ghost; {restore: false} leaves the current selection and scroll exactly as they are. */
+  clear({restore: allowed = true} = {}) {
     if (!this.current) {
       return;
     }
-    const restore = this.current.base === this.core.textarea.value;
+    const restore = allowed && this.current.base === this.core.textarea.value;
     this.current = null;
     this.core.view.root.classList.remove('sx-ed-previewing');
     this.core.view.endPreview(restore);

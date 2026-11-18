@@ -1,11 +1,11 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden
 // Identity and connection choices shared by every adaptor's Add form.
 export function identityPool(value) {
   const used = new Set();
   function visit(value) {
     if (!value || typeof value !== 'object') return;
     if (typeof value.id === 'string') used.add(value.id);
-    if (Array.isArray(value.axes)) value.axes.forEach(axis => { if (typeof axis?.name === 'string') used.add(axis.name); });
+    if (Array.isArray(value.sweeps)) value.sweeps.forEach(axis => { if (typeof axis?.name === 'string') used.add(axis.name); });
     Object.values(value).forEach(visit);
   }
   visit(value); return used;
@@ -19,14 +19,16 @@ export function nextIdentity(base, used) {
   const id = base + number; used.add(id); return id;
 }
 
-/** A node name from a chosen file: its name without the extension, or its folder for a generic "case" file. */
+/** Parent folder and file stem, collapsing identical parts, as a valid node identity. */
 export function entryName(path, used) {
-  const parts = String(path || '').split(/[\\/]+/).filter(Boolean);
-  let base = (parts.at(-1) || '').replace(/\.[A-Za-z0-9]+$/, '');
-  if (!base || /^case$/i.test(base)) base = parts.at(-2) || base;
+  if (typeof path !== 'string' || !path.trim()) return null;
+  const parts = path.trim().split(/[\\/]+/).filter(Boolean);
+  const stem = (parts.at(-1) || '').replace(/\.[A-Za-z0-9]+$/, '');
+  if (!stem) return null;
+  const parent = parts.at(-2);
+  let base = !parent || parent === '.' || parent === '..' || parent === stem ? stem : `${parent}_${stem}`;
   base = base.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
   if (!base) return null;
-  if (!/^[A-Za-z]/.test(base)) base = 'case_' + base;
   if (!used.has(base)) return base;
   let number = 2;
   while (used.has(`${base}_${number}`)) number++;
@@ -47,7 +49,7 @@ export function preferredInput(documentValue, selected, kind, kinds) {
 export function initialOperation(item, documentValue, selected, kinds = {}) {
   const used = identityPool(documentValue), value = {};
   if (item.schema.properties?.id) value.id = nextIdentity(item.operation || item.id.split(':').at(-1), used);
-  if (item.at === '/axes/-' && item.schema.properties?.name) value.name = nextIdentity('axis', used);
+  if (item.at === '/sweeps/-' && item.schema.properties?.name) value.name = nextIdentity('sweep', used);
   // One primary connection is inferred; additional ports (e.g. seeds/mesh) stay explicit.
   const primary = Object.entries(item.ports || {}).find(([, port]) => port.required);
   if (primary && item.at === '/nodes/-') {

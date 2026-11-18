@@ -2,7 +2,10 @@
 // Plan text edits that insert JSON values at RFC 6901 pointers while keeping
 // the surrounding indentation. Pure functions: the editor applies the edits.
 //
-//   planInsert(ast, pointer, values, {indent}) -> {from, to, text, select: {from, to}}
+//   planInsert(ast, pointer, values, {indent}) -> {from, to, text, select: {from, to}, effect}
+//
+// `effect` records what the planner actually does at `pointer`: 'replace' an
+// existing value (including the document root) or 'insert' a new member/item.
 //
 // `pointer` semantics: '/a/-' appends to array a; '/a/2' inserts before item 2;
 // '/a/key' sets (adds or replaces) an object member. Missing containers are
@@ -86,7 +89,8 @@ function setMember(text, object, key, value, unit) {
   if (existing && existing.value) {
     const indent = lineIndent(text, existing.key.from);
     const body = formatValue(value, indent, unit);
-    return {from: existing.value.from, to: existing.value.to, text: body, select: {from: 0, to: body.length}};
+    return {from: existing.value.from, to: existing.value.to, text: body, select: {from: 0, to: body.length},
+      effect: 'replace'};
   }
   const members = object.members;
   const indent = childIndent(text, object, members, unit);
@@ -97,12 +101,13 @@ function setMember(text, object, key, value, unit) {
     const to = object.closed ? object.to - 1 : from;
     const prefix = `\n${indent}`;
     const select = {from: prefix.length, to: prefix.length + entry.length};
-    return {from, to, text: `${prefix}${entry}\n${parentIndent}`, select};
+    return {from, to, text: `${prefix}${entry}\n${parentIndent}`, select, effect: 'insert'};
   }
   const multiline = isMultiline(text, object);
   const prefix = multiline ? `,\n${indent}` : ', ';
   const at = members[members.length - 1].to;
-  return {from: at, to: at, text: prefix + entry, select: {from: prefix.length, to: prefix.length + entry.length}};
+  return {from: at, to: at, text: prefix + entry, select: {from: prefix.length, to: prefix.length + entry.length},
+    effect: 'insert'};
 }
 
 /**
@@ -117,7 +122,8 @@ export function planInsert(ast, pointer, values, options = {}) {
   const segments = parsePointer(pointer);
   if (segments.length === 0) {
     const body = formatValue(list[0], '', unit);
-    return {from: 0, to: text.length, text: body, select: {from: 0, to: body.length}};
+    return {from: ast.root ? ast.root.from : 0, to: ast.root ? ast.root.to : text.length, text: body,
+      select: {from: 0, to: body.length}, effect: 'replace'};
   }
   const last = segments[segments.length - 1];
   const parentPointer = formatPointer(segments.slice(0, -1));
@@ -127,9 +133,9 @@ export function planInsert(ast, pointer, values, options = {}) {
       ? [...missingContainers(options.creatingContainer && INDEX.test(last) ? Number(last) : 0, list[0]), ...list]
       : {[last]: list[0]};
     if (segments.length === 1 && !ast.root) {
-      return planInsert(ast, '', [wrapped], options);
+      return {...planInsert(ast, '', [wrapped], options), effect: 'insert'};
     }
-    return planInsert(ast, parentPointer, [wrapped], {...options, creatingContainer: true});
+    return {...planInsert(ast, parentPointer, [wrapped], {...options, creatingContainer: true}), effect: 'insert'};
   }
   if (parent.type === 'array') {
     if (last !== '-' && !INDEX.test(last)) {
@@ -138,7 +144,7 @@ export function planInsert(ast, pointer, values, options = {}) {
     const index = last === '-' ? parent.items.length : Number(last);
     const inserted = options.creatingContainer && index > parent.items.length
       ? [...missingContainers(index - parent.items.length, list[0]), ...list] : list;
-    return insertIntoArray(text, parent, index, inserted, unit);
+    return {...insertIntoArray(text, parent, index, inserted, unit), effect: 'insert'};
   }
   if (parent.type === 'object') {
     if (list.length !== 1) {
@@ -214,7 +220,7 @@ export function planInserts(ast, inserts, options = {}) {
       pointer = context.pointer;
       if (current.format !== 'yaml' && context.node && !Object.hasOwn(insert, 'merge')) {
         const formatted = formatValue(insert.values[0], lineIndent(text, context.range.from), options.indent);
-        edit = {...context.range, text: formatted};
+        edit = {...context.range, text: formatted, effect: 'replace'};
       }
     } else {
       pointer = compatiblePosition(current, pointer, caret);
@@ -238,7 +244,8 @@ export function planInserts(ast, inserts, options = {}) {
     }
     text = applyEdit(text, edit);
     summaries.push({pointer, count: insert.values?.length || Object.keys(insert.merge || {}).length,
-      action: Object.hasOwn(insert, 'merge') ? 'merge' : 'insert'});
+      action: Object.hasOwn(insert, 'merge') ? 'merge' : 'insert',
+      effect: Object.hasOwn(insert, 'merge') ? 'merge' : edit.effect});
   }
   let from = 0;
   let end = ast.text.length;

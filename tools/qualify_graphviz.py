@@ -159,7 +159,7 @@ def main():
         changed=workflow.execute(graph,directory/'workflow-changed',locations=locations,timeout=30);assert workflow.verify(directory/'workflow-changed')['verified']
         downstream=next(j for j in changed['jobs'] if j['operation']=='consumer');assert a.read(Path(downstream['directory']),'layout.json')['rankDirection']=='LR'
         report['workflow']={'status':first['status'],'verifiedValueHandoff':True,'unchangedReused':True,'corruptCachedProducerAndConsumerReused':False,'changedAuthoredResumeRejected':True,'freshChangedDirectionHandoff':'LR'}
-        study=copy.deepcopy(document);study['axes']=[{'name':'direction','values':['TB','LR']}];study['rankDirection']={'$axis':'direction'}
+        study=copy.deepcopy(document);study['sweeps']=[{'name':'direction','values':['TB','LR']}];study['rankDirection']={'$sweep':'direction'}
         result=a.run(study,directory/'study',executable=locations['graphviz'],timeout=30);assert a.verify(directory/'study')['verified'] and len(result['states'])==2
         report['composition']={'states':2,'verified':True};report['inflightLifecycle']=lifecycle(directory,document)
         if args.register:register(directory/'kit/qualification.json')

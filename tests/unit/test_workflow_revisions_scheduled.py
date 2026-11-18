@@ -71,8 +71,8 @@ def workflow(consumer='freecad', index=0):
 def swept(document, option, values):
     """The document with one option driven by a document-level axis, which makes it a native study."""
     result = copy.deepcopy(document)
-    result['axes'] = [{'name': 'axis', 'values': list(values)}]
-    result['nodes'][0]['options'][option] = {'$axis': 'axis'}
+    result['sweeps'] = [{'name': 'axis', 'values': list(values)}]
+    result['nodes'][0]['options'][option] = {'$sweep': 'axis'}
     return result
 
 
@@ -205,7 +205,7 @@ class ScheduledParentWorkflowTests(ScheduledRevisionCase):
     def test_auto_scheduled_parent_is_edited_rerun_and_verified_without_touching_the_parent(self):
         parent = self.parent()
         authored = load(parent / 'authored.json')
-        self.assertFalse({'execution', 'dimensions', 'definitions', 'settings', 'axes'} & set(authored))
+        self.assertFalse({'execution', 'dimensions', 'definitions', 'settings', 'sweeps'} & set(authored))
         self.assertFalse(any('execution' in operation for operation in authored['operations']))
         self.assertTrue((parent / 'cad' / 'batch-0' / 'attempt-0001' / 'body.step').is_file())
         before = tree(parent)
@@ -300,7 +300,7 @@ class ScheduledParentAdmissionTests(ScheduledRevisionCase):
         cases = {'top-level execution': {'execution': execution},
                  'settings': {'settings': {'size': 2}},
                  'definitions': {'definitions': {'size': 2}},
-                 'axes': {'axes': [{'name': 'size', 'values': [1, 2]}]}}
+                 'sweeps': {'sweeps': [{'name': 'size', 'values': [1, 2]}]}}
         for name, extra in cases.items():
             with self.subTest(name):
                 parent = self.root / name.replace(' ', '-')
@@ -580,7 +580,7 @@ class ScheduledSingleVisitTests(ScheduledRevisionCase):
     """Every operation of a scheduled parent is one batch with one native visit.
 
     ``study_required`` only sees ``$analytic`` expressions and workflow-level
-    axes, so a document-level ``axes`` list lets the scheduler run one batch
+    axes, so a document-level ``sweeps`` list lets the scheduler run one batch
     holding several native states. Those parents are refused wherever the
     study sits; a study with a single state is not a second visit.
     """

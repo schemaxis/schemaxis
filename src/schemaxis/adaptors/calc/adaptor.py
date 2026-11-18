@@ -31,6 +31,8 @@ TYPED_COLUMNS={'type':'array','minItems':1,'maxItems':typed_table.MAX_COLUMNS,'r
     'nullable':{'type':'boolean','default':False}}}}
 NULL_TOKEN={'type':'string','minLength':1,'maxLength':16,'default':typed_table.NULL_TOKEN}
 TYPED_OPS=('fromTypedRows','readTypedCSV')
+# The planner's fullmatch grammar; a lookahead, unlike $, also refuses a final line break in Python and ECMA-262.
+NODE_ID_PATTERN='^[A-Za-z][A-Za-z0-9_]{0,63}(?![\\s\\S])'
 CSV_OPS=('readCSV','readTypedCSV')
 
 OPTIONS={
@@ -68,7 +70,7 @@ def schema():
     from schemaxis.schema import DRAFT,object_schema,argument_schema
     variants=[]
     for op,options in OPTIONS.items():
-        variants.append(object_schema({'id':{'type':'string','pattern':'^[A-Za-z][A-Za-z0-9_]{0,63}$'},'filter':{'const':op},
+        variants.append(object_schema({'id':{'type':'string','pattern':NODE_ID_PATTERN},'filter':{'const':op},
           'options':object_schema({k:argument_schema(v) for k,v in options.items()},[k for k,v in options.items() if v.get('required')])},['id','filter','options']))
     return {'$schema':DRAFT,**object_schema({'version':{'const':'schemaxis.calc/1'},'nodes':{'type':'array','minItems':1,'maxItems':1,'items':{'oneOf':variants}},
                                          'requirements':requirements.schema()},['version','nodes'])}

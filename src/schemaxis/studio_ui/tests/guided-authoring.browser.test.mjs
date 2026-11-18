@@ -106,7 +106,7 @@ for (const theme of ['light', 'dark']) {
 
         const before = await session.evaluate(`${editor}.getValue()`);
         await session.evaluate(`[...document.querySelectorAll('${visible} .library-section button')]
-          .find(button => button.textContent.includes('X, Y and Z slice arrays')).focus()`);
+          .find(button => button.textContent.includes('Slice sweeps through the volume (X, Y, Z)')).focus()`);
         await session.wait(`(() => {
           const viewport = document.querySelector('${visible} .sx-editor').getBoundingClientRect();
           return [...document.querySelectorAll('${visible} .sx-ghost')].some(ghost => {
@@ -125,7 +125,7 @@ for (const theme of ['light', 'dark']) {
         await session.wait(`document.querySelector('${visible} .sx-ed-previewing .sx-ghost')`, 'multi-insert ghost');
         assert.equal(await session.evaluate(`${editor}.getValue()`), before);
         assert.match(await session.evaluate(`document.querySelector('.library-popover .library-summary').textContent`),
-          /axes.*scenes|scenes.*axes/);
+          /sweeps.*scenes|scenes.*sweeps/);
         await screenshot(session, 'multi-insert-ghost', theme);
         await session.key('Enter');
         await session.wait(`document.querySelector('${popover}') && !document.querySelector('.library-popover')`,
@@ -174,7 +174,7 @@ for (const theme of ['light', 'dark']) {
         assert.equal(accepted.valid, true, JSON.stringify(accepted.diagnostics));
         const value = JSON.parse(await session.evaluate(`${editor}.getValue()`));
         assert.ok(value.nodes.some(node => node.id === 'sliceX'));
-        assert.equal(value.axes.find(axis => axis.name === 'sliceFraction').series.count, 3);
+        assert.equal(value.sweeps.find(axis => axis.name === 'sliceFraction').series.count, 3);
         await dismissNotifications(session);
         await screenshot(session, 'xyz-complete', theme);
 

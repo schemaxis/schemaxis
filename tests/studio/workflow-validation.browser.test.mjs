@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {launch} from '../../src/schemaxis/studio_ui/tests/harness.mjs';
@@ -33,12 +33,12 @@ test('nested validation checks workflow references without saving drafts or prev
     assert.equal(background.result.validation.deferred, true);
     assert.deepEqual({document: background.request.document, revision: background.request.revision,
       operation: background.request.operation}, {document: record.id, revision: record.revision, operation: 'scaled'});
-    await s.wait(`document.querySelector('.wb-diagnostic-state')?.textContent==='0 diagnostics'`, 'no false file-path diagnostic');
+    await s.wait(`!window.studio.windows.active().window.editor.getSettledState().editing && window.studio.windows.active().window.editor.getSettledState().diagnostics.length===0`, 'no false file-path diagnostic');
 
     const count = await s.evaluate('window.__contextChecks.length');
     await s.clickSelector('[data-action="validate"]');
     await s.wait(`window.__contextChecks.length>${count}`, 'explicit validation completed');
-    await s.wait(`document.body.textContent.includes('Workflow references checked')`, 'deferred validation explained');
+    await s.wait(`document.querySelector('.toast.ok')?.textContent.includes('Input checked; inspection deferred')`, 'deferred validation explained');
     assert.equal(await s.evaluate('window.__contextChecks.at(-1).request.operation'), 'scaled');
     await s.wait(`!document.querySelector('[data-action="preview"]').disabled`, 'validation action finished');
     await s.clickSelector('[data-action="preview"]');

@@ -58,6 +58,16 @@ same way, but confirm that your ParaView release reads your output format,
 multi-region layout and processor decomposition before relying on it. See
 [preparing the case](cfd-postprocessing.md#1-prepare-the-case-and-the-two-python-environments).
 
+## A document that adapts to the case
+
+The [car example](../examples/paraview-car/README.md) types in no coordinate.
+It reads the box around the body and the wheels from the loaded case
+(`union(extents(body), extents(wheels))`) and derives the zoom, a wake box, a
+cut plane, the cameras and a sweep of a seed line across the car's width from
+that box. Binding another car case needs the case path and the patch names,
+not new bounds. `schemaxis spatial list` and `spatial explain` check such a
+document without starting ParaView.
+
 ## ParaView demonstration
 
 Provide an external ParaView installation with `bin/pvbatch` and an OpenFOAM case

@@ -12,10 +12,10 @@ test('case parameter controls preserve scalar types, defaults and vectors', () =
   assert.equal(parseParameter({kind: 'number'}, ''), undefined);
   assert.equal(parseParameter({kind: 'string'}, ''), '');
   assert.equal(parseParameter({kind: 'enum', constraints: {enum: [false, true]}}, '0'), false);
-  assert.equal(parseParameter({kind: 'enum', constraints: {enum: [2.5, 6]}}, '1'), 6);
+  assert.equal(parseParameter({kind: 'enum', constraints: {enum: [2.5, 6]}}, '6'), 6);
   assert.deepEqual(parseParameter({kind: 'vector', constraints: {length: 3}}, '[0, -1, 2]'), [0, -1, 2]);
   assert.throws(() => parseParameter({kind: 'integer'}, '2.3'), /whole number/);
-  assert.throws(() => parseParameter({kind: 'number'}, 'Infinity'), /finite number/);
+  assert.deepEqual(parseParameter({kind: 'number'}, 'Infinity'), {$expr: 'Infinity'}); // Host checks names.
   assert.throws(() => parseParameter({kind: 'boolean'}, 'wrong'), /Yes or No/);
   assert.throws(() => parseParameter({kind: 'enum', constraints: {enum: [1]}}, '2'), /listed value/);
   assert.throws(() => parseParameter({kind: 'vector', constraints: {length: 2}}, '[true, 0]'), /2 numbers/);

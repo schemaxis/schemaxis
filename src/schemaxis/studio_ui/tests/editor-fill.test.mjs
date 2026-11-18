@@ -74,11 +74,11 @@ test('placeholder text bounds count Unicode code points with inclusive limits', 
   assert.equal(checkField('😀'.repeat(41), {type: 'string', maxLength: 40}), 'Use at most 40 characters.');
 });
 
-test('choices use enum, kinds, axes, observations and recent values', () => {
-  const value = {nodes: [{id: 'mesh'}, {id: 'picture'}], axes: [{name: 'sweep'}]};
+test('choices use enum, kinds, sweeps, observations and recent values', () => {
+  const value = {nodes: [{id: 'mesh'}, {id: 'picture'}], sweeps: [{name: 'sweep'}]};
   assert.deepEqual(fieldChoices({type: 'nodeRef', acceptsKinds: ['geometry']}, value,
     {nodeKinds: {mesh: ['geometry'], picture: ['image']}}), ['mesh']);
-  assert.deepEqual(fieldChoices({type: 'axisRef'}, value), ['sweep']);
+  assert.deepEqual(fieldChoices({type: 'sweepRef'}, value), ['sweep']);
   assert.deepEqual(fieldChoices({type: 'field'}, value, {observations: [{name: 'pressure'}]}), ['pressure']);
   assert.deepEqual(fieldChoices({type: 'enum', values: [1, 2]}, value, {recent: [2, 3]}), [1, 2, 3]);
   assert.ok(!documentPointers({a: {$fill: 'x'}, b: {c: 1}}).includes('/a'));
@@ -87,9 +87,9 @@ test('choices use enum, kinds, axes, observations and recent values', () => {
 test('reference choices exclude unresolved markers and other non-string identities', () => {
   const marker = {$fill: 'prefix'};
   const value = {nodes: [{id: 'source'}, {id: marker}, {id: 7}, {id: ''}, null],
-    axes: [{name: 'height'}, {name: marker}, {name: false}, {name: ''}, null]};
+    sweeps: [{name: 'height'}, {name: marker}, {name: false}, {name: ''}, null]};
   assert.deepEqual(fieldChoices({type: 'nodeRef'}, value, {recent: [marker]}), ['source']);
-  assert.deepEqual(fieldChoices({type: 'axisRef'}, value, {recent: [marker]}), ['height']);
+  assert.deepEqual(fieldChoices({type: 'sweepRef'}, value, {recent: [marker]}), ['height']);
   assert.deepEqual(fieldChoices({type: 'field'}, value, {
     observations: ['velocity', {name: 'pressure'}, {name: marker}, {name: 4}, {name: ''}, null],
     recent: [marker],
@@ -99,7 +99,7 @@ test('reference choices exclude unresolved markers and other non-string identiti
 test('only schema-supported expressions are offered at the current real-schema pointer', () => {
   assert.deepEqual(expressionKinds(paraview, document, '/version'), []);
   assert.deepEqual(expressionKinds(paraview, document, pointer),
-    ['$document', '$value', '$axis', '$analytic', '$expr', '$observe', '$sample', '$calc', '$call']);
+    ['$document', '$value', '$sweep', '$analytic', '$expr', '$observe', '$sample', '$calc', '$call']);
   const box = {version: 'schemaxis.freecad/1', nodes: [{id: 'box', filter: 'box', options: {length: {$fill: 'size'}}}]};
   const allowed = expressionKinds(freecad, box, '/nodes/0/options/length');
   assert.ok(allowed.includes('$value'));
@@ -153,10 +153,10 @@ test('Workbench guidance uses declared kinds and scientific arrays from native o
   const {nodeKinds, observationFields} = await import('../windows/workbench/guidance.mjs');
   assert.deepEqual(nodeKinds({operationKinds: {box: ['solid']}}, {nodes: [
     {id: 'body', filter: 'box'}, {id: {$fill: 'next'}, filter: 'box'}]}), {body: ['solid']});
-  const draft = {nodes: {$fill: 'nodes'}, axes: {$fill: 'axes'}};
+  const draft = {nodes: {$fill: 'nodes'}, sweeps: {$fill: 'sweeps'}};
   assert.deepEqual(nodeKinds({}, draft), {});
   assert.deepEqual(fieldChoices({type: 'nodeRef'}, draft), []);
-  assert.deepEqual(fieldChoices({type: 'axisRef'}, draft), []);
+  assert.deepEqual(fieldChoices({type: 'sweepRef'}, draft), []);
   const observed = {objects: [{fields: {POINTS: {pressure: {}, velocity: {}}, CELLS: {pressure: {}}}}],
     metadata: {name: 'ignore'}, mesh: {pointData: {temperature: {components: 1}}}};
   assert.deepEqual(observationFields(observed), ['pressure', 'temperature', 'velocity']);

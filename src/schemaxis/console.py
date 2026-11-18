@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """JSON console front end; the caller owns and closes the session."""
 import json
 import sys
@@ -60,15 +60,19 @@ def run_console(session, stream=sys.stdin, output=sys.stdout, *, prompt=True):
 
 def _run_console(session, stream, output, *, prompt, editing):
     while True:
+        data = session.live_data.status()
+        size = data.get('bytes')
+        indicator = ('loading' if data.get('loading') else (format(size / 1024**2, '.1f') + 'M RSS') if size is not None else 'on') if data['enabled'] else 'off'
+        prompt_text = f'schemaxis [Live Data {indicator}]> '
         if editing:
-            try: line = input('schemaxis> ')
+            try: line = input(prompt_text)
             except EOFError: break
             except KeyboardInterrupt:
                 print(file=output)
                 continue
         else:
             if prompt and stream.isatty():
-                print('schemaxis> ', end='', flush=True, file=output)
+                print(prompt_text, end='', flush=True, file=output)
             line = stream.readline()
         if editing and not line: continue
         if not line or line.strip().lower() in ('quit', 'exit'):

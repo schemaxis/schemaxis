@@ -454,8 +454,8 @@ def workflows(directory, locations):
     accepted('workflow verify', lambda: workflow.verify(root))
     second = workflow.execute(graph, root, locations=locations, timeout=60, resume=True)
     assert all(j.get('reused') for j in second['jobs']), second['jobs']
-    study = document(source, {'$axis': 'spacing'})
-    study['axes'] = [{'name': 'spacing', 'values': [1000.0, 2000.0]}]
+    study = document(source, {'$sweep': 'spacing'})
+    study['sweeps'] = [{'name': 'spacing', 'values': [1000.0, 2000.0]}]
     states = a.run(study, directory / 'study', executable=locations['pyproj'], timeout=60)
     assert len(states['states']) == 2
     accepted('study verify', lambda: registry.verify(directory / 'study'))

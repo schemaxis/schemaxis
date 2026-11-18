@@ -19,7 +19,7 @@ test('local folder browser, Open/Add, recursion, paths, types, recent folders, t
   for(let n=0;n<130;n++)await writeFile(join(first,`image_${String(n).padStart(3,'0')}.svg`),svg('#369'));
   await writeFile(join(first,'nested','deep.svg'),svg('#936'));await writeFile(join(first,'readme.txt'),'first folder');await writeFile(join(first,'clip.mp4'),'media placeholder');
   await writeFile(join(second,'new.txt'),'second folder');
-  server=spawn('python3',['-u','-m','schemaxis_viewer','--no-browser'],{cwd:repository,env:{...process.env,PYTHONPATH:join(repository,'src'),XDG_STATE_HOME:join(dir,'state')},stdio:['ignore','pipe','pipe']});
+  server=spawn('python3',['-u','-m','schemaxis_viewer','--classic','--no-browser'],{cwd:repository,env:{...process.env,PYTHONPATH:join(repository,'src'),XDG_STATE_HOME:join(dir,'state')},stdio:['ignore','pipe','pipe']});
   const url=await new Promise((resolve,reject)=>{let output='';const timer=setTimeout(()=>reject(Error('Viewer startup timed out')),10000);server.stdout.on('data',data=>{output+=data;const match=/Artifact viewer: (http:\/\/\S+)/.exec(output);if(match){clearTimeout(timer);resolve(match[1]);}});server.once('error',reject);});
   s=await launch({root,path:'/index.html',width:1500,height:1000});await s.send('Page.navigate',{url});await s.wait('Boolean(window.artifactViewer)','local viewer ready');
   const open=async(path,replace)=>{

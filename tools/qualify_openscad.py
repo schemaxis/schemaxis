@@ -184,7 +184,7 @@ def workflow_checks(directory,document,executable):
     refused(lambda:workflow.execute(graph,directory/'workflow',locations=locations,timeout=60,resume=True),'RESUME_MISMATCH')
     changed=workflow.execute(graph,directory/'workflow-changed',locations=locations,timeout=60);assert workflow.verify(directory/'workflow-changed')['verified']
     downstream=next(j for j in changed['jobs'] if j['operation']=='consumer');assert a.read(Path(downstream['directory']),'part-summary.json')['height']==4
-    study=copy.deepcopy(document);study['axes']=[{'name':'height','values':[2,4]}];study['plate']['height']={'$axis':'height'}
+    study=copy.deepcopy(document);study['sweeps']=[{'name':'height','values':[2,4]}];study['plate']['height']={'$sweep':'height'}
     result=a.run(study,directory/'study',executable=executable,timeout=60);assert a.verify(directory/'study')['verified'] and len(result['states'])==2
     return {'verifiedValueHandoff':True,'unchangedReused':True,'corruptCacheInvalidatedProducerAndConsumer':True,'changedAuthoredResumeRejected':True,'freshChangedHeight':4,'finiteStates':2}
 

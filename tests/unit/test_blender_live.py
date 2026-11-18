@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Host lifecycle tests and opt-in serial native Blender acceptance."""
 import copy
 import json
@@ -149,8 +149,8 @@ class LiveHostTests(unittest.TestCase):
     def test_rejects_batch_and_arbitrary_commands(self):
         worker = FakeWorker()
         authored = document()
-        authored['nodes'][1]['options']['size'] = {'$axis': 'sizes'}
-        authored['axes'] = [{'name': 'sizes', 'values': [1, 2]}]
+        authored['nodes'][1]['options']['size'] = {'$sweep': 'sizes'}
+        authored['sweeps'] = [{'name': 'sizes', 'values': [1, 2]}]
         with self.assertRaises(SchemaxisError) as caught: worker.apply(authored)
         self.assertEqual(caught.exception.fault.code, 'UNSUPPORTED_LIVE_INPUT')
         for command, args in [('exec', {'code': 'print(1)'}), ('status', {'extra': True}),
@@ -236,7 +236,7 @@ class BlenderNativeLiveTests(unittest.TestCase):
                 pid = session.request('status')['pid']
                 for operation in workshop['operations']:
                     authored = copy.deepcopy(operation['document'])
-                    for axis in authored.get('axes', []):
+                    for axis in authored.get('sweeps', []):
                         axis['values'] = axis['values'][-1:]
                     for node in authored['nodes']:
                         if 'file' in node.get('options', {}):
@@ -260,13 +260,6 @@ class BlenderNativeLiveTests(unittest.TestCase):
                 geometry = session.request('geometry')
                 xs = [v[0] for f in geometry['objects'][0]['faces'] for v in f['vertices']]
                 self.assertEqual((min(xs), max(xs)), (-2, 2))
-                # Invalid native file construction must rebuild the previous mesh.
-                broken = document()
-                broken['nodes'] = [{'id': 'missing', 'filter': 'readSTL', 'options': {'file': str(Path(root) / 'absent.stl')}}]
-                broken['scenes'][0]['visible'] = ['missing']
-                with self.assertRaises(SchemaxisError) as caught: session.request('apply', document=broken)
-                self.assertTrue(caught.exception.fault.observed['rolledBack'])
-                self.assertEqual(session.request('geometry'), geometry)
                 image = session.image(Path(root) / 'preview.png')
                 self.assertTrue(image['verified'])
                 self.assertTrue(Path(image['file']).is_file())
@@ -279,6 +272,16 @@ class BlenderNativeLiveTests(unittest.TestCase):
                 self.assertEqual(session.request('geometry'), geometry)
                 session.request('apply', document=document(5))
                 self.assertEqual(session.request('status')['pid'], a['pid'])
+                # A failure inside native construction proves nothing about what was
+                # allocated: the session reports uncertainty and refuses further work.
+                broken = document()
+                broken['nodes'] = [{'id': 'missing', 'filter': 'readSTL', 'options': {'file': str(Path(root) / 'absent.stl')}}]
+                broken['scenes'][0]['visible'] = ['missing']
+                with self.assertRaises(SchemaxisError) as caught: session.request('apply', document=broken)
+                self.assertEqual(caught.exception.fault.code, 'UNCERTAIN_STATE')
+                self.assertEqual(list(caught.exception.fault.observed['unknown']), ['missing'])
+                with self.assertRaises(SchemaxisError): session.request('geometry')
+                self.assertEqual(session.request('status')['state'], 'uncertain')
                 process = session.process
             self.assertIsNotNone(process.poll())
             session.close()

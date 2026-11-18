@@ -64,9 +64,9 @@ class WorkflowDesignTests(unittest.TestCase):
         value['workflow']['definitions'] = {'diameter': {'$expr': {'op': 'multiply', 'args': [2, {'$fill': 'radius'}]}}}
         self.assertEqual(design.validate(value)['status'], 'unfilled')
         del value['workflow']['definitions']
-        value['workflow']['axes'] = [{'name': 'distance', 'values': []}]
-        self.fault('EMPTY_AXIS', lambda: design.validate(value))
-        value['workflow']['axes'][0]['values'] = [1, 2, 3]
+        value['workflow']['sweeps'] = [{'name': 'distance', 'values': []}]
+        self.fault('EMPTY_SWEEP', lambda: design.validate(value))
+        value['workflow']['sweeps'][0]['values'] = [1, 2, 3]
         self.assertEqual(design.validate(value)['status'], 'empty')
 
     def test_reentrant_adaptor_visits_are_not_feedback(self):

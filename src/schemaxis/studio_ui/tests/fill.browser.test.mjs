@@ -33,14 +33,14 @@ test('expression references omit draft identities and discriminator follow-ups s
         const schema = await (await fetch('/docs/generated/paraview.authored.schema.json')).json();
         const value = structuredClone(window.demo.initial);
         value.nodes.push(null, {id: {$fill: 'next'}}, {id: 7}, {id: ''});
-        value.axes = [{name: 'height'}, null, {name: {$fill: 'axis'}}, {name: false}, {name: ''}];
-        return ['$observe', '$sample', '$axis'].map((kind) => {
+        value.sweeps = [{name: 'height'}, null, {name: {$fill: 'axis'}}, {name: false}, {name: ''}];
+        return ['$observe', '$sample', '$sweep'].map((kind) => {
           const form = createExpressionForm({schema, value, pointer: '/nodes/1/options/origin', kind,
             onChange: () => {}});
           return [...form.element.querySelector('select').options].map((option) => option.value);
         });
       })()`);
-      assert.deepEqual(choices, [['source', 'slice'], ['source', 'slice'], ['height', 'Create an axis…']]);
+      assert.deepEqual(choices, [['source', 'slice'], ['source', 'slice'], ['height', 'Create a sweep…']]);
       for (const theme of ['light', 'dark']) {
         await session.evaluate(`(() => {
           document.documentElement.dataset.theme = ${JSON.stringify(theme)};
@@ -89,7 +89,7 @@ test('linked XYZ fields navigate and count once while all occurrences fill atomi
         const {libraryRequest, markers} = await import('/src/schemaxis/studio_ui/editor/insert-fields.mjs');
         const library = await (await fetch('/src/schemaxis/adaptors/paraview/studio.json')).json();
         const recipe = library.snippets.find((entry) => entry.id === 'xyz-slice-arrays');
-        const base = {version: 'schemaxis/1', nodes: [{id: 'source', filter: 'wavelet'}], axes: [], scenes: []};
+        const base = {version: 'schemaxis/1', nodes: [{id: 'source', filter: 'wavelet'}], sweeps: [], scenes: []};
         const request = libraryRequest(recipe, base);
         for (const insert of request.inserts) base[insert.at.split('/')[1]].push(...insert.values);
         const pointers = markers(base).map((entry) => entry.pointer);
@@ -218,6 +218,7 @@ test('fill keyboard navigation, persisted markers, typed expressions and both th
       for (const kind of ['$document', '$expr', '$observe', '$sample', '$calc', '$call']) {
         await resetOrigin();
         await select(session, 'Value or expression', kind);
+        if (kind === '$expr') await input(session, 'Expression', 'vector(0, 0, 1)');
         if (kind === '$sample') await input(session, 'Field name', 'pressure');
         if (kind === '$call') await input(session, 'bounds argument', '[0,1,0,1,0,1]');
         assert.equal(await session.evaluate(`${visible}.querySelector('.primary').disabled`), false, kind);
@@ -225,16 +226,16 @@ test('fill keyboard navigation, persisted markers, typed expressions and both th
         assert.ok(Object.hasOwn((await value(session)).nodes[1].options.origin, kind));
       }
       await resetOrigin();
-      await select(session, 'Value or expression', '$axis');
-      await input(session, 'New axis name', 'height');
-      await input(session, 'New axis values (JSON)', '[0, 1, 2]');
+      await select(session, 'Value or expression', '$sweep');
+      await input(session, 'New sweep name', 'height');
+      await input(session, 'New sweep values (JSON)', '[0, 1, 2]');
       await session.evaluate(`${visible}.querySelector('.primary').click()`);
-      assert.deepEqual((await value(session)).axes, [{name: 'height', values: [0, 1, 2]}]);
-      assert.deepEqual((await value(session)).nodes[1].options.origin, {$axis: 'height'});
+      assert.deepEqual((await value(session)).sweeps, [{name: 'height', values: [0, 1, 2]}]);
+      assert.deepEqual((await value(session)).nodes[1].options.origin, {$sweep: 'height'});
       await session.evaluate('window.demo.editor.stopFill(); window.demo.editor.focus()');
       await session.key('z', 2);
-      await session.wait('JSON.parse(window.demo.editor.getValue()).axes === undefined',
-        'one undo removes axis and binding');
+      await session.wait('JSON.parse(window.demo.editor.getValue()).sweeps === undefined',
+        'one undo removes sweep and binding');
       assert.equal((await value(session)).nodes[1].options.origin.$fill, 'origin');
 
       await session.evaluate(`window.demo.editor.stopFill();

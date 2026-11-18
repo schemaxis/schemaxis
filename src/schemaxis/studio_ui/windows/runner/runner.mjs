@@ -1,4 +1,5 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
+import {reportSpatialCheck} from '../../editor/spatial-input.mjs';
 // Case Runner: values-only authoring over the shared template and workflow APIs.
 import {h, icon, mount} from '../../lib/dom.mjs';
 import {Store} from '../../lib/store.mjs';
@@ -65,14 +66,21 @@ export const runnerWindow = {
         return;
       }
       state.set({busy: true});
+      let failure;
       try {
         return await work();
       } catch (error) {
+        failure = error.fault;
         ctx.notify.error(error, {title: titleText});
         return undefined;
       } finally {
         if (!disposed) {
           state.set({busy: false});
+          const prefix = '$.case.values.';
+          if (failure?.location?.startsWith(prefix)) {
+            const input = form.elements.namedItem(failure.location.slice(prefix.length));
+            if (input) reportSpatialCheck(input, {ok: false, fault: failure});
+          }
         }
       }
     }

@@ -155,3 +155,12 @@ browser interaction and native acceptance. Reproduce the native serial case with
 ```sh
 PYTHONPATH=src python3 tools/qualify_authoring.py --output-directory evidence/authoring-qualification
 ```
+
+## Pure identity rename previews
+
+The [checked identity API](identity-authoring.md) produces a digest-checked cloned
+candidate with declared references repaired. Its first policy covers ordinary
+ParaView nodes, including workflow/design scopes. The pure API remains a programmatic preview. The dedicated `rename-preview` and
+`rename` Console commands add checked durable history and resident alignment;
+see the [transaction contract](identity-authoring.md#durable-console-identity-history).
+Browser saved-name controls and local editor history remain pending.

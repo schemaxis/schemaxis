@@ -79,7 +79,7 @@ test('real local server: checked sidecars, registered mesh, strict CSP, hash fai
   const mesh='v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n';await writeFile(join(dir,'domain.obj'),mesh);
   await writeFile(join(dir,'domain.obj.metadata.json'),JSON.stringify({version:'schemaxis.artifact-metadata/1',artifact:{file:'domain.obj',sha256:createHash('sha256').update(mesh).digest('hex')},group:'Imported CFD',spatial:{state:'known',frame:'run',units:'m'}}));
   await writeFile(join(dir,'bad.png'),png);await writeFile(join(dir,'bad.png.metadata.json'),JSON.stringify({version:'schemaxis.artifact-metadata/1',artifact:{file:'bad.png',sha256:'0'.repeat(64)}}));
-  server=spawn('python3',['-u','-m','schemaxis_viewer','--no-browser',dir],{cwd:repository,env:{...process.env,PYTHONPATH:join(repository,'src'),XDG_STATE_HOME:state},stdio:['ignore','pipe','pipe']});
+  server=spawn('python3',['-u','-m','schemaxis_viewer','--classic','--no-browser',dir],{cwd:repository,env:{...process.env,PYTHONPATH:join(repository,'src'),XDG_STATE_HOME:state},stdio:['ignore','pipe','pipe']});
   const url=await new Promise((resolve,reject)=>{let output='';const timer=setTimeout(()=>reject(Error('Server startup timed out')),10000);server.stdout.on('data',data=>{output+=data;const match=/Artifact viewer: (http:\/\/\S+)/.exec(output);if(match){clearTimeout(timer);resolve(match[1]);}});server.once('error',reject);});
   session=await launch({root,path:'/index.html',width:1500,height:1000});
   await session.send('Page.navigate',{url});await session.wait('Boolean(window.artifactViewer)&&artifactViewer.items.length===16','server inventory loaded');

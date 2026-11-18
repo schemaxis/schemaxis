@@ -133,7 +133,7 @@ format identifier even though the product and command are named Schemaxis.
 | `dimensions`, `settings`, `views`, `definitions` | Named authored data reused elsewhere in the same document. |
 | `nodes` | Reader/filter definitions. Each has an `id`, `filter`, optional `options` and upstream `inputs`. |
 | `times` | Which solution times to visit: explicit values or a native inspection selector. |
-| `axes` or inline `$analytic` | Parameter variations such as slice positions or contour levels. |
+| `sweeps` or inline `$analytic` | Parameter variations such as slice positions or contour levels. |
 | `scenes` | Publication requests: visible objects/styles, geometry exports, measurements, images and cameras. |
 | `maxPublications` | A bound on output expansion; keep initial sweeps small. |
 
@@ -241,7 +241,7 @@ This visits Z = 0.1, 0.3 and 0.5. It varies a parameter; it does not fit a funct
 to your CFD data. Analytics also support declared value lists and camera orbits
 in supported scopes. Repeated analytics with the same `sync` name advance
 together; independent ones create combinations where used together. An explicit
-named `axes` array with `$axis` references is another way to declare variations.
+named `sweeps` array with `$sweep` references is another way to declare variations.
 See [parameter variations](docs/json-input.md#4-vary-a-parameter).
 
 ### Read native results at runtime
@@ -252,7 +252,7 @@ See [parameter variations](docs/json-input.md#4-vary-a-parameter).
 | `{"$call":"boundsCentre","args":{"bounds":{"$observe":"flow","path":["bounds"]}}}` | Compute the centre from native bounds, using named arguments. |
 | `{"$calc":"midpoint","args":[{"$observe":"flow","path":["bounds"]}]}` | The corresponding runtime calculation using positional arguments. |
 | `{"$sample":"probe","association":"POINTS","field":"p","index":0}` | Read a field tuple from an upstream node named `probe`; it must exist and provide that array/association. |
-| `{"$time":true}` / `{"$axis":"height"}` | Current solution time / named variation value. |
+| `{"$time":true}` / `{"$sweep":"height"}` | Current solution time / named variation value. |
 
 Authored `boundsCentre3D` above accepts `{min,max}`; runtime `boundsCentre` accepts
 `[xmin,xmax,ymin,ymax,zmin,zmax]`. Choose the contract matching your data.

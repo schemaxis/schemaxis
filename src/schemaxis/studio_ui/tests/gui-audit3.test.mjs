@@ -24,5 +24,6 @@ test('a block list resolves as the application does: patterns add, exclusions re
     ['internalMesh', 'body_upper']);
   assert.deepEqual(selectedNames(entriesOf(['internalMesh', {pattern: '^patch/'}]), ['internalMesh', 'patch/a', 'patch/b']),
     ['internalMesh', 'patch/a', 'patch/b']);
-  assert.deepEqual(selectedNames([], BLOCKS, true), BLOCKS);
+  // An empty draft selects nothing. An authored Extract Block requires selectors.
+  assert.deepEqual(selectedNames([], BLOCKS, true), []);
 });

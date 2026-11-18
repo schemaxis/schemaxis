@@ -2,4 +2,5 @@
 
 from pathlib import Path
 
-WEB_ROOT = Path(__file__).with_name('web')
+WEB_ROOT = Path(__file__).with_name('explorer')
+CLASSIC_ROOT = Path(__file__).with_name('web')

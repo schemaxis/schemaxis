@@ -252,11 +252,11 @@ class AdaptorRuntimeTests(unittest.TestCase):
     def test_explicit_axes_keep_local_scopes_in_a_workflow_study(self):
         first, second = gmsh(), gmsh()
         for doc, sizes in ((first, [2, 3]), (second, [4, 5])):
-            doc['axes'] = [{'name': 'h', 'values': sizes}]
-            doc['nodes'][1]['options']['size'] = {'$axis': 'h'}
+            doc['sweeps'] = [{'name': 'h', 'values': sizes}]
+            doc['nodes'][1]['options']['size'] = {'$sweep': 'h'}
         document = {'version': 'schemaxis.workflow/1',
-                    'axes': [{'name': 'h', 'values': [10, 20]}],
-                    'dimensions': {'extent': {'$axis': 'h'}},
+                    'sweeps': [{'name': 'h', 'values': [10, 20]}],
+                    'dimensions': {'extent': {'$sweep': 'h'}},
                     'operations': [{'id': 'a', 'document': first}, {'id': 'b', 'document': second}]}
         second['nodes'][0]['options']['size'][0] = {'$document': '/dimensions/extent', 'scope': 'workflow'}
         prepared = workflow.inspect_plan(document)
@@ -265,7 +265,7 @@ class AdaptorRuntimeTests(unittest.TestCase):
         self.assertEqual([s[1]['document']['nodes'][0]['options']['size'][0] for s in states], [10,20]*4)
         self.assertEqual([s[0]['document']['nodes'][1]['options']['size'] for s in states], [2,2,3,3]*2)
         self.assertEqual([s[1]['document']['nodes'][1]['options']['size'] for s in states], [4]*4+[5]*4)
-        self.assertTrue(all('axes' not in op['document'] for state in states for op in state))
+        self.assertTrue(all('sweeps' not in op['document'] for state in states for op in state))
 
     def test_analytic_sequence_can_depend_on_a_verified_producer_value(self):
         first, second = gmsh(), gmsh()

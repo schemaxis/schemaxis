@@ -85,3 +85,35 @@ Public upstream references: [MLT XML](https://www.mltframework.org/docs/mltxml/)
 [Shotcut source](https://github.com/mltframework/shotcut). MLT's `MLT_XML_DEEP`
 environment setting requests native service graph serialisation during the reload
 stage; it is defined by the public XML producer implementation.
+
+## Adding and editing the timeline
+
+The Add catalogue contains one **Trim and arrange video clips** entry. A Shotcut
+document owns one timeline: Add creates it in an empty input and refuses a second
+without replacing existing work. Select the existing timeline and use **Edit
+settings** to change its ordinary options. Its user-entered Name and ordered asset
+and clip lists are retained when editing other settings; repeated clip ranges
+remain repeated. This does not yet provide reference-aware timeline or asset
+renaming, batch membership or new ordered-list/subset controls.
+
+The trim/reorder template selects zero-based source frames **3–5, then 0–1**.
+These literal ranges are not relative to the end of an arbitrary video. Profile
+and actual source-length checks still belong to planning and native execution.
+The discovery and Add checks are host/browser behavior; historical native
+qualification is not current-source qualification of this authoring change.
+
+The separate **Trim and arrange clips** snippet replaces a whole input. Every
+route that inserts it (the Templates panel, the snippet tray by mouse or
+keyboard, the command palette and a nested Schema Editor operation) first shows
+the shared replacement review; nothing changes until **Replace input** is
+chosen, and one Undo restores the previous input. This is shared library
+behaviour, not Shotcut-specific code; it does not complete the Shotcut owner,
+rename the timeline or qualify native output.
+
+### Preview an asset rename
+
+The host identity preview can change a literal asset name and the clips that
+refer to it in the same timeline. Asset names start with an ASCII letter and
+contain at most 64 letters, digits, underscores or hyphens. The preview preserves
+clip order, frame ranges and source file paths. See
+[Identity authoring](identity-authoring.md#shotcut-asset-names).

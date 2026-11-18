@@ -61,7 +61,7 @@ Start with `examples/schemaxis/source-coverage.json`, `blender-gallery.json`,
 `blender-primitives.json`, or `paraview-to-blender.json`.
 The gallery requests OPTIX; use `"render":{"device":"CPU"}` on a machine without it.
 
-Expressions: `$axis` selects an iteration value; `$observe` and `$sample` read
+Expressions: `$sweep` selects an iteration value; `$observe` and `$sample` read
 upstream results; `$call` calls the typed functions listed by `schemaxis functions`. `$expr` performs
 authored document composition/arithmetic before planning.
 Copy their exact shapes from the examples and declarations rather than guessing.

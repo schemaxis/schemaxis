@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Loopback server for Schemaxis Studio.
 
 Security is inherited from the console server: loopback binding, a per-launch
@@ -7,6 +7,7 @@ request limit. Studio adds per-document reads, adaptor/schema/capability
 discovery and role-scoped settings. Native work still runs one job at a time.
 """
 import copy
+import functools
 import hashlib
 import json
 from pathlib import Path
@@ -84,7 +85,7 @@ class StudioApplication(ConsoleApplication):
         with self.job_lock:
             jobs = [{'id': identity, 'status': job['status'], 'label': job.get('label')}
                     for identity, job in list(self.jobs.items())[-20:]]
-        return {**snapshot, 'busy': self.busy, 'jobs': jobs, 'workspace': str(self.session.workspace)}
+        return {**snapshot, 'liveData': self.session.live_data.status(), 'busy': self.busy, 'jobs': jobs, 'workspace': str(self.session.workspace)}
 
     def focus(self, identity):
         """Make an explicitly named document active. Callers hold the session lock."""
@@ -246,7 +247,8 @@ class StudioApplication(ConsoleApplication):
                 from .pipeline import digest
                 with allocation({}, self.cancellations[identity]), tempfile.TemporaryDirectory(prefix='studio-inspect-') as root:
                     result = hook(document, node, executable, Path(root) / 'session', port=port, prepare=prepare,
-                                  **({'geometry': True} if request.get('geometry') else {}))
+                                  **({'geometry': True} if request.get('geometry') else {}),
+                                  **({'live_data': self.session.live_data} if not prepare and meta.get('extents', {}).get('inspect') else {}))
                 outcome = {'status': 'succeeded', 'result': {**result, 'inputDigest': digest(document)}}
             except Exception as error:
                 outcome = {'status': 'failed', 'fault': fault(error)}
@@ -263,6 +265,61 @@ class StudioApplication(ConsoleApplication):
                 self.cancellations.pop(identity, None)
             raise
         return {'job': identity, 'status': 'running'}
+
+    def spatial_request(self, request):
+        """Appendix A actions; spatial_load runs as a job with the busy and cancellation rules of inspection."""
+        from .spatial_actions import Draft, run
+        action = request.get('action')
+        payload = {key: value for key, value in request.items() if key != 'action'}
+        if action == 'live_data_status': return self.session.live_data.status()
+        if action == 'live_data_list': return self.session.live_data.selection(payload)
+        if action == 'live_data_unload':
+            with self.job_lock:
+                if self.busy: fail('SESSION_BUSY', 'Wait for loading or cancel it before disabling Live Data')
+                return self.session.live_data.unload()
+        if action == 'spatial_eval': return self.session.live_data.evaluate(payload)
+        if action not in ('spatial_load', 'live_data_load', 'live_data_refresh'):
+            return run(action, payload)
+        adaptor = Draft(payload).selected.scope.adaptor
+        if adaptor.extents is not True:
+            fail('EXTENTS_UNSUPPORTED', 'this adaptor does not report extents, so there is nothing to load',
+                 adaptor=adaptor.name)
+        with self.job_lock:
+            if self.busy:
+                fail('SESSION_BUSY', 'Wait for the current native operation to finish')
+            executable = self.setup.location(adaptor.name)
+            if not self.setup.available(adaptor.name, executable):
+                fail('NATIVE_UNAVAILABLE', 'Configure this application in Setup before loading extents')
+            identity = uuid.uuid4().hex
+            self.busy = True
+            self.jobs[identity] = {'status': 'running', 'label': 'Refresh from Live Data' if action == 'live_data_refresh' else 'Enable Live Data'}
+            self.cancellations[identity] = threading.Event()
+        roots = registry.metadata(adaptor.name).get('locationKind') == 'roots'
+        locations = {adaptor.name: [executable] if roots else executable}
+        try:
+            self.job_owner.submit(identity, functools.partial(self._load_extents, identity, payload, locations, refresh_only=action == 'live_data_refresh'),
+                                  self.cancellations[identity])
+        except Exception:
+            with self.job_lock:
+                self.busy = False
+                self.jobs.pop(identity, None)
+                self.cancellations.pop(identity, None)
+            raise
+        return {'job': identity, 'status': 'running'}
+
+    def _load_extents(self, identity, payload, locations, *, refresh_only=False):
+        outcome = {'status': 'failed', 'fault': {'code': 'INTERRUPTED', 'message': 'Loading extents interrupted'}}
+        try:
+            from .dispatch import allocation
+            with allocation({}, self.cancellations[identity]):
+                method = self.session.live_data.refresh if refresh_only else self.session.live_data.load
+                outcome = {'status': 'succeeded', 'result': method(payload, locations=locations)}
+        except Exception as error:
+            outcome = {'status': 'failed', 'fault': fault(error)}
+        finally:
+            with self.job_lock:
+                self.jobs[identity] = {**self.jobs[identity], **outcome}
+                self.busy = False
 
     def design(self, request):
         keys(request, ('document', 'revision', 'action', 'params'), 'design')
@@ -291,7 +348,12 @@ class StudioApplication(ConsoleApplication):
             fail('INVALID_DOCUMENT', 'source must be text of at most one MiB', 'source')
         with self.lock:
             validation = None
-            check = lambda candidate: self.session._validate(candidate, provider)
+            def check(candidate):
+                nonlocal validation
+                result = self.session._validate(candidate, provider)
+                if isinstance(result, dict) and result.get('deferred'):
+                    validation = result
+                return result
             if any(key in value for key in CONTEXT_FIELDS):
                 check, validation = operation_validator(self.session, value, provider)
             document, diagnostics = authoring.analyse(
@@ -529,7 +591,8 @@ class StudioHandler(ViewerTransport, ConsoleHandler):
                   '/api/settings': 'settings_request', '/api/validate': 'validate_source',
                   '/api/design': 'design', '/api/cases': 'case_request', '/api/setup': 'setup_request',
                   '/api/preview': 'preview_request', '/api/input-file': 'input_file_request',
-                  '/api/inspect-input': 'inspect_input_request', '/api/peek-input': 'peek_input_request'}
+                  '/api/inspect-input': 'inspect_input_request', '/api/peek-input': 'peek_input_request',
+                  '/api/spatial': 'spatial_request'}
         if parsed.path == '/artifact-viewer/api/open':
             try:
                 self.authorised(parsed)

@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Named video assets and frame-exact cuts published through Shotcut's MLT engine."""
 import hashlib
 import json
@@ -21,9 +21,12 @@ from schemaxis.dispatch import cancellation_requested
 from schemaxis.errors import fail, keys
 from schemaxis.native_command import execute
 
+from .authoring_references import ASSET_NAME
+
 VERSION = 'schemaxis.shotcut/1'
 MAX_BYTES = 192 * 1024 * 1024
-NAME = {'type': 'string', 'minLength': 1, 'maxLength': 64, 'required': True}
+NAME = {key: value for key, value in ASSET_NAME.items() if key != 'pattern'}
+NAME['required'] = True
 OPTIONS = {
     'assets': {'type': 'array', 'minItems': 1, 'maxItems': 16, 'required': True,
                'items': {'type': 'object', 'properties': {
@@ -59,7 +62,7 @@ def plan(document):
     names = set()
     for index, asset in enumerate(options['assets']):
         at = '$.nodes[0].options.assets[' + str(index) + ']'
-        if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{0,63}', asset['name']) or asset['name'] in names:
+        if not re.fullmatch(ASSET_NAME['pattern'], asset['name']) or asset['name'] in names:
             fail('INVALID_ASSET', 'asset names must be unique bounded identifiers', at + '.name')
         names.add(asset['name'])
         if '\x00' in asset['file'] or not Path(asset['file']).is_absolute(): fail('INVALID_RESOURCE', 'asset paths must be absolute and contain no NUL', at + '.file')
@@ -80,9 +83,22 @@ def plan(document):
             'segments': segments, 'frames': total, 'duration': total / options['fps'], 'losses': LOSSES}
 
 
+def _name_constraints(options):
+    for collection, name in (('assets', 'name'), ('clips', 'asset')):
+        options[collection]['items']['properties'][name]['pattern'] = ASSET_NAME['pattern']
+    return options
+
+
+def options_schema(declaration):
+    from schemaxis.schema import option_schema
+    result = option_schema(declaration)
+    _name_constraints(result['properties'])
+    return result
+
+
 def schema():
     from schemaxis.schema import DRAFT, NAME as ID, argument_schema, object_schema
-    options = {key: argument_schema(spec) for key, spec in OPTIONS.items()}
+    options = _name_constraints({key: argument_schema(spec) for key, spec in OPTIONS.items()})
     descriptions = {
         'assets': 'Named local video files retained beside the editable project; use absolute paths.',
         'clips': 'Timeline order. Each clip selects a contiguous source range at the declared frame rate.',
@@ -104,9 +120,9 @@ def schema():
     return {'$schema': DRAFT, **object_schema({
         'version': {'const': VERSION, 'description': 'Shotcut timeline document contract.'},
         'nodes': {'type': 'array', 'minItems': 1, 'maxItems': 1, 'description': 'One declared timeline publication.',
-                  'items': object_schema({'id': {**ID, 'description': 'Publication identity within the workflow.'},
+                  'items': {'title': 'Trim and arrange video clips', **object_schema({'id': {**ID, 'description': 'Publication identity within the workflow.'},
                       'filter': {'const': 'editTimeline', 'description': 'Trim and arrange named video ranges.'},
-                      'options': object_schema(options, ['assets', 'clips'])}, ['id', 'filter', 'options'])}}, ['version', 'nodes'])}
+                      'options': object_schema(options, ['assets', 'clips'])}, ['id', 'filter', 'options'])}}}, ['version', 'nodes'])}
 
 
 def reusableInputs(document):
@@ -135,14 +151,6 @@ def _source_bytes(filename):
         if len(data) > MAX_BYTES: fail('RESOURCE_LIMIT', 'encoded source byte budget exceeded', filename)
         return data
     except (OSError, ValueError) as error: fail('RESOURCE_NOT_FOUND', str(error), filename)
-
-
-def studioCatalogue(schema):
-    return [{'id': 'operation:editTimeline', 'operation': 'editTimeline',
-             'title': 'Trim and arrange video clips', 'group': 'sources', 'at': '/nodes/-',
-             'schema': schema['properties']['nodes']['items'],
-             'description': 'Trim, reorder and repeat named source ranges in a verified editable timeline.',
-             'ports': {}, 'bindings': DECLARATIONS['editTimeline']['options']}]
 
 
 def provisionalResources(document, execution, identity):

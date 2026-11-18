@@ -171,7 +171,7 @@ def main():
         source.write_bytes(source.read_bytes()+b'\n')
         changed=workflow.execute(graph,directory/'workflow',locations=locations,timeout=30,resume=True);assert not changed['jobs'][0]['reused'];assert workflow.verify(directory/'workflow')['verified']
         report['workflow']={'baseline':first['status'],'unchangedReused':True,'samePathChangedBytesReused':False,'handoff':'Verified VTK artifact consumed by reverse VTU conversion.'}
-        study=copy.deepcopy(document);study['axes']=[{'name':'unit','values':['m','cm']}];study['targetUnits']={'$axis':'unit'}
+        study=copy.deepcopy(document);study['sweeps']=[{'name':'unit','values':['m','cm']}];study['targetUnits']={'$sweep':'unit'}
         study['definitions']={'format':'vtk'};study['targetFormat']={'$document':'/definitions/format'}
         result=adaptor.run(study,directory/'study',executable=executable,timeout=30);assert len(result['states'])==2 and adaptor.verify(directory/'study')['verified']
         report['composition']={'states':2,'verified':True}

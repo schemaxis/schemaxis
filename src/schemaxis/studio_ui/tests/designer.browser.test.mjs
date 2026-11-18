@@ -55,8 +55,9 @@ async function addOperation(session, id) {
   await session.evaluate(`document.querySelector('.dz-palette-item[data-adaptor="octave"]').focus()`);
   await session.key('Enter');
   await session.wait(`document.querySelector('.dialog input[name="id"]')`, 'operation dialog');
-  await field(session, '.dialog input[name="id"]', id);
   await field(session, '.dialog textarea', JSON.stringify(operation));
+  assert.match(await session.evaluate(`document.querySelector('.dialog input[name="id"]').value`), /^octave_data(?:_\d+)?$/);
+  await field(session, '.dialog input[name="id"]', id);
   await button(session, '.dialog', 'Add operation');
   await session.wait(`${state}.projection.nodes.some((node) => node.id === '${id}')`, `operation ${id}`);
   await session.wait(`!document.querySelector('.dialog')`, 'operation dialog closed');
@@ -195,10 +196,17 @@ for (const theme of ['light', 'dark']) {
       await session.wait(`${state}.projection.parameters.samples.label === 'Samples per run'`, 'parameter table saved');
       await session.clickSelector('.dz-bottom-tab[data-tab="outputs"]');
       await button(session, '.dz-bottom', 'Add output');
-      await field(session, '.dz-bottom input[aria-label="Alias"]', 'result');
       await field(session, '.dz-bottom select[aria-label="Operation"]', 'response');
+      assert.equal(await session.evaluate('document.querySelector(\'.dz-bottom input[aria-label="Alias"]\').value'),
+        'output_response_table_0');
+      await field(session, '.dz-bottom input[aria-label="Alias"]', 'result');
+      await button(session, '.dz-bottom', 'Add output');
+      const aliases = '.dz-bottom input[aria-label="Alias"]';
+      assert.deepEqual(await session.evaluate(`[...document.querySelectorAll(${JSON.stringify(aliases)})].map(input => input.value)`),
+        ['result', 'output_source_table_0']);
       await button(session, '.dz-bottom', 'Save');
-      await session.wait(`${state}.projection.outputs.result`, 'named output');
+      await session.wait(`${state}.projection.outputs.result && ${state}.projection.outputs.output_source_table_0`,
+        'both output bindings saved together');
       await session.clickSelector('.dz-bottom-tab[data-tab="naming"]');
       await field(session, '.dz-naming-input', '{index}-{output}-n{param:samples}{ext}');
       await button(session, '.dz-bottom', 'Save naming');

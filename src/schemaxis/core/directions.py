@@ -33,7 +33,7 @@ from .faults import SchemaxisError, Fault
 
 UNDER_SPECIFIED_DIRECTION = "UNDER_SPECIFIED_DIRECTION"
 OVER_SPECIFIED_DIRECTION = "OVER_SPECIFIED_DIRECTION"
-UNKNOWN_AXIS_TOKEN = "UNKNOWN_AXIS_TOKEN"
+UNKNOWN_SWEEP_TOKEN = "UNKNOWN_SWEEP_TOKEN"
 DEGENERATE_DIRECTION = "DEGENERATE_DIRECTION"
 
 RESOLUTION_PHASE = "value-resolution"
@@ -173,7 +173,7 @@ def resolve_axis_token(token: str, location: str) -> tuple[float, float, float]:
     key = token.strip().lower() if isinstance(token, str) else token
     if key not in AXIS_TOKENS:
         raise _fault(
-            UNKNOWN_AXIS_TOKEN, f"unknown axis token {token!r}", location,
+            UNKNOWN_SWEEP_TOKEN, f"unknown axis token {token!r}", location,
             observed={"token": token},
             recovery="use one of: " + ", ".join(sorted(AXIS_TOKENS)),
         )

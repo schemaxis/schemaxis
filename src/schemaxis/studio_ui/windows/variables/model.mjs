@@ -1,3 +1,4 @@
+// Copyright (C) 2026 David L. F. Gaden.
 // Named authoring data stays in the document. No independent variable store.
 import {atPointer, replacing} from '../../editor/fill-data.mjs';
 import {escapeSegment} from '../../editor/json-pointer.mjs';
@@ -29,15 +30,15 @@ export function entries(root) {
     const document = atPointer(root, scope.base);
     return [...GROUPS.flatMap(group => Object.entries(namedMap(document?.[group])).map(([name, value]) =>
       ({...scope, name, group, value, pointer: `${scope.base}/${group}/${escapeSegment(name)}`}))),
-    ...(Array.isArray(document?.axes) ? document.axes : []).flatMap((axis, index) => axis && typeof axis.name === 'string'
-      ? [{...scope, name: axis.name, group: 'axes', value: axis, pointer: `${scope.base}/axes/${index}`}] : [])];
+    ...(Array.isArray(document?.sweeps) ? document.sweeps : []).flatMap((axis, index) => axis && typeof axis.name === 'string'
+      ? [{...scope, name: axis.name, group: 'sweeps', value: axis, pointer: `${scope.base}/sweeps/${index}`}] : [])];
   });
 }
 
 export function reference(entry, target) {
-  if (entry.group === 'axes') {
+  if (entry.group === 'sweeps') {
     if (entry.base !== target.base) throw Error('A sweep belongs to its document. Use a shared workflow value to bind across scopes.');
-    return {$axis: entry.name};
+    return {$sweep: entry.name};
   }
   const pointer = entry.pointer.slice(entry.base.length);
   return {$document: pointer, ...(entry.base === target.base ? {} : entry.workflow ? {scope: 'workflow'}
@@ -46,26 +47,26 @@ export function reference(entry, target) {
 
 export function saveEntry(root, {base, name, group, value, parameter, units = '', help = ''}, previous) {
   if (!NAME.test(name)) throw Error('Use a letter, then letters, digits, _ or - for the name.');
-  if (![...GROUPS, 'axes'].includes(group)) throw Error('Choose a supported value group.');
+  if (![...GROUPS, 'sweeps'].includes(group)) throw Error('Choose a supported value group.');
   const scope = scopes(root).find(s => s.base === base);
   if (!scope) throw Error('The owner document is no longer available.');
   const duplicate = entries(root).find(e => e.base === base && e.group === group && e.name === name);
   if (duplicate && duplicate.pointer !== previous?.pointer) throw Error('That name already exists in this group.');
   if (previous && (previous.name !== name || previous.group !== group || previous.base !== base)) {
-    if (previous.group !== 'axes') root = replacing(root, previous.pointer, value);
+    if (previous.group !== 'sweeps') root = replacing(root, previous.pointer, value);
     root = relocateEntry(root, previous, {base, name, group});
     previous = entries(root).find(e => e.base === base && e.group === group && e.name === name);
-    if (group !== 'axes') value = previous.value;
+    if (group !== 'sweeps') value = previous.value;
   }
   let result = structuredClone(root);
   const owner = atPointer(result, base);
-  if (group === 'axes') {
+  if (group === 'sweeps') {
     if (value.values && (!Array.isArray(value.values) || !value.values.length)) throw Error('Provide a nonempty list of sweep values.');
     if (!value.values && !value.series) throw Error('Provide values or a regular series.');
-    owner.axes ||= [];
+    owner.sweeps ||= [];
     const axis = {...value, name};
-    if (previous) owner.axes[Number(previous.pointer.split('/').at(-1))] = axis;
-    else owner.axes.push(axis);
+    if (previous) owner.sweeps[Number(previous.pointer.split('/').at(-1))] = axis;
+    else owner.sweeps.push(axis);
   } else {
     if (owner[group] !== undefined && (!owner[group] || Array.isArray(owner[group]) || typeof owner[group] !== 'object'
       || Object.keys(owner[group]).some(k => k.startsWith('$')))) throw Error(`The ${group} container is an expression; edit its source first.`);
@@ -73,7 +74,7 @@ export function saveEntry(root, {base, name, group, value, parameter, units = ''
     Object.defineProperty(owner[group], name, {value, enumerable: true, configurable: true, writable: true});
   }
   if (parameter) {
-    if (root.version !== 'schemaxis.workflow-design/2' || !scope.workflow || group === 'axes') {
+    if (root.version !== 'schemaxis.workflow-design/2' || !scope.workflow || group === 'sweeps') {
       throw Error('Case Runner parameters belong to shared values in a workflow design.');
     }
     const kind = typeof value === 'number' ? (Number.isInteger(value) ? 'integer' : 'number')
@@ -110,8 +111,8 @@ function absoluteReference(root, value, site) {
   return owner.base + '/' + parts.join('/');
 }
 export function relocateEntry(root, previous, next) {
-  if ((previous.group === 'axes') !== (next.group === 'axes')) throw Error('Sweeps and ordinary values use different contracts. Create the destination value and rebind consumers first.');
-  if (previous.group === 'axes' && previous.base !== next.base) throw Error('A sweep is local to its document. Create a sweep in the destination scope and rebind consumers first.');
+  if ((previous.group === 'sweeps') !== (next.group === 'sweeps')) throw Error('Sweeps and ordinary values use different contracts. Create the destination value and rebind consumers first.');
+  if (previous.group === 'sweeps' && previous.base !== next.base) throw Error('A sweep is local to its document. Create a sweep in the destination scope and rebind consumers first.');
   const destination = `${next.base}/${next.group}/${escapeSegment(next.name)}`;
   const oldOwner = ownerAt(root, previous.pointer), newOwner = scopes(root).find(s => s.base === next.base);
   if (!newOwner) throw Error('Choose an available scope.');
@@ -124,7 +125,7 @@ export function relocateEntry(root, previous, next) {
     return {$document: target.slice(targetOwner.base.length), ...(targetOwner.base === ownerAt(root, site).base ? {}
       : targetOwner.workflow ? {scope: 'workflow'} : {operation: targetOwner.operation})};
   };
-  const moving = previous.group !== 'axes';
+  const moving = previous.group !== 'sweeps';
   const mapped = site => moving && (site === previous.pointer || site.startsWith(previous.pointer + '/'))
     ? destination + site.slice(previous.pointer.length) : site;
   function visit(value, site = '') {
@@ -135,11 +136,11 @@ export function relocateEntry(root, previous, next) {
     }
     if (Array.isArray(value)) return value.map((v, i) => visit(v, site + '/' + i));
     const result = Object.fromEntries(Object.entries(value).map(([k, v]) => [k, visit(v, site + '/' + escapeSegment(k))]));
-    if (previous.group === 'axes' && value.$axis === previous.name && ownerAt(root, site).base === previous.base) result.$axis = next.name;
+    if (previous.group === 'sweeps' && value.$sweep === previous.name && ownerAt(root, site).base === previous.base) result.$sweep = next.name;
     return result;
   }
   let result = visit(root);
-  if (previous.group === 'axes') {
+  if (previous.group === 'sweeps') {
     atPointer(result, previous.pointer).name = next.name;
     return result;
   }
@@ -188,10 +189,10 @@ export function removeEntry(root, entry) {
     }
     Object.entries(value).forEach(([k, v]) => scan(v, `${pointer}/${escapeSegment(k)}`));
   };
-  // Axis references are local, so skip unrelated owners while checking them.
-  if (entry.group === 'axes') {
+  // Sweep references are local, so skip unrelated owners while checking them.
+  if (entry.group === 'sweeps') {
     const visit = (v, p) => { if (v && typeof v === 'object') {
-      if (v.$axis === entry.name) uses.push(p);
+      if (v.$sweep === entry.name) uses.push(p);
       Object.entries(v).forEach(([k, c]) => visit(c, p + '/' + escapeSegment(k)));
     }};
     visit(atPointer(root, entry.base), entry.base);
@@ -203,12 +204,12 @@ export function removeEntry(root, entry) {
   });
   if (uses.length || parameter) throw Error(`This value is in use${uses.length ? ': ' + uses.slice(0, 3).join(', ') : ' by a Case Runner parameter'}. Update its references first.`);
   const result = structuredClone(root), owner = atPointer(result, entry.base);
-  if (entry.group === 'axes') owner.axes.splice(Number(entry.pointer.split('/').at(-1)), 1);
+  if (entry.group === 'sweeps') owner.sweeps.splice(Number(entry.pointer.split('/').at(-1)), 1);
   else delete owner[entry.group][entry.name];
   return result;
 }
 
-/** Preview only static document references and scalar arithmetic; runtime results stay explicitly pending. */
+/** Literal/reference inspection only; computed previews use spatial_eval in host.mjs. */
 export function preview(root, value, scope = scopes(root)[0], active = new Set()) {
   if (!value || typeof value !== 'object') return value;
   if (value.$document) {
@@ -220,28 +221,6 @@ export function preview(root, value, scope = scopes(root)[0], active = new Set()
     const target = atPointer(root, path);
     if (target === undefined) throw Error('The referenced value is missing.');
     return preview(root, target, owner, new Set([...active, path]));
-  }
-  if (value.$value) {
-    const args = preview(root, value.args, scope, active), b = args.bounds;
-    if (value.$value === 'boundsFromExtents') return {min: args.extents.filter((_, i) => i % 2 === 0), max: args.extents.filter((_, i) => i % 2 === 1)};
-    if (b?.min && b?.max) {
-      const mid = b.min.map((v, i) => (v + b.max[i]) / 2), size = b.min.map((v, i) => b.max[i] - v);
-      if (value.$value === 'boundsCentre3D') return mid;
-      if (value.$value === 'boundsSize') return size;
-      if (value.$value === 'boundsPoint') return [...'xyz'].map((axis, i) => args[axis] === 'min' ? b.min[i] : args[axis] === 'max' ? b.max[i] : mid[i]);
-      if (value.$value === 'boundsExtend') return {min: b.min.map((v, i) => v - (args.before?.[i] || 0) * size[i]), max: b.max.map((v, i) => v + (args.after?.[i] || 0) * size[i])};
-    }
-    throw Error('Resolved by host validation.');
-  }
-  if (value.$expr) {
-    const {op, args} = value.$expr;
-    if (!['add', 'subtract', 'multiply', 'divide'].includes(op)) throw Error('Resolved by host validation.');
-    const values = args.map(arg => preview(root, arg, scope, active));
-    if (values.length !== 2 || !values.every(v => typeof v === 'number' && Number.isFinite(v))) throw Error('Arithmetic requires two finite numbers.');
-    const [a, b] = values;
-    const result = {add: () => a + b, subtract: () => a - b, multiply: () => a * b, divide: () => a / b}[op]();
-    if (!Number.isFinite(result)) throw Error('The calculation is not finite.');
-    return result;
   }
   if (Object.keys(value).some(k => k.startsWith('$'))) throw Error('Available when the host resolves this expression or runs the workflow.');
   return Array.isArray(value) ? value.map(v => preview(root, v, scope, active))

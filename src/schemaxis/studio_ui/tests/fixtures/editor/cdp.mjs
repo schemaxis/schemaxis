@@ -4,9 +4,8 @@
 
 import {spawn} from 'node:child_process';
 import {existsSync} from 'node:fs';
-import {mkdtemp, rm, writeFile} from 'node:fs/promises';
-import {homedir} from 'node:os';
-import {join} from 'node:path';
+import {writeFile} from 'node:fs/promises';
+import {createBrowserProfile, cleanupLaunch} from '../../browser-profile.mjs';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -39,7 +38,7 @@ export async function launch({root, path, width = 1280, height = 800}) {
       {stdio: ['ignore', 'pipe', 'pipe']});
     const port = await waitForLine(handles.server.stdout, /port (\d+)/, 'http.server');
     const origin = `http://127.0.0.1:${port}`;
-    handles.profile = await mkdtemp(join(homedir(), 'schemaxis-editor-test-'));
+    handles.profile = await createBrowserProfile('schemaxis-editor-test-');
     handles.browser = spawn(findChromium(), ['--headless', '--no-sandbox', '--disable-dev-shm-usage',
       '--remote-debugging-port=0', '--remote-allow-origins=*', `--user-data-dir=${handles.profile}`,
       `--window-size=${width},${height}`, '--hide-scrollbars', '--no-first-run', '--no-default-browser-check',
@@ -53,7 +52,7 @@ export async function launch({root, path, width = 1280, height = 800}) {
       socket.onerror = reject;
     });
     handles.socket = socket;
-    return createSession(handles, origin, path, {width, height});
+    return await createSession(handles, origin, path, {width, height});
   } catch (error) {
     await shutdown(handles);
     throw error;
@@ -151,20 +150,5 @@ async function createSession(handles, origin, path, size) {
 }
 
 async function shutdown(handles) {
-  const {socket, browser, server, profile} = handles;
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({id: 999999, method: 'Browser.close'}));
-    await delay(300);
-    socket.close();
-  }
-  for (const child of [browser, server]) {
-    if (child && child.exitCode === null) {
-      child.on('error', () => {});
-      child.kill();
-      await Promise.race([new Promise((resolve) => child.once('exit', resolve)), delay(1000)]);
-    }
-  }
-  if (profile) {
-    await rm(profile, {recursive: true, force: true, maxRetries: 3});
-  }
+  await cleanupLaunch(handles);
 }

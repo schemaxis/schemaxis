@@ -169,7 +169,7 @@ def main():
         src.write_bytes((ROOT/'examples/schemaxis/fixtures/imagemagick/grid-changed.png').read_bytes())
         third=workflow.execute(graph,directory/'workflow',locations=locations,timeout=30,resume=True);assert all(not j['reused'] for j in third['jobs']);assert workflow.verify(directory/'workflow')['verified']
         report['workflow']={'baseline':first['status'],'PNGArtifactHandoff':True,'unchangedReused':True,'changedSamePathSourceBytesReused':False}
-        study=copy.deepcopy(doc);study['axes']=[{'name':'scale','values':[1,2]}];study['images'][0]['scale']={'$axis':'scale'}
+        study=copy.deepcopy(doc);study['sweeps']=[{'name':'scale','values':[1,2]}];study['images'][0]['scale']={'$sweep':'scale'}
         outcome=adaptor.run(study,directory/'study',executable=executable,timeout=30);assert len(outcome['states'])==2;assert adaptor.verify(directory/'study')['verified'];report['composition']={'states':2,'verified':True}
         report['inflightLifecycle']=interrupted_processes(directory,doc)
         if args.register:register(directory/'kit/qualification.json')

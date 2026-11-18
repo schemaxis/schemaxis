@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Adaptor-owned conceptual guidance, host-safe projection and honest coverage."""
 import json
 import re
@@ -7,7 +7,7 @@ from .errors import fail
 
 VERSION = 'schemaxis.studio-guidance/1'
 STATUSES = {'reviewed', 'reference', 'pending'}
-PARTS = {'status', 'explanation', 'units', 'defaultMeaning', 'pitfalls', 'examples', 'sources', 'question', 'fileExtensions', 'label', 'control'}
+PARTS = {'status', 'explanation', 'units', 'defaultMeaning', 'pitfalls', 'examples', 'sources', 'question', 'fileExtensions', 'label', 'control', 'authoring'}
 
 
 def escape(part):
@@ -20,19 +20,21 @@ def fields(schema):
     References are inventoried at their definition once, rather than expanded.
     Validation keywords and literal defaults are never treated as schemas.
     """
-    def visit(node, path=''):
+    def visit(node, path='', depth=0):
         if not isinstance(node, dict):
             return
+        if depth > 128:
+            fail('INVALID_STUDIO_SCHEMA', 'The schema exceeds the nesting limit.', path)
         yield path, node
         for key in ('properties', '$defs', 'patternProperties'):
             for name, child in node.get(key, {}).items():
-                yield from visit(child, path + '/' + key + '/' + escape(name))
+                yield from visit(child, path + '/' + key + '/' + escape(name), depth + 1)
         for key in ('items', 'additionalProperties', 'not', 'if', 'then', 'else'):
             if isinstance(node.get(key), dict):
-                yield from visit(node[key], path + '/' + key)
+                yield from visit(node[key], path + '/' + key, depth + 1)
         for key in ('oneOf', 'anyOf', 'allOf', 'prefixItems'):
             for index, child in enumerate(node.get(key, [])):
-                yield from visit(child, path + '/' + key + '/' + str(index))
+                yield from visit(child, path + '/' + key + '/' + str(index), depth + 1)
     return visit(schema)
 
 
@@ -73,6 +75,9 @@ def validate_record(record):
             raise ValueError(key + ' requires a text array')
     if 'examples' in record and not isinstance(record['examples'], list):
         raise ValueError('examples requires an array')
+    if 'authoring' in record:
+        from .studio_catalogue import validate_authoring
+        validate_authoring(record['authoring'])
     if 'control' in record:
         control = record['control']
         line = (isinstance(control, dict) and set(control) == {'kind', 'start', 'end'}
@@ -82,8 +87,60 @@ def validate_record(record):
                   and control['kind'] == 'blocks' and isinstance(control['input'], str) and bool(control['input']))
         reader = (isinstance(control, dict) and set(control) == {'kind', 'field'}
                   and control['kind'] == 'reader-selection' and control['field'] in ('regions', 'cellArrays'))
-        if not line and not blocks and not reader:
-            raise ValueError('control requires line endpoint names or a blocks input port')
+        arrays = (isinstance(control, dict) and set(control) == {'kind', 'input', 'association'}
+                  and control['kind'] == 'dataset-arrays' and isinstance(control['input'], str) and bool(control['input'])
+                  and control['association'] in ('POINTS', 'CELLS'))
+        nodes = (isinstance(control, dict) and set(control) == {'kind', 'nodeKind'}
+                 and control['kind'] == 'document-nodes' and isinstance(control['nodeKind'], str)
+                 and bool(control['nodeKind']))
+        assembly = (isinstance(control, dict) and set(control) == {'kind', 'input', 'assemblyOption', 'defaultAssembly'}
+                    and control['kind'] == 'assembly-paths'
+                    and all(isinstance(control[key], str) and bool(control[key])
+                            for key in ('input', 'assemblyOption', 'defaultAssembly')))
+        discrete = control in ({'kind': 'file-subset'}, {'kind': 'enum-subset'})
+        collections = control.get('collection') if isinstance(control, dict) else None
+        collections = [collections] if isinstance(collections, str) else collections
+        roots = control.get('rootCollections', []) if isinstance(control, dict) else []
+        entry_fields = control.get('field') if isinstance(control, dict) else None
+        entry_fields = [entry_fields] if isinstance(entry_fields, str) else entry_fields
+        match = control.get('match') if isinstance(control, dict) else None
+        if match is not None and (not isinstance(match, dict) or not {'field', 'value'} <= set(match) or set(match) - {'field', 'value', 'invert'}
+                or not isinstance(match['field'], str) or not match['field'].isidentifier()
+                or not isinstance(match['value'], str) or not isinstance(match.get('invert', False), bool)):
+            raise ValueError('match requires a field and literal text value')
+        qualified = control.get('qualified') if isinstance(control, dict) else None
+        if qualified is not None and (not isinstance(qualified, dict)
+                or not {'ownerField', 'members', 'activeAt'} <= set(qualified)
+                or set(qualified) - {'ownerField', 'members', 'activeAt', 'activeDepth', 'unqualified'}
+                or type(qualified.get('activeDepth', 0)) is not int or not 0 <= qualified.get('activeDepth', 0) <= 12
+                or not isinstance(qualified.get('unqualified', False), bool)
+                or any(not isinstance(qualified[key], str) or not qualified[key].isidentifier()
+                       for key in ('ownerField', 'members'))
+                or not isinstance(qualified['activeAt'], list) or not 0 < len(qualified['activeAt']) <= 4
+                or any(not isinstance(path, str) or not re.fullmatch(r'(?:/[A-Za-z][A-Za-z0-9_]*){1,8}', path)
+                       for path in qualified['activeAt'])):
+            raise ValueError('qualified choices require declared collection members and active owner pointers')
+        entries = (isinstance(control, dict) and {'kind', 'collection', 'field'} <= set(control)
+                   and set(control) <= {'kind', 'collection', 'field', 'scopeDepth', 'exclude', 'qualified', 'match', 'rootCollections'}
+                   and control['kind'] == 'document-entries'
+                   and isinstance(collections, list) and 0 < len(collections) <= 8
+                   and isinstance(roots, list) and len(roots) <= 8
+                   and all(isinstance(path, str) and re.fullmatch(r'(?:/[A-Za-z][A-Za-z0-9_]*){1,8}', path)
+                           for path in collections + roots)
+                   and isinstance(entry_fields, list) and 0 < len(entry_fields) <= 8
+                   and all(isinstance(field, str) and field.isidentifier() for field in entry_fields)
+                   and isinstance(control.get('exclude', []), list)
+                   and all(isinstance(value, str) for value in control.get('exclude', []))
+                   and type(control.get('scopeDepth', 0)) is int and 0 <= control.get('scopeDepth', 0) <= 8)
+        inspected = (isinstance(control, dict) and {"kind", "source", "field"} <= set(control) <= {"kind", "source", "field", "native", "documentSource", "sourceLevels", "sourcePointer"}
+                     and type(control.get("sourceLevels", 0)) is int and 0 <= control.get("sourceLevels", 0) <= 4
+                     and all(type(control.get(key, False)) is bool for key in ("native", "documentSource", "sourcePointer"))
+                     and control["kind"] == "inspected-entries"
+                     and isinstance(control["source"], str) and control["source"].startswith("/")
+                     and control["source"][1:].isidentifier()
+                     and isinstance(control["field"], str) and control["field"].isidentifier())
+        if not (line or blocks or reader or arrays or nodes or assembly or discrete or entries or inspected):
+            raise ValueError('Use a supported Studio control and its declared settings')
     if record['status'] != 'pending' and not record.get('explanation'):
         raise ValueError('available guidance requires an explanation')
     if record['status'] != 'pending' and record['explanation'].strip().lower().startswith(('todo', 'tbd', 'replace scaffold', 'development scaffold')):
@@ -95,7 +152,10 @@ def enrich(schema, provider, version, guidance=None):
     """Annotate a copy; authored validation constraints are unchanged."""
     # Schema builders reuse dictionaries. Each occurrence needs its own address
     # and explanation; deepcopy preserves those aliases and lets the last win.
-    result = json.loads(json.dumps(schema))
+    try:
+        result = json.loads(json.dumps(schema))
+    except (RecursionError, ValueError, TypeError):
+        fail('INVALID_STUDIO_SCHEMA', 'The schema must be JSON with finite nesting.', version)
     guidance = load(provider) if guidance is None else guidance
     records = guidance.get('routes', {}).get(version, {}).get('fields', {})
     for path, node in fields(result):
@@ -117,12 +177,22 @@ def enrich(schema, provider, version, guidance=None):
     return result
 
 
+def enumerated_subset(node):
+    items = node.get('items')
+    values = items.get('enum') if isinstance(items, dict) else None
+    return (node.get('type') == 'array' and node.get('uniqueItems') is True
+            and isinstance(values, list) and bool(values)
+            and all(isinstance(value, str) and value for value in values))
+
+
 def annotate(node, guide, path, provider, version):
     node['x-studio-guide'] = {**guide, 'address': path, 'version': version, 'provider': provider}
     if guide.get('label'):
         node['title'] = guide['label']
     if guide.get('control'):
         node['x-studio-control'] = guide['control']
+    elif enumerated_subset(node):
+        node['x-studio-control'] = {'kind': 'enum-subset'}
     if guide.get('explanation'):
         if node.get('description'):
             node['x-studio-technical'] = node['description']

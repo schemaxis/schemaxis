@@ -66,7 +66,7 @@ assignment and cluster scheduling remain future work.
 Time batching requires a finite, explicit `times` list. Each contiguous batch keeps
 the full analytic parameter sweep and native object reuse within its own process.
 The original unsplit expansion/publication budgets are checked before splitting.
-Automatic source-time discovery and splitting an analytic axis are not supported by
+Automatic source-time discovery and splitting an analytic sweep are not supported by
 this first batching contract. Use separate operations for independent parameter
 sets, or keep the analytic sweep together when reuse is valuable.
 

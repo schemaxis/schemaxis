@@ -688,8 +688,8 @@ def main():
         assert a.read(Path(consumer['directory']), 'table-report.json')['rows'][2] == ['North', '3', '301']
         assert workflow.verify(directory / 'workflow')['verified']
         report['workflow'] = {'actualSQLiteCSVHandoff': True, 'literalRows': literal, 'unchangedReused': True, 'samePathChangedBytesReused': False}
-        study = copy.deepcopy(document);study['axes'] = [{'name': 'id', 'values': ['0', '4']}]
-        study['where'] = [{'column': 'id', 'test': 'eq', 'value': {'$axis': 'id'}}]
+        study = copy.deepcopy(document);study['sweeps'] = [{'name': 'id', 'values': ['0', '4']}]
+        study['where'] = [{'column': 'id', 'test': 'eq', 'value': {'$sweep': 'id'}}]
         result = a.run(study, directory / 'study', executable=locations['apachearrow'], timeout=30)
         assert a.verify(directory / 'study')['verified'] and len(result['states']) == 2
         report['composition'] = {'states': 2, 'verified': True}

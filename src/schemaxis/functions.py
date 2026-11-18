@@ -8,6 +8,9 @@ import copy
 import math
 from schemaxis.core.declarations import validate_arguments, validate_value, validate_specifications
 from .errors import fail
+from .expr.functions import BUILTINS, CASTS, CONDITIONAL, RESERVED_FUNCTIONS
+
+LANGUAGE_NAMES = frozenset(BUILTINS) | frozenset(CASTS) | {CONDITIONAL, 'extents', 'sweep'} | RESERVED_FUNCTIONS
 
 
 class FunctionRegistry:
@@ -17,6 +20,9 @@ class FunctionRegistry:
     def register(self, name, arguments, result, function):
         if not isinstance(name, str) or not name or name in self.entries:
             fail('DUPLICATE_FUNCTION', 'function name must be new and nonempty', str(name))
+        if name in LANGUAGE_NAMES:
+            fail('RESERVED_FUNCTION', 'the expression language uses or reserves this function name', name,
+                 reserved=name in RESERVED_FUNCTIONS)
         object_arguments = {k: v for k, v in arguments.items() if 'objectKind' in v}
         for key, spec in object_arguments.items():
             if set(spec) - {'objectKind', 'required'} or not isinstance(spec['objectKind'], str):
@@ -72,12 +78,8 @@ def make_registry():
     registry = FunctionRegistry()
     number = {'type': 'number'}
     vector = {'type': 'array', 'items': number, 'minItems': 3, 'maxItems': 3}
-    bounds = {'type': 'array', 'items': number, 'minItems': 6, 'maxItems': 6}
-    def midpoint(bounds):
-        if any(bounds[i] > bounds[i + 1] for i in (0, 2, 4)):
-            raise ValueError('bounds are empty')
-        return [bounds[i] / 2 + bounds[i+1] / 2 for i in (0, 2, 4)]
-    registry.register('boundsCentre', {'bounds': {**bounds, 'required': True}}, vector, midpoint)
+    from .spatial import BOUNDS, centre
+    registry.register('boundsCentre', {'bounds': {**BOUNDS, 'required': True}}, vector, centre)
     registry.register('vectorLength', {'vector': {**vector, 'required': True}}, number,
                       lambda vector: math.hypot(*vector))
     registry.register('sinDegrees', {'angle': {**number, 'required': True}}, number,

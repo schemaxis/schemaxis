@@ -16,7 +16,7 @@ from .unfilled import find_unfilled, reject_unfilled
 
 VERSION = 'schemaxis.studio-adaptor/2'
 TYPES = {'number', 'integer', 'boolean', 'string', 'enum', 'vector3', 'bounds', 'colour',
-         'path', 'id', 'nodeRef', 'axisRef', 'field', 'json'}
+         'path', 'id', 'nodeRef', 'sweepRef', 'field', 'json'}
 INTERPOLATION = re.compile(r'\$\{([^}:]+)\}')
 LEGACY = re.compile(r'\$\{([^}:]+):([^}]*)\}')
 
@@ -68,7 +68,7 @@ def _field_value(value, spec, location):
         _check(all(0 <= v <= 1 for v in value), 'colour components must be between zero and one', location)
     if kind == 'bounds':
         _check(all(value[i] <= value[i + 1] for i in (0, 2, 4)), 'bounds limits are reversed', location)
-    if kind in ('id', 'nodeRef', 'axisRef', 'path'):
+    if kind in ('id', 'nodeRef', 'sweepRef', 'path'):
         _check(bool(value), 'field requires a nonempty value', location)
     if kind == 'id':
         _check(bool(re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]*', value)), 'invalid identifier', location)

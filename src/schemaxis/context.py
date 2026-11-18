@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Contextual typed dictionary reads and execution-scoped object identities.
 
 No native runtime imports. Object values stay in process and are never copied.
@@ -139,6 +139,13 @@ class InputContext:
         return validate_value(value, specification, location) if specification else copy.deepcopy(value)
 
 
+def inline_identity(owner, port, index=None):
+    """The deterministic identity reserved by an anonymous input construction."""
+    import hashlib
+    path = owner + '/' + port + ('/' + str(index) if index is not None else '')
+    return 'inline' + hashlib.sha256(path.encode()).hexdigest()[:16]
+
+
 def compile_objects(document):
     """Lift inline input constructions into the master graph, without executing.
 
@@ -165,9 +172,7 @@ def compile_objects(document):
         node = copy.deepcopy(value.get('$create'))
         keys(node, ('id', 'filter', 'inputs', 'options', 'onVisit'), owner + '/' + port)
         if 'id' not in node:
-            import hashlib
-            path = owner + '/' + port + ('/' + str(index) if index is not None else '')
-            node['id'] = 'inline' + hashlib.sha256(path.encode()).hexdigest()[:16]
+            node['id'] = inline_identity(owner, port, index)
         identity = node['id']
         if not isinstance(identity, str):
             fail('INVALID_NAME', 'inline identity must be a string', owner + '/' + port)

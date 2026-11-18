@@ -98,12 +98,12 @@ test('composition markers are accepted and offered only when asked for', () => {
   assert.ok(!labels(plain).some((label) => label.startsWith('$')));
   const markers = complete(root,
     '{"version": "schemaxis/1", "nodes": [{"id": "a", "filter": "slice", "options": {"origin": {"$|"}}}]}');
-  for (const marker of ['$document', '$expr', '$value', '$axis']) {
+  for (const marker of ['$document', '$expr', '$value', '$sweep']) {
     assert.ok(labels(markers).includes(marker), marker);
   }
   const document = {version: 'schemaxis.freecad/1', output: 'b', nodes: [{id: 'b', filter: 'box', options: {
     length: {$document: '/settings/length', scope: 'workflow'}, width: {$expr: {op: 'add', args: [1, 2]}},
-    height: {$analytic: {type: 'values', values: [1, 2]}}, origin: [0, {$axis: 'x'}, 0]}}]};
+    height: {$analytic: {type: 'values', values: [1, 2]}}, origin: [0, {$sweep: 'x'}, 0]}}]};
   assert.deepEqual(validate(schema('freecad'), document), []);
 });
 

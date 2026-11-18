@@ -29,7 +29,7 @@ def validate(document, *, allow_unfilled=False):
     if not allow_unfilled:
         from .unfilled import reject_unfilled
         reject_unfilled(document)
-    keys(document, ('version', 'operations', 'execution', 'dimensions', 'definitions', 'settings', 'axes', 'maxStates'), '$')
+    keys(document, ('version', 'operations', 'execution', 'dimensions', 'definitions', 'settings', 'sweeps', 'maxStates'), '$')
     if document.get('version') != 'schemaxis.workflow/1':
         fail('UNSUPPORTED_VERSION', 'expected schemaxis.workflow/1')
     from .adaptor_runtime import workflow_inputs
@@ -282,19 +282,75 @@ def verify(directory):
     return {'verified': True, 'operations': len(operations), 'artifacts': count}
 
 
+def sync_members(document):
+    """Sync names of a workflow by what each member waits for, read after its document references are followed.
+
+    Returns the names each operation can step in the schedule of the run, keyed
+    by the pointer of its document (the envelope under the empty pointer), and
+    for each name of a sweep that takes its ends from another operation's
+    result, the first such site in each operation.
+    """
+    from .adaptor_runtime import pending, workflow_inputs
+    from .expressions import analytic_specifications, sweep_syncs, SECTIONS
+    resolved = workflow_inputs(document)
+    scheduled, waiting = {}, {}
+    owners = [('', {key: resolved.get(key) for key in SECTIONS})] + [
+        ('/operations/' + str(index) + '/document', operation['document'])
+        for index, operation in enumerate(resolved.get('operations', []))
+        if isinstance(operation, dict) and isinstance(operation.get('document'), dict)]
+    for prefix, owner in owners:
+        scheduled[prefix] = set(sweep_syncs(owner))
+        for path, spec in analytic_specifications(owner):
+            if not isinstance(spec, dict) or not isinstance(spec.get('sync'), str):
+                continue
+            if pending(spec):
+                waiting.setdefault(spec['sync'], {}).setdefault(prefix, prefix + path)
+            else:
+                scheduled[prefix].add(spec['sync'])
+    return scheduled, waiting
+
+
+def refuse_unschedulable_sync(scheduled, waiting):
+    """Refuse a sync name that cannot step together because one member waits for another operation's result.
+
+    A sweep whose ends are a verified result of an earlier operation is stepped
+    by its own operation once that result exists, after the schedule of the run
+    is fixed. It may share its sync name only with sweeps that wait in the same
+    operation.
+    """
+    for name, sites in waiting.items():
+        if len(sites) > 1 or any(name in names for names in scheduled.values()):
+            fail('UNSCHEDULABLE_SYNC',
+                 'The sync name ' + repr(name) + ' cannot step together: this sweep takes its ends from the result '
+                 'of an earlier operation, so it can only be stepped after that operation has run. Remove the sync '
+                 'name from it, or give it ends that do not depend on another operation.',
+                 '$' + next(iter(sites.values())), sync=name)
+
+
 def study_required(document):
-    from .adaptor_runtime import walk, requires_common, pending
+    from .adaptor_runtime import walk, requires_common, pending, planned
     if not isinstance(document, dict): fail('INVALID_DOCUMENT', 'workflow must be an object')
     if not isinstance(document.get('operations', []), list): fail('INVALID_DOCUMENT', 'operations must be a list')
-    if document.get('axes') or any('$analytic' in value for key in ('dimensions','definitions','settings')
-                                  for _, value in walk(document.get(key))):
-        return True
     for operation in document.get('operations', []):
         if not isinstance(operation, dict): fail('INVALID_DOCUMENT', 'operation must be an object')
+        if not isinstance(operation.get('document', {}), dict): fail('INVALID_DOCUMENT', 'operation document must be an object')
+    scheduled, waiting = sync_members(document)
+    refuse_unschedulable_sync(scheduled, waiting)
+    if document.get('sweeps') or any('$analytic' in value for key in ('dimensions','definitions','settings')
+                                  for _, value in walk(document.get(key))):
+        return True
+    shared = set()
+    for index, operation in enumerate(document.get('operations', [])):
         value = operation.get('document', {})
-        if not isinstance(value, dict): fail('INVALID_DOCUMENT', 'operation document must be an object')
+        if planned(value):
+            continue
         if not pending(value) and any('$analytic' in item for _, item in walk(value)):
             if requires_common(value, registry.resolve(value, legacy=True)[1]): return True
+        # One sync name in two operations steps both together, which only a study of the whole workflow does.
+        # An operation that waits for a result elsewhere still steps the sweeps that do not wait for it.
+        names = scheduled.get('/operations/' + str(index) + '/document', set())
+        if names & shared: return True
+        shared |= names
     return False
 
 

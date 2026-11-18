@@ -224,6 +224,20 @@ class Backend:
         finally:
             evaluated.to_mesh_clear()
 
+    def extents(self, obj):
+        """World bounds of the evaluated mesh; a material has none and a mesh without points is empty."""
+        if isinstance(obj, bpy.types.Material) or not hasattr(obj, 'evaluated_get'):
+            return [{'status': 'notSpatial'}]
+        evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        mesh = evaluated.to_mesh()
+        try:
+            points = [evaluated.matrix_world @ vertex.co for vertex in mesh.vertices]
+        finally:
+            evaluated.to_mesh_clear()
+        if not points:
+            return [{'status': 'empty'}]
+        return [{'status': 'ok', 'bounds': [f(p[i] for p in points) for i in range(3) for f in (min, max)]}]
+
     def delete(self, obj):
         self.records.pop(obj.as_pointer(), None)
         if isinstance(obj, bpy.types.Material):
@@ -366,7 +380,7 @@ def execute(directory):
             data = [state['observations'][name]['bounds'] for name in spec['visible']]
             bounds = [min(b[i] for b in data) if i%2 == 0 else max(b[i] for b in data) for i in range(6)]
             for ci, authored in enumerate(writer['cameras']):
-                settings = camera_values(evaluate(authored, visit['axes'], state['observations'], visit['time'], 'camera'), 'camera')
+                settings = camera_values(evaluate(authored, visit['sweeps'], state['observations'], visit['time'], 'camera', None, master.scope), 'camera')
                 actual_camera = frame(camera, settings, bounds, writer['size'])
                 if production and production.features:production.features.prepare_shading()
                 if spec.get('prepareOnly'):
@@ -426,6 +440,8 @@ def execute(directory):
             if production:production.close()
             atomic_json(directory / 'verification.json', receipt)
         active.close()
+        from schemaxis import spatial_results
+        receipt.update(spatialVersion=spatial_results.VERSION, spatial=spatial_results.record(master, receipt['states']))
         receipt.update(status='succeeded', events=active.events)
         atomic_json(directory / 'verification.json', receipt)
     finally:

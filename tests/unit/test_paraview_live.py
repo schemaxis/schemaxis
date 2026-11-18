@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from schemaxis.core.faults import SchemaxisError
 from schemaxis.adaptors.paraview.live import LiveSession
@@ -19,6 +20,26 @@ def document(radius=1):
 
 
 class ParaViewLiveHostTests(unittest.TestCase):
+    def test_reader_inspection_keeps_native_names_when_mesh_display_is_unavailable(self):
+        from schemaxis.adaptors.paraview.studio import inspect_input
+        authored = {'version': 'schemaxis/1', 'nodes': [
+            {'id': 'case', 'filter': 'foam', 'options': {'file': 'case.foam'}}], 'scenes': []}
+        prepared = {'node': 'case', 'value': authored['nodes'][0], 'regions': ['internalMesh'],
+                    'cellArrays': ['p', 'U'], 'availableTimes': [0.6, 1.0], 'times': [0.6]}
+        observed = {'node': 'case', 'geometry': None, 'observation': {'cells': 42},
+                    'geometryUnavailable': {'code': 'LIVE_LIMIT', 'message': 'Too many faces'}}
+        with patch('schemaxis.adaptors.paraview.live.LiveSession') as session:
+            worker = session.return_value.__enter__.return_value
+            worker.request.side_effect = [prepared, observed]
+            result = inspect_input(authored, 'case', 'unused', 'unused', geometry=True)
+        self.assertTrue(result['available'])
+        self.assertEqual(result['cellArrays'], ['p', 'U'])
+        self.assertEqual(result['availableTimes'], [0.6, 1.0])
+        self.assertEqual(result['observation'], {'cells': 42})
+        self.assertEqual(result['geometryUnavailable']['code'], 'LIVE_LIMIT')
+        self.assertEqual(worker.request.call_args.kwargs['document']['times'], [0.6])
+        self.assertNotIn('times', authored)
+
     def test_input_inspection_prunes_unfinished_consumers_and_keeps_observation_dependencies(self):
         from schemaxis.adaptors.paraview.studio import inspection_document
         authored = document()
@@ -52,7 +73,10 @@ class ParaViewNativeLiveTests(unittest.TestCase):
             {'id': 'grouped', 'filter': 'group', 'inputs': {'input': ['ball', 'cone']}},
             {'id': 'unfinished', 'filter': 'extractBlock', 'inputs': {'input': 'grouped'}}])
         with tempfile.TemporaryDirectory() as root:
-            result = inspect_input(authored, 'grouped', os.environ['SCHEMAXIS_LIVE_PARAVIEW'], Path(root) / 'inspect')
+            result = inspect_input(authored, 'grouped', os.environ['SCHEMAXIS_LIVE_PARAVIEW'], Path(root) / 'inspect', geometry=True)
+            self.assertGreater(result['geometry']['revision'], 0)
+            self.assertEqual(result['geometry']['faceIds'], 'revision-scoped')
+            self.assertTrue(result['geometry']['documentDigest'])
             blocks = result['assemblies']['Hierarchy']
             choice = next(block for block in blocks if block['label'] == 'cone')
             self.assertEqual(choice['selector'], '/Root/cone')

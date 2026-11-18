@@ -2,6 +2,17 @@
   "version": "schemaxis.studio-guidance/1",
   "operations": {
     "fromRows": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/columns",
+            "label": "Columns"
+          }
+        ],
+        "naming": {
+          "prefix": "table"
+        }
+      },
       "status": "reviewed",
       "explanation": "Builds one LibreOffice Calc workbook from a numeric table typed directly into the document: a Data sheet with your column labels and rows, and a Summary sheet with count, sum, mean, minimum, maximum and sample standard deviation per column. It publishes analysis.xlsx, analysis.ods (reopened by a second Calc process) and data.csv, each checked against independent arithmetic. Choose it for small reproducible tables (2 to 10,000 rows, 1 to 64 columns); use readCSV when the table already exists as a file or comes from another workflow step.",
       "sources": [
@@ -16,6 +27,18 @@
       ]
     },
     "readCSV": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "CSV file",
+            "style": "lastSegment"
+          }
+        ],
+        "naming": {
+          "prefix": "csv"
+        }
+      },
       "status": "reviewed",
       "explanation": "Builds the same Data/Summary workbook as fromRows, but reads the table from an existing comma-separated file: the first line holds column labels and every later line holds numbers. The file bytes are copied into the run so later verification does not depend on the original file. Choose it for measured data already on disk or for a numeric table produced by another workflow step (for example an R or ngspice results table).",
       "sources": [
@@ -31,6 +54,18 @@
       ]
     },
     "fromTypedRows": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/columns",
+            "label": "Columns",
+            "nameField": "name"
+          }
+        ],
+        "naming": {
+          "prefix": "table"
+        }
+      },
       "status": "reviewed",
       "explanation": "Builds an editable LibreOffice Calc workbook from a labelled table written in this document: each column is declared as text or number, and each record mixes part or sample IDs, notes and measurements. Missing measurements are explicit nulls that become blank cells, so blank, zero and text stay distinct. It publishes analysis.xlsx, analysis.ods (reopened by a second Calc process) and a typed data.csv handoff, each checked cell by cell, with fixed numeric summaries only for the number columns. Choose it for small reproducible inventories or measurement logs; use fromRows when every cell is a number, and readTypedCSV when the table already exists as a file. Workbook numbers keep 15 significant digits, so Data cells and the Summary MIN and MAX are checked to a relative 1e-14, while SUM, AVERAGE and STDEV allow relative 2e-8 plus 1e-12 of the column's largest magnitude; counts are exact and an all-zero column accepts only zero statistics.",
       "sources": [
@@ -49,6 +84,18 @@
       ]
     },
     "readTypedCSV": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "CSV file",
+            "style": "lastSegment"
+          }
+        ],
+        "naming": {
+          "prefix": "typedCSV"
+        }
+      },
       "status": "reviewed",
       "explanation": "Builds the same editable workbook and typed data.csv handoff as fromTypedRows, but reads the records from a captured CSV file with an exact declared header, column kinds and a reserved null token. The file bytes are copied into the run, so later verification does not depend on the original. Choose it when the table already exists as a file, such as a CSV written by another tool or a typed table handed over by an earlier Calc step; the quoting and null token follow the Apache Arrow adaptor's source dialect. Its file may be an earlier workflow step's CSV file or table artifact; the bytes are validated against the declared columns first. Workbook numbers keep 15 significant digits, so Data cells and the Summary MIN and MAX are checked to a relative 1e-14, while SUM, AVERAGE and STDEV allow relative 2e-8 plus 1e-12 of the column's largest magnitude; counts are exact and an all-zero column accepts only zero statistics.",
       "sources": [
@@ -241,6 +288,29 @@
           ]
         },
         "/properties/requirements/items/oneOf/0": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/cell",
+                "label": "Cell"
+              },
+              {
+                "path": "/minimum",
+                "label": "Minimum"
+              },
+              {
+                "path": "/maximum",
+                "label": "Maximum"
+              }
+            ],
+            "naming": {
+              "prefix": "requirement"
+            },
+            "identityStyle": "label",
+            "multiMode": {
+              "rationale": "Each requirement checks its own workbook cell against an interval."
+            }
+          },
           "status": "reference",
           "explanation": "An inclusive numeric cell bound. Supply minimum, maximum or both and inspect the signed distance to the closest bound in each native format.",
           "sources": [
@@ -301,6 +371,30 @@
           ]
         },
         "/properties/requirements/items/oneOf/1": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/terms",
+                "label": "Terms",
+                "style": "omit"
+              },
+              {
+                "path": "/target",
+                "label": "Target"
+              },
+              {
+                "path": "/absoluteTolerance",
+                "label": "Absolute tolerance"
+              }
+            ],
+            "naming": {
+              "prefix": "requirement"
+            },
+            "identityStyle": "label",
+            "multiMode": {
+              "rationale": "Each named linear requirement owns its own target and tolerance."
+            }
+          },
           "status": "reference",
           "explanation": "An explicit weighted reconciliation over distinct native numeric cells. Inspect value, target, absolute tolerance and signed margin separately for both formats.",
           "sources": [

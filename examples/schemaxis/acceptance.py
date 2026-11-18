@@ -87,8 +87,8 @@ def main():
         report['checks'].append('hidden runtime field samples determine radii 1 and 2')
         execute('gltf', json.loads((examples / 'scene-gltf.json').read_text()))
         switching = copy.deepcopy(branch_document)
-        switching['axes'][0]['values'] = [[0, 0, 0]]
-        switching['axes'][1]['values'] = [[2]]
+        switching['sweeps'][0]['values'] = [[0, 0, 0]]
+        switching['sweeps'][1]['values'] = [[2]]
         switching['scenes'] = [{'id': 'cut', 'geometry': ['cut']}, {'id': 'source', 'geometry': ['source']},
                                {'id': 'cutAgain', 'geometry': ['cut']}]
         switched = execute('scene-switching', switching)
@@ -107,7 +107,7 @@ def main():
         missing['nodes'][4]['options']['field'] = ['POINTS', 'absent']
         negative('missing-field', missing, 'MISSING_FIELD')
         empty = copy.deepcopy(branch_document)
-        empty['axes'][0]['values'] = [[0, 0, 1000]]
+        empty['sweeps'][0]['values'] = [[0, 0, 1000]]
         negative('empty-slice', empty, 'EMPTY_GEOMETRY')
         cycle = copy.deepcopy(branch_document)
         cycle['nodes'][0]['options'] = {'centre': {'$observe': 'cut', 'path': ['bounds']}}

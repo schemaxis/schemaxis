@@ -124,26 +124,11 @@ def _fault(
     ))
 
 
-def resolve_times(
-    declared: Any,
-    available: Sequence[float],
-    *,
-    location: str = "$.times",
-) -> TimeSelection:
-    """Resolve a declared time selection against the times an application has.
-
-    ``available`` is indexed as supplied; positions in ``indices`` and
-    ``indexRange`` address that ordering.
-    """
-
+def validate_selection(declared: Any, *, location: str = "$.times") -> dict:
+    """Check selection syntax without inventing available source times."""
     value = validate_value(declared, TIMES_ARGUMENT, location, RESOLUTION_PHASE)
     if isinstance(value, str):
         value = {value: 1}
-
-    stored = _stored_times(available, location)
-    notes: list[str] = []
-    if [item.value for item in stored] != sorted(item.value for item in stored):
-        notes.append("the supplied times were not in ascending order; indices address them as supplied")
 
     declared_selectors = [name for name in _SELECTORS if name in value]
     if not declared_selectors:
@@ -160,6 +145,28 @@ def resolve_times(
             recovery="declare exactly one of: " + ", ".join(_SELECTORS),
         )
 
+    return value
+
+
+def resolve_times(
+    declared: Any,
+    available: Sequence[float],
+    *,
+    location: str = "$.times",
+) -> TimeSelection:
+    """Resolve a declared time selection against the times an application has.
+
+    ``available`` is indexed as supplied; positions in ``indices`` and
+    ``indexRange`` address that ordering.
+    """
+
+    value = validate_selection(declared, location=location)
+    stored = _stored_times(available, location)
+    notes: list[str] = []
+    if [item.value for item in stored] != sorted(item.value for item in stored):
+        notes.append("the supplied times were not in ascending order; indices address them as supplied")
+
+    declared_selectors = [name for name in _SELECTORS if name in value]
     spelling = declared_selectors[0]
     tolerance = value.get("tolerance")
     if tolerance is not None and spelling not in {"values", "valueRange"}:

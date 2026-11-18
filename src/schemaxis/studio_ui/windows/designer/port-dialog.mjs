@@ -93,6 +93,8 @@ export async function portDialog(ctx, model, operation, side, {existingName, exi
   const ports = (model.store.get().projection.ports[operation] || {})[side] || {};
   const taken = Object.keys(ports).filter((name) => name !== existingName);
   const name = h('input', {class: 'input', name: 'portName', value: existingName || '', spellcheck: 'false'});
+  let editedName = Boolean(existingName);
+  name.addEventListener('input', () => { editedName = true; });
   const error = h('div', {class: 'error-text', role: 'alert'});
   const data = dataFields(existing && existing.data);
   const body = [];
@@ -123,7 +125,7 @@ export async function portDialog(ctx, model, operation, side, {existingName, exi
     ], (item) => {
       target = item.target;
       kind = item.kind;
-      if (!name.value || !existingName) {
+      if (!editedName) {
         name.value = uniqueId(item.name, taken);
       }
       if (item.dataKindKnown && item.dataKinds.length === 1 && !data.kind.value) {
@@ -144,7 +146,7 @@ export async function portDialog(ctx, model, operation, side, {existingName, exi
         + (item.nodeKinds.length ? ` · ${item.nodeKinds.join(', ')}` : '')),
     ], (item) => {
       artifact.value = String(item.artifact);
-      if (!existingName) {
+      if (!editedName) {
         name.value = uniqueId(item.name, taken);
       }
       const known = item.nodeKinds.find((value) => DATA_KINDS.includes(value));

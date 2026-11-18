@@ -151,6 +151,30 @@ class DiscoveryTests(unittest.TestCase):
         os.environ[ROOTS_VARIABLE] = str(self.root / "install-a")
         self.assertEqual(find_paraview(search_path=False)[0].executable, str(planted))
 
+    def test_installation_bin_and_gui_paths_resolve_the_batch_interpreter(self):
+        planted = self.plant('installation/bin/pvbatch')
+        gui = self.plant('installation/bin/paraview')
+        python = self.plant('installation/bin/pvpython')
+        for location in (gui.parent.parent, gui.parent, gui, python, planted):
+            with self.subTest(location=location):
+                self.assertEqual([item.executable for item in find_paraview([location], search_path=False)],
+                                 [str(planted)])
+
+    def test_live_locations_never_launch_the_gui_or_fall_back_to_another_installation(self):
+        from schemaxis.adaptors.paraview.mvp.runners import live_executable
+        python = self.plant('installation/bin/pvpython')
+        batch = self.plant('installation/bin/pvbatch')
+        gui = self.plant('installation/bin/paraview')
+        for location in (gui.parent.parent, gui.parent, gui, python):
+            self.assertEqual(live_executable(location), str(python))
+        self.assertEqual(live_executable(batch), str(batch))
+        python.chmod(0o644)
+        self.assertEqual(live_executable(gui), str(batch))
+        os.environ[ROOTS_VARIABLE] = str(gui.parent.parent)
+        with self.assertRaises(SchemaxisError) as caught:
+            live_executable(self.root / 'missing')
+        self.assertEqual(caught.exception.fault.code, 'INTERPRETER_NOT_FOUND')
+
     def test_the_same_executable_is_not_reported_twice(self) -> None:
         self.plant("install-a/bin/pvbatch")
         root = self.root / "install-a"

@@ -97,7 +97,7 @@ def declarations():
     result['join'] = {'id':'join','native':'join','inputs':{'inputs':{'native':'inputs','required':True,'multiple':True}},'options':{}}
     result['shrinkwrap']['inputs']['target']={'native':'target','required':True}
     for kind in ('readSTL','readPLY'):
-        result[kind]={'id':kind,'native':kind,'inputs':{},'options':{
+        result[kind]={'id':kind,'native':kind,'loadsData':True,'inputs':{},'options':{
             'file':{'value':{'type':'string','minLength':1,'required':True},'path':[],'constructor':True},
             'scale':{**opt('number',1,minimum=0.000001,maximum=1000000),'constructor':True},
         }}

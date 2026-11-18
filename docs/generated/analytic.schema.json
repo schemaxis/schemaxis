@@ -181,10 +181,10 @@
         "path"
       ]
     },
-    "axisReference": {
+    "sweepReference": {
       "type": "object",
       "properties": {
-        "$axis": {
+        "$sweep": {
           "type": "string",
           "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
         },
@@ -205,7 +205,7 @@
       },
       "additionalProperties": false,
       "required": [
-        "$axis"
+        "$sweep"
       ]
     },
     "authorNumber": {
@@ -1204,7 +1204,17 @@
           "type": "object",
           "properties": {
             "$expr": {
-              "$ref": "#/$defs/expression"
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/expression"
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096,
+                  "description": "An expression in the Schemaxis expression language, for example model.inflate(0.52)."
+                }
+              ]
             }
           },
           "additionalProperties": false,
@@ -1228,22 +1238,96 @@
                         "bounds": {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
+                                          },
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
+                                          },
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    }
                                   },
-                                  {
-                                    "$ref": "#/$defs/composition"
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
                                   },
-                                  {
-                                    "$ref": "#/$defs/analytic"
-                                  }
-                                ]
-                              },
-                              "minItems": 6,
-                              "maxItems": 6
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
+                                }
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -1288,70 +1372,96 @@
                         "bounds": {
                           "anyOf": [
                             {
-                              "type": "object",
-                              "properties": {
-                                "min": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/composition"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
-                                      },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
                                     }
-                                  ]
+                                  },
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
                                 },
-                                "max": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
                                       },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
-                                    }
-                                  ]
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                                 }
-                              },
-                              "additionalProperties": false,
-                              "required": [
-                                "min",
-                                "max"
-                              ]
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -1396,70 +1506,96 @@
                         "bounds": {
                           "anyOf": [
                             {
-                              "type": "object",
-                              "properties": {
-                                "min": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/composition"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
-                                      },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
                                     }
-                                  ]
+                                  },
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
                                 },
-                                "max": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
                                       },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
-                                    }
-                                  ]
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                                 }
-                              },
-                              "additionalProperties": false,
-                              "required": [
-                                "min",
-                                "max"
-                              ]
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -1570,70 +1706,96 @@
                         "bounds": {
                           "anyOf": [
                             {
-                              "type": "object",
-                              "properties": {
-                                "min": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/composition"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
-                                      },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
                                     }
-                                  ]
+                                  },
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
                                 },
-                                "max": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
                                       },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
-                                    }
-                                  ]
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                                 }
-                              },
-                              "additionalProperties": false,
-                              "required": [
-                                "min",
-                                "max"
-                              ]
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -1791,22 +1953,96 @@
                         "extents": {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
+                                          },
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
+                                          },
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    }
                                   },
-                                  {
-                                    "$ref": "#/$defs/composition"
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
                                   },
-                                  {
-                                    "$ref": "#/$defs/analytic"
-                                  }
-                                ]
-                              },
-                              "minItems": 6,
-                              "maxItems": 6
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
+                                }
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -1851,70 +2087,96 @@
                         "bounds": {
                           "anyOf": [
                             {
-                              "type": "object",
-                              "properties": {
-                                "min": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/composition"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
-                                      },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
                                     }
-                                  ]
+                                  },
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
                                 },
-                                "max": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
                                       },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
-                                    }
-                                  ]
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                                 }
-                              },
-                              "additionalProperties": false,
-                              "required": [
-                                "min",
-                                "max"
-                              ]
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -2013,70 +2275,96 @@
                         "bounds": {
                           "anyOf": [
                             {
-                              "type": "object",
-                              "properties": {
-                                "min": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/composition"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
-                                      },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
                                     }
-                                  ]
+                                  },
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
                                 },
-                                "max": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
                                       },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
-                                    }
-                                  ]
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                                 }
-                              },
-                              "additionalProperties": false,
-                              "required": [
-                                "min",
-                                "max"
-                              ]
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -2125,70 +2413,96 @@
                               "items": {
                                 "anyOf": [
                                   {
-                                    "type": "object",
-                                    "properties": {
-                                      "min": {
-                                        "anyOf": [
-                                          {
-                                            "type": "array",
-                                            "items": {
-                                              "anyOf": [
-                                                {
-                                                  "type": "number"
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "min": {
+                                            "anyOf": [
+                                              {
+                                                "type": "array",
+                                                "items": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number"
+                                                    },
+                                                    {
+                                                      "$ref": "#/$defs/composition"
+                                                    },
+                                                    {
+                                                      "$ref": "#/$defs/analytic"
+                                                    }
+                                                  ]
                                                 },
-                                                {
-                                                  "$ref": "#/$defs/composition"
+                                                "minItems": 3,
+                                                "maxItems": 3
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
+                                          },
+                                          "max": {
+                                            "anyOf": [
+                                              {
+                                                "type": "array",
+                                                "items": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "number"
+                                                    },
+                                                    {
+                                                      "$ref": "#/$defs/composition"
+                                                    },
+                                                    {
+                                                      "$ref": "#/$defs/analytic"
+                                                    }
+                                                  ]
                                                 },
-                                                {
-                                                  "$ref": "#/$defs/analytic"
-                                                }
-                                              ]
-                                            },
-                                            "minItems": 3,
-                                            "maxItems": 3
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
+                                                "minItems": 3,
+                                                "maxItems": 3
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           }
-                                        ]
+                                        },
+                                        "additionalProperties": false,
+                                        "required": [
+                                          "min",
+                                          "max"
+                                        ],
+                                        "title": "min and max corners"
                                       },
-                                      "max": {
-                                        "anyOf": [
-                                          {
-                                            "type": "array",
-                                            "items": {
-                                              "anyOf": [
-                                                {
-                                                  "type": "number"
-                                                },
-                                                {
-                                                  "$ref": "#/$defs/composition"
-                                                },
-                                                {
-                                                  "$ref": "#/$defs/analytic"
-                                                }
-                                              ]
+                                      {
+                                        "type": "array",
+                                        "items": {
+                                          "anyOf": [
+                                            {
+                                              "type": "number"
                                             },
-                                            "minItems": 3,
-                                            "maxItems": 3
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
+                                            {
+                                              "$ref": "#/$defs/composition"
+                                            },
+                                            {
+                                              "$ref": "#/$defs/analytic"
+                                            }
+                                          ]
+                                        },
+                                        "minItems": 6,
+                                        "maxItems": 6,
+                                        "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                                       }
-                                    },
-                                    "additionalProperties": false,
-                                    "required": [
-                                      "min",
-                                      "max"
-                                    ]
+                                    ],
+                                    "title": "box",
+                                    "description": "A box as min and max corners, or as six extents"
                                   },
                                   {
                                     "$ref": "#/$defs/composition"
@@ -2449,70 +2763,96 @@
                         "bounds": {
                           "anyOf": [
                             {
-                              "type": "object",
-                              "properties": {
-                                "min": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/composition"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
-                                      },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
                                     }
-                                  ]
+                                  },
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
                                 },
-                                "max": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
                                       },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
-                                    }
-                                  ]
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                                 }
-                              },
-                              "additionalProperties": false,
-                              "required": [
-                                "min",
-                                "max"
-                              ]
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -3062,70 +3402,96 @@
                         "bounds": {
                           "anyOf": [
                             {
-                              "type": "object",
-                              "properties": {
-                                "min": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/composition"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
-                                      },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
                                     }
-                                  ]
+                                  },
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
                                 },
-                                "max": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
                                       },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
-                                    }
-                                  ]
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                                 }
-                              },
-                              "additionalProperties": false,
-                              "required": [
-                                "min",
-                                "max"
-                              ]
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -3384,70 +3750,96 @@
                         "bounds": {
                           "anyOf": [
                             {
-                              "type": "object",
-                              "properties": {
-                                "min": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "min": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/composition"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
+                                    },
+                                    "max": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/composition"
+                                              },
+                                              {
+                                                "$ref": "#/$defs/analytic"
+                                              }
+                                            ]
                                           },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
-                                      },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
+                                          "minItems": 3,
+                                          "maxItems": 3
+                                        },
+                                        {
+                                          "$ref": "#/$defs/composition"
+                                        },
+                                        {
+                                          "$ref": "#/$defs/analytic"
+                                        }
+                                      ]
                                     }
-                                  ]
+                                  },
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "min",
+                                    "max"
+                                  ],
+                                  "title": "min and max corners"
                                 },
-                                "max": {
-                                  "anyOf": [
-                                    {
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/composition"
-                                          },
-                                          {
-                                            "$ref": "#/$defs/analytic"
-                                          }
-                                        ]
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
                                       },
-                                      "minItems": 3,
-                                      "maxItems": 3
-                                    },
-                                    {
-                                      "$ref": "#/$defs/composition"
-                                    },
-                                    {
-                                      "$ref": "#/$defs/analytic"
-                                    }
-                                  ]
+                                      {
+                                        "$ref": "#/$defs/composition"
+                                      },
+                                      {
+                                        "$ref": "#/$defs/analytic"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 6,
+                                  "maxItems": 6,
+                                  "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                                 }
-                              },
-                              "additionalProperties": false,
-                              "required": [
-                                "min",
-                                "max"
-                              ]
+                              ],
+                              "title": "box",
+                              "description": "A box as min and max corners, or as six extents"
                             },
                             {
                               "$ref": "#/$defs/composition"
@@ -3578,7 +3970,7 @@
           "$ref": "#/$defs/valueReference"
         },
         {
-          "$ref": "#/$defs/axisReference"
+          "$ref": "#/$defs/sweepReference"
         }
       ]
     }

@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Bounded, typed references within JSON authoring documents.
 
 Authored composition and arithmetic are closed data operations; no filesystem reads or runtime handles.
@@ -15,6 +15,31 @@ from .composition import evaluate
 def _fail(code, message, location):
     raise SchemaxisError(Fault(code, message, location, 'input',
                          recovery='Use a complete {"$document": "/section/key"} value pointing to existing JSON data.'))
+
+
+def reference_pointer(reference, site):
+    """Address a document marker without reading or evaluating its target.
+
+    ``site`` is the marker's RFC 6901 address. Relative paths start at its
+    containing object, exactly as authored document resolution does.
+    """
+    if not isinstance(reference, str) or not reference.startswith(('/', './', '../')):
+        _fail('INVALID_DOCUMENT_REFERENCE', 'Use an absolute, ./ or ../ document pointer', '$' + site)
+    if re.search(r'~(?![01])', reference):
+        _fail('INVALID_DOCUMENT_REFERENCE', 'Invalid JSON pointer escape', '$' + site)
+    if reference.startswith('/'):
+        return reference
+    parts = site.split('/')[1:-1]
+    for token in reference.split('/'):
+        if token == '.':
+            continue
+        if token == '..':
+            if not parts:
+                _fail('INVALID_DOCUMENT_REFERENCE', 'Relative reference escapes the document root', '$' + site)
+            parts.pop()
+        else:
+            parts.append(token)
+    return '/' + '/'.join(parts) if parts else ''
 
 
 def load_document(text, format="json"):
@@ -58,6 +83,57 @@ def load_document_file(path, format=None):
     return load_document(Path(path).read_text(encoding='utf-8'), document_format(path, format))
 
 
+RESERVED = re.compile(r'%%.*%%', re.DOTALL)
+
+
+def refuse_reserved(value, location='$'):
+    """Refuse an authored document that uses a field name Schemaxis keeps for its own records.
+
+    A name written between double percent signs is added by Schemaxis to the
+    documents it prepares for each visit of a study, and is never authored.
+    """
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if isinstance(key, str) and RESERVED.fullmatch(key):
+                raise SchemaxisError(Fault(
+                    'RESERVED_KEY', f'The field name {key!r} is reserved for internal use', location, 'input',
+                    observed={'key': key},
+                    recovery='Remove the field. Names written between double percent signs are added by '
+                             'Schemaxis itself and are not authored.'))
+            refuse_reserved(item, location + '.' + key)
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            refuse_reserved(item, location + '[' + str(index) + ']')
+
+
+_ENTRY = re.compile(r'(/operations/[0-9]+/document)?/(dimensions|settings|definitions)/([^/]+)')
+_OPERATION = re.compile(r'/operations/[0-9]+/document(?:/|$)')
+
+
+def _entry_reference(document, path, active):
+    """Name of an expression-valued entry that is being read through a reference, or None.
+
+    A string expression is evaluated among the names of the document that
+    holds it. Copying its text to the place that refers to it would evaluate
+    it among other names and schedule its sweeps a second time, so the
+    reference reads the entry by name instead.
+    """
+    match = _ENTRY.fullmatch(path)
+    if match is None:
+        return None
+    key = match.group(3).replace('~1', '/').replace('~0', '~')
+    if '`' in key or any(ord(character) < 32 for character in key):
+        return None
+    sites = {found.group(0).rstrip('/') for found in map(_OPERATION.match, active) if found}
+    name = match.group(2) + '.`' + key + '`'
+    if sites == ({match.group(1)} if match.group(1) else set()):
+        return name
+    version = document.get('version')
+    if match.group(1) is None and isinstance(version, str) and version.startswith('schemaxis.workflow/'):
+        return 'workflow.' + name
+    return None
+
+
 def resolve_document(document, *, max_values=100000, max_depth=128, value_resolver=None,
                      marker_resolver=None, defer=None):
     """Return independent resolved JSON and lookup provenance.
@@ -72,9 +148,16 @@ def resolve_document(document, *, max_values=100000, max_depth=128, value_resolv
     evidence = []
     active = set()
     remaining = max_values
+    reading = None
+
+    def follow(value, target, origin, depth):
+        nonlocal reading
+        reading = None if target == origin or target.startswith(origin + '/') else target
+        return visit(value, target, depth)
 
     def visit(value, path, depth):
-        nonlocal remaining
+        nonlocal remaining, reading
+        referenced, reading = reading is not None and reading == path, None
         remaining -= 1
         location = '$' + path
         if remaining < 0 or depth > max_depth:
@@ -85,7 +168,7 @@ def resolve_document(document, *, max_values=100000, max_depth=128, value_resolv
         try:
             if isinstance(value, dict):
                 if marker_resolver is not None:
-                    handled, result = marker_resolver(value, path, lambda item, where: visit(item, where, depth + 1))
+                    handled, result = marker_resolver(value, path, lambda item, where: follow(item, where, path, depth + 1))
                     if handled:
                         return result
                 if '$value' in value and value_resolver is not None:
@@ -100,6 +183,9 @@ def resolve_document(document, *, max_values=100000, max_depth=128, value_resolv
                 if '$expr' in value:
                     if set(value) != {'$expr'}:
                         _fail('INVALID_EXPRESSION', 'Expression marker must be the entire value', location)
+                    if isinstance(value['$expr'], str):
+                        return {'$expr': (_entry_reference(document, path, active) if referenced else None)
+                                or value['$expr']}
                     expression = visit(value['$expr'], path + '/$expr', depth + 1)
                     if defer is not None and defer(expression):
                         return {'$expr': expression}
@@ -111,18 +197,7 @@ def resolve_document(document, *, max_values=100000, max_depth=128, value_resolv
                     if set(value) != {'$document'} or not isinstance(pointer, str) or not pointer.startswith(('/', './', '../')):
                         _fail('INVALID_DOCUMENT_REFERENCE', 'Reference must contain only $document with an absolute pointer or ./ or ../ path', location)
                     reference = pointer
-                    if not pointer.startswith('/'):
-                        parts = path.split('/')[1:-1]
-                        for token in pointer.split('/'):
-                            if token == '.':
-                                continue
-                            if token == '..':
-                                if not parts:
-                                    _fail('INVALID_DOCUMENT_REFERENCE', 'Relative reference escapes the document root', location)
-                                parts.pop()
-                            else:
-                                parts.append(token)
-                        pointer = '/' + '/'.join(parts) if parts else ''
+                    pointer = reference_pointer(pointer, path)
                     target = document
                     for token in pointer[1:].split('/') if pointer else []:
                         if re.search(r'~(?![01])', token):
@@ -135,7 +210,7 @@ def resolve_document(document, *, max_values=100000, max_depth=128, value_resolv
                         else:
                             _fail('UNKNOWN_DOCUMENT_REFERENCE', f'No document value at {pointer!r}', location)
                     evidence.append({'location': location, 'reference': reference, 'pointer': pointer})
-                    return visit(target, pointer, depth + 1)
+                    return follow(target, pointer, path, depth + 1)
                 result = {}
                 for key, item in value.items():
                     if not isinstance(key, str):

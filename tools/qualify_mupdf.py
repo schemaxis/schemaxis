@@ -155,7 +155,7 @@ def main():
         changed=workflow.execute(graph,directory/'workflow',locations=locations,timeout=60,resume=True);assert not changed['jobs'][0]['reused'];assert workflow.verify(directory/'workflow')['verified']
         report['workflow']={'baseline':first['status'],'unchangedReused':True,'samePathChangedBytesReused':False}
         study=copy.deepcopy(document);study['definitions']={'density':72};study['dpi']={'$document':'/definitions/density'}
-        study['axes']=[{'name':'turn','values':[0,180]}];study['rotation']={'$axis':'turn'}
+        study['sweeps']=[{'name':'turn','values':[0,180]}];study['rotation']={'$sweep':'turn'}
         result=adaptor.run(study,directory/'study',executable=executable,timeout=60);assert adaptor.verify(directory/'study')['verified'];assert len(result['states'])==2
         report['composition']={'states':2,'verified':True}
         if args.ffmpeg:

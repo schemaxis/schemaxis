@@ -329,3 +329,11 @@ class SharedDocumentGuidanceTests(unittest.TestCase):
         self.assertIn('isolines', contour['nativeDescription'])
         for item in items.values():
             self.assertNotEqual(item['guidance']['status'], 'pending')
+
+    def test_bounds_function_help_does_not_refuse_flat_boxes(self):
+        refused = ('positive extent', 'strictly less', 'strictly greater', 'must exceed the matching',
+                   'Each extent must be positive', 'bounds of a flat slice fail')
+        for provider in ('blender', 'paraview', 'workflow'):
+            text = Path(f'src/schemaxis/adaptors/{provider}/guidance.json').read_text()
+            for phrase in refused:
+                self.assertNotIn(phrase, text, provider)

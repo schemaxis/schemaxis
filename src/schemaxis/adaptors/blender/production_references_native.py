@@ -63,7 +63,7 @@ def references(master, selection, prepared, visit, sources, *, reference_directo
     bounds=[min(b[i] for b in data) if i%2==0 else max(b[i] for b in data) for i in range(6)]
     writer=scene_spec['images'][0]
     for authored in writer['cameras']:
-        settings=camera_values(evaluate(authored,visit['axes'],observations,visit['time'],'camera'),'camera')
+        settings=camera_values(evaluate(authored,visit['sweeps'],observations,visit['time'],'camera',None,master.scope),'camera')
         frame(bpy.context.scene.camera,settings,bounds,writer['size'])
     if production and production.features:
         production.features.prefix=f'{state_index:04d}'

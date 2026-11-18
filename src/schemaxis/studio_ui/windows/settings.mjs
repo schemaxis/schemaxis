@@ -10,6 +10,7 @@ const GROUPS = [
   {title: 'Editor', prefix: ['editor.']},
   {title: 'Files and help', prefix: ['files.', 'help.']},
   {title: 'Outputs', prefix: ['output.']},
+  {title: 'Live Data', prefix: ['spatial.']},
   {title: 'Execution', prefix: ['execution.']},
   {title: 'Notifications', prefix: ['notifications.']},
 ];
@@ -17,7 +18,7 @@ const GROUPS = [
 function control(ctx, key, spec, value, editable) {
   const save = (next) => setSetting(ctx, {[key]: next});
   if (spec.type === 'boolean') {
-    return h('label', {class: 'checkbox'},
+    return h('label', {class: 'checkbox', title: spec.description},
       h('input', {type: 'checkbox', checked: value, disabled: !editable,
         onChange: (event) => save(event.target.checked)}),
       spec.label);
@@ -45,7 +46,7 @@ function namingPreview(settings) {
     .replace('{operation}', 'slices')
     .replace('{output}', 'pressure')
     .replace(/\{param:([^}]+)\}/g, (match, name) => `${name}_1p815`)
-    .replace(/\{axis:([^}]+)\}/g, 'm0p325')
+    .replace(/\{sweep:([^}]+)\}/g, 'm0p325')
     .replace('{artifact}', '0')
     .replace('{ext}', '.png');
   return h('div', {class: 'hint'}, 'Example: ', h('code', {}, example));
@@ -80,7 +81,7 @@ export const settingsWindow = {
             }}, h('option', {value: ''}, 'Choose a preset…'),
               h('option', {value: '{index}-{operation}-{output}{ext}'}, 'Indexed output'),
               h('option', {value: '{index}-{operation}-{output}-{param:pressure}{ext}'}, 'Key and value (edit parameter name above)'),
-              h('option', {value: '{operation}-{output}-{axis:x}{ext}'}, 'Sweep value (edit axis name above)'))),
+              h('option', {value: '{operation}-{output}-{sweep:x}{ext}'}, 'Sweep value (edit the sweep name above)'))),
             namingPreview(settings)) : null,
           group.title === 'Appearance' ? h('p', {class: 'hint muted'},
             'Roles change which windows are shown. They are not access control: this Studio runs locally for '

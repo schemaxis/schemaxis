@@ -359,6 +359,29 @@
           ]
         },
         "/properties/photos/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/path",
+                "label": "Source file",
+                "style": "lastSegment"
+              },
+              {
+                "path": "/sha256",
+                "label": "Expected SHA-256",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "photo"
+            },
+            "uniqueFields": [
+              "/path"
+            ],
+            "multiMode": {
+              "rationale": "Each media entry captures its own file with a separate Name and provenance."
+            }
+          },
           "status": "reviewed",
           "explanation": "One photo: a stable ID, an absolute local JPEG path and an optional SHA-256 pin. Duplicate IDs and any malformed JPEG or selected tag refuse this exact photo before ExifTool runs.",
           "sources": [
@@ -414,6 +437,34 @@
           "units": "items"
         },
         "/properties/media/anyOf/0/properties/items/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/path",
+                "label": "Source file",
+                "style": "lastSegment"
+              },
+              {
+                "path": "/sidecar",
+                "label": "Sidecar",
+                "style": "omit"
+              },
+              {
+                "path": "/sha256",
+                "label": "Expected SHA-256",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "photo"
+            },
+            "uniqueFields": [
+              "/path"
+            ],
+            "multiMode": {
+              "rationale": "Each media entry captures its own file with a separate Name and provenance."
+            }
+          },
           "status": "reviewed",
           "explanation": "One item: a stable ID, an absolute .jpg, .jpeg, .tif, .tiff, .dng, .png, .webp, .heic, .heif, .avif or .xmp path (the container is detected by signature, never by suffix), an optional SHA-256 pin and, for a photo, an optional XMP sidecar path. A problem with this item faults only this item.",
           "sources": [
@@ -636,6 +687,18 @@
           ]
         },
         "/oneOf/0/properties/photos/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/path",
+                "label": "Photo file",
+                "style": "lastSegment"
+              }
+            ],
+            "naming": {
+              "prefix": "photo"
+            }
+          },
           "status": "reviewed",
           "explanation": "One photo: a stable ID, an absolute local JPEG path and an optional SHA-256 pin. Duplicate IDs and any malformed JPEG or selected tag refuse this exact photo before ExifTool runs.",
           "sources": [
@@ -1442,6 +1505,7 @@
           ]
         },
         "/properties/edits/properties/keywords/properties/remove": {
+          "control": {"kind": "inspected-entries", "source": "/version", "field": "keywords", "documentSource": true},
           "status": "reviewed",
           "explanation": "Keywords to remove from the current list, resolved against the independently read current list before writing (the XMP and IPTC lists must agree, a keyword to remove must be present, and the result may not be empty). The whole list is written back; ExifTool list append and remove operators are never used.",
           "sources": [
@@ -1645,6 +1709,19 @@
           ]
         },
         "/properties/itemEdits/items": {
+          "authoring": {
+            "identityField": false,
+            "instanceFields": [
+              {
+                "path": "/item",
+                "label": "Media item"
+              }
+            ],
+            "multiMode": {
+              "validatePlan": true,
+              "rationale": "Apply the captured edits to a different declared media item. The planner checks each item consumes at most one item-specific edit."
+            }
+          },
           "status": "reviewed",
           "explanation": "One per-item override: the item ID and its own edits.",
           "sources": [
@@ -1848,6 +1925,7 @@
           ]
         },
         "/properties/itemEdits/items/properties/edits/properties/keywords/properties/remove": {
+          "control": {"kind": "inspected-entries", "source": "/item", "field": "keywords", "sourceLevels": 2},
           "status": "reviewed",
           "explanation": "Keywords to remove from the current list, resolved against the independently read current list before writing (the XMP and IPTC lists must agree, a keyword to remove must be present, and the result may not be empty). The whole list is written back; ExifTool list append and remove operators are never used.",
           "sources": [
@@ -2431,6 +2509,7 @@
           ]
         },
         "/oneOf/4/properties/edits/properties/keywords/properties/remove": {
+          "control": {"kind": "inspected-entries", "source": "/version", "field": "keywords", "documentSource": true},
           "status": "reviewed",
           "explanation": "Keywords to remove from the current list, resolved against the independently read current list before writing (the XMP and IPTC lists must agree, a keyword to remove must be present, and the result may not be empty). The whole list is written back; ExifTool list append and remove operators are never used.",
           "sources": [
@@ -2837,6 +2916,7 @@
           ]
         },
         "/oneOf/4/properties/itemEdits/items/properties/edits/properties/keywords/properties/remove": {
+          "control": {"kind": "inspected-entries", "source": "/item", "field": "keywords", "sourceLevels": 2},
           "status": "reviewed",
           "explanation": "Keywords to remove from the current list, resolved against the independently read current list before writing (the XMP and IPTC lists must agree, a keyword to remove must be present, and the result may not be empty). The whole list is written back; ExifTool list append and remove operators are never used.",
           "sources": [
@@ -3273,6 +3353,29 @@
           ]
         },
         "/properties/groups/properties/members/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/items",
+                "label": "Media items"
+              }
+            ],
+            "naming": {
+              "prefix": "group"
+            },
+            "multiMode": {
+              "validatePlan": true,
+              "rationale": "Define an independent declared clock group with its own Name and subset of media items. The planner checks membership across groups."
+            },
+            "identityField": "group",
+            "identityStyle": "underscore",
+            "when": {
+              "path": "/groups/by",
+              "values": [
+                "declared"
+              ]
+            }
+          },
           "status": "reviewed",
           "explanation": "One declared group: its name and its member items.",
           "sources": [
@@ -3287,6 +3390,7 @@
           ]
         },
         "/properties/groups/properties/members/items/properties/items": {
+          "control": {"kind": "document-entries", "collection": "/media/items", "field": "id"},
           "status": "reviewed",
           "explanation": "Item IDs belonging to this group; each media item belongs to exactly one declared group.",
           "sources": [
@@ -3393,6 +3497,7 @@
           ]
         },
         "/properties/simultaneous/items/properties/items": {
+          "control": {"kind": "document-entries", "collection": "/media/items", "field": "id"},
           "status": "reviewed",
           "explanation": "Two or more item IDs taken at the same moment.",
           "sources": [
@@ -3416,6 +3521,7 @@
           "defaultMeaning": "1"
         },
         "/properties/assumeCorrect": {
+          "control": {"kind": "document-entries", "collection": "/groups/members", "field": "group"},
           "status": "reviewed",
           "explanation": "Groups whose clock you declare is correct: their skew is taken as zero without a reference. This is a declaration, not a verification, and it is refused if a reference or residual contradicts it.",
           "sources": [
@@ -3854,6 +3960,26 @@
           ]
         },
         "/properties/tracks/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/path",
+                "label": "Path",
+                "style": "lastSegment"
+              },
+              {
+                "path": "/sha256",
+                "label": "Sha256",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "track"
+            },
+            "multiMode": {
+              "rationale": "Each named track captures its own GPX source."
+            }
+          },
           "status": "reviewed",
           "explanation": "One GPX file with a stable ID.",
           "sources": [
@@ -4313,6 +4439,7 @@
           ]
         },
         "/oneOf/6/properties/groups/properties/members/items/properties/items": {
+          "control": {"kind": "document-entries", "collection": "/media/items", "field": "id"},
           "status": "reviewed",
           "explanation": "Item IDs belonging to this group; each media item belongs to exactly one declared group.",
           "sources": [
@@ -4419,6 +4546,7 @@
           ]
         },
         "/oneOf/6/properties/simultaneous/items/properties/items": {
+          "control": {"kind": "document-entries", "collection": "/media/items", "field": "id"},
           "status": "reviewed",
           "explanation": "Two or more item IDs taken at the same moment.",
           "sources": [
@@ -4442,6 +4570,7 @@
           "defaultMeaning": "1"
         },
         "/oneOf/6/properties/assumeCorrect": {
+          "control": {"kind": "document-entries", "collection": "/groups/members", "field": "group"},
           "status": "reviewed",
           "explanation": "Groups whose clock you declare is correct: their skew is taken as zero without a reference. This is a declaration, not a verification, and it is refused if a reference or residual contradicts it.",
           "sources": [
@@ -4919,6 +5048,7 @@
           ]
         },
         "/oneOf/8/properties/groups/properties/members/items/properties/items": {
+          "control": {"kind": "document-entries", "collection": "/media/items", "field": "id"},
           "status": "reviewed",
           "explanation": "Item IDs belonging to this group; each media item belongs to exactly one declared group.",
           "sources": [
@@ -5025,6 +5155,7 @@
           ]
         },
         "/oneOf/8/properties/simultaneous/items/properties/items": {
+          "control": {"kind": "document-entries", "collection": "/media/items", "field": "id"},
           "status": "reviewed",
           "explanation": "Two or more item IDs taken at the same moment.",
           "sources": [
@@ -5048,6 +5179,7 @@
           "defaultMeaning": "1"
         },
         "/oneOf/8/properties/assumeCorrect": {
+          "control": {"kind": "document-entries", "collection": "/groups/members", "field": "group"},
           "status": "reviewed",
           "explanation": "Groups whose clock you declare is correct: their skew is taken as zero without a reference. This is a declaration, not a verification, and it is refused if a reference or residual contradicts it.",
           "sources": [
@@ -5891,6 +6023,18 @@
           ]
         },
         "/oneOf/10/properties/tracks/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/path",
+                "label": "Track file",
+                "style": "lastSegment"
+              }
+            ],
+            "naming": {
+              "prefix": "track"
+            }
+          },
           "status": "reviewed",
           "explanation": "One GPX file with a stable ID.",
           "sources": [
@@ -6102,6 +6246,7 @@
           ]
         },
         "/oneOf/10/properties/groups/properties/members/items/properties/items": {
+          "control": {"kind": "document-entries", "collection": "/media/items", "field": "id"},
           "status": "reviewed",
           "explanation": "Item IDs belonging to this group; each media item belongs to exactly one declared group.",
           "sources": [

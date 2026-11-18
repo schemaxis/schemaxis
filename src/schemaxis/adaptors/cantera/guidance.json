@@ -2,6 +2,19 @@
   "version": "schemaxis.studio-guidance/1",
   "operations": {
     "gas": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/basis",
+            "label": "Basis"
+          },
+          {
+            "path": "/options/pressure",
+            "label": "Pressure"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Defines the starting gas state for the second node: a pressure in pascals and a hydrogen/oxygen/inert mixture drawn from the ten species of Cantera's h2o2.yaml ideal-gas phase ohmech. It produces no table itself; it is always the first of the two nodes, and the thermoSweep or equilibrate node that follows evaluates it at each requested temperature, while a reactorHistory node uses it as the reactor state at time zero. Amounts are proportions on the chosen mole or mass basis and are normalised, so they need not sum to one. Choose another tool when the mixture contains carbon, NOx or condensed phases; this mechanism cannot represent them.",
       "sources": [
@@ -30,6 +43,15 @@
       ]
     },
     "thermoSweep": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/temperatures",
+            "label": "Temperatures"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Evaluates the gas at each listed temperature with its composition and pressure frozen, publishing results.csv (one row per temperature: density, specific enthalpy, internal energy, entropy, cp, cv, mean molecular weight and the unchanged mole and mass fractions) plus chemistry-summary.json. Choose it for property tables of a non-reacting mixture, for example heat capacity of a diluent or density of a fixed fuel/air mixture; choose equilibrate when the composition should be allowed to react to chemical equilibrium. The host recomputes every property from the public NASA7 coefficients and a second Cantera process reloads the saved states before the run is accepted.",
       "sources": [
@@ -59,6 +81,15 @@
       ]
     },
     "equilibrate": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/mode",
+            "label": "Mode"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "For each listed initial temperature, sets the gas to that temperature and its pressure and then calls Cantera's ThermoPhase.equilibrate with the element-potential solver, holding either temperature and pressure (TP) or specific enthalpy and pressure (HP, adiabatic). It publishes the same results.csv columns as thermoSweep, now with the equilibrium composition and, for HP, the adiabatic final temperature, plus chemistry-summary.json with element-conservation and chemical-potential residuals. Choose it for dissociation at fixed temperature or adiabatic flame temperatures of hydrogen mixtures; choose thermoSweep for a non-reacting property table.",
       "sources": [
@@ -87,6 +118,19 @@
       ]
     },
     "reactorHistory": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/model",
+            "label": "Model"
+          },
+          {
+            "path": "/options/temperature",
+            "label": "Temperature"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
       "explanation": "Integrates one closed homogeneous ideal-gas reactor in time from the gas node state at the chosen initial temperature, using Cantera's IdealGasConstPressureReactor (pressure held) or IdealGasReactor (volume held) in a ReactorNet with the 29-reaction h2o2 mechanism. It publishes results.csv with one row per requested sample time (time, temperature, pressure, density, energies, heat capacities, mole and mass fractions) and chemistry-summary.json with the reactor model, solver settings read back from Cantera, the ignition delay by the declared temperature-rise criterion, conservation residuals and the verification tolerances. Choose it to see how fast a hydrogen mixture reacts, for example an ignition delay or cooling under a fixed-temperature bath; choose equilibrate when only the final equilibrium state matters. Optional thermalConductance and bathTemperature connect a fixed bath through a linear heat-transfer wall; zero conductance preserves the adiabatic model. The bath exchanges heat only and never gas. At constant pressure, volume changes to maintain pressure while mass stays fixed.",
@@ -302,7 +346,7 @@
         },
         "/properties/nodes/items/oneOf/0/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -494,7 +538,7 @@
         },
         "/properties/nodes/items/oneOf/1/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -607,7 +651,7 @@
         },
         "/properties/nodes/items/oneOf/2/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -764,7 +808,7 @@
         },
         "/properties/nodes/items/oneOf/3/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -978,14 +1022,14 @@
           "status": "reviewed",
           "label": "Bath thermal conductance",
           "units": "W/K",
-          "explanation": "Total linear thermal conductance G between the closed reactor and a fixed-temperature bath: heat input is G times (bath temperature minus reactor temperature). It applies to the entire vessel, including a constant-pressure vessel whose volume changes; it is not a heat-transfer coefficient per area or per volume. Values are 0\u20131000000 W/K. Cantera uses a fixed 1 m\u00b2 Wall with heat_transfer_coeff equal to G, zero expansion and zero radiation; settings and instantaneous heat flow are read back.",
+          "explanation": "Total linear thermal conductance G between the closed reactor and a fixed-temperature bath: heat input is G times (bath temperature minus reactor temperature). It applies to the entire vessel, including a constant-pressure vessel whose volume changes; it is not a heat-transfer coefficient per area or per volume. Values are 0–1000000 W/K. Cantera uses a fixed 1 m² Wall with heat_transfer_coeff equal to G, zero expansion and zero radiation; settings and instantaneous heat flow are read back.",
           "defaultMeaning": "Omitted or zero means adiabatic; no wall or bath is created.",
           "examples": [
             0,
             1000
           ],
           "pitfalls": [
-            "Do not enter a coefficient in W/(m\u00b2 K) without multiplying by the intended physical area yourself.",
+            "Do not enter a coefficient in W/(m² K) without multiplying by the intended physical area yourself.",
             "Large conductance can suppress ignition, demand small integration steps or make the supported temperature bounds fail. The numerical step/time budgets still apply."
           ],
           "sources": [
@@ -998,7 +1042,7 @@
           "status": "reviewed",
           "label": "Fixed bath temperature",
           "units": "K",
-          "explanation": "Temperature of the infinite, well-mixed thermal bath (300\u20133500 K), held fixed by a Cantera Reservoir. A colder bath removes energy; a hotter bath adds energy. There is no mass flow, bath chemistry coupling, finite bath heat capacity or changing bath schedule. Used only when thermalConductance is positive; validated even when conductance is zero.",
+          "explanation": "Temperature of the infinite, well-mixed thermal bath (300–3500 K), held fixed by a Cantera Reservoir. A colder bath removes energy; a hotter bath adds energy. There is no mass flow, bath chemistry coupling, finite bath heat capacity or changing bath schedule. Used only when thermalConductance is positive; validated even when conductance is zero.",
           "defaultMeaning": "Omitted means 300 K. With default zero conductance this value has no effect.",
           "examples": [
             300,

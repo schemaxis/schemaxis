@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Durable host-only multi-document sessions. Callers serialise session access."""
 import copy
 from collections import ChainMap
@@ -14,6 +14,7 @@ import uuid
 import zipfile
 from xml.etree import ElementTree
 from .errors import fail
+from schemaxis.identity_policy import policy_request
 from .core.faults import SchemaxisError
 from .storage import encoded, load, digest, atomic, AtomicPublicationError
 from . import authoring
@@ -41,9 +42,9 @@ CONSOLE_TYPES = ChainMap({'workflow': {
 PROVIDER_VERSIONS = {name: item['version'] for name, item in CONSOLE_TYPES.items()}
 COMMANDS = ['new [NAME] [PROVIDER]', 'provider PROVIDER', 'use DOCUMENT_UUID', 'configure PROVIDER LOCATION',
     'connect [LOCATION]', 'live EXECUTABLE_OR_ROOT', 'open FILE', 'add ID FILTER [OPTIONS_JSON] [INPUTS_JSON]',
-    'set ID OPTION JSON', 'set document FIELD JSON', 'source JSON_STRING', 'patch EDITS_JSON', 'draft', 'write [FILE]', 'remove ID', 'show ID', 'select ID', 'undo', 'redo',
+    'rename POINTER NAME [--operation ID]', 'rename-preview POINTER NAME [--operation ID]', 'set ID OPTION JSON', 'set document FIELD JSON', 'source JSON_STRING', 'patch EDITS_JSON', 'draft', 'write [FILE]', 'remove ID', 'show ID', 'select ID', 'undo', 'redo',
     'preview [DIRECTORY]', 'geometry', 'image [FILE]', 'save FILE', 'inspect [ID]', 'artifacts',
-    'list', 'history', 'status', 'unload', 'disconnect', 'help', 'quit']
+    'data list [--operation ID]', 'data load NODE... [--operation ID]', 'data refresh [NODE...] [--operation ID]', 'data eval EXPRESSION [--cached] [--operation ID]', 'data status', 'data unload', 'list', 'history', 'status', 'unload', 'disconnect', 'help', 'quit']
 
 
 def adaptor(provider):
@@ -63,6 +64,8 @@ class AdaptorConsoleSession:
         self._closed = False
         self._runtimes = {}
         self._pending_clients = []
+        from .live_data import LiveDataSession
+        self.live_data = LiveDataSession(self.workspace / 'live-data')
         try:
             # POSIX locking is imported here so host-only commands that read
             # CONSOLE_TYPES (discover, describe, plan) do not need fcntl.
@@ -96,6 +99,7 @@ class AdaptorConsoleSession:
             self._closed = True
             raise
 
+    @policy_request
     def _validate_state(self):
         # Explicit checks rather than assertions, which python -O removes.
         def require(condition):
@@ -117,6 +121,19 @@ class AdaptorConsoleSession:
                 require(isinstance(record.get('provider'), str) and record['provider'] in CONSOLE_TYPES)
                 for snapshot in [record] + record['undo'] + record['redo']:
                     require(isinstance(snapshot, dict) and 'document' in snapshot)
+                    if 'identityTransition' in snapshot:
+                        from .identity_transition import stored, verify, current_policy_digest
+                        marker = snapshot['identityTransition']
+                        require(isinstance(marker, dict) and set(marker) == {'id', 'proof'})
+                        require(str(uuid.UUID(marker['id'])) == marker['id'])
+                        require(stored(marker['proof']) == snapshot['document'])
+                        authority = current_policy_digest(marker['proof'])
+                        if authority != marker['proof']['binding']['policyDigest']:
+                            # Changed/removed authority grants no old continuity,
+                            # but does not erase otherwise valid authored work.
+                            snapshot.pop('identityTransition')
+                        else:
+                            verify(marker['proof'])
                     diagnostics = snapshot.get('diagnostics', [])
                     require(isinstance(diagnostics, list) and all(isinstance(item, dict) for item in diagnostics))
                     if 'source' in snapshot:
@@ -211,6 +228,7 @@ class AdaptorConsoleSession:
             self._invalidate()
             self._native_fault = {'code': 'NATIVE_CLOSE_FAILED', 'message': 'previous client cleanup failed'}
             raise
+        self._runtime.pop('pendingIdentity', None)
         self._runtime['client'] = client
         self._native_fault = None
         self._invalidate()
@@ -256,6 +274,8 @@ class AdaptorConsoleSession:
 
     def _validate(self, document, provider=None, *, draft=True):
         from .unfilled import reject_unfilled
+        from .core.documents import refuse_reserved
+        refuse_reserved(document)
         reject_unfilled(document)
         provider = provider or self.provider
         adaptor(provider)
@@ -264,7 +284,15 @@ class AdaptorConsoleSession:
         if not CONSOLE_TYPES[provider].get('hostOnly') and any(any(key in value for key in ('$document', '$expr', '$value', '$analytic')) for _, value in walk(document)):
             owner, _ = registry.resolve(document)
             if owner != provider: fail('UNSUPPORTED_VERSION', 'document must match selected provider')
-            return registry.plan(document)
+            try:
+                return registry.plan(document)
+            except SchemaxisError as error:
+                # Only the adaptor can validate the rest of a document whose
+                # source times cannot be enumerated by the host planner.
+                hook = self._hook('validate', provider)
+                if error.fault.code != 'TIME_INSPECTION_REQUIRED' or hook is None:
+                    raise
+                return hook(document, draft=draft)
         validation = CONSOLE_TYPES[provider].get('documentValidation')
         if validation: return registry.binding(validation)(document, draft=draft)
         if self._assembly(document):
@@ -299,6 +327,7 @@ class AdaptorConsoleSession:
             'revision': state['nextRevision'], 'selected': None, 'file': None, 'undo': [], 'redo': [], 'checkpoints': [], 'attempts': []}
         state['activeDocument'] = identity
         self._commit(state)
+        self._runtime.pop('pendingIdentity', None)
         self._invalidate()
         return self.status()
 
@@ -358,6 +387,35 @@ class AdaptorConsoleSession:
     def _check_revision(self, document_id, expected_revision):
         authoring.check(self._record, self.active_document, document_id, expected_revision)
 
+    @staticmethod
+    def _identity_token(status):
+        return {key: status.get(key) for key in ('documentDigest', 'revision', 'geometryDigest')}
+
+    def _commit_ordinary(self, state, archived=None):
+        """Remove identity credit iff ordinary publication actually became visible.
+
+        A history archive is optional and applies only to its exact native state.
+        Fresh identity transitions retain their strict refusal boundary.
+        """
+        pending = None
+        if archived and archived['document'] == self.active_document and archived['client'] == id(self.live):
+            try:
+                status = self._identity_call('status')
+                token = self._identity_token(archived.get('aligned', archived['expected']))
+                if status.get('state') == 'ready' and self._identity_token(status) == token:
+                    pending = copy.deepcopy(archived)
+                    pending['revision'] = state['documents'][self.active_document]['revision']
+            except SchemaxisError:
+                pass  # Ordinary history remains readable, without native credit.
+        try:
+            self._commit(state)
+        finally:
+            if self._state is state:
+                self._runtime.pop('pendingIdentity', None)
+                if pending is not None:
+                    self._runtime['pendingIdentity'] = pending
+                self._invalidate()
+
     def _edit(self, document, selected=None, **metadata):
         self._validate(document)
         source = authoring.render(self._record, document)
@@ -365,9 +423,173 @@ class AdaptorConsoleSession:
             fail('INVALID_DOCUMENT', 'edited document exceeds one MiB')
         state = authoring.replace(self._state, self.active_document,
             dict(document=document, selected=selected, source=source, diagnostics=[], **metadata))
-        self._commit(state)
-        self._invalidate()
+        self._commit_ordinary(state)
         return self.status()
+
+    @policy_request
+    def prepare_rename(self, identity_pointer, new_name, document_id, expected_revision, *, operation=None):
+        """Return a checked authored candidate without publishing or consuming resident views."""
+        from .identity_transition import proof
+        self._check_revision(document_id, expected_revision)
+        evidence = proof(self._record['document'], identity_pointer, new_name, operation=operation)
+        source = authoring.render(self._record, evidence['after'])
+        document, diagnostics = authoring.analyse(source, self._validate, self._record.get('sourceFormat', 'json'))
+        if document != evidence['after']:
+            fail('INVALID_SOURCE', 'The renamed source cannot be rendered in its current format')
+        return {'document': document_id, 'revision': expected_revision, 'proof': evidence,
+                'source': source, 'diagnostics': diagnostics}
+
+    @policy_request
+    def rename(self, identity_pointer, new_name, document_id, expected_revision, *, operation=None):
+        candidate = self.prepare_rename(identity_pointer, new_name, document_id, expected_revision, operation=operation)
+        evidence = candidate['proof']
+        selected = (evidence['binding']['new'] if not evidence['binding']['scope']
+                    and self.selected == evidence['binding']['old'] else self.selected)
+        marker = {'id': str(uuid.uuid4()), 'proof': evidence}
+        state = authoring.replace(self._state, self.active_document,
+            {'document': evidence['after'], 'source': candidate['source'], 'diagnostics': candidate['diagnostics'],
+             'selected': selected, 'identityTransition': marker})
+        self._publish_identity(state, marker, reverse=False)
+        return self.status()
+
+    def _identity_call(self, command, **args):
+        # Identity refusal must retain the actual owner and handles for retry or
+        # explicit release. Ordinary apply's rebuild/close recovery is inapplicable.
+        try:
+            method = getattr(self.live, command, None)
+            return method(*args.values()) if callable(method) else self.live.request(command, **args)
+        except Exception as error:
+            code = error.fault.code if isinstance(error, SchemaxisError) else 'NATIVE_TRANSPORT_FAILED'
+            unavailable = {'NATIVE_TRANSPORT_FAILED', 'NATIVE_FAILED', 'NATIVE_DIVERGENCE',
+                'UNCERTAIN_STATE', 'NO_RESIDENT_DATA', 'RUNNER_CANCELLED', 'LIVE_TIMEOUT',
+                'NATIVE_EXIT', 'SESSION_CLOSED'}
+            if (command == 'graph-prepare-identity' and isinstance(error, SchemaxisError)
+                    and code not in unavailable and not error.fault.observed.get('uncertain')
+                    and not getattr(self.live, '_closed', False)):
+                # Checked preparation is pure: refusal cannot discard a healthy
+                # preview or invent a native failure. Alignment is never exempt.
+                raise
+            self._invalidate()
+            message = str(error)
+            if not isinstance(error, SchemaxisError):
+                message = 'Identity transport failed; explicitly release the native client before reconnecting: ' + message
+            self._native_fault = {'code': code, 'message': message}
+            if isinstance(error, SchemaxisError):
+                raise
+            fail(code, message, command=command)
+
+    @policy_request
+    def _publish_identity(self, state, marker, *, reverse):
+        from .identity_transition import verify, append_verified
+        evidence = marker['proof']
+        before, after, _ = verify(evidence, reverse=reverse)
+        identity, runtime, client = self.active_document, self._runtime, self.live
+        revision = self._record['revision']
+        if before != self._record['document'] or after != state['documents'][identity]['document']:
+            fail('STALE_IDENTITY_TRANSITION', 'History evidence differs from the exact authored endpoints')
+        directed = {'proof': evidence, 'reverse': reverse}
+        pending = copy.deepcopy(runtime.get('pendingIdentity'))
+        if pending and (pending['document'] != identity or pending['revision'] != revision
+                        or pending['client'] != id(client)):
+            fail('STALE_IDENTITY_TRANSITION', 'Pending identity evidence belongs to another revision or client')
+        if client is not None:
+            status = self._identity_call('status')
+            if status.get('documentDigest') is not None:
+                if status.get('state') != 'ready':
+                    self._invalidate()
+                    self._native_fault = {'code': 'NO_RESIDENT_DATA',
+                        'message': 'The native owner is uncertain; explicitly release it before renaming'}
+                    fail('NO_RESIDENT_DATA', self._native_fault['message'])
+                if pending is None:
+                    if status['documentDigest'] != digest(before):
+                        fail('STALE_IDENTITY_TRANSITION', 'The native worker represents another authored base; Preview the current document or explicitly release the native client before renaming')
+                    pending = {'document': identity, 'client': id(client), 'proofs': [],
+                               'expected': {key: status.get(key) for key in ('documentDigest', 'revision', 'geometryDigest')}}
+                if pending.get('aligned'):
+                    pending['expected'] = {key: pending['aligned'][key] for key in ('documentDigest', 'revision', 'geometryDigest')}
+                    pending['proofs'] = []
+                    pending.pop('aligned')
+                pending['proofs'] = append_verified(pending['proofs'], directed)
+                if pending['proofs']:
+                    self._identity_call('graph-prepare-identity', expected=pending['expected'], proofs=pending['proofs'])
+                elif self._identity_token(status) != pending['expected'] or status['documentDigest'] != digest(after):
+                    fail('STALE_IDENTITY_TRANSITION', 'Cancelled identity history no longer owns the original native state')
+        operation = evidence['binding']['operation']
+        views = copy.deepcopy(runtime.get('identityViews', {}))
+        history = copy.deepcopy(runtime.get('identityHistory', {}))
+        with self.live_data.identity_stage() as (stage, install):
+            request = {'input': before, 'sessionDocument': identity, 'operation': operation}
+            if stage.needs_identity(request):
+                pair = history.get(marker['id'])
+                if pair is None:
+                    if views.get(operation): request['view'] = views[operation]
+                    adopted = stage.accept_history_identity(request, evidence, reverse=reverse)
+                    pair = ({'from': adopted['to'], 'to': adopted['from']} if reverse else
+                            {'from': adopted['from'], 'to': adopted['to']})
+                    history[marker['id']] = pair
+                expected_view = pair['to'] if reverse else pair['from']
+                if views.get(operation) not in (None, expected_view):
+                    fail('STALE_IDENTITY_TRANSITION', 'History belongs to another resident view branch')
+                views[operation] = pair['from'] if reverse else pair['to']
+                stage.check_identity_view({'input': after, 'sessionDocument': identity, 'operation': operation}, views[operation])
+            new_revision = state['documents'][identity]['revision']
+            if pending: pending['revision'] = new_revision
+            try:
+                self._commit(state)
+            finally:
+                # AtomicPublicationError can report visible-but-uncertain bytes.
+                # Adopt exactly once iff _commit actually installed this state.
+                if self._state is state:
+                    install()
+                    runtime['identityViews'], runtime['identityHistory'] = views, history
+                    if pending:
+                        runtime['pendingIdentity'] = pending
+                        destination_marker = state['documents'][identity].get('identityTransition')
+                        if destination_marker:
+                            runtime.setdefault('identityPlans', {})[destination_marker['id']] = copy.deepcopy(pending)
+                    else: runtime.pop('pendingIdentity', None)
+                    self._invalidate()
+
+    def _align_identity(self):
+        pending = self._runtime.get('pendingIdentity')
+        if pending is None: return None
+        if (pending['document'] != self.active_document or pending['revision'] != self._record['revision']
+                or pending['client'] != id(self.live)):
+            fail('STALE_IDENTITY_TRANSITION', 'Pending native identity belongs to another document, revision or client')
+        try:
+            applied = pending.get('aligned')
+            if applied is None:
+                if pending['proofs']:
+                    applied = self._identity_call('graph-reidentify', expected=pending['expected'], proofs=pending['proofs'])
+                else:
+                    applied = self._identity_call('status')
+                    if applied.get('state') != 'ready' or self._identity_token(applied) != pending['expected']:
+                        fail('STALE_IDENTITY_TRANSITION', 'Cancelled history no longer owns its exact native state')
+            # Keep the committed native result if a subsequent transport/read
+            # fails, so retry never applies the same rename twice.
+            pending['aligned'] = applied
+        except Exception as error:
+            self._invalidate()
+            self._native_fault = {'code': getattr(getattr(error, 'fault', None), 'code', 'NATIVE_FAILED'),
+                                  'message': str(error)}
+            raise
+        geometry = self._identity_call('geometry')
+        if (not isinstance(geometry, dict) or geometry.get('documentDigest') != digest(self._record['document'])
+                or geometry.get('revision') != applied.get('revision')
+                or digest(geometry.get('objects')) != applied.get('geometryDigest')):
+            self._invalidate()
+            self._native_fault = {'code': 'NATIVE_DIVERGENCE', 'message': 'Identity geometry does not match the committed native result'}
+            fail('NATIVE_DIVERGENCE', 'Identity geometry does not match the committed native result')
+        self._resident = (self.active_document, self._record['revision'], id(self.live))
+        self._geometry = {**geometry, 'nativeRevision': geometry['revision'],
+                          'revision': self._record['revision'], 'document': self.active_document}
+        self._runtime['geometryDigest'] = digest(geometry)
+        marker = self._record.get('identityTransition')
+        if marker:
+            self._runtime.setdefault('identityPlans', {})[marker['id']] = copy.deepcopy(pending)
+        self._runtime.pop('pendingIdentity', None)
+        self._native_fault = None
+        return applied
 
     def draft(self, *, offset=0, length=4096):
         if type(offset) is not int or offset < 0 or type(length) is not int or not 1 <= length <= 16384:
@@ -397,8 +619,7 @@ class AdaptorConsoleSession:
         document, diagnostics = authoring.analyse(source, self._validate, format)
         state = authoring.replace(self._state, self.active_document,
             {'source': source, 'sourceFormat': format, 'document': document, 'diagnostics': diagnostics, 'selected': None})
-        self._commit(state)
-        self._invalidate()
+        self._commit_ordinary(state)
         return self.draft()
 
     def patch(self, edits, document_id, expected_revision):
@@ -419,8 +640,7 @@ class AdaptorConsoleSession:
             {'source': source, 'sourceFormat': format, 'document': document, 'diagnostics': diagnostics,
              'selected': None, 'name': path.stem, 'file': str(path)})
         state.setdefault('fileBaselines', {})[str(path)] = hashlib.sha256(payload).hexdigest()
-        self._commit(state)
-        self._invalidate()
+        self._commit_ordinary(state)
         return self.status()
 
     def write_source(self, document_id, expected_revision, filename=None, overwrite=False):
@@ -459,9 +679,20 @@ class AdaptorConsoleSession:
         return {'saved': str(path), 'revision': expected_revision, 'valid': not bool(self._record.get('diagnostics')),
                 'sha256': hashlib.sha256(payload).hexdigest()}
 
+    @policy_request
     def _travel(self, source, target):
-        self._commit(authoring.travel(self._state, self.active_document, source))
-        self._invalidate()
+        state = authoring.travel(self._state, self.active_document, source)
+        destination = state['documents'][self.active_document]
+        marker = self._record.get('identityTransition') if source == 'undo' else destination.get('identityTransition')
+        if marker:
+            from .identity_transition import verify
+            before, after, _ = verify(marker['proof'], reverse=source == 'undo')
+            if before == self._record['document'] and after == destination['document']:
+                self._publish_identity(state, marker, reverse=source == 'undo')
+                return self.status()
+        marker = destination.get('identityTransition')
+        archived = self._runtime.get('identityPlans', {}).get(marker['id']) if marker else None
+        self._commit_ordinary(state, archived)
         return self.status()
 
     def undo(self): return self._travel('undo', 'redo')
@@ -601,7 +832,7 @@ class AdaptorConsoleSession:
         native, artifacts, geometry, native_save = False, [], None, None
         if self.live is not None:
             target.mkdir(parents=True)
-            applied = self._live_call('apply', document=document)
+            applied = self._align_identity() or self._live_call('apply', document=document)
             geometry = self._live_call('geometry')
             if not isinstance(geometry, dict) or not isinstance(geometry.get('objects'), (list, dict)):
                 fail('INVALID_GEOMETRY', 'live client must return an objects collection')
@@ -661,10 +892,15 @@ class AdaptorConsoleSession:
         state['documents'][self.active_document]['checkpoints'].append(checkpoint)
         self._commit(state)
         if geometry is not None:
+            self._native_fault = None
             self._resident = (self.active_document, self._record['revision'], id(self.live))
             self._geometry = {**geometry, 'nativeRevision': geometry.get('revision'), 'revision': self._record['revision'], 'document': self.active_document}
             self._runtime['geometryDigest'] = digest(geometry)
-        return {'status': 'succeeded' if native else 'planned', 'preview': str(target), 'native': native, 'checkpoint': identity, 'artifacts': artifacts, 'revision': self._record['revision']}
+        outcome = {'status': 'succeeded' if native else 'planned', 'preview': str(target), 'native': native, 'checkpoint': identity, 'artifacts': artifacts, 'revision': self._record['revision']}
+        if native and self.live is None:
+            from .spatial_results import job_records
+            outcome['spatial'] = job_records(document, target)
+        return outcome
 
     @staticmethod
     def _artifact(artifact, directory):
@@ -716,6 +952,7 @@ class AdaptorConsoleSession:
         return {'saved': str(destination), 'kind': kind, 'document': self.active_document, 'revision': self._record['revision'], 'sha256': hashlib.sha256(payload).hexdigest(), 'nativeSave': provenance}
 
     def geometry(self):
+        self._align_identity()
         if self._resident != (self.active_document, self._record['revision'], id(self.live)) or self._geometry is None:
             fail('NO_GEOMETRY', 'preview this revision with a live provider first')
         # Ask the worker to run its native-divergence checks before serving the
@@ -768,7 +1005,7 @@ class AdaptorConsoleSession:
         return self.status()
 
     def status(self):
-        records = {identity: {k: copy.deepcopy(v) for k, v in record.items() if k not in ('undo', 'redo', 'source')} for identity, record in self._state['documents'].items()}
+        records = {identity: {k: copy.deepcopy(v) for k, v in record.items() if k not in ('undo', 'redo', 'source', 'identityTransition')} for identity, record in self._state['documents'].items()}
         connections = [{**copy.deepcopy(config), 'status': 'configured'} for config in self._state['configurations'].values()]
         for identity, record in records.items():
             runtime = self._runtimes.get(identity, {})
@@ -783,7 +1020,7 @@ class AdaptorConsoleSession:
         return {'provider': self.provider, 'document': self._record['name'], 'activeDocument': self.active_document,
             'revision': self._record['revision'], 'documents': records, 'references': copy.deepcopy(self._state['references']),
             'configurations': copy.deepcopy(self._state['configurations']), 'connection': self.connection,
-            'connections': connections,
+            'connections': connections, 'liveData': self.live_data.status(),
             'configured': self.connection is not None, 'resident': self._resident == (self.active_document, self._record['revision'], id(self.live)),
             'nativeState': 'unavailable' if self._native_fault else ('resident' if self._resident else 'not resident'),
             'nativeFault': copy.deepcopy(self._native_fault),
@@ -810,6 +1047,40 @@ class AdaptorConsoleSession:
         except ValueError as error: fail('INVALID_COMMAND', str(error))
         if not parts: return {'status': 'empty'}
         command, args = parts[0].lower(), parts[1:]
+        if command in ('rename', 'rename-preview'):
+            operation = None
+            if len(args) == 4 and args[2] == '--operation':
+                operation, args = args[3], args[:2]
+            if len(args) != 2:
+                fail('INVALID_COMMAND', 'Use rename POINTER NAME [--operation ID]')
+            method = self.rename if command == 'rename' else self.prepare_rename
+            return method(*args, self.active_document, self._record['revision'], operation=operation)
+        if command == 'data':
+            if args == ['status']: return self.live_data.status()
+            if args == ['unload']: return self.live_data.unload()
+            operation = None
+            if '--operation' in args:
+                index = args.index('--operation')
+                if index + 1 >= len(args): fail('INVALID_COMMAND', '--operation needs an operation ID')
+                operation = args[index + 1]
+                args = args[:index] + args[index + 2:]
+            document = self.document
+            request = {'input': document, 'sessionDocument': self.active_document,
+                       **({'operation': operation} if operation else {})}
+            view = self._runtime.get('identityViews', {}).get(operation)
+            if view: request['view'] = view
+            if args == ['list']: return self.live_data.selection(request)
+            locations = {
+                key: ([value['executable']] if registry.metadata(key).get('locationKind') == 'roots' else value['executable'])
+                for key, value in self._state['configurations'].items()}
+            if args and (args[0] == 'refresh' or args[0] == 'load' and len(args) > 1):
+                method = self.live_data.refresh if args[0] == 'refresh' else self.live_data.load
+                return method({**request, **({'nodes': args[1:]} if len(args) > 1 else {})}, locations=locations)
+            if args and args[0] == 'eval' and (len(args) == 2 or len(args) == 3 and args[2] == '--cached'):
+                request['expression'] = args[1]
+                if len(args) == 3: return self.live_data.evaluate(request)
+                return self.live_data.refresh(request, locations=locations, missing_only=True)
+            fail('INVALID_COMMAND', 'Use data list/status/load NODE.../refresh [NODE...]/eval EXPRESSION/unload; optional --operation ID')
         zero = {'draft': self.draft, 'status': self.status, 'list': self.list_features, 'ls': self.list_features, 'undo': self.undo,
             'redo': self.redo, 'unload': self.unload, 'disconnect': self.disconnect, 'geometry': self.geometry,
             'artifacts': self.artifacts, 'history': lambda: self.history, 'help': lambda: {'commands': COMMANDS + CONSOLE_TYPES[self.provider].get('consoleCommands', [])}, '?': lambda: {'commands': COMMANDS + CONSOLE_TYPES[self.provider].get('consoleCommands', [])}}
@@ -838,7 +1109,7 @@ class AdaptorConsoleSession:
         if not self._closed:
             first_error = None
             try:
-                clients = [runtime.get('client') for runtime in self._runtimes.values()] + self._pending_clients
+                clients = [self.live_data] + [runtime.get('client') for runtime in self._runtimes.values()] + self._pending_clients
                 for client in clients:
                     if client is not None:
                         try: client.close()

@@ -36,7 +36,7 @@ BEVEL = {'id': 'bevel', 'native': 'bevel', 'inputs': {
     'width': option({'type': 'number', 'minimum': 0}, 0.1),
     'segments': option({'type': 'integer', 'minimum': 1, 'maximum': 12}, 3),
 }}
-GLTF = {'id': 'readGltf', 'native': 'readGltf', 'inputs': {}, 'options': {
+GLTF = {'id': 'readGltf', 'native': 'readGltf', 'loadsData': True, 'inputs': {}, 'options': {
     'file': {'value': {'type': 'string', 'minLength': 1, 'required': True}, 'path': [], 'constructor': True},
 }}
 from schemaxis.adaptors.blender.operations import declarations as mesh_declarations
@@ -53,16 +53,28 @@ MATERIAL['options'].update({
 DECLARATIONS = {**{d['id']: d for d in (MATERIAL, CUBE, BEVEL, GLTF)}, **mesh_declarations()}
 
 
+def graph_master(document, declarations=None):
+    """The node graph of a Blender document, planned without its scene."""
+    if isinstance(document,dict) and document.get('version')=='schemaxis.blender.production/1':
+        from .production_job import lower
+        document=lower(document)
+    if not isinstance(document, dict) or document.get('version') != 'schemaxis.blender/1':
+        fail('UNSUPPORTED_VERSION', 'expected schemaxis.blender/1')
+    graph = copy.deepcopy(document)
+    graph['version'] = 'schemaxis/1'
+    return DefinitionGraph(graph, declarations if declarations is not None else DECLARATIONS, 'blender')
+
+
 def plan(document, declarations=None):
     if isinstance(document,dict) and document.get('version')=='schemaxis.blender.production/1':
         from .production_job import lower
         document=lower(document)
-    keys(document, ('version', 'nodes', 'axes', 'times', 'scenes', 'maxStates', 'maxPublications', 'definitions', 'dimensions', 'views', 'settings'), '$')
+    keys({key: value for key, value in document.items() if key not in ('%%workflowScope%%', '%%studyVisits%%', '%%studyPositions%%')}
+         if isinstance(document, dict) else document,
+         ('version', 'nodes', 'sweeps', 'times', 'scenes', 'maxStates', 'maxPublications', 'definitions', 'dimensions', 'views', 'settings'), '$')
     if document.get('version') != 'schemaxis.blender/1':
         fail('UNSUPPORTED_VERSION', 'expected schemaxis.blender/1')
-    graph = copy.deepcopy(document)
-    graph['version'] = 'schemaxis/1'
-    master = DefinitionGraph(graph, declarations if declarations is not None else DECLARATIONS)
+    master = graph_master(document, declarations)
     output = master.document.get('scenes')
     if not isinstance(output, list) or len(output) != 1:
         fail('INVALID_SCENE', 'initial Blender adaptor requires one scene')
@@ -115,7 +127,9 @@ def plan(document, declarations=None):
         late.extend(markers(camera))
         camera_values(camera, 'camera', deferred=True)
     master._check_markers(late, 'camera')
-    selection = master.select(list(dict.fromkeys([*graph_roots, *(m['$observe'] for m in late if '$observe' in m)])))
+    profile = master.presentation({'cameras': cameras}, '/scenes/0/images/0', 'camera')
+    selection = master.select(list(dict.fromkeys([*graph_roots, *(m['$observe'] for m in late if '$observe' in m),
+                                                  *sorted(profile.nodes)])))
     from .shader_budget import validate as validate_shader_budget
     validate_shader_budget(production or {'materialGraphs':[],'nodeGroups':[]},
         {identity:master.nodes[identity] for identity in selection.order},'$.scenes[0]')
@@ -124,8 +138,8 @@ def plan(document, declarations=None):
             fail('UNSUPPORTED_EXPRESSION', 'Blender field sampling is not declared', 'camera')
         if '$observe' in marker and marker['$observe'] not in selection.order:
             fail('UNKNOWN_REFERENCE', 'camera observation must belong to the active graph', 'camera')
-        if '$axis' in marker and marker['$axis'] not in selection.axes:
-            fail('UNKNOWN_AXIS', 'camera references an inactive axis', 'camera')
+        if '$sweep' in marker and marker['$sweep'] not in selection.axes:
+            fail('UNKNOWN_SWEEP', 'camera references an inactive sweep', 'camera')
     size = validate_arguments({'size': {'type': 'array', 'items': {'type': 'integer', 'minimum': 32, 'maximum': 2048},
                                       'minItems': 2, 'maxItems': 2, 'default': [320, 240]}},
                               {'size': writer['size']} if 'size' in writer else {})['size']
@@ -153,14 +167,20 @@ def plan(document, declarations=None):
                               'verificationScope': 'mesh/material/camera state, fresh-process blend reopen and decoded PNGs'}
 
 
+def require_runtime(executable):
+    """Probe the executable and refuse any release other than the qualified one."""
+    runtime = Interpreter('blender', str(Path(executable).resolve())).probe()
+    if runtime.version != '5.2.3':
+        fail('UNSUPPORTED_RUNTIME', 'Blender adaptor requires the qualified 5.2.3 release', version=runtime.version)
+    return runtime
+
+
 def run(document, directory, *, executable=None, timeout=300):
     master, selection, prepared = plan(document)
     executable = executable or os.environ.get('SCHEMAXIS_BLENDER')
     if not executable:
         fail('INTERPRETER_NOT_FOUND', 'set SCHEMAXIS_BLENDER or pass --blender to an explicit executable')
-    runtime = Interpreter('blender', str(Path(executable).resolve())).probe()
-    if runtime.version != '5.2.3':
-        fail('UNSUPPORTED_RUNTIME', 'Blender adaptor requires the qualified 5.2.3 release', version=runtime.version)
+    runtime = require_runtime(executable)
     directory = Path(directory).expanduser().absolute()
     if directory.exists() or directory.is_symlink():
         fail('OUTPUT_EXISTS', 'choose a new output directory', str(directory))
@@ -253,10 +273,12 @@ def _verify(directory, require_result=True):
     from schemaxis.bindings import validate_options
     for state, visit in zip(receipt['states'], visits):
         for node in selection.order:
-            options = evaluate(master.nodes[node]['options'], visit['axes'], state['observations'], visit['time'], node)
+            options = evaluate(master.nodes[node]['options'], visit['sweeps'], state['observations'], visit['time'], node, None, master.scope, master.pointer(node))
             expected = validate_options(master.declarations[master.nodes[node]['filter']], options, node)
             if state['effective'][node] != expected:
                 fail('VERIFICATION_FAILED', 'Blender effective options differ', node)
+    from schemaxis import spatial_results
+    spatial_results.verify(master, receipt, directory)
     if receipt.get('receiptVersion', 1) >= 2:
         events = [{'event': 'create', 'node': node} for node in selection.order]
         prior_values, prior_time, identities = {}, None, None
@@ -316,7 +338,7 @@ def _verify(directory, require_result=True):
         if artifact.get('kind') == 'image' and not artifact.get('productionOutput'):
             state = receipt['states'][artifact['state']]
             visit = state['visit']
-            expected = camera_values(evaluate(writer['cameras'][artifact['cameraIndex']], visit['axes'], state['observations'], visit['time'], 'camera'), 'camera')
+            expected = camera_values(evaluate(writer['cameras'][artifact['cameraIndex']], visit['sweeps'], state['observations'], visit['time'], 'camera', None, master.scope), 'camera')
             if expected != artifact.get('effectiveCamera'):
                 fail('VERIFICATION_FAILED', 'Blender camera settings differ')
             data = [state['observations'][node]['bounds'] for node in master.document['scenes'][0]['visible']]
@@ -351,7 +373,8 @@ def _verify(directory, require_result=True):
         from .production_verify import fresh_reopen
         fresh=fresh_reopen(directory,trusted_input,canonical_prepared['pipeline']['digest'])
         if fresh!=reopened:fail('VERIFICATION_FAILED','current native project/production output differs from retained readback')
-    return {'verified': True, 'artifacts': len(artifacts), 'states': len(visits), 'runtime': json.loads((directory/'submission.json').read_text())['interpreter']}
+    return {'verified': True, 'artifacts': len(artifacts), 'states': len(visits), 'runtime': json.loads((directory/'submission.json').read_text())['interpreter'],
+            **({'spatial': receipt['spatial']} if 'spatial' in receipt else {})}
 
 
 # Shared authored-input, analytic-visit and verification boundary.
@@ -370,11 +393,12 @@ def _check_lathe_profiles(master, selection, document):
             continue
         options = node['options']
         pending = [options[k] for k in ('profile', 'segments', 'caps') if k in options]
-        if any('$observe' in m or '$sample' in m for value in pending for m in markers(value)):
+        if any('$observe' in m or '$sample' in m for value in pending for m in markers(value)) or any(
+                master.profiles[key][k].observed for k in ('profile', 'segments', 'caps') if k in options):
             continue  # needs native observations; the native check remains the backstop
         # Inline $create nodes are lifted into the graph and have no authored index.
         location, where = ('$.nodes[%d].options.profile' % authored[key], {}) if key in authored else ('$.nodes', {'node': key})
-        visits = selection.visits() if any(True for value in pending for _ in markers(value)) else [{'axes': {}, 'time': None}]
+        visits = selection.visits() if any(True for value in pending for _ in markers(value)) else [{'sweeps': {}, 'time': None}]
         for visit in visits:
-            values = {k: evaluate(options[k], visit['axes'], {}, visit['time'], key + '.' + k) for k in ('profile', 'segments', 'caps') if k in options}
+            values = {k: evaluate(options[k], visit['sweeps'], {}, visit['time'], key + '.' + k, None, master.scope, master.pointer(key, k)) for k in ('profile', 'segments', 'caps') if k in options}
             check_lathe_profile(values['profile'], values.get('segments', 64), values.get('caps', True), location, **where)

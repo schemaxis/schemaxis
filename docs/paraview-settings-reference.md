@@ -40,7 +40,7 @@ Centre of six-component VTK bounds.
 
 | Key | Syntax / constraints | Default / requirement |
 | --- | --- | --- |
-| `bounds` | `{"type":"array","items":{"type":"number"},"minItems":6,"maxItems":6}` | required |
+| `bounds` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
 
 Result contract: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
@@ -48,14 +48,18 @@ Result contract: `{"type":"array","items":{"type":"number"},"minItems":3,"maxIte
 {
   "$value": "boundsCentre",
   "args": {
-    "bounds": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1
-    ]
+    "bounds": {
+      "min": [
+        1,
+        1,
+        1
+      ],
+      "max": [
+        1,
+        1,
+        1
+      ]
+    }
   }
 }
 ```
@@ -67,7 +71,7 @@ Centre of min/max bounds.
 
 | Key | Syntax / constraints | Default / requirement |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | required |
+| `bounds` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
 
 Result contract: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
@@ -98,11 +102,11 @@ Extend min/max bounds by before/after vectors.
 
 | Key | Syntax / constraints | Default / requirement |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | required |
+| `bounds` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
 | `before` | `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `after` | `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 
-Result contract: `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
+Result contract: `{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
 
 ```json
 {
@@ -131,13 +135,13 @@ Frame bounds with margins, a floor and an aspect ratio.
 
 | Key | Syntax / constraints | Default / requirement |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | required |
+| `bounds` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
 | `before` | `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `after` | `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `floor` | `{"type":"number"}` | required |
 | `aspect` | `{"type":"array","items":{"type":"number","minimum":0,"exclusiveMinimum":true},"minItems":2,"maxItems":2}` | `[16,9]` |
 
-Result contract: `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
+Result contract: `{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
 
 ```json
 {
@@ -161,13 +165,78 @@ Result contract: `{"type":"object","properties":{"min":{"type":"array","items":{
 ```
 Use `$call` instead of `$value` when arguments contain graph runtime expressions.
 
+## boundsFromExtents
+
+Registered pure typed function.
+
+| Key | Syntax / constraints | Default / requirement |
+| --- | --- | --- |
+| `extents` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
+
+Result contract: `{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
+
+```json
+{
+  "$value": "boundsFromExtents",
+  "args": {
+    "extents": {
+      "min": [
+        1,
+        1,
+        1
+      ],
+      "max": [
+        1,
+        1,
+        1
+      ]
+    }
+  }
+}
+```
+Use `$call` instead of `$value` when arguments contain graph runtime expressions.
+
+## boundsPoint
+
+Registered pure typed function.
+
+| Key | Syntax / constraints | Default / requirement |
+| --- | --- | --- |
+| `bounds` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
+| `x` | `{"type":"enum","values":["min","mid","max"]}` | `"mid"` |
+| `y` | `{"type":"enum","values":["min","mid","max"]}` | `"mid"` |
+| `z` | `{"type":"enum","values":["min","mid","max"]}` | `"mid"` |
+
+Result contract: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
+
+```json
+{
+  "$value": "boundsPoint",
+  "args": {
+    "bounds": {
+      "min": [
+        1,
+        1,
+        1
+      ],
+      "max": [
+        1,
+        1,
+        1
+      ]
+    }
+  }
+}
+```
+Use `$call` instead of `$value` when arguments contain graph runtime expressions.
+
 ## boundsSize
 
 Axis extents of min/max bounds.
 
 | Key | Syntax / constraints | Default / requirement |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | required |
+| `bounds` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
 
 Result contract: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
@@ -198,9 +267,9 @@ Union of a nonempty list of min/max bounds.
 
 | Key | Syntax / constraints | Default / requirement |
 | --- | --- | --- |
-| `bounds` | `{"type":"array","items":{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},"minItems":1}` | required |
+| `bounds` | `{"type":"array","items":{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]},"minItems":1}` | required |
 
-Result contract: `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
+Result contract: `{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
 
 ```json
 {
@@ -252,7 +321,7 @@ Fit a camera to bounds.
 
 | Key | Syntax / constraints | Default / requirement |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | required |
+| `bounds` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
 | `aspect` | `{"type":"array","items":{"type":"number","minimum":0,"exclusiveMinimum":true},"minItems":2,"maxItems":2}` | `[16,9]` |
 | `padding` | `{"type":"number","minimum":0}` | `0.15` |
 | `parallel` | `{"type":"boolean"}` | `true` |
@@ -316,7 +385,7 @@ Produce camera declarations around bounds.
 
 | Key | Syntax / constraints | Default / requirement |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | required |
+| `bounds` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
 | `aspect` | `{"type":"array","items":{"type":"number","minimum":0,"exclusiveMinimum":true},"minItems":2,"maxItems":2}` | `[16,9]` |
 | `padding` | `{"type":"number","minimum":0}` | `0.15` |
 | `parallel` | `{"type":"boolean"}` | `true` |
@@ -396,7 +465,7 @@ Produce scalar slice positions along one bounds axis.
 
 | Key | Syntax / constraints | Default / requirement |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | required |
+| `bounds` | `{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | required |
 | `axis` | `{"type":"enum","values":["x","y","z"]}` | required |
 | `count` | `{"type":"integer","minimum":1,"maximum":10000}` | `9` |
 

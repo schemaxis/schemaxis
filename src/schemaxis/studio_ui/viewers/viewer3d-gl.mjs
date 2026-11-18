@@ -110,6 +110,7 @@ export function createRenderer(canvas) {
   let derivatives = false;
   let lost = false;
   let mesh = null;
+  let overlays = null;
 
   function compile(kind, source) {
     const shader = gl.createShader(kind);
@@ -137,7 +138,8 @@ export function createRenderer(canvas) {
     }
     uniforms = Object.fromEntries(UNIFORMS.map((name) => [name, gl.getUniformLocation(program, name)]));
     attributes = ATTRIBUTES.map(([name, size, offset]) => [gl.getAttribLocation(program, name), size, offset]);
-    buffers = {faces: gl.createBuffer(), lines: gl.createBuffer(), dots: gl.createBuffer()};
+    buffers = {faces: gl.createBuffer(), lines: gl.createBuffer(), dots: gl.createBuffer(),
+      overlayLines: gl.createBuffer(), overlayDots: gl.createBuffer()};
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
     gl.clearColor(0, 0, 0, 0);
@@ -166,6 +168,16 @@ export function createRenderer(canvas) {
     }
   }
 
+  function uploadOverlays(prepared) {
+    overlays = prepared;
+    if (lost) return;
+    for (const [key, data] of [['overlayLines', prepared?.lines], ['overlayDots', prepared?.dots]]) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffers[key]);
+      gl.bufferData(gl.ARRAY_BUFFER, data || new Float32Array(), gl.STATIC_DRAW);
+      counts[key] = (data?.length || 0) / 10;
+    }
+  }
+
   /**
    * Draw a frame. view = {right, up, forward, target, eye, extent: [x, y], perspective, depthRange,
    * axis, cut, side, selected, hovered, wireframe, light, colours: {surface, select, hover, line, wire},
@@ -183,7 +195,7 @@ export function createRenderer(canvas) {
     }
     gl.viewport(0, 0, width, height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    if (!mesh) {
+    if (!mesh && !overlays) {
       return;
     }
     gl.useProgram(program);
@@ -210,16 +222,31 @@ export function createRenderer(canvas) {
     gl.uniform3fv(uniforms.uLine, view.colours.line);
     gl.uniform3fv(uniforms.uWire, view.colours.wire);
     gl.depthFunc(gl.LEQUAL);
-    // Offset filled polygons so their own native boundary wires remain visible.
-    gl.enable(gl.POLYGON_OFFSET_FILL);
-    gl.polygonOffset(1, 1);
-    bindAttributes(buffers.faces);
-    gl.drawArrays(gl.TRIANGLES, 0, counts.faces);
-    gl.disable(gl.POLYGON_OFFSET_FILL);
-    bindAttributes(buffers.lines);
-    gl.drawArrays(gl.LINES, 0, counts.lines);
-    bindAttributes(buffers.dots);
-    gl.drawArrays(gl.POINTS, 0, counts.dots);
+    gl.enable(gl.DEPTH_TEST);
+    if (mesh) {
+      // Offset filled polygons so their own native boundary wires remain visible.
+      gl.enable(gl.POLYGON_OFFSET_FILL);
+      gl.polygonOffset(1, 1);
+      bindAttributes(buffers.faces);
+      gl.drawArrays(gl.TRIANGLES, 0, counts.faces);
+      gl.disable(gl.POLYGON_OFFSET_FILL);
+      bindAttributes(buffers.lines);
+      gl.drawArrays(gl.LINES, 0, counts.lines);
+      bindAttributes(buffers.dots);
+      gl.drawArrays(gl.POINTS, 0, counts.dots);
+    }
+    // Authored overlays remain visible through surfaces; they never enter picking.
+    if (overlays) {
+      gl.disable(gl.DEPTH_TEST);
+      gl.uniform1f(uniforms.uSelected, view.overlaySelected ?? -1);
+      gl.uniform1f(uniforms.uHovered, -1);
+      gl.uniform3fv(uniforms.uLine, view.colours.hover);
+      bindAttributes(buffers.overlayLines);
+      gl.drawArrays(gl.LINES, 0, counts.overlayLines);
+      bindAttributes(buffers.overlayDots);
+      gl.drawArrays(gl.POINTS, 0, counts.overlayDots);
+      gl.enable(gl.DEPTH_TEST);
+    }
   }
 
   /** Count rendered (non-transparent) pixels; used by browser tests. */
@@ -237,6 +264,7 @@ export function createRenderer(canvas) {
   return {
     gl,
     upload,
+    uploadOverlays,
     draw,
     coveredPixels,
     get derivatives() {
@@ -252,6 +280,7 @@ export function createRenderer(canvas) {
       lost = false;
       initialise();
       upload(mesh);
+      uploadOverlays(overlays);
     },
     destroy() {
       for (const buffer of Object.values(buffers)) {

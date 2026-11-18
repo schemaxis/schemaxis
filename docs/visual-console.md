@@ -271,7 +271,7 @@ termination and may leave partial evidence. It does not roll back an application
 After the workflow verifies, the runner publishes a `named/` view with links or
 copies and a `naming.json` manifest. Native artifact names and receipts remain
 unchanged. Names support `{index}`, `{operation}`, `{output}`, `{param:ID}`,
-`{axis:NAME}`, `{artifact}` and `{ext}`. Unsafe characters are sanitised, and
+`{sweep:NAME}`, `{artifact}` and `{ext}`. Unsafe characters are sanitised, and
 collisions fail naming without overwriting publications. A naming failure is
 reported separately; a verified native run remains verified and its original
 outputs remain available.

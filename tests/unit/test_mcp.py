@@ -43,7 +43,7 @@ class McpTests(unittest.TestCase):
 
     def test_shared_inventory_and_all_method_parity(self):
         trusted = McpDispatcher(self.service, profile='trusted-local', store=self.mcp.store)
-        self.assertEqual(len(METHODS), 56)  # 55 inherited methods plus unavailable run_tool.
+        self.assertEqual(len(METHODS), 57)  # 56 inherited methods plus unavailable run_tool.
         self.assertEqual(set(trusted.catalogue.specs), {'methods', *METHODS})
         for method in METHODS:
             if method == 'run_tool':

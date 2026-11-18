@@ -2,6 +2,15 @@
   "version": "schemaxis.studio-guidance/1",
   "operations": {
     "box": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/size",
+            "label": "Size"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Creates an axis-aligned rectangular solid with gmsh.model.occ.addBox from a minimum corner and three extents in millimetres, as the solid source for a tetrahedral node. Choose it for test domains, channel sections and mesh-size studies where no CAD file is needed; its exact volume and bounds let verification compare the mesh with analytic values. Use cylinder, hollowCylinder or sphere for those primitives, or readSTEP for other shapes. The solid is not published by itself; only the tetrahedral node publishes files.",
       "sources": [
@@ -24,6 +33,18 @@
       ]
     },
     "readSTEP": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "STEP file",
+            "style": "lastSegment"
+          }
+        ],
+        "naming": {
+          "prefix": "step"
+        }
+      },
       "status": "reviewed",
       "explanation": "Imports exactly one solid from a single-file STEP document with gmsh.model.occ.importShapes, converting its length unit to millimetres. Choose it to mesh a real CAD part, such as a FreeCAD STEP artifact in a workflow. The file bytes are captured (digest and retained copy) before meshing, and the volume and bounds measured by OpenCASCADE become the reference for verification. Feature history and STEP labels are not imported; name faces with the tetrahedral faceGroups.",
       "sources": [
@@ -46,6 +67,19 @@
       ]
     },
     "tetrahedral": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/volumeName",
+            "label": "Volume name"
+          },
+          {
+            "path": "/options/size",
+            "label": "Size"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Meshes the preceding solid with first-order (4-node) tetrahedra using the chosen Delaunay or HXT 3D algorithm at a global target size, optionally finer near named boundaries, and assigns one named physical volume plus named planar face groups, named whole analytic cylindrical wall groups (bore wall, hole wall, shaft surface) with a proven material side, and a remainder boundary that may be empty when those groups cover the whole boundary. It publishes result.msh (ASCII MSH 2.2 with names), volume.vtu and boundary.vtu (numeric physicalTag per cell, with quality arrays on the volume) and mesh-summary.json (name and tag map, mm units, counts, CAD and mesh volume, quality distributions). Every mesh is reopened in a fresh Gmsh process and checked independently for positive volumes, a closed boundary, face membership and agreement with the CAD volume; every boundary triangle of a named wall is re-proven from coordinates, with measured chord deviation. Add the top-level refinement object to refine until measured requirements pass.",
       "sources": [
@@ -87,6 +121,19 @@
       ]
     },
     "cylinder": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/radius",
+            "label": "Radius"
+          },
+          {
+            "path": "/options/height",
+            "label": "Height"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Constructs a full right circular cylinder as one solid for tetrahedral meshing. origin is the centre of the starting disk, axis chooses a positive world direction, radius and height are in millimetres. Use this for rods and cylindrical specimens without a CAD file; choose hollowCylinder for a through bore. The host independently checks CAD volume pi*r²*h, analytic bounds and radial containment of every mesh node. The solid is consumed by tetrahedral; it is not separately published. Linear triangles approximate circular caps and the lateral surface. Name the lateral wall with tetrahedral cylinderGroups (side outer, radius equal to this radius, centre equal to origin) to apply loads or constraints by name.",
       "sources": [
@@ -108,6 +155,23 @@
       ]
     },
     "hollowCylinder": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/radius",
+            "label": "Radius"
+          },
+          {
+            "path": "/options/innerRadius",
+            "label": "Inner radius"
+          },
+          {
+            "path": "/options/height",
+            "label": "Height"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Constructs a straight annular solid by subtracting a coaxial through cylinder from a larger cylinder, consuming both tools and requiring exactly one resulting volume. Use it for tubes and sleeves without authoring a boolean tree. origin is the starting annulus centre; axis is positive x, y or z. radius is the outer radius, innerRadius the bore radius; their difference must be at least 0.001 mm. Independent verification checks pi*(radius²-innerRadius²)*height, bounds and each node against the outer radius and bore. Both curved walls remain in the remainder boundary group unless you name them with tetrahedral cylinderGroups (bore: side inner at innerRadius; outside: side outer at radius), which also lets the remainder be empty when the caps are named too.",
       "sources": [
@@ -133,6 +197,15 @@
       ]
     },
     "sphere": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/radius",
+            "label": "Radius"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Constructs one complete spherical solid from a centre and radius in millimetres for tetrahedral meshing. Use it for spherical specimens and curved-boundary resolution studies. The host independently checks 4*pi*r³/3, analytic bounds and radial containment of every mesh node. It is a full ball, with no polar cuts, shell thickness or planar caps. Linear boundary triangles inscribe an approximation; choose a small enough mesh size to meet volumeTolerance.",
       "sources": [
@@ -635,6 +708,35 @@
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/faceGroups/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/axis",
+                "label": "Axis"
+              },
+              {
+                "path": "/coordinate",
+                "label": "Coordinate"
+              },
+              {
+                "path": "/tolerance",
+                "label": "Tolerance",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "face"
+            },
+            "multiMode": {
+              "validatePlan": true,
+              "rationale": "Select an independent planar physical group. The host planner checks overlapping selector intervals, shared limits and names."
+            },
+            "identityField": "name",
+            "identityStyle": "label",
+            "identityPeers": [
+              "cylinderGroups"
+            ]
+          },
           "status": "reviewed",
           "explanation": "One named plane selector. Every boundary face whose extent along axis stays within tolerance of coordinate joins this group, so several separate faces on the same plane are grouped together.",
           "examples": [
@@ -1113,7 +1215,7 @@
             "guidance:operation cylinder"
           ],
           "status": "reviewed",
-          "explanation": "Constructs a full right circular cylinder as one solid for tetrahedral meshing. origin is the centre of the starting disk, axis chooses a positive world direction, radius and height are in millimetres. Use this for rods and cylindrical specimens without a CAD file; choose hollowCylinder for a through bore. The host independently checks CAD volume pi*r²*h, analytic bounds and radial containment of every mesh node. The solid is consumed by tetrahedral; it is not separately published. Linear triangles approximate circular caps and the lateral surface.",
+          "explanation": "Constructs a full right circular cylinder as one solid for tetrahedral meshing. origin is the centre of the starting disk, axis chooses a positive world direction, radius and height are in millimetres. Use this for rods and cylindrical specimens without a CAD file; choose hollowCylinder for a through bore. The host independently checks CAD volume pi*r²*h, analytic bounds and radial containment of every mesh node. The solid is consumed by tetrahedral; it is not separately published. Linear triangles approximate circular caps and the lateral surface. Name the lateral wall with tetrahedral cylinderGroups (side outer, radius equal to this radius, centre equal to origin) to apply loads or constraints by name.",
           "pitfalls": [
             "A target mesh size is not a geometric-error guarantee; inspect the independently measured volume error.",
             "Named circular or annular planar caps require an explicit areaTolerance; the strict default detects their discretisation loss."
@@ -1231,7 +1333,7 @@
             "guidance:operation hollowCylinder"
           ],
           "status": "reviewed",
-          "explanation": "Constructs a straight annular solid by subtracting a coaxial through cylinder from a larger cylinder, consuming both tools and requiring exactly one resulting volume. Use it for tubes and sleeves without authoring a boolean tree. origin is the starting annulus centre; axis is positive x, y or z. radius is the outer radius, innerRadius the bore radius; their difference must be at least 0.001 mm. Independent verification checks pi*(radius²-innerRadius²)*height, bounds and each node against the outer radius and bore. Both curved walls remain in the remainder boundary group unless planar caps are named; there is no separate inner-wall selector.",
+          "explanation": "Constructs a straight annular solid by subtracting a coaxial through cylinder from a larger cylinder, consuming both tools and requiring exactly one resulting volume. Use it for tubes and sleeves without authoring a boolean tree. origin is the starting annulus centre; axis is positive x, y or z. radius is the outer radius, innerRadius the bore radius; their difference must be at least 0.001 mm. Independent verification checks pi*(radius²-innerRadius²)*height, bounds and each node against the outer radius and bore. Both curved walls remain in the remainder boundary group unless you name them with tetrahedral cylinderGroups (bore: side inner at innerRadius; outside: side outer at radius), which also lets the remainder be empty when the caps are named too.",
           "pitfalls": [
             "A target mesh size is not a geometric-error guarantee; inspect the independently measured volume error.",
             "Named circular or annular planar caps require an explicit areaTolerance; the strict default detects their discretisation loss."
@@ -1486,6 +1588,38 @@
           ]
         },
         "/properties/nodes/items/oneOf/2/properties/options/properties/cylinderGroups/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/axis",
+                "label": "Axis"
+              },
+              {
+                "path": "/centre",
+                "label": "Axis point"
+              },
+              {
+                "path": "/radius",
+                "label": "Radius"
+              },
+              {
+                "path": "/side",
+                "label": "Side"
+              }
+            ],
+            "naming": {
+              "prefix": "cylinder"
+            },
+            "multiMode": {
+              "validatePlan": true,
+              "rationale": "Select another analytic cylindrical surface. The host planner checks selector overlap, shared limits and names."
+            },
+            "identityField": "name",
+            "identityStyle": "label",
+            "identityPeers": [
+              "faceGroups"
+            ]
+          },
           "status": "reviewed",
           "explanation": "One named cylinder selector. Every whole CAD face lying on the cylinder with this axis, centre line, radius and material side joins the group. Verification then classifies every boundary triangle from its coordinates, proves each triangle is on that cylinder and faces the stated side, and measures the wall's chord deviation and unrolled area.",
           "examples": [

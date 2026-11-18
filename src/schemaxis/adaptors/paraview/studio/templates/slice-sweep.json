@@ -1,5 +1,10 @@
 {
   "version": "schemaxis/1",
+  "definitions": {
+    "data": {
+      "$expr": "extents(source)"
+    }
+  },
   "nodes": [
     {
       "id": "source",
@@ -10,97 +15,9 @@
       "filter": "slice",
       "options": {
         "normal": "x+",
-        "origin": [
-          {
-            "$calc": "add",
-            "args": [
-              {
-                "$observe": "source",
-                "path": [
-                  "bounds",
-                  0
-                ]
-              },
-              {
-                "$calc": "multiply",
-                "args": [
-                  {
-                    "$axis": "fraction"
-                  },
-                  {
-                    "$calc": "subtract",
-                    "args": [
-                      {
-                        "$observe": "source",
-                        "path": [
-                          "bounds",
-                          1
-                        ]
-                      },
-                      {
-                        "$observe": "source",
-                        "path": [
-                          "bounds",
-                          0
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "$calc": "divide",
-            "args": [
-              {
-                "$calc": "add",
-                "args": [
-                  {
-                    "$observe": "source",
-                    "path": [
-                      "bounds",
-                      2
-                    ]
-                  },
-                  {
-                    "$observe": "source",
-                    "path": [
-                      "bounds",
-                      3
-                    ]
-                  }
-                ]
-              },
-              2
-            ]
-          },
-          {
-            "$calc": "divide",
-            "args": [
-              {
-                "$calc": "add",
-                "args": [
-                  {
-                    "$observe": "source",
-                    "path": [
-                      "bounds",
-                      4
-                    ]
-                  },
-                  {
-                    "$observe": "source",
-                    "path": [
-                      "bounds",
-                      5
-                    ]
-                  }
-                ]
-              },
-              2
-            ]
-          }
-        ]
+        "origin": {
+          "$expr": "vector(data.min.x + fraction * data.deltaX, data.mid.y, data.mid.z)"
+        }
       },
       "inputs": {
         "input": "source"
@@ -156,7 +73,7 @@
       ]
     }
   ],
-  "axes": [
+  "sweeps": [
     {
       "name": "fraction",
       "series": {

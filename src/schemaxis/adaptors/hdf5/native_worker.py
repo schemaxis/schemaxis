@@ -920,6 +920,40 @@ def attribute_order(obj):
 
 
 # ---------------------------------------------------------------- admission
+def studio_paths():
+    """List the union of internal object paths, as used by comparison."""
+    import h5py
+
+    paths = {"/"}
+    for filename in ("source.h5", "reference.h5"):
+        with h5py.File(filename, "r") as file:
+            def visit(path, link):
+                if isinstance(link, h5py.HardLink):
+                    paths.add("/" + path)
+                if len(paths) > 1024 or len(path) > 1024:
+                    raise Fault("HDF5_RESOURCE_LIMIT", "The object paths exceed the Studio choice limit.", "$.tolerance.paths")
+            file.visititems_links(visit)
+    return sorted(paths)
+
+
+def studio_compound(dataset):
+    """Read only the datatype of a dataset reached through internal hard links."""
+    import h5py
+
+    with h5py.File("source.h5", "r") as file:
+        item = file
+        for part in dataset[1:].split("/"):
+            if not isinstance(item, h5py.Group) or not isinstance(item.get(part, getlink=True), h5py.HardLink):
+                raise Fault("HDF5_DATASET_NOT_FOUND", "Choose an internal dataset reached through hard links.", dataset)
+            item = item[part]
+        if not isinstance(item, h5py.Dataset) or not item.dtype.names:
+            return []
+        names = item.dtype.names
+        if len(names) > 256 or any(len(name) > 256 for name in names):
+            raise Fault("HDF5_RESOURCE_LIMIT", "The datatype exceeds the Studio choice limit.", dataset)
+        return list(names)
+
+
 def preflight(target):
     """Metadata only: walk hard links, never follow soft/external links, read no dataset or attribute values."""
     import h5py
@@ -1815,6 +1849,10 @@ def main():
             result = build(config)
         elif stage == 'edit':
             result = edit(config)
+        elif stage == 'studio-paths':
+            result = studio_paths()
+        elif stage == 'studio-compound':
+            result = studio_compound(config['dataset'])
         elif stage.startswith('preflight-'):
             result = preflight(config['preflights'][stage])
         elif stage.startswith('readback') or stage.startswith('inspect'):

@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Shared module and installed-command entry points for Schemaxis."""
 import argparse
 import json
@@ -83,10 +83,11 @@ def help_topic(parser, args):
 
 def authored_input(filename, format=None):
     """Load human-authored syntax; retained worker records stay strict JSON."""
-    from .core.documents import load_document_file
-    if str(filename) == '-':
-        return load_document(sys.stdin.read(), format=format or 'json')
-    return load_document_file(filename, format=format)
+    from .core.documents import load_document_file, refuse_reserved
+    document = (load_document(sys.stdin.read(), format=format or 'json') if str(filename) == '-'
+                else load_document_file(filename, format=format))
+    refuse_reserved(document)
+    return document
 
 
 def build_parser():
@@ -285,6 +286,33 @@ def build_parser():
     query.add_argument('input', nargs='?')
     query.add_argument('--input-format', choices=('json', 'yaml'))
     query.add_argument('--operations', nargs='+')
+    spatial = commands.add_parser('spatial', help='list, evaluate and explain named scalars, vectors and boxes without starting applications')
+    spatial_actions = spatial.add_subparsers(dest='spatial_action', required=True)
+    for action, text in (('list', 'list spatial entries with their type, phase, dependencies and sweeps'),
+                         ('eval', 'evaluate entries or one expression at a chosen state'),
+                         ('explain', 'show why each entry is constant, per-visit or observed'),
+                         ('rename', 'rename a spatial value and its bound references; print the updated input')):
+        sub = spatial_actions.add_parser(action, help=text)
+        sub.add_argument('input')
+        sub.add_argument('--input-format', choices=('json', 'yaml'))
+        sub.add_argument('--operation', help='workflow operation whose document supplies the names')
+        if action == 'rename':
+            sub.add_argument('--section', choices=('definitions','settings','dimensions'), default='definitions')
+            sub.add_argument('--name', required=True)
+            sub.add_argument('--new-name', required=True)
+            continue
+        if action == 'list':
+            sub.add_argument('--functions', action='store_true', help='include the callable functions')
+            continue
+        sub.add_argument('--entry', action='append', metavar='[workflow:]SECTION.KEY',
+                         help='entry to report (repeatable); all spatial entries when omitted')
+        if action == 'eval':
+            sub.add_argument('--expression', help='evaluate this expression instead of named entries')
+            sub.add_argument('--destination', help='JSON pointer of the value the expression is for')
+            sub.add_argument('--index', action='append', default=[], metavar='SWEEP=N',
+                             help='position on a sweep (repeatable); omitted positions are 0')
+            sub.add_argument('--time-index', type=int, default=0)
+            sub.add_argument('--observations', type=Path, help='observations saved from an earlier extents load')
     reference = commands.add_parser('reference', help='generate schemas, reference pages and module index')
     reference.add_argument('--check', action='store_true')
     reference.add_argument('--output-directory', type=Path, default=None)
@@ -514,6 +542,9 @@ def main():
             parser.error('query needs either INPUT or --operations')
         document = authored_input(args.input, args.input_format) if args.input else None
         return query(document, args.operations)
+    if args.command == 'spatial':
+        from .spatial_actions import command
+        return command(args, authored_input(args.input, args.input_format))
     if args.command == 'capabilities':
         from .capabilities import CapabilityCatalogue
         catalogue = CapabilityCatalogue()

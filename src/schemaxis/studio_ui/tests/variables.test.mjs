@@ -40,14 +40,12 @@ test('deletion protects shared references and parameters; preview detects cycles
   assert.throws(() => removeEntry(document, entries(document).find(e => e.operation === 'a')), /parameter/);
 });
 
-test('static calculation previews preserve scope and reject nonnumeric or infinite arithmetic', () => {
+test('local inspection does not evaluate computed expressions', () => {
   const document = root(), scope = scopes(document)[1];
-  const expression = {$expr: {op: 'divide', args: [{$document: '/dimensions/distance', scope: 'workflow'}, 2]}};
-  assert.equal(preview(document, expression, scope), 5);
-  expression.$expr.args[1] = 0;
-  assert.throws(() => preview(document, expression, scope), /finite/);
-  expression.$expr.args = ['10', 2];
-  assert.throws(() => preview(document, expression, scope), /numbers/);
+  for (const expression of [{$expr: '2 + 3'}, {$expr: {op: 'divide', args: [10, 2]}},
+    {$value: 'boundsSize', args: {bounds: [0, 1, 0, 1, 0, 0]}}]) {
+    assert.throws(() => preview(document, expression, scope), /host/);
+  }
 });
 
 test('editing a parameter preserves its declared kind and constraints', () => {

@@ -39,6 +39,24 @@ class AuthoringTests(unittest.TestCase):
         self.assertEqual(caught.exception.fault.code, code)
         return caught.exception.fault
 
+    def test_a_field_name_between_double_percent_signs_is_refused_where_documents_are_handed_in(self):
+        from schemaxis.__main__ import authored_input
+        from schemaxis.core.documents import refuse_reserved
+        draft = self.edit(json.dumps({**BOX, '%%studyVisits%%': 2}, indent=2)+'\n')
+        self.assertFalse(draft['valid'])
+        self.assertEqual(draft['diagnostics'][0]['code'], 'RESERVED_KEY')
+        for name, value in (('top.json', {**BOX, '%%studyPositions%%': {}}),
+                            ('nested.json', {'version': 'schemaxis.workflow/1',
+                                             'operations': [{'id': 'a', 'document': {**BOX, '%%anything%%': 1}}]})):
+            (self.root/name).write_text(json.dumps(value))
+            fault = self.fault('RESERVED_KEY', lambda: authored_input(self.root/name))
+            self.assertIn('reserved for internal use', fault.message)
+            self.assertIn('double percent', fault.recovery)
+        self.assertEqual(self.fault('RESERVED_KEY', lambda: refuse_reserved(
+            {'operations': [{'document': {'%%x%%': 1}}]})).location, '$.operations[0].document')
+        (self.root/'plain.json').write_text(json.dumps({**BOX, 'note': '%%not a field name%%', '%odd%': 1, '%%open': 2}))
+        self.assertEqual(authored_input(self.root/'plain.json')['%odd%'], 1)
+
     def test_invalid_source_survives_reopen_and_blocks_all_execution(self):
         draft = self.edit('{\n "version": ')
         self.assertFalse(draft['valid'])

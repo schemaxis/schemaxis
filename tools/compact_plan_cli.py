@@ -87,7 +87,7 @@ def projection(plan):
                           'sceneStateVisits': sum(scene['selection']['states'] for scene in scenes),
                           'expectedPublications': plan['expectedPublications']},
                   nodes=nodes, times=copy.deepcopy(pipeline['times']),
-                  axes=copy.deepcopy(pipeline['axes']), scenes=copy.deepcopy(scenes))
+                  sweeps=copy.deepcopy(pipeline['sweeps']), scenes=copy.deepcopy(scenes))
     return result
 
 

@@ -1,3 +1,6 @@
+// Copyright (C) 2026 David L. F. Gaden.
+import {literalSpatial} from '../spatial/model.mjs';
+import {previewSpatial, spatialAction, spatialRequest} from '../spatial/host.mjs';
 import {h, mount} from '../../lib/dom.mjs';
 import {openDialog} from '../../shell/dialog.mjs';
 import {atPointer, replacing} from '../../editor/fill-data.mjs';
@@ -6,26 +9,34 @@ import {entries, valueCandidates, scopes, ownerAt, reference, preview, removeEnt
 import {button, field, editEntry, valueEditor, schemaContext} from './forms.mjs';
 
 function display(root, entry) {
-  if (entry.group === 'axes') return entry.value.values ? `${entry.value.values.length} samples` : JSON.stringify(entry.value.series);
+  if (entry.group === 'sweeps') return entry.value.values ? `${entry.value.values.length} samples` : JSON.stringify(entry.value.series);
   try { return JSON.stringify(preview(root, entry.value, entry)); }
   catch { return 'Computed value · resolved during validation or execution'; }
 }
 
-function admissible(root, value, context) {
+async function admissible(api, root, value, context) {
   const problem = checkSchemaValue(context.schema, context.value, context.pointer, value);
   if (problem) return problem;
-  if (value?.$axis) {
-    const axis = entries(root).find(entry => entry.group === 'axes' && entry.base === context.scope.base && entry.name === value.$axis);
+  if (value?.$sweep) {
+    const axis = entries(root).find(entry => entry.group === 'sweeps' && entry.base === context.scope.base && entry.name === value.$sweep);
     if (!axis) return 'This sweep is not declared in the destination document.';
     const samples = axis.value.values || [axis.value.series?.start, axis.value.series?.end];
     if (!value.path && samples.some(sample => sample !== undefined
       && checkSchemaValue(context.schema, context.value, context.pointer, sample))) return 'The sweep samples do not match this field’s type or limits.';
   }
   try {
-    const resolved = preview(root, value, context.scope);
+    if (typeof value?.$expr === 'string') {
+      const checked = await spatialAction(api, 'spatial_check', spatialRequest(root, context.scope.base, undefined,
+        {expression: value.$expr, destination: context.pointer}));
+      if (!checked.ok) return checked.fault?.message || 'Expression refused';
+    }
+    const resolved = await previewSpatial(api, root, value, context.scope.base, {destination: context.pointer});
+    // Host records keep boxes canonical; the host checks and converts their
+    // destination form. Rechecking that record as a six-number array is wrong.
+    if (literalSpatial(resolved)?.type === 'box') return '';
     return checkSchemaValue(context.schema, context.value, context.pointer, resolved);
   } catch (fault) {
-    return /Available when|Resolved by host|Preview needs/.test(fault.message) ? '' : fault.message;
+    return /Available when|Resolved by host|Preview needs|needs-data|needs-state|awaits-producer/.test(fault.message) ? '' : fault.message;
   }
 }
 
@@ -36,18 +47,22 @@ export async function chooseValue(ctx, {root, pointer, pointers = [pointer]}) {
   const list = h('div', {class: 'variables-list'}), slot = h('div'), error = h('p', {role: 'alert', class: 'error-text'});
   const readout = h('output', {class: 'variables-preview'});
   let chosen, chosenEntry, rendering = false;
-  const summary = () => {
-    try { const value = chosen || expression?.read(); readout.textContent = `Preview: ${JSON.stringify(preview(staged, value, context.scope))}`; }
-    catch (fault) { readout.textContent = fault.message; }
+  let previewTicket = 0;
+  const summary = async () => {
+    const ticket = ++previewTicket;
+    try { const value = chosen ?? expression?.read();
+      const resolved = await previewSpatial(ctx.api, staged, value, context.scope.base);
+      if (ticket === previewTicket) readout.textContent = `Preview: ${JSON.stringify(resolved)}`;
+    } catch (fault) { if (ticket === previewTicket) readout.textContent = fault.message; }
   };
   const render = async () => {
     rendering = true;
     const all = valueCandidates(staged).filter(entry => entry.pointer !== pointer
-      && (entry.group !== 'axes' || entry.base === context.scope.base));
-    const rows = all.map(entry => {
-      const value = reference(entry, context.scope), reason = admissible(staged, value, context);
+      && (entry.group !== 'sweeps' || entry.base === context.scope.base));
+    const rows = (await Promise.all(all.map(async entry => {
+      const value = reference(entry, context.scope), reason = await admissible(ctx.api, staged, value, context);
       return {entry, value, reason};
-    }).sort((a, b) => Boolean(a.reason) - Boolean(b.reason));
+    }))).sort((a, b) => Boolean(a.reason) - Boolean(b.reason));
     mount(list, rows.length ? rows.map(({entry, value, reason}) => button(
       `${entry.name} · ${entry.label} · ${display(staged, entry)}${reason ? ' — ' + reason : ''}`,
       () => { chosen = value; chosenEntry = entry; error.textContent = ''; summary(); list.querySelectorAll('button').forEach(b => b.classList.remove('primary'));
@@ -75,10 +90,10 @@ export async function chooseValue(ctx, {root, pointer, pointers = [pointer]}) {
         for (const target of pointers) {
           const where = await schemaContext(ctx, result, target);
           const binding = chosenEntry ? reference(chosenEntry, where.scope) : value;
-          const problem = admissible(result, binding, where);
+          const problem = await admissible(ctx.api, result, binding, where);
           if (problem) throw Error(problem);
           result = replacing(result, target, binding);
-          const after = admissible(result, binding, where);
+          const after = await admissible(ctx.api, result, binding, where);
           if (after) throw Error(after);
         }
         return {document: result, value};
@@ -107,6 +122,11 @@ export async function manageVariables(ctx, snapshot) {
       button('Create new value…', () => ctx.call(async () => {
         const result = await editEntry(ctx, staged, {base: snapshot.base ?? scopes(staged)[0].base});
         if (result) { staged = result.document; render(); }
+      })), button('Spatial…', () => ctx.call(async () => {
+        const {manageSpatial} = await import('../spatial/panel.mjs');
+        await manageSpatial(ctx, {root: staged, base: snapshot.base, label: snapshot.label, identity: snapshot.identity, revision: snapshot.revision,
+          spatial: snapshot.spatial, observeSpatial: snapshot.observeSpatial,
+          commit: value => { staged = value; render(); }});
       })), list, error),
     actions: [{label: 'Cancel', run: () => null}, {label: snapshot.applyLabel || 'Apply changes', primary: true, run: async () => {
       if (applying) return false;

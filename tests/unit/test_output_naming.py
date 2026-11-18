@@ -82,6 +82,18 @@ class OutputNamingTests(unittest.TestCase):
                 self.assertEqual(output_naming.sanitise(value), expected)
         self.fault('INVALID_NAMING', lambda: output_naming.sanitise({'a': 1}))
 
+    def test_the_naming_guidance_and_the_scheduling_diagram_name_sweeps(self):
+        root = Path(__file__).resolve().parents[2]
+        guidance = json.loads((root / 'src/schemaxis/adaptors/workflow-design/guidance.json').read_text())
+        text = json.dumps(guidance)
+        self.assertIn('{sweep:NAME}', text)
+        self.assertNotIn('{axis:', text)
+        output_naming.validate_pattern('{index}-{sweep:t}{ext}')
+        with self.assertRaises(SchemaxisError) as caught:
+            output_naming.validate_pattern('{index}-{axis:t}{ext}')
+        self.assertEqual(caught.exception.fault.code, 'INVALID_NAMING')
+        self.assertIn('sweeps / option $analytic', (root / 'docs/assets/cfd-execution.svg').read_text())
+
     def test_preview_matches_live_ui_needs(self):
         entries = [{'operation': 'mesh', 'output': 'volume', 'ext': '.vtu', 'parameters': {'inlet': 2.5}},
                    {'operation': 'mesh', 'output': 'volume', 'ext': '.vtu', 'parameters': {'inlet': -1}}]
@@ -116,7 +128,7 @@ class OutputNamingTests(unittest.TestCase):
         directory = self.run_workflow()
         self.fault('NAMING_COLLISION', lambda: output_naming.apply(directory, '{operation}'))
         self.assertFalse((directory / 'named').exists())
-        self.fault('INVALID_NAMING', lambda: output_naming.apply(directory, '{index}-{axis:stop}{ext}'))
+        self.fault('INVALID_NAMING', lambda: output_naming.apply(directory, '{index}-{sweep:stop}{ext}'))
         result = json.loads((directory / 'result.json').read_text())
         result['status'] = 'failed'
         atomic_json(directory / 'result.json', result)
@@ -133,17 +145,17 @@ class OutputNamingTests(unittest.TestCase):
 
     def test_study_axes_name_each_state_in_deterministic_order(self):
         document = example()
-        document['axes'] = [{'name': 'stop', 'values': [4, 8.5]}]
-        document['settings'] = {'stop': {'$axis': 'stop'}}
+        document['sweeps'] = [{'name': 'stop', 'values': [4, 8.5]}]
+        document['settings'] = {'stop': {'$sweep': 'stop'}}
         document['operations'][0]['document']['nodes'][0]['options']['stop'] = {
             '$document': '/settings/stop', 'scope': 'workflow'}
         directory = self.run_workflow(document, 'study')
-        result = output_naming.apply(directory, '{index}-s{axis:stop}-{operation}-{artifact}{ext}', index_width=1)
+        result = output_naming.apply(directory, '{index}-s{sweep:stop}-{operation}-{artifact}{ext}', index_width=1)
         self.assertEqual(list(result['names']), [
             '1-s4-samples-0.csv', '2-s4-samples-1.json', '3-s4-scaled-0.csv', '4-s4-scaled-1.json',
             '5-s8p5-samples-0.csv', '6-s8p5-samples-1.json', '7-s8p5-scaled-0.csv', '8-s8p5-scaled-1.json'])
         self.assertTrue(result['names']['5-s8p5-samples-0.csv']['source'].startswith('state-00001/'))
-        self.assertEqual(result['names']['5-s8p5-samples-0.csv']['axes'], {'stop': 8.5})
+        self.assertEqual(result['names']['5-s8p5-samples-0.csv']['sweeps'], {'stop': 8.5})
 
 
 if __name__ == '__main__':

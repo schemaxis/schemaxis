@@ -91,9 +91,9 @@ indices. Rename a conflicting array upstream, for example with `pvPassArrays`.
   (`INVALID_ARGUMENT`, `UNKNOWN_ARGUMENT`). This includes Python text supplied as the
   query. Semantic errors use `INVALID_SELECTION_QUERY`. Source diagnostics give the
   RFC 6901 pointer, for example `/nodes/1/options/QueryString/any/0/all/0/maximum`.
-  The check runs for each option and each axis value, even when other options on
+  The check runs for each option and each sweep value, even when other options on
   the node are dynamic.
-- **Runtime values.** Values that arrive through `$observe`, `$sample`, `$axis`,
+- **Runtime values.** Values that arrive through `$observe`, `$sample`, `$sweep`,
   `$call` or `$calc` are validated and compiled again after resolution, before the
   backend sees them.
 - **Native boundary.** `native.assign` looks up the ParaView property's command

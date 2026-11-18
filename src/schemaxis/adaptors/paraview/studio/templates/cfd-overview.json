@@ -1,5 +1,14 @@
 {
   "version": "schemaxis/1",
+  "times": {
+    "source": "case",
+    "select": {"latest": 1}
+  },
+  "definitions": {
+    "domain": {
+      "$expr": "extents(speed)"
+    }
+  },
   "nodes": [
     {
       "id": "case",
@@ -48,97 +57,9 @@
       "filter": "slice",
       "options": {
         "normal": "x+",
-        "origin": [
-          {
-            "$calc": "add",
-            "args": [
-              {
-                "$observe": "speed",
-                "path": [
-                  "bounds",
-                  0
-                ]
-              },
-              {
-                "$calc": "multiply",
-                "args": [
-                  {
-                    "$axis": "fraction"
-                  },
-                  {
-                    "$calc": "subtract",
-                    "args": [
-                      {
-                        "$observe": "speed",
-                        "path": [
-                          "bounds",
-                          1
-                        ]
-                      },
-                      {
-                        "$observe": "speed",
-                        "path": [
-                          "bounds",
-                          0
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "$calc": "divide",
-            "args": [
-              {
-                "$calc": "add",
-                "args": [
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      2
-                    ]
-                  },
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      3
-                    ]
-                  }
-                ]
-              },
-              2
-            ]
-          },
-          {
-            "$calc": "divide",
-            "args": [
-              {
-                "$calc": "add",
-                "args": [
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      4
-                    ]
-                  },
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      5
-                    ]
-                  }
-                ]
-              },
-              2
-            ]
-          }
-        ]
+        "origin": {
+          "$expr": "vector(domain.min.x + fraction * domain.deltaX, domain.mid.y, domain.mid.z)"
+        }
       },
       "inputs": {
         "input": "speed"
@@ -149,97 +70,9 @@
       "filter": "slice",
       "options": {
         "normal": "y+",
-        "origin": [
-          {
-            "$calc": "divide",
-            "args": [
-              {
-                "$calc": "add",
-                "args": [
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      0
-                    ]
-                  },
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      1
-                    ]
-                  }
-                ]
-              },
-              2
-            ]
-          },
-          {
-            "$calc": "add",
-            "args": [
-              {
-                "$observe": "speed",
-                "path": [
-                  "bounds",
-                  2
-                ]
-              },
-              {
-                "$calc": "multiply",
-                "args": [
-                  {
-                    "$axis": "fraction"
-                  },
-                  {
-                    "$calc": "subtract",
-                    "args": [
-                      {
-                        "$observe": "speed",
-                        "path": [
-                          "bounds",
-                          3
-                        ]
-                      },
-                      {
-                        "$observe": "speed",
-                        "path": [
-                          "bounds",
-                          2
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "$calc": "divide",
-            "args": [
-              {
-                "$calc": "add",
-                "args": [
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      4
-                    ]
-                  },
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      5
-                    ]
-                  }
-                ]
-              },
-              2
-            ]
-          }
-        ]
+        "origin": {
+          "$expr": "vector(domain.mid.x, domain.min.y + fraction * domain.deltaY, domain.mid.z)"
+        }
       },
       "inputs": {
         "input": "speed"
@@ -250,97 +83,9 @@
       "filter": "slice",
       "options": {
         "normal": "z+",
-        "origin": [
-          {
-            "$calc": "divide",
-            "args": [
-              {
-                "$calc": "add",
-                "args": [
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      0
-                    ]
-                  },
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      1
-                    ]
-                  }
-                ]
-              },
-              2
-            ]
-          },
-          {
-            "$calc": "divide",
-            "args": [
-              {
-                "$calc": "add",
-                "args": [
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      2
-                    ]
-                  },
-                  {
-                    "$observe": "speed",
-                    "path": [
-                      "bounds",
-                      3
-                    ]
-                  }
-                ]
-              },
-              2
-            ]
-          },
-          {
-            "$calc": "add",
-            "args": [
-              {
-                "$observe": "speed",
-                "path": [
-                  "bounds",
-                  4
-                ]
-              },
-              {
-                "$calc": "multiply",
-                "args": [
-                  {
-                    "$axis": "fraction"
-                  },
-                  {
-                    "$calc": "subtract",
-                    "args": [
-                      {
-                        "$observe": "speed",
-                        "path": [
-                          "bounds",
-                          5
-                        ]
-                      },
-                      {
-                        "$observe": "speed",
-                        "path": [
-                          "bounds",
-                          4
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+        "origin": {
+          "$expr": "vector(domain.mid.x, domain.mid.y, domain.min.z + fraction * domain.deltaZ)"
+        }
       },
       "inputs": {
         "input": "speed"
@@ -419,7 +164,7 @@
       ]
     }
   ],
-  "axes": [
+  "sweeps": [
     {
       "name": "fraction",
       "series": {

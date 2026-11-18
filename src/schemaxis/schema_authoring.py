@@ -7,7 +7,7 @@ the planner's responsibility. All references are internal to the exported file.
 import copy
 
 from .errors import fail
-from .schema import DRAFT, NAME, object_schema, argument_schema, arguments_schema, json_value_schema
+from .schema import DRAFT, EXPRESSION_TEXT, NAME, object_schema, argument_schema, arguments_schema, json_value_schema
 
 from .adaptors.registry import routes, metadata, binding, isolated
 
@@ -78,8 +78,8 @@ def composition_definitions():
     defs.update({key: _lift(value, compose=True, wrap=False) for key, value in analytic_definitions().items()})
     defs['valueReference'] = object_schema({'$value': NAME, 'path': {'type': 'string', 'pattern': r'^(?:/(?:[^~]|~[01])*)?$'},
         'visit': {'type': 'integer', 'minimum': 0}, 'artifact': {'type': 'integer', 'minimum': 0}}, ['$value', 'path'])
-    defs['axisReference'] = object_schema({'$axis': NAME,
-        'path': array(alternatives({'type': 'string'}, {'type': 'integer', 'minimum': 0}))}, ['$axis'])
+    defs['sweepReference'] = object_schema({'$sweep': NAME,
+        'path': array(alternatives({'type': 'string'}, {'type': 'integer', 'minimum': 0}))}, ['$sweep'])
     # References and pure operations can appear recursively in their arguments.
     for kind in ('number', 'string', 'array', 'object'):
         literal = {'type': kind}
@@ -117,7 +117,7 @@ def composition_definitions():
         arguments = _lift(arguments_schema(entry['arguments']), compose=True, analytic=True)
         calls.append(object_schema({'$value': {'const': name}, 'args': arguments}, ['$value', 'args']))
     defs['composition'] = alternatives(ref('documentReference'),
-        object_schema({'$expr': ref('expression')}, ['$expr']), {'oneOf': calls}, ref('valueReference'), ref('axisReference'))
+        object_schema({'$expr': alternatives(ref('expression'), EXPRESSION_TEXT)}, ['$expr']), {'oneOf': calls}, ref('valueReference'), ref('sweepReference'))
     return defs
 
 
@@ -225,7 +225,7 @@ def version_schema(version, *, authored=False, artifact=False, annotate=None):
         result['$defs'].update(composition_definitions())
         result['properties']['maxStates'] = {'type': 'integer', 'minimum': 1, 'maximum': 10000}
         if not routes()[version][1].get('graph'):
-            result['properties']['axes'] = array(_axis_schema())
+            result['properties']['sweeps'] = array(_axis_schema())
         if routes()[version][1].get('graph'):
             _author_graph(result, version)
     if artifact: result['$defs']['artifact'] = object_schema({'$artifact': NAME, 'index': {'type': 'integer', 'minimum': 0}}, ['$artifact', 'index'])
@@ -336,7 +336,7 @@ def workflow_schema(*, authored=True, annotate=None):
         defs.update(composition_definitions())
         properties.update({key: ref('authorData') for key in ('dimensions', 'definitions', 'settings')})
         properties['maxStates'] = {'type': 'integer', 'minimum': 1, 'maximum': 10000}
-        properties['axes'] = array(_axis_schema())
+        properties['sweeps'] = array(_axis_schema())
         # Shared definition owning Studio guidance; embedded adaptor documents
         # reference their own copy only at adaptor-declared reader positions.
         from .captured_inputs import reference_schema

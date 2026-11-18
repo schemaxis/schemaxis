@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 // Studio bootstrap: context, layout, polling and global shortcuts.
 
 import {installHierarchyControls} from '../lib/hierarchy.mjs';
@@ -14,6 +14,8 @@ import {windowFor, identity, registerIdentities} from './providers.mjs';
 import {registerWindows} from '../windows/index.mjs';
 import {applyTheme, setSetting} from './preferences.mjs';
 import {openVariables} from '../windows/variables/panel.mjs';
+import {openLiveData, memoryLabel} from '../windows/spatial/live-data.mjs';
+import {openSpatial} from '../windows/spatial/panel.mjs';
 
 const RAIL = [
   {type: 'start', icon: 'home', label: 'Start'},
@@ -44,6 +46,7 @@ function createContext() {
     if (notify.suppressed) notify.container.replaceChildren();
   });
   ctx.openVariables = () => ctx.call(() => openVariables(ctx), {title: 'Could not open variables'});
+  ctx.openSpatial = () => ctx.call(() => openSpatial(ctx), {title: 'Could not open Spatial'});
 
   /** Run an async action; report failures and return undefined on error. */
   ctx.call = async (action, {title, quiet, source} = {}) => {
@@ -142,6 +145,8 @@ function buildTopbar(ctx) {
       const dark = document.documentElement.dataset.theme === 'dark';
       setSetting(ctx, {theme: dark ? 'light' : 'dark'});
     }}, icon('moon'));
+  const liveData = h('button', {class:'button ghost small', 'aria-label':'Live Data selection',
+    title:'Select data to keep loaded; memory includes native application overhead', onClick:()=>ctx.call(()=>openLiveData(ctx))}, '○ Live Data off');
   const element = h('header', {class: 'topbar'},
     h('div', {class: 'brand'},
       h('span', {class: 'brand-mark', 'aria-hidden': 'true'}, 'S'),
@@ -149,17 +154,21 @@ function buildTopbar(ctx) {
     h('button', {class: 'topbar-search', onClick: () => showPalette(ctx)},
       icon('search'), 'Search commands, windows and documents', h('kbd', {}, 'Ctrl K')),
     h('div', {class: 'topbar-actions'},
-      connection,
+      connection, liveData,
       h('button', {class: 'button ghost small', 'aria-label': 'Bottom panel',
         title: 'Show or hide Problems, Jobs, Log and Console (Ctrl+J)',
         onClick: () => ctx.store.set(state => ({panelOpen: !state.panelOpen}))}, icon('panel'), 'Panel'),
       h('button', {class: 'button ghost small', onClick: () => ctx.openVariables()}, 'Variables & expressions'),
+      h('button', {class: 'button ghost small', onClick: () => ctx.openSpatial()}, 'Spatial'),
       h('button', {class: 'button ghost small', onClick: () => ctx.openHelp()}, 'Help'),
       roleButton,
       themeButton,
       h('button', {class: 'button ghost small icon-only', 'aria-label': 'Settings', 'data-tooltip': 'Settings',
         'data-tooltip-position': 'below', onClick: () => ctx.windows.open('settings')}, icon('gear'))));
   ctx.store.subscribe((state) => {
+    const data = state.server?.liveData;
+    liveData.textContent = data?.loading ? '● Live Data loading…' : data?.enabled ? `● Live Data ${memoryLabel(data.bytes)}` : '○ Live Data off';
+    liveData.style.color = data?.enabled ? 'var(--success, #218647)' : '';
     connection.dataset.state = state.connection;
     connection.textContent = state.connection === 'connected' ? 'Connected'
       : state.connection === 'offline' ? 'Offline' : 'Connecting';
@@ -244,6 +253,8 @@ function registerCommands(ctx) {
   const c = ctx.commands;
   c.register({id: 'variables.open', title: 'Variables & expressions', group: 'Authoring', icon: 'braces',
     run: () => ctx.openVariables()});
+  c.register({id: 'spatial.open', title: 'Spatial: boxes, vectors and scalars', group: 'Authoring', icon: 'braces',
+    run: () => ctx.openSpatial()});
   c.register({id: 'window.help', title: 'Open Help', group: 'Help', icon: 'help', shortcut: 'F1',
     run: () => ctx.openHelp()});
   c.register({id: 'window.start', title: 'Go to Start', group: 'Window', icon: 'home', run: () => ctx.windows.open('start')});

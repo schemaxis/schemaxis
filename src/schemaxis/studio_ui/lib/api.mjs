@@ -1,6 +1,6 @@
-// Copyright (C) 2026 David L F Gaden
-// HTTP client for the loopback Studio server. Every fault becomes an ApiError
-// carrying the server's structured fault (code, message, location, recovery).
+// Copyright (C) 2026 David L. F. Gaden.
+// HTTP errors carry structured faults. A successful spatial_check request can
+// return a refused expression as data, including its inferred type and phase.
 
 export class ApiError extends Error {
   constructor(fault) {
@@ -58,7 +58,9 @@ export class Api {
       } catch {
         throw new ApiError({code: 'INVALID_RESPONSE', message: `HTTP ${response.status}: expected JSON`});
       }
-      if (data && data.fault) {
+      const checkResult = response.ok && path === '/api/spatial'
+        && body?.action === 'spatial_check' && data?.ok === false;
+      if (data && data.fault && !checkResult) {
         throw new ApiError(data.fault);
       }
       if (!response.ok) {

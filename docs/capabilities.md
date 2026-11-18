@@ -231,17 +231,19 @@ objects. Duplicate names, unknown ports/references, invalid options and cycles
 fail explicitly. The resolved plan includes defaults, declarations and a digest.
 
 `RuntimeClosure` takes the dependency closure of visible objects and explicit
-output roots. Unused nodes and their iteration axes do not execute. Across scenes,
+output roots. Unused nodes and their iteration sweeps do not execute. Across scenes,
 shared nodes survive while unneeded nodes are deleted in reverse dependency order.
 Each active logical node owns one native proxy. There is no proxy aliasing between
 distinct logical nodes.
 
-Independent axes vary fastest-first in their declared order. Multiple properties
-can reference one axis for coordination. Direct parameter changes are all applied
+Independent sweeps vary fastest-first in their declared order. Multiple properties
+can reference one sweep for coordination. Direct parameter changes are all applied
 before explicit pipeline updates; observation-dependent changes follow fresh
 upstream observations. Dirty state propagates downstream. Identical effective
 values do not trigger redundant updates. No output is published between partial
-changes. A failed transition poisons that active instance; it must be closed.
+changes. A failed apply poisons that active instance; only a planned reverse
+transition (see [ordinary resident transitions](identity-authoring.md#ordinary-resident-transitions))
+or closing it may follow.
 
 Publication order is time → scene → geometry state → geometry/measurement outputs
 → appearance → glTF/image writer/camera. Geometry is not multiplied by camera or
@@ -295,9 +297,9 @@ than silently restricting its internal aggregation to the outer publication time
   "nodes": [
     {"id": "data", "filter": "wavelet"},
     {"id": "cut", "filter": "slice", "inputs": {"input": "data"},
-     "options": {"normal": "z+", "origin": [0, 0, {"$axis": "height"}]}}
+     "options": {"normal": "z+", "origin": [0, 0, {"$sweep": "height"}]}}
   ],
-  "axes": [{"name": "height", "series": {"start": -2, "end": 2, "count": 3}}],
+  "sweeps": [{"name": "height", "series": {"start": -2, "end": 2, "count": 3}}],
   "scenes": [{"id": "sections", "geometry": ["cut"],
     "visible": {"cut": {"colour": "xkcd:sky blue"}},
     "images": [{"id": "report", "size": [640, 480],
@@ -305,9 +307,9 @@ than silently restricting its internal aggregation to the outer publication time
 }
 ```
 
-An axis accepts `values` or a scalar `series`. To move a pair of seed endpoints
-together, use object-valued axis entries and select each endpoint with
-`{"$axis":"seed","path":["start"]}` and `..."end"`.
+A sweep accepts `values` or a scalar `series`. To move a pair of seed endpoints
+together, use object-valued sweep entries and select each endpoint with
+`{"$sweep":"seed","path":["start"]}` and `..."end"`.
 
 Runtime inputs are explicit:
 
@@ -362,7 +364,7 @@ Appearance values and camera settings may use runtime observations and samples;
 their dependencies remain active even if invisible. Camera lists may be literal
 or authored analytic publication sequences.
 Camera-only variation belongs in those lists rather than multiplying geometry
-through a presentation-only axis. `examples/schemaxis/data-framing.json` demonstrates
+through a presentation-only sweep. `examples/schemaxis/data-framing.json` demonstrates
 data-dependent ranges and a close-up framed by an invisible bounds object.
 
 Plan version 2 includes presentation and the complete resolved document in its
@@ -412,7 +414,7 @@ construction uses `{"$create": {"id": "source", "filter": "wavelet"}}` and an ob
 reference uses `{"$object": "source"}`. Inline constructions are lifted into the
 master graph before execution and retain their identity on repeated reads.
 
-A parameter can carry its own analytic without a separate authored axis:
+A parameter can carry its own analytic without a separate authored sweep:
 
 ```json
 {"radius": {"$analytic": {
@@ -425,7 +427,7 @@ sequence. Any number of members may share a `sync` name, but their lengths must
 match; independent groups form a Cartesian product. Developer lookups register
 bindings by owner and member path and return the current ordinary value.
 `analytic-bindings.json` retains those associations for submitted runs. Explicit
-axes precede generated axes; first encountered analytic groups vary fastest.
+sweeps precede generated sweeps; first encountered analytic groups vary fastest.
 
 Camera lists can use `{"$analytic":{"type":"orbit","start":0,"end":330,
 "count":12,"elevation":25}}`. Appearance lists can use a `values` analytic.

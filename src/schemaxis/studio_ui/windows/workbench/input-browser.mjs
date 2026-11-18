@@ -4,6 +4,7 @@
 // Open. Selecting a path never uploads or copies its bytes.
 import {h, icon, mount} from '../../lib/dom.mjs';
 import {openDialog} from '../../shell/dialog.mjs';
+import {subsetChips} from './subset-chips.mjs';
 
 const RECENT = 'schemaxis.studio.folders';
 
@@ -28,7 +29,7 @@ function rememberFolder(folder) {
  * Ask for a file. Resolves with its absolute path, or null when cancelled.
  * `save` names a destination, which need not exist yet.
  */
-export function chooseFile(ctx, {label, extensions = [], current = '', save = false}) {
+export function chooseFile(ctx, {label, extensions = [], current = '', save = false, multiple = false}) {
   let sequence = 0;
   let parent = '';
   let directory = '';
@@ -47,6 +48,7 @@ export function chooseFile(ctx, {label, extensions = [], current = '', save = fa
     }});
   const state = h('p', {class: 'wb-help', role: 'status'});
   const list = h('div', {class: 'operation-file-list', role: 'listbox', 'aria-label': 'Folders and files'});
+  const fileSubset = multiple ? subsetChips({choices: [], label, choiceNoun: 'files', preserveOrder: true}) : null;
   const crumbs = h('nav', {class: 'operation-file-crumbs', 'aria-label': 'Folder path'});
   const places = h('nav', {class: 'operation-file-places', 'aria-label': 'Places'});
   const search = h('input', {class: 'input', type: 'search', placeholder: 'Filter this folder…',
@@ -73,8 +75,8 @@ export function chooseFile(ctx, {label, extensions = [], current = '', save = fa
     h('div', {class: 'operation-file-panes'}, places,
       h('div', {class: 'operation-file-main'},
         h('div', {class: 'operation-file-tools'}, search, h('label', {}, hidden, ' Hidden files'),
-          extensions.length ? h('label', {}, allFiles, ' All file types') : null), list, state)),
-    h('label', {class: 'operation-file-name'}, h('span', {}, 'File name'), name),
+          extensions.length ? h('label', {}, allFiles, ' All file types') : null), list, state, fileSubset?.element)),
+    multiple ? null : h('label', {class: 'operation-file-name'}, h('span', {}, 'File name'), name),
     h('small', {class: 'wb-help'}, `${extensions.length ? `Suggested types: ${extensions.join(', ')}` : 'All file types'}`
       + ' · files on the computer running Studio'));
 
@@ -85,6 +87,12 @@ export function chooseFile(ctx, {label, extensions = [], current = '', save = fa
   }
 
   function accept() {
+    if (fileSubset) {
+      const files = fileSubset.read();
+      if (!files.length) { state.textContent = 'Select at least one file.'; return false; }
+      rememberFolder(directory);
+      return files;
+    }
     const value = path();
     const folder = entries.find((entry) => entry.directory && entry.path === value);
     if (folder) {
@@ -105,7 +113,10 @@ export function chooseFile(ctx, {label, extensions = [], current = '', save = fa
     const matches = entries.filter((entry) => (hidden.checked || !entry.name.startsWith('.'))
       && entry.name.toLocaleLowerCase().includes(query));
     state.textContent = `${matches.length} of ${entries.length} entries${matches.length ? '' : ' · No matches. Clear the filter or choose another folder.'}`;
-    mount(list, matches.map((entry) => h('button', {class: 'operation-file-entry', type: 'button', role: 'option',
+    if (fileSubset) fileSubset.setChoices(matches.filter(entry => !entry.directory)
+      .map(entry => ({id: entry.path, label: entry.name})));
+    const listed = fileSubset ? matches.filter(entry => entry.directory) : matches;
+    mount(list, listed.map((entry) => h('button', {class: 'operation-file-entry', type: 'button', role: 'option',
       title: entry.path, 'aria-selected': String(entry.path === selected),
       onClick: () => {
         if (entry.directory) {
@@ -134,6 +145,7 @@ export function chooseFile(ctx, {label, extensions = [], current = '', save = fa
     const token = ++sequence;
     state.textContent = 'Loading folder…';
     mount(list);
+    fileSubset?.setChoices([]);
     try {
       const result = await ctx.api.get('/api/input-files', {directory: folder,
         extensions: allFiles.checked ? '' : extensions.join(',')});
@@ -162,17 +174,24 @@ export function chooseFile(ctx, {label, extensions = [], current = '', save = fa
     }
   }
 
-  const result = openDialog({title: save ? 'Save as' : `Open ${label.split(/[./]/).at(-1) || 'file'}`, wide: true, enterSubmits: false,
+  const result = openDialog({title: multiple ? 'Choose files' : save ? 'Save as' : `Open ${label.split(/[./]/).at(-1) || 'file'}`, wide: true, enterSubmits: false,
     className: 'file-dialog', initialFocus: '[aria-label="Filter files"]', content: (close) => {
       finish = close;
       return panel;
-    }, actions: [{label: 'Cancel', run: () => null}, {label: save ? 'Save here' : 'Open', primary: true, run: accept}]});
+    }, actions: [{label: 'Cancel', run: () => null}, {label: multiple ? 'Add selected files' : save ? 'Save here' : 'Open', primary: true, run: accept}]});
   if (current.includes('/')) {
     selected = current;
     name.value = current.slice(current.lastIndexOf('/') + 1);
   }
   load(current.includes('/') ? current.slice(0, current.lastIndexOf('/')) || '/' : ctx.store.get().server?.workspace);
-  return result.then((value) => typeof value === 'string' ? value : null);
+  return result.then(value => multiple ? Array.isArray(value) ? value : null : typeof value === 'string' ? value : null);
+}
+
+export function fileSubsetBrowser(ctx, label, extensions, current, onChoose) {
+  return h('button', {class: 'button small', type: 'button', onClick: () => ctx.call(async () => {
+    const chosen = await chooseFile(ctx, {label, extensions, current: current(), multiple: true});
+    if (chosen) onChoose(chosen);
+  }, {title: 'Could not choose files'})}, 'Browse for several files…');
 }
 
 /** Choose an existing file with the desktop's Open window when there is one, otherwise Studio's own. */

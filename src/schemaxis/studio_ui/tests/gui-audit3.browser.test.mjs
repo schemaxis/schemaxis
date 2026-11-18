@@ -73,9 +73,9 @@ test('blocks are chosen by name, expression and exclusion with the case names in
 
       // The settings window reopens from Properties with the entries it was added with.
       await session.evaluate(`[...document.querySelectorAll('.wb-comprehension button')].find(b=>b.textContent.includes('extractBlock1')).click()`);
-      await session.wait(`document.querySelector('.wb-properties [data-action="edit-settings"]')`, 'Edit settings in Properties');
+      await session.wait(`document.querySelector('.wb-overview-node.selected [data-action="edit-settings"]')`, 'Edit settings in Guide');
       assert.ok(await session.evaluate(`document.querySelector('.wb-editor-tools [data-action="edit-settings"]') !== null`));
-      await session.evaluate(`document.querySelector('.wb-properties [data-action="edit-settings"]').click()`);
+      await session.evaluate(`document.querySelector('.wb-overview-node.selected [data-action="edit-settings"]').click()`);
       await session.wait(`document.querySelector('.operation-dialog')`, 'settings window reopened');
       assert.equal(await session.evaluate(`document.querySelectorAll('.operation-form .reader-entry').length`), 3);
       await session.evaluate(press('.dialog-footer', 'Cancel'));
@@ -111,7 +111,7 @@ test('Start lists each application with New, Open and recent work; a saved file 
       await session.evaluate(setValue('.file-dialog [aria-label="File name"]', saved));
       await session.evaluate(press('.file-dialog .dialog-footer', 'Open'));
       await session.wait(`document.querySelector('.tab[aria-selected="true"] .label')?.textContent === 'wing'`, 'opened in the Workbench');
-      await session.wait(`document.querySelector('.wb-view-state [role=status]')?.textContent.includes('wing.json')`, 'file shown beside the revision');
+      await session.wait(`studio.windows.active().window.store.get().record?.file?.endsWith('wing.json')`, 'saved file attached to the document');
       await session.evaluate(`window.studio.windows.open('start')`);
       await session.wait(`[...document.querySelectorAll('.start-app[data-app="workbench"] .list-item')].some(i=>i.textContent.includes(${JSON.stringify(saved)}))`,
         'recent item names its file');
@@ -127,7 +127,7 @@ test('Start lists each application with New, Open and recent work; a saved file 
       await session.wait(`document.querySelector('.dialog h3')?.textContent === 'Replace the existing file?'`, 'replace question');
       assert.equal(await readFile(taken, 'utf8'), '{}');
       await session.evaluate(press('.dialog-footer', 'Replace'));
-      await session.wait(`document.querySelector('.wb-view-state [role=status]')?.textContent.includes('taken.json')`, 'saved under the new name');
+      await session.wait(`studio.windows.active().window.store.get().record?.file?.endsWith('taken.json')`, 'saved under the new name');
       assert.match(await readFile(taken, 'utf8'), /schemaxis\/1/);
       assert.deepEqual(session.exceptions, []);
       assert.deepEqual(session.consoleErrors.filter((text) => !text.includes('status of 400')), []);

@@ -187,6 +187,40 @@
           ]
         },
         "/properties/circuit/anyOf/0/properties/resistors/items": {
+          "authoring": {
+            "identityStyle": "lowercase",
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              },
+              {
+                "path": "/resistance",
+                "label": "Resistance",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "r"
+            },
+            "identityPeers": [
+              "capacitors",
+              "inductors"
+            ],
+            "when": {
+              "path": "/operation",
+              "values": [
+                "dcSweep"
+              ]
+            },
+            "multiMode": {
+              "rationale": "DC and AC networks admit separately named components with their own terminal pairs. The RC step has fixed component counts."
+            }
+          },
           "status": "reference",
           "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
           "sources": [
@@ -235,6 +269,40 @@
           "defaultMeaning": "Schemaxis default: [] (no capacitors)."
         },
         "/properties/circuit/anyOf/0/properties/capacitors/items": {
+          "authoring": {
+            "identityStyle": "lowercase",
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              },
+              {
+                "path": "/capacitance",
+                "label": "Capacitance",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "c"
+            },
+            "identityPeers": [
+              "resistors",
+              "inductors"
+            ],
+            "when": {
+              "path": "/operation",
+              "values": [
+                "dcSweep"
+              ]
+            },
+            "multiMode": {
+              "rationale": "DC and AC networks admit separately named components with their own terminal pairs. The RC step has fixed component counts."
+            }
+          },
           "status": "reference",
           "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
           "sources": [
@@ -274,6 +342,7 @@
           ]
         },
         "/properties/circuit/anyOf/0/properties/probes": {
+          "control": {"kind": "document-entries", "collection": ["/circuit", "/circuit/resistors", "/circuit/capacitors", "/circuit/inductors"], "field": ["source", "a", "b"], "exclude": ["0"]},
           "status": "reviewed",
           "explanation": "Non-ground nodes whose voltages are written to results.csv, 1 to 16, without repeats; each must appear in the circuit. One volt column is published per probe.",
           "sources": [
@@ -320,6 +389,41 @@
           ]
         },
         "/properties/circuit/anyOf/1/properties/resistors/items": {
+          "authoring": {
+            "identityStyle": "lowercase",
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              },
+              {
+                "path": "/resistance",
+                "label": "Resistance",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "r"
+            },
+            "identityPeers": [
+              "capacitors",
+              "inductors"
+            ],
+            "when": {
+              "path": "/operation",
+              "values": [
+                "dcSweep",
+                "acSweep"
+              ]
+            },
+            "multiMode": {
+              "rationale": "DC and AC networks admit separately named components with their own terminal pairs. The RC step has fixed component counts."
+            }
+          },
           "status": "reference",
           "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
           "sources": [
@@ -369,6 +473,41 @@
           "defaultMeaning": "Schemaxis default: [] (no capacitors)."
         },
         "/properties/circuit/anyOf/1/properties/capacitors/items": {
+          "authoring": {
+            "identityStyle": "lowercase",
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              },
+              {
+                "path": "/capacitance",
+                "label": "Capacitance",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "c"
+            },
+            "identityPeers": [
+              "resistors",
+              "inductors"
+            ],
+            "when": {
+              "path": "/operation",
+              "values": [
+                "dcSweep",
+                "acSweep"
+              ]
+            },
+            "multiMode": {
+              "rationale": "DC and AC networks admit separately named components with their own terminal pairs. The RC step has fixed component counts."
+            }
+          },
           "status": "reference",
           "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
           "sources": [
@@ -408,6 +547,7 @@
           ]
         },
         "/properties/circuit/anyOf/1/properties/probes": {
+          "control": {"kind": "document-entries", "collection": ["/circuit", "/circuit/resistors", "/circuit/capacitors", "/circuit/inductors"], "field": ["source", "a", "b"], "exclude": ["0"]},
           "status": "reviewed",
           "explanation": "Non-ground nodes whose phasors are written to results.csv, 1 to 15, without repeats; each must appear in the circuit. Each probe adds real, imaginary, magnitude and phase columns.",
           "sources": [
@@ -439,6 +579,41 @@
           ]
         },
         "/properties/circuit/anyOf/1/properties/inductors/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              },
+              {
+                "path": "/inductance",
+                "label": "Inductance",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "l"
+            },
+            "multiMode": {
+              "validatePlan": true,
+              "rationale": "Add an inductor with separate terminals. The AC planner checks source shorts, ideal loops and the circuit reference path."
+            },
+            "identityStyle": "lowercase",
+            "identityPeers": [
+              "resistors",
+              "capacitors"
+            ],
+            "when": {
+              "path": "/operation",
+              "values": [
+                "acSweep"
+              ]
+            }
+          },
           "status": "reference",
           "explanation": "One AC-only uncoupled ideal coil with unique name, distinct endpoints and positive inductance in henries.",
           "sources": [
@@ -606,6 +781,33 @@
           ]
         },
         "/properties/requirements/anyOf/0/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/probe",
+                "label": "Probe"
+              },
+              {
+                "path": "/quantity",
+                "label": "Quantity"
+              },
+              {
+                "path": "/minimum",
+                "label": "Minimum"
+              },
+              {
+                "path": "/maximum",
+                "label": "Maximum"
+              }
+            ],
+            "naming": {
+              "prefix": "check"
+            },
+            "multiMode": {
+              "rationale": "Each check judges the selected circuit quantity against its own bounds."
+            },
+            "identityStyle": "label"
+          },
           "status": "reviewed",
           "explanation": "One DC requirement: a name, a published probe, quantity voltage_V, axis sourceVoltage_V, a window of source voltages and at least one bound.",
           "sources": [
@@ -725,6 +927,33 @@
           ]
         },
         "/properties/requirements/anyOf/1/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/probe",
+                "label": "Probe"
+              },
+              {
+                "path": "/quantity",
+                "label": "Quantity"
+              },
+              {
+                "path": "/minimum",
+                "label": "Minimum"
+              },
+              {
+                "path": "/maximum",
+                "label": "Maximum"
+              }
+            ],
+            "naming": {
+              "prefix": "check"
+            },
+            "multiMode": {
+              "rationale": "Each check judges the selected circuit quantity against its own bounds."
+            },
+            "identityStyle": "label"
+          },
           "status": "reviewed",
           "explanation": "Named finite-frequency AC acceptance selects a published node, branch or $input quantity, an inclusive sample-containing frequency window and at least one bound. Supports voltage/gain, relative phase/dB, passive branch current/power and input loading. Signed quantities retain polarity and convention; only magnitude bounds must be nonnegative. No continuous-band guarantee.",
           "sources": [
@@ -844,6 +1073,33 @@
           ]
         },
         "/properties/requirements/anyOf/2/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/probe",
+                "label": "Probe"
+              },
+              {
+                "path": "/quantity",
+                "label": "Quantity"
+              },
+              {
+                "path": "/minimum",
+                "label": "Minimum"
+              },
+              {
+                "path": "/maximum",
+                "label": "Maximum"
+              }
+            ],
+            "naming": {
+              "prefix": "check"
+            },
+            "multiMode": {
+              "rationale": "Each check judges the selected circuit quantity against its own bounds."
+            },
+            "identityStyle": "label"
+          },
           "status": "reviewed",
           "explanation": "One RC requirement: a name, a published probe, quantity voltage_V, axis time_s, a time window and at least one bound.",
           "sources": [
@@ -1015,6 +1271,23 @@
           ]
         },
         "/oneOf/0/properties/circuit/properties/resistors/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              }
+            ],
+            "naming": {
+              "prefix": "r"
+            },
+            "identityField": "name",
+            "identityStyle": "lowercase"
+          },
           "status": "reference",
           "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
           "sources": [
@@ -1064,6 +1337,23 @@
           "defaultMeaning": "Schemaxis default: [] (no capacitors)."
         },
         "/oneOf/0/properties/circuit/properties/capacitors/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              }
+            ],
+            "naming": {
+              "prefix": "c"
+            },
+            "identityField": "name",
+            "identityStyle": "lowercase"
+          },
           "status": "reference",
           "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
           "sources": [
@@ -1103,6 +1393,7 @@
           ]
         },
         "/oneOf/0/properties/circuit/properties/probes": {
+          "control": {"kind": "document-entries", "collection": ["/circuit", "/circuit/resistors", "/circuit/capacitors", "/circuit/inductors"], "field": ["source", "a", "b"], "exclude": ["0"]},
           "status": "reviewed",
           "explanation": "Non-ground nodes whose voltages are written to results.csv, 1 to 16, without repeats; each must appear in the circuit. One volt column is published per probe.",
           "sources": [
@@ -1330,6 +1621,23 @@
           ]
         },
         "/oneOf/1/properties/circuit/properties/resistors/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              }
+            ],
+            "naming": {
+              "prefix": "r"
+            },
+            "identityField": "name",
+            "identityStyle": "lowercase"
+          },
           "status": "reference",
           "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
           "sources": [
@@ -1379,6 +1687,23 @@
           "defaultMeaning": "Schemaxis default: [] (no capacitors)."
         },
         "/oneOf/1/properties/circuit/properties/capacitors/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              }
+            ],
+            "naming": {
+              "prefix": "c"
+            },
+            "identityField": "name",
+            "identityStyle": "lowercase"
+          },
           "status": "reference",
           "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
           "sources": [
@@ -1418,6 +1743,7 @@
           ]
         },
         "/oneOf/1/properties/circuit/properties/probes": {
+          "control": {"kind": "document-entries", "collection": ["/circuit", "/circuit/resistors", "/circuit/capacitors", "/circuit/inductors"], "field": ["source", "a", "b"], "exclude": ["0"]},
           "status": "reviewed",
           "explanation": "Non-ground nodes whose phasors are written to results.csv, 1 to 15, without repeats; each must appear in the circuit. Each probe adds real, imaginary, magnitude and phase columns.",
           "sources": [
@@ -1449,6 +1775,41 @@
           ]
         },
         "/oneOf/1/properties/circuit/properties/inductors/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              },
+              {
+                "path": "/inductance",
+                "label": "Inductance",
+                "style": "omit"
+              }
+            ],
+            "naming": {
+              "prefix": "l"
+            },
+            "multiMode": {
+              "validatePlan": true,
+              "rationale": "Add an inductor with separate terminals. The AC planner checks source shorts, ideal loops and the circuit reference path."
+            },
+            "identityStyle": "lowercase",
+            "identityPeers": [
+              "resistors",
+              "capacitors"
+            ],
+            "when": {
+              "path": "/operation",
+              "values": [
+                "acSweep"
+              ]
+            }
+          },
           "status": "reference",
           "explanation": "One AC-only uncoupled ideal coil with unique name, distinct endpoints and positive inductance in henries.",
           "sources": [
@@ -1739,6 +2100,23 @@
           ]
         },
         "/oneOf/2/properties/circuit/properties/resistors/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              }
+            ],
+            "naming": {
+              "prefix": "r"
+            },
+            "identityField": "name",
+            "identityStyle": "lowercase"
+          },
           "status": "reference",
           "explanation": "One ideal resistor with unique name, distinct endpoints and positive ohmic resistance.",
           "sources": [
@@ -1796,6 +2174,23 @@
           ]
         },
         "/oneOf/2/properties/circuit/properties/capacitors/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "Terminal A"
+              },
+              {
+                "path": "/b",
+                "label": "Terminal B"
+              }
+            ],
+            "naming": {
+              "prefix": "c"
+            },
+            "identityField": "name",
+            "identityStyle": "lowercase"
+          },
           "status": "reference",
           "explanation": "One ideal capacitor with unique name, distinct endpoints and positive capacitance in farads.",
           "sources": [
@@ -1835,6 +2230,7 @@
           ]
         },
         "/oneOf/2/properties/circuit/properties/probes": {
+          "control": {"kind": "document-entries", "collection": ["/circuit", "/circuit/resistors", "/circuit/capacitors", "/circuit/inductors"], "field": ["source", "a", "b"], "exclude": ["0"]},
           "status": "reviewed",
           "explanation": "Nodes to publish: the source node and/or the response node, without repeats. The capacitor voltage is on the response node.",
           "sources": [
@@ -2018,6 +2414,7 @@
           ]
         },
         "/properties/circuit/anyOf/1/properties/branchProbes": {
+          "control": {"kind": "document-entries", "collection": ["/circuit/resistors", "/circuit/capacitors", "/circuit/inductors"], "field": "name"},
           "status": "reviewed",
           "explanation": "Optional list of up to eight existing component names for derived AC current phasors and passive active/reactive power. Omit for no branch output. Current is positive from authored a to b; reversing terminals reverses current but preserves absorbed power. Currents use verified terminal voltages and ideal R/C/L laws, rather than native device-current readback. All selected metrics together must fit 64 CSV columns.",
           "sources": [
@@ -2171,6 +2568,7 @@
           ]
         },
         "/oneOf/1/properties/circuit/properties/branchProbes": {
+          "control": {"kind": "document-entries", "collection": ["/circuit/resistors", "/circuit/capacitors", "/circuit/inductors"], "field": "name"},
           "status": "reviewed",
           "explanation": "Optional list of up to eight existing component names for derived AC current phasors and passive active/reactive power. Omit for no branch output. Current is positive from authored a to b; reversing terminals reverses current but preserves absorbed power. Currents use verified terminal voltages and ideal R/C/L laws, rather than native device-current readback. All selected metrics together must fit 64 CSV columns.",
           "sources": [

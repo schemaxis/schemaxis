@@ -776,6 +776,43 @@ def run_stage(executable, directory, stage, deadline, program):
         mapped_fault(directory, stage, error)
 
 
+def studio_inspect(document, source, executable, directory, *, port=0, prepare=False, geometry=False):
+    """Read names from the configured profile using only fixed dictionary queries."""
+    if port or prepare or geometry or source != model.VERSION or document.get('operation') != 'inspect':
+        fail('UNSUPPORTED_INSPECTION', 'Choose an Oracle dictionary inspection.')
+    raw = document.get('inspection', {})
+    if not isinstance(raw, dict):
+        fail('INVALID_ARGUMENT', 'Complete the inspection settings.')
+    inspection = {'kinds': raw['kinds']} if 'kinds' in raw else {}
+    p = plan({'version': model.VERSION, 'operation': 'inspect', 'connection': document.get('connection'),
+              'inspection': inspection})
+    require_noncolliding_credentials(p)
+    require_scannable_secrets(p)
+    kinds = p['inspection']['kinds']
+    queries = sql.catalog_queries([])
+    program = {'identity': sql.identity_queries(), 'catalog': {key: queries[key] for key in kinds}}
+    directory.mkdir()
+    (directory / 'native-worker.py').write_text(worker_source())
+    atomic_json(directory / 'native-config.json', {'connection': p['connection'], 'runId': secrets.token_hex(8)})
+    try:
+        run_stage(executable, directory, 'identify', time.monotonic() + 15, program)
+    finally:
+        scan_secrets(directory, p)
+    result = read(directory, 'identify.json')
+    gates(p, result)
+    columns = {'tables': 'table_name', 'views': 'view_name', 'sequences': 'sequence_name', 'indexes': 'table_name'}
+    names = set()
+    for kind, evidence in result['catalog'].items():
+        index = [name.lower() for name in evidence['columns']].index(columns[kind])
+        for row in evidence['rows']:
+            value = reference.dictionary_name(row[index])
+            if value and model.IDENTIFIER.fullmatch(value) and value not in model.RESERVED_NAMES:
+                names.add(value)
+    if len(names) > 1024:
+        fail('UNAVAILABLE_METADATA', 'The schema has too many names for the Studio picker.')
+    return {'readerChoices': {'names': sorted(names)}}
+
+
 def run(document, directory, *, executable=None, timeout=300):
     p = plan(document)
     require_noncolliding_credentials(p)

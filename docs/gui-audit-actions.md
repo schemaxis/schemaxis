@@ -109,7 +109,7 @@ pass. Nothing was committed to `develop`.
 - [x] B11 — The settings window has **Settings** and **Final values** screens,
   moves by its title bar, and Enter no longer closes it. **Add operation**
   works from either screen, so existing flows are unchanged.
-- [x] B12 — **Edit…** (or a double-click) in the pipeline guide reopens the
+- [x] B12 — **Edit** in the pipeline Overview reopens the
   settings window for an existing node and applies it as one undoable edit.
 - [x] B13 — The fill window moves by its heading and stays where it is put.
 

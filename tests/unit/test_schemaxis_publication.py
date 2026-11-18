@@ -121,9 +121,9 @@ class PublicationTests(unittest.TestCase):
 
     def test_presentation_only_axis_cannot_duplicate_geometry_silently(self):
         value = document()
-        value['axes'] = [{'name': 'camera', 'values': [1, 2]}]
-        value['scenes'][0]['images'][0]['cameras'][0]['scale'] = {'$axis': 'camera'}
-        self.fault('PRESENTATION_AXIS_UNAVAILABLE', lambda: plan(value))
+        value['sweeps'] = [{'name': 'camera', 'values': [1, 2]}]
+        value['scenes'][0]['images'][0]['cameras'][0]['scale'] = {'$sweep': 'camera'}
+        self.fault('PRESENTATION_SWEEP_UNAVAILABLE', lambda: plan(value))
 
     def test_receipt_checks_membership_content_and_sidecars(self):
         value = {'version': 'schemaxis/1', 'nodes': [{'id': 's', 'filter': 'sphere'}],

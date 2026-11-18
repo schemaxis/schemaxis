@@ -2,6 +2,19 @@
   "version": "schemaxis.studio-guidance/1",
   "operations": {
     "sprite": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/width",
+            "label": "Width"
+          },
+          {
+            "path": "/options/height",
+            "label": "Height"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Starts every Aseprite document: creates a new RGB sprite canvas of width x height pixels with one transparent frame, one normal image layer and an initial palette. It must be the first node and appear only once; every later operation modifies this same sprite in sequence. The finished sprite is published as editable sprite.aseprite, preview.png (first frame), sheet.png (all frames in a row) and sheet.json (frame rectangles, durations and tags).",
       "sources": [
@@ -27,6 +40,15 @@
       ]
     },
     "layer": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/name",
+            "label": "Name"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Adds a new, empty, visible image layer with normal blending on top of all existing layers. Choose it to keep parts of the artwork separately editable in Aseprite, such as a background and a foreground; in the flattened preview and sheet, opaque pixels on later layers cover those on earlier layers. Drawing nodes select the layer by its name.",
       "sources": [
@@ -42,6 +64,15 @@
       ]
     },
     "frame": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/durationMS",
+            "label": "Duration (ms)"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Appends one new empty animation frame after the last frame, with its own display duration. Choose it to build an animation; frames are numbered from 1 in the order they are added, and every layer is transparent in the new frame until drawing nodes with that frame number paint it. Each frame becomes one cell of the horizontal sheet.png.",
       "sources": [
@@ -58,6 +89,20 @@
       ]
     },
     "palette": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/inputs/sprite",
+            "label": "Sprite"
+          },
+          {
+            "path": "/options/colours",
+            "label": "Colours",
+            "style": "count"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Replaces the sprite's whole palette with the listed RGBA colours, in order. Because Schemaxis sprites use RGB colour mode, the palette is saved in sprite.aseprite as the colour swatches offered when editing in Aseprite; it does not recolour existing pixels and does not restrict which colours drawing nodes may use.",
       "sources": [
@@ -75,6 +120,27 @@
       ]
     },
     "pixel": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/layer",
+            "label": "Layer"
+          },
+          {
+            "path": "/options/frame",
+            "label": "Frame"
+          },
+          {
+            "path": "/options/x",
+            "label": "X"
+          },
+          {
+            "path": "/options/y",
+            "label": "Y"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Sets exactly one pixel at zero-based column x and row y (origin at the top-left) on a named layer and frame. Pixels are replaced, not blended: an opaque colour overwrites the selected layer and frame, and transparent [0, 0, 0, 0] erases. Choose it for highlights, outlines and single details; use rect or circle for filled areas.",
       "sources": [
@@ -90,6 +156,27 @@
       ]
     },
     "rect": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/layer",
+            "label": "Layer"
+          },
+          {
+            "path": "/options/frame",
+            "label": "Frame"
+          },
+          {
+            "path": "/options/width",
+            "label": "Width"
+          },
+          {
+            "path": "/options/height",
+            "label": "Height"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Fills an axis-aligned rectangle of width x height pixels whose top-left pixel is at (x, y), covering columns x to x + width - 1 and rows y to y + height - 1, on a named layer and frame. Pixels are replaced, not blended: an opaque colour overwrites the selected layer and frame, and transparent [0, 0, 0, 0] erases. Choose it for backgrounds, panels and blocks; a full-canvas rect is the usual way to give a frame an opaque background.",
       "sources": [
@@ -104,6 +191,23 @@
       ]
     },
     "circle": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/layer",
+            "label": "Layer"
+          },
+          {
+            "path": "/options/frame",
+            "label": "Frame"
+          },
+          {
+            "path": "/options/radius",
+            "label": "Radius"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Fills a raster disc centred on pixel (x, y): every pixel whose squared distance from the centre is at most radius squared, on a named layer and frame. Radius 0 draws a single pixel. Pixels are replaced, not blended: an opaque colour overwrites the selected layer and frame, and transparent [0, 0, 0, 0] erases. Choose it for round shapes and, with a transparent colour, for round cut-outs.",
       "sources": [
@@ -119,6 +223,15 @@
       ]
     },
     "tag": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/name",
+            "label": "Name"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Names an inclusive range of existing frames and records its playback direction as an Aseprite animation tag. Tags change no pixels; they are saved in sprite.aseprite and listed in sheet.json so that a game engine or an artist in Aseprite can play that sequence. Choose it to label animations such as walk or blink when the sprite has several frames.",
       "sources": [
@@ -137,6 +250,24 @@
       ]
     },
     "importImage": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/source",
+            "label": "Source",
+            "style": "lastSegment"
+          },
+          {
+            "path": "/options/layer",
+            "label": "Layer"
+          },
+          {
+            "path": "/options/frame",
+            "label": "Frame"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Place captured PNG artwork into an existing named layer and frame at integer canvas coordinates. Choose this to turn prepared raster assets into editable cels while retaining procedural drawing and animation tags. The declared image rectangle replaces existing pixels in that cel, including transparent pixels which erase; transparent top-layer pixels reveal lower layers in the flattened preview. Captures, reopened cels and both PNG publications are independently checked sample by sample.",
       "sources": [
@@ -307,7 +438,7 @@
         },
         "/properties/nodes/items/oneOf/0/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -569,7 +700,7 @@
         },
         "/properties/nodes/items/oneOf/1/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -659,7 +790,7 @@
         },
         "/properties/nodes/items/oneOf/2/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -761,7 +892,7 @@
         },
         "/properties/nodes/items/oneOf/3/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -994,7 +1125,7 @@
         },
         "/properties/nodes/items/oneOf/4/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -1256,7 +1387,7 @@
         },
         "/properties/nodes/items/oneOf/5/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -1555,7 +1686,7 @@
         },
         "/properties/nodes/items/oneOf/6/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]
@@ -1832,7 +1963,7 @@
         },
         "/properties/nodes/items/oneOf/7/properties/filter": {
           "status": "reference",
-          "explanation": "Select the declared operation that creates this node\u2019s result.",
+          "explanation": "Select the declared operation that creates this node’s result.",
           "sources": [
             "docs/studio-adaptor-contract.md"
           ]

@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Shared durable JSON and recursive native-runtime packaging."""
 import hashlib
 import io
@@ -14,7 +14,10 @@ LICENCES = 'schemaxis-licences'
 def atomic_json(path, value):
     path = Path(path)
     temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
+    from .wire_json import chunks
+    with temporary.open('w') as stream:
+        for chunk in chunks(value):
+            stream.write(chunk)
     temporary.replace(path)
 
 

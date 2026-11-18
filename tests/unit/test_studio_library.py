@@ -47,6 +47,18 @@ class StudioLibraryTests(unittest.TestCase):
                     validate_library(data)
                 self.assertEqual(caught.exception.fault.code, 'INVALID_STUDIO_LIBRARY')
 
+    def test_a_field_that_chooses_a_declared_sweep_is_a_sweep_reference(self):
+        def chooser(kind):
+            value = self.library()
+            value['snippets'][0]['fields']['choice'] = {'label': 'Sweep', 'type': kind, 'default': 'height'}
+            value['snippets'][0]['inserts'][0]['values'][0]['along'] = {'$sweep': {'$fill': 'choice'}}
+            return value
+        library = validate_library(chooser('sweepRef'))
+        self.assertEqual(instantiate_item(library, library['snippets'][0])['nodes'][0]['along'], {'$sweep': 'height'})
+        with self.assertRaises(SchemaxisError) as caught:
+            validate_library(chooser('axisRef'))
+        self.assertEqual(caught.exception.fault.code, 'INVALID_STUDIO_LIBRARY')
+
     def test_typed_constraints_and_cursor_fixture(self):
         for kind, default in [('enum', True), ('number', float('inf')), ('colour', [1, 0, 0, 1]),
                               ('colour', [2, 0, 0]), ('bounds', [1, 0, 0, 1, 0, 1])]:
@@ -98,9 +110,9 @@ class StudioLibraryTests(unittest.TestCase):
     def test_ordered_inserts_create_containers_and_merge(self):
         before = {'scenes': [{'visible': {'source': {'colour': 'red', 'opacity': 1}}}]}
         result = apply_inserts(before, [
-            {'at': '/axes/-', 'values': [{'name': 'x', 'values': [1]}]},
+            {'at': '/sweeps/-', 'values': [{'name': 'x', 'values': [1]}]},
             {'at': '/scenes/0/visible', 'merge': {'source': {'opacity': 0.5}, 'cut': {}}}])
         self.assertEqual(result['scenes'][0]['visible']['source'], {'colour': 'red', 'opacity': 0.5})
-        self.assertEqual(result['axes'][0]['name'], 'x')
-        self.assertNotIn('axes', before)
+        self.assertEqual(result['sweeps'][0]['name'], 'x')
+        self.assertNotIn('sweeps', before)
         self.assertEqual(fill_fields({'$fill': 'x'}, {'x': {'label': 'X', 'type': 'json'}}, {'x': None}), None)

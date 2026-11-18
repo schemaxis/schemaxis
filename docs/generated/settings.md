@@ -52,7 +52,7 @@ Generated from current code declarations. Do not edit by hand.
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"array","items":{"type":"number"},"minItems":6,"maxItems":6}` | **required** |
+| `bounds` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 
 Result: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
@@ -60,7 +60,7 @@ Result: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | **required** |
+| `bounds` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 
 Result: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
@@ -68,37 +68,37 @@ Result: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | **required** |
+| `bounds` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 | `before` | `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `after` | `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 
-Result: `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
+Result: `{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
 
 ## boundsFrame
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | **required** |
+| `bounds` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 | `before` | `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `after` | `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}` | `[0,0,0]` |
 | `floor` | `{"type":"number"}` | **required** |
 | `aspect` | `{"type":"array","items":{"type":"number","minimum":0,"exclusiveMinimum":true},"minItems":2,"maxItems":2}` | `[16,9]` |
 
-Result: `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
+Result: `{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
 
 ## boundsFromExtents
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `extents` | `{"type":"array","items":{"type":"number"},"minItems":6,"maxItems":6}` | **required** |
+| `extents` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 
-Result: `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
+Result: `{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
 
 ## boundsPoint
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | **required** |
+| `bounds` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 | `x` | `{"type":"enum","values":["min","mid","max"]}` | `"mid"` |
 | `y` | `{"type":"enum","values":["min","mid","max"]}` | `"mid"` |
 | `z` | `{"type":"enum","values":["min","mid","max"]}` | `"mid"` |
@@ -109,7 +109,7 @@ Result: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | **required** |
+| `bounds` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 
 Result: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
@@ -117,9 +117,9 @@ Result: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"array","items":{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},"minItems":1}` | **required** |
+| `bounds` | `{"type":"array","items":{"type":"union","title":"box","summary":"A box as min and max corners, or as six extents","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]},"minItems":1}` | **required** |
 
-Result: `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
+Result: `{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}`.
 
 ## directionVector
 
@@ -134,7 +134,7 @@ Result: `{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3}`.
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | **required** |
+| `bounds` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 | `aspect` | `{"type":"array","items":{"type":"number","minimum":0,"exclusiveMinimum":true},"minItems":2,"maxItems":2}` | `[16,9]` |
 | `padding` | `{"type":"number","minimum":0}` | `0.15` |
 | `parallel` | `{"type":"boolean"}` | `true` |
@@ -156,7 +156,7 @@ Result: `{"type":"array","items":{"type":"string"}}`.
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | **required** |
+| `bounds` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 | `aspect` | `{"type":"array","items":{"type":"number","minimum":0,"exclusiveMinimum":true},"minItems":2,"maxItems":2}` | `[16,9]` |
 | `padding` | `{"type":"number","minimum":0}` | `0.15` |
 | `parallel` | `{"type":"boolean"}` | `true` |
@@ -186,7 +186,7 @@ Result: `{"type":"number"}`.
 
 | Option | Type / constraints | Default |
 | --- | --- | --- |
-| `bounds` | `{"type":"object","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}}` | **required** |
+| `bounds` | `{"type":"union","options":[{"type":"object","title":"min and max corners","properties":{"min":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true},"max":{"type":"array","items":{"type":"number"},"minItems":3,"maxItems":3,"required":true}}},{"type":"array","title":"xmin, xmax, ymin, ymax, zmin, zmax","items":{"type":"number"},"minItems":6,"maxItems":6}]}` | **required** |
 | `axis` | `{"type":"enum","values":["x","y","z"]}` | **required** |
 | `count` | `{"type":"integer","minimum":1,"maximum":10000}` | `9` |
 

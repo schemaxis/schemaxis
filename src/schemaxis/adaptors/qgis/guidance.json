@@ -2,6 +2,19 @@
   "version": "schemaxis.studio-guidance/1",
   "operations": {
     "readVector": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "File",
+            "style": "lastSegment"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each row has its own source result. Other settings come from the starting instance."
+        }
+      },
       "status": "reviewed",
       "explanation": "Loads one vector layer from a single-file GeoJSON or GeoPackage as the start of a vector chain, keeping its geometry, attributes and declared CRS. Schemaxis copies the file into the run before QGIS opens the copy through the OGR provider. Choose it for every input layer; other operations take a reader or a later node as input. The layer must hold valid, nonempty 2D geometry with an EPSG CRS, at most 10000 features and one million vertices.",
       "sources": [
@@ -27,6 +40,18 @@
       ]
     },
     "reproject": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/crs",
+            "label": "Crs"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each operation has a distinct result and shares the captured input."
+        }
+      },
       "status": "reviewed",
       "explanation": "Transforms every feature's coordinates from the input layer's CRS to an explicit EPSG target CRS with QgsCoordinateTransform, keeping attributes. Choose it before buffer or centroid, which need a projected CRS (buffer in metres), or to match another layer's CRS before clipping. Ballpark and fallback transformations are disabled, so a missing datum grid makes the run fail instead of silently losing accuracy.",
       "sources": [
@@ -50,6 +75,18 @@
       ]
     },
     "centroid": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/inputs/input",
+            "label": "Layer"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each operation derives a separate centroid layer from its selected input."
+        }
+      },
       "status": "reviewed",
       "explanation": "Replaces each polygon or multipolygon feature by its planar area-weighted centre of mass (QgsGeometry.centroid), producing a point layer that keeps attributes and CRS. Choose it to reduce parcels or zones to representative points, for example before buffering around their centres. The input must be a polygon layer in a projected CRS; the boundary and area are not retained.",
       "sources": [
@@ -72,6 +109,22 @@
       ]
     },
     "buffer": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/distance",
+            "label": "Distance"
+          },
+          {
+            "path": "/options/segments",
+            "label": "Segments"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance produces its own result with these settings and can be used independently."
+        }
+      },
       "status": "reviewed",
       "explanation": "Replaces each feature by the area within a fixed distance of it (QgsGeometry.buffer), so points become discs, lines become corridors and polygons grow outward; attributes are kept. Choose it for proximity zones such as setbacks or catchments. The layer must be in a projected CRS whose map units are metres; geographic coordinates are rejected rather than buffering in degrees.",
       "sources": [
@@ -95,6 +148,18 @@
       ]
     },
     "clip": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/bounds",
+            "label": "Bounds"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each operation has a distinct result and shares the captured input."
+        }
+      },
       "status": "reviewed",
       "explanation": "Intersects each feature with an axis-aligned rectangle given in the input layer's CRS (QgsGeometry.intersection with a rectangle), keeping attributes. Features entirely outside the rectangle are dropped; those crossing its edge are cut. Choose it to restrict analysis to a study area; there is no clipping by another layer's polygons.",
       "sources": [
@@ -117,6 +182,23 @@
       ]
     },
     "selectAttributes": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/inputs/input",
+            "label": "Input"
+          },
+          {
+            "path": "/options/predicates",
+            "label": "Predicates",
+            "style": "omit"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each predicate set selects a separate vector result."
+        }
+      },
       "status": "reviewed",
       "explanation": "Select features using conjunctive literal typed attribute tests and explicit minimum/maximum count requirements; retain geometry, CRS and original fields. Declare minFeatures/maxFeatures to detect an unexpected selection. No geometry or CRS conversion occurs.",
       "sources": [
@@ -135,6 +217,27 @@
       ]
     },
     "summariseAttributes": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/inputs/input",
+            "label": "Input"
+          },
+          {
+            "path": "/options/groupBy",
+            "label": "Group by"
+          },
+          {
+            "path": "/options/aggregates",
+            "label": "Aggregates",
+            "style": "omit"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each set of aggregation rules produces its own result and node-owned summary files."
+        }
+      },
       "status": "reviewed",
       "explanation": "Publish a typed group summary table and CSV with sorted member IDs, explicit units and numeric null handling while passing the input vector through unchanged. Each summary publishes a CSV, a typed JSON table and a separate editable GeoPackage no-geometry table reopened from the saved QGIS project. The vector output remains suitable for downstream geometry operations.",
       "sources": [
@@ -1395,6 +1498,22 @@
           ]
         },
         "/properties/nodes/items/oneOf/6/properties/options/properties/aggregates/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/field",
+                "label": "Input field"
+              },
+              {
+                "path": "/statistic",
+                "label": "Statistic"
+              }
+            ],
+            "naming": {
+              "prefix": "aggregate"
+            },
+            "identityField": "name"
+          },
           "status": "reviewed",
           "explanation": "One named statistic column. count counts all member features and omits field; nonNullCount, sum and mean require a numeric source field. Declare units features for either count, or the source quantity units for sum/mean.",
           "sources": [

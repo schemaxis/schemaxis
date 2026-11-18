@@ -30,7 +30,7 @@ def document(value, extra=None, axes=None):
         {'id': 'cut', 'filter': 'pvExtractSelection', 'inputs': {'Input': 'grid', 'Selection': 'find'}}],
         'scenes': [{'id': 'view', 'geometry': ['cut']}]}
     if axes:
-        result['axes'] = axes
+        result['sweeps'] = axes
     return result
 
 
@@ -208,7 +208,7 @@ class SelectionQueryEnforcementTests(unittest.TestCase):
 
     def test_planning_checks_static_query_beside_dynamic_options(self):
         axes = [{'name': 'flip', 'values': [False, True]}]
-        bad = document(query({'array': 'exec', 'test': '>', 'value': 1}), {'InsideOut': {'$axis': 'flip'}}, axes)
+        bad = document(query({'array': 'exec', 'test': '>', 'value': 1}), {'InsideOut': {'$sweep': 'flip'}}, axes)
         with self.assertRaises(SchemaxisError) as caught:
             plan(bad)
         self.assertEqual(caught.exception.fault.code, 'INVALID_SELECTION_QUERY')
@@ -218,7 +218,7 @@ class SelectionQueryEnforcementTests(unittest.TestCase):
         for values, code in [([good, "__import__('os').system('id')"], 'INVALID_ARGUMENT'),
                              ([good, query({'array': 'eval', 'test': '>', 'value': 1})], 'INVALID_SELECTION_QUERY')]:
             with self.subTest(code=code), self.assertRaises(SchemaxisError) as caught:
-                plan(document({'$axis': 'q'}, axes=[{'name': 'q', 'values': values}]))
+                plan(document({'$sweep': 'q'}, axes=[{'name': 'q', 'values': values}]))
             self.assertEqual(caught.exception.fault.code, code)
 
     def test_runtime_values_are_checked_before_the_backend_sees_them(self):
@@ -347,10 +347,67 @@ class NativeBoundaryTests(unittest.TestCase):
             declaration = {'id': 'pvSelectionQuerySource', 'native': 'SelectionQuerySource', 'inputs': {},
                            'nativeIdentity': 'sources/SelectionQuerySource',
                            'options': {'QueryString': {'path': ['QueryString'], 'value': {'type': 'string'}}}}
-            with self.subTest(vtk_class=vtk_class), self.assertRaises(SchemaxisError) as caught:
+            with self.subTest(vtk_class=vtk_class), self.output_window(), self.assertRaises(SchemaxisError) as caught:
                 backend.create('find', declaration, {}, constructor)
             self.assertEqual(caught.exception.fault.code, code)
             self.assertIs(deleted[-1], proxy)
+
+    def test_create_refuses_a_node_that_reports_an_error_when_created(self):
+        from schemaxis.adaptors.paraview.native import ParaViewBackend
+        window = ReportingWindow()
+        core = types.ModuleType('vtkmodules.vtkCommonCore')
+        core.vtkOutputWindow = types.SimpleNamespace(GetInstance=window.instance)
+        reader = Reader(window, self.proxy({}, 'vtkXMLUnstructuredGridReader'))
+        deleted = []
+        backend = ParaViewBackend.__new__(ParaViewBackend)
+        backend.records, backend.loaded_dependencies = {}, set()
+        backend.pv = types.SimpleNamespace(XMLUnstructuredGridReader=reader.create, Delete=deleted.append)
+        declaration = {'id': 'readUnstructuredGrid', 'native': 'XMLUnstructuredGridReader', 'inputs': {},
+                       'options': {'files': {'path': ['FileName'], 'constructor': True,
+                                             'value': {'type': 'array', 'items': {'type': 'string'}}}}}
+        modules = {'vtkmodules': types.ModuleType('vtkmodules'), 'vtkmodules.vtkCommonCore': core}
+        with patch.dict(sys.modules, modules):
+            self.assertIs(backend.create('mesh', declaration, {}, {'files': ['good.vtu']}), reader.proxy)
+            self.assertEqual((deleted, window.observers), ([], {}))
+            with self.assertRaises(SchemaxisError) as caught:
+                backend.create('mesh', declaration, {}, {'files': ['unreadable.vtu']})
+        self.assertEqual((caught.exception.fault.code, caught.exception.fault.location),
+                         ('NATIVE_PIPELINE_ERROR', 'mesh'))
+        self.assertEqual((deleted, window.observers, backend.records), ([reader.proxy], {}, {}))
+
+
+class ReportingWindow:
+    """Stand-in for the application's output window: observers hear each reported error."""
+
+    def __init__(self):
+        self.observers = {}
+
+    def instance(self):
+        return self
+
+    def AddObserver(self, event, callback):
+        identity = len(self.observers) + 1
+        self.observers[identity] = callback
+        return identity
+
+    def RemoveObserver(self, identity):
+        del self.observers[identity]
+
+    def report(self):
+        for callback in list(self.observers.values()):
+            callback(self, 'ErrorEvent')
+
+
+class Reader:
+    """Stand-in for a reader constructor that reports an error for a file it cannot parse."""
+
+    def __init__(self, window, proxy):
+        self.window, self.proxy = window, proxy
+
+    def create(self, registrationName, FileName):
+        if FileName == ['unreadable.vtu']:
+            self.window.report()
+        return self.proxy
 
 
 class CatalogueRegenerationTests(unittest.TestCase):

@@ -25,8 +25,8 @@ from schemaxis.observations import at_pointer, bounded
 DOCUMENT = {'version': 'schemaxis/1', 'nodes': [
     {'id': 'source', 'filter': 'wavelet'},
     {'id': 'slice', 'filter': 'slice', 'inputs': {'input': 'source'},
-     'options': {'origin': {'$axis': 'cut'}, 'normal': 'z+'}}],
-    'times': [0, 1], 'axes': [{'name': 'cut', 'values': [[0, 0, 0], [0, 0, 1]]}],
+     'options': {'origin': {'$sweep': 'cut'}, 'normal': 'z+'}}],
+    'times': [0, 1], 'sweeps': [{'name': 'cut', 'values': [[0, 0, 0], [0, 0, 1]]}],
     'scenes': [{'id': 'sections', 'geometry': ['slice'], 'visible': {'slice': {}},
                 'images': [{'id': 'image', 'size': [192, 160], 'cameras': [{'direction': [0, 0, 1], 'up': [0, 1, 0]}]}]}]}
 

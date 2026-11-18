@@ -21,8 +21,8 @@ test('invalid patterns and widths are rejected like the server', () => {
   for (const width of [0, 13, true, 2.5]) {
     assert.throws(() => validateWidth(width), NamingError, String(width));
   }
-  assert.deepEqual(validatePattern('{index}-inlet_{param:inlet}-s{axis:stop}{ext}'),
-    ['index', 'param:inlet', 'axis:stop', 'ext']);
+  assert.deepEqual(validatePattern('{index}-inlet_{param:inlet}-s{sweep:stop}{ext}'),
+    ['index', 'param:inlet', 'sweep:stop', 'ext']);
 });
 
 test('sanitising matches output_naming.sanitise', () => {

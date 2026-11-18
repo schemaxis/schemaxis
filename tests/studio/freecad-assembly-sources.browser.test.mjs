@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {test} from 'node:test';
@@ -238,8 +238,8 @@ test('nested sourced assembly shows no false host diagnostic for its $artifact b
     await s.key('End', {modifiers: 2});
     await s.type('\n');
     await s.wait('window.__validations.length>0', 'background validation ran', 30000);
-    await s.wait(`!document.querySelector('.wb-diagnostic-state').textContent.startsWith('Editing')`, 'validation settled');
-    assert.equal(await s.evaluate(`document.querySelector('.wb-diagnostic-state').textContent`), '0 diagnostics');
+    await s.wait(`!window.studio.windows.active().window.editor.getSettledState().editing`, 'validation settled');
+    assert.deepEqual(await s.evaluate(`window.studio.windows.active().window.editor.getSettledState().diagnostics`), []);
   } finally {await s.close();}
 });
 

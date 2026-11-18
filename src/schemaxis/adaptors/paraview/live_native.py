@@ -1,10 +1,12 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Trusted serial builtin ParaView worker. Native imports remain process-local."""
+import math
 import os
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from schemaxis.live_runtime import GraphWorker, MAX_FACES, MAX_VERTICES
 from schemaxis.live_transport import fault, serve
+from schemaxis.core.faults import SchemaxisError
 
 
 def leaves(data):
@@ -35,7 +37,7 @@ class Worker(GraphWorker):
         if command == 'prepare-input':
             from .studio_native import prepare_input
             return prepare_input(args['document'], args['node'])
-        from schemaxis.pipeline import DefinitionGraph, RuntimeClosure
+        from schemaxis.pipeline import DefinitionGraph, RuntimeClosure, digest
         from .filters import catalogue
         from .studio import inspection_document
         from vtkmodules.vtkCommonCore import vtkIndent
@@ -44,35 +46,7 @@ class Worker(GraphWorker):
         try:
             active.activate([args['node']])
             active.apply(next(active.selection.visits()))
-            proxy = active.handles[args['node']]
-            proxy = active.backend.output_port(proxy, args['port'])
-            info = proxy.GetDataInformation()
-            assemblies = {}
-            for name, assembly in (('Hierarchy', info.GetHierarchy()), ('Assembly', info.GetDataAssembly())):
-                blocks = []
-                if assembly is not None:
-                    root = ET.fromstring(assembly.SerializeToXML(vtkIndent()))
-
-                    def visit(element, depth=0, parent=None):
-                        identity = int(element.attrib['id'])
-                        path = assembly.GetNodePath(identity)
-                        blocks.append({'selector': path, 'label': element.get('label', element.tag),
-                                       'depth': depth, 'parent': parent})
-                        if len(blocks) > 10000:
-                            fault('INSPECTION_LIMIT', 'Block hierarchy exceeds 10,000 entries')
-                        for child in element:
-                            if child.tag != 'dataset':
-                                visit(child, depth + 1, path)
-                    visit(root)
-                assemblies[name] = blocks
-            geometry = None
-            if args.get('geometry'):
-                self.active, self.prepared = active, (master, active.selection, None, [args['node']])
-                try: geometry = {'objects': self.geometry(), 'units': 'native', 'observations': dict(active.observations)}
-                finally: self.active = self.prepared = None
-            return {'geometry': geometry, 'node': args['node'], 'port': args['port'],
-                    'observation': {'bounds': list(info.GetBounds()), 'points': info.GetNumberOfPoints(), 'cells': info.GetNumberOfCells()},
-                    'assemblies': assemblies, 'scope': 'Current draft input and its upstream dependencies; no publications'}
+            return inspect_resident(active, args['node'], port=args['port'], geometry=args.get('geometry', False))
         finally:
             active.close()
 
@@ -211,3 +185,79 @@ def start(directory, parent_pid=None, parent_start=None):
     if servermanager.ActiveConnection.IsRemote() or (controller and controller.GetNumberOfProcesses() != 1):
         fault('UNSUPPORTED_EXECUTION', 'Live ParaView requires a serial builtin connection')
     serve(directory, Worker(), parent_pid=parent_pid, parent_start=parent_start)
+
+
+def inspect_resident(active, node, port=0, geometry=False):
+    """Read assembly metadata and optional display geometry without unloading data."""
+    from vtkmodules.vtkCommonCore import vtkIndent
+    from schemaxis.pipeline import digest
+    args = {'node': node, 'port': port, 'geometry': geometry, 'document': active.master.document}
+    master = active.master
+    self = Worker()
+    proxy = active.handles[args['node']]
+    proxy = active.backend.output_port(proxy, args['port'])
+    info = proxy.GetDataInformation()
+    assemblies = {}
+    for name, assembly in (('Hierarchy', info.GetHierarchy()), ('Assembly', info.GetDataAssembly())):
+        blocks = []
+        if assembly is not None:
+            root = ET.fromstring(assembly.SerializeToXML(vtkIndent()))
+
+            def visit(element, depth=0, parent=None):
+                identity = int(element.attrib['id'])
+                path = assembly.GetNodePath(identity)
+                blocks.append({'selector': path, 'label': element.get('label', element.tag),
+                               'depth': depth, 'parent': parent})
+                if len(blocks) > 10000:
+                    fault('INSPECTION_LIMIT', 'Block hierarchy exceeds 10,000 entries')
+                for child in element:
+                    if child.tag != 'dataset':
+                        visit(child, depth + 1, path)
+            visit(root)
+        assemblies[name] = blocks
+    geometry = geometry_unavailable = None
+    if args.get('geometry'):
+        self.revision += 1
+        self.active, self.prepared = active, (master, active.selection, None, [args['node']])
+        try: geometry = {'objects': self.geometry(), 'units': 'native', 'revision': self.revision,
+                         'faceIds': 'revision-scoped', 'documentDigest': digest(args['document']),
+                         'observations': dict(active.observations)}
+        except SchemaxisError as error:
+            if error.fault.code != 'LIVE_LIMIT':
+                raise
+            geometry_unavailable = {'code': error.fault.code, 'message': error.fault.message}
+        finally: self.active = self.prepared = None
+    names = {}
+    source = active.handles[node]
+    properties = source.ListProperties()
+    for native, key in (('MeshRegions','regions'), ('CellArrays','cellArrays')):
+        if native in properties:
+            names[key] = list(getattr(source, native).Available)
+    if 'TimestepValues' in properties: names['availableTimes'] = list(source.TimestepValues)
+    from .reader_choices import available_choices
+    choices = available_choices(master.declarations[master.nodes[node]['filter']], source, properties)
+    if choices:
+        names['readerChoices'] = choices
+    # Dataset metadata only: no Fetch or transfer of array tuples to Studio.
+    fields = {}
+    for association, arrays in (('POINTS', proxy.PointData), ('CELLS', proxy.CellData)):
+        fields[association] = {}
+        for key in arrays.keys():
+            array = arrays[key]
+            numeric = array.GetDataType() != 13
+            def finite_range(component):
+                values = list(array.GetRange(component)) if numeric else None
+                return values if values is not None and all(math.isfinite(value) for value in values) else None
+            components = array.GetNumberOfComponents()
+            fields[association][key] = {'components': components, 'range': finite_range(-1),
+                                       'componentRanges': [finite_range(i) for i in range(components)],
+                                       'numeric': numeric}
+    return inspection_reply({**names, 'geometry': geometry, 'node': args['node'], 'port': args['port'],
+            **({'geometryUnavailable': geometry_unavailable} if geometry_unavailable else {}),
+            'observation': {'bounds': list(info.GetBounds()), 'points': info.GetNumberOfPoints(), 'cells': info.GetNumberOfCells(),
+                            'dataType': info.GetDataClassName(), 'fields': fields},
+            'assemblies': assemblies, 'scope': 'Current draft input and its upstream dependencies; no publications'})
+
+
+# Retain the adaptor-level import for existing native callers.
+from schemaxis.live_transport import inspection_reply

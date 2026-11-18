@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 // Real-server coverage for authoring, snippets, samples, reference chips and parent design edits.
 import assert from 'node:assert/strict';
 import {mkdir, readFile, readdir, writeFile} from 'node:fs/promises';
@@ -34,14 +34,18 @@ for (const theme of ['light', 'dark']) {
     try {
       await start(session, theme);
       await session.clickSelector('.wb-outline-item[data-pointer="/nodes/0"]');
-      assert.equal(await session.evaluate(`document.querySelector('[aria-label="/nodes/0/options/length"]').value`),
+      await session.clickSelector('.wb-overview-node.selected [data-action="edit-settings"]');
+      await session.wait(`document.querySelector('.operation-dialog')`, 'full box settings');
+      assert.equal(await session.evaluate(`document.querySelector('[aria-label="box.options.length"]').value`),
         '30');
       await session.evaluate(`(() => {
-        const input = document.querySelector('[aria-label="/nodes/0/options/length"]');
+        const input = document.querySelector('[aria-label="box.options.length"]');
         input.value = '42';
-        input.dispatchEvent(new Event('change', {bubbles: true}));
+        input.dispatchEvent(new Event('input', {bubbles: true}));
+        [...document.querySelectorAll('.operation-dialog > .dialog-footer button')].find(b=>b.textContent==='Apply changes').click();
       })()`);
       await session.wait(`JSON.parse(${active}.editor.getValue()).nodes[0].options.length === 42`, 'property changed');
+      await session.clickSelector('[data-sidebar=library]');
       await session.evaluate(`document.querySelector('[data-library="add-box"]')
         .dispatchEvent(new MouseEvent('mouseenter'))`);
       await session.wait(`document.querySelector('.sx-ed-previewing')`, 'ghost shown');
@@ -105,6 +109,7 @@ for (const theme of ['light', 'dark']) {
       assert.equal(await session.evaluate(`getComputedStyle(document.querySelector('.wb-editor-host')).display`),
         'none');
       await session.clickSelector('[data-tab="input"]');
+      await session.clickSelector('[data-sidebar=guide]');
       await session.clickSelector('.wb-outline-item[data-pointer="/nodes/0"]');
       await session.evaluate(`document.querySelectorAll('.toast [aria-label="Dismiss"]').forEach((b) => b.click())`);
       assert.equal(await session.evaluate(`getComputedStyle(document.querySelector('[data-viewer-panel="text"]'))
@@ -135,12 +140,14 @@ test('Workbench displays and edits an existing array property', {timeout: 90000}
     })()`);
     await session.wait(`${active}.store?.get().schema`, 'reader workbench loaded');
     await session.clickSelector('.wb-outline-item[data-pointer="/nodes/0"]');
-    assert.deepEqual(JSON.parse(await session.evaluate(
-      `document.querySelector('[aria-label="/nodes/0/options/files"]').value`)), ['surface.vtp']);
+    await session.clickSelector('.wb-overview-node.selected [data-action="edit-settings"]');
+    await session.wait(`document.querySelector('.operation-dialog')`, 'full reader settings');
+    assert.equal(await session.evaluate(`document.querySelector('[aria-label="readSurface.options.files[0]"]').value`), 'surface.vtp');
     await session.evaluate(`(() => {
-      const field = document.querySelector('[aria-label="/nodes/0/options/files"]');
-      field.value = JSON.stringify(['edited.vtp']);
-      field.dispatchEvent(new Event('change', {bubbles: true}));
+      const field = document.querySelector('[aria-label="readSurface.options.files[0]"]');
+      field.value = 'edited.vtp';
+      field.dispatchEvent(new Event('input', {bubbles: true}));
+      [...document.querySelectorAll('.operation-dialog > .dialog-footer button')].find(b=>b.textContent==='Apply changes').click();
     })()`);
     await session.wait(`JSON.parse(${active}.editor.getValue()).nodes[0].options.files[0] === 'edited.vtp'`,
       'edited array retained in source');
@@ -354,6 +361,7 @@ test('Workbench output references retain their revision and reject modified arti
         }
       }
       await writeFile(artifact.file, 'Modified after verification\n');
+      await session.clickSelector('[data-sidebar=library]');
       await session.evaluate(`document.querySelector('.wb-artifact button').scrollIntoView({block: 'center'})`);
       await session.evaluate(`new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))`);
       await session.clickSelector('.wb-artifact button');

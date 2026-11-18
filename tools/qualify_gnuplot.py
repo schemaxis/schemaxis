@@ -212,7 +212,7 @@ def main():
         source.write_bytes(source.read_bytes().replace(b'1,2,0.5',b'1,2.0,0.5'))
         third=workflow.execute(graph,directory/'workflow',locations=locations,timeout=30,resume=True);assert not third['jobs'][0]['reused'];assert workflow.verify(directory/'workflow')['verified']
         report['workflow']={'baseline':first['status'],'unchangedReused':True,'changedSamePathBytesReused':False}
-        study=copy.deepcopy(document);study['definitions']={'title':'Bound calibration'};study['title']={'$document':'/definitions/title'};study['axes']=[{'name':'size','values':[800,960]}];study['width']={'$axis':'size'}
+        study=copy.deepcopy(document);study['definitions']={'title':'Bound calibration'};study['title']={'$document':'/definitions/title'};study['sweeps']=[{'name':'size','values':[800,960]}];study['width']={'$sweep':'size'}
         result=adaptor.run(study,directory/'study',executable=locations['gnuplot'],timeout=30);assert adaptor.verify(directory/'study')['verified'];assert len(result['states'])==2
         report['composition']={'states':2,'verified':True}
         report['inflightLifecycle']=interrupted_processes(directory,document)

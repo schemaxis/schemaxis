@@ -1,6 +1,6 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden
 """Application-owned scene and settings schemas; host-safe."""
-from schemaxis.schema import NAME, DRAFT, object_schema, arguments_schema, argument_schema, option_schema, graph_document_schema
+from schemaxis.schema import NAME, NODE_NAME, DRAFT, object_schema, arguments_schema, argument_schema, option_schema, graph_document_schema
 from schemaxis.camera import CAMERA
 from .publication import APPEARANCE, IMAGE_BACKGROUND, STYLE
 
@@ -10,7 +10,8 @@ def scene_schema(catalogue, definitions):
         'minimum': 32, 'maximum': 8192}, 'minItems': 2, 'maxItems': 2,
         'default': [640, 480]},
         **{key: argument_schema(spec) for key, spec in IMAGE_BACKGROUND.items()},
-        'cameras': {'type': 'array', 'minItems': 1, 'items': arguments_schema(CAMERA, dynamic=True)}}, ['id', 'cameras'])
+        'cameras': {'type': 'array', 'minItems': 1, 'items': {'anyOf': [
+            arguments_schema(CAMERA, dynamic=True), {'$ref': '#/$defs/runtime'}]}}}, ['id', 'cameras'])
     images = {'type': 'array', 'items': image}
     styles = {'type': 'object', 'additionalProperties': arguments_schema(APPEARANCE, dynamic=True)}
     readbacks = []
@@ -28,9 +29,9 @@ def scene_schema(catalogue, definitions):
     for name, declaration in catalogue.items():
         if declaration.get('role') != 'writer': continue
         export_variants.append(object_schema({
-            'id': NAME, 'node': NAME, 'writer': {'const': name},
+            'id': NAME, 'node': NODE_NAME, 'writer': {'const': name},
             'options': {'$ref': '#/$defs/options-' + name},
-            'resources': object_schema({key:NAME for key,spec in declaration['inputs'].items()
+            'resources': object_schema({key:NODE_NAME for key,spec in declaration['inputs'].items()
                                         if spec.get('kind','data')!='data'}),
             'extension': {'enum': declaration['publication']['extensions']},
             'comparison': {'enum': ['exact', 'geometry', 'pixels', 'table', 'semantic']},
@@ -40,17 +41,17 @@ def scene_schema(catalogue, definitions):
         }, ['id', 'node', 'writer']))
     scene = object_schema({'id': NAME, 'visible': styles, 'images': images,
         'exports': {'type': 'array', 'items': {'oneOf': export_variants}},
-        'geometry': {'type': 'array', 'items': NAME}, 'gltf': {'type': 'boolean', 'default': False},
+        'geometry': {'type': 'array', 'items': NODE_NAME}, 'gltf': {'type': 'boolean', 'default': False},
         'stateBundle': {'type': 'boolean', 'default': False},
         'appearances': {'type': 'array', 'minItems': 1, 'items': styles, 'default': [{}]},
-        'measurements': {'type': 'array', 'items': object_schema({'node': NAME,
+        'measurements': {'type': 'array', 'items': object_schema({'node': NODE_NAME,
             'association': {'enum': ['POINTS', 'CELLS', 'ROWS'], 'default': 'POINTS'}}, ['node'])}}, ['id'])
     return scene
 
 
 def document_schema():
-    reference = {'oneOf': [NAME, object_schema({'node': NAME, 'port': {'type': 'integer', 'minimum': 0}}, ['node', 'port'])]}
-    return graph_document_schema('paraview', scene_schema, reference=reference, source_times=True)
+    reference = {'oneOf': [NODE_NAME, object_schema({'node': NODE_NAME, 'port': {'type': 'integer', 'minimum': 0}}, ['node', 'port'])]}
+    return graph_document_schema('paraview', scene_schema, reference=reference, node_name=NODE_NAME, source_times=True)
 
 
 def style_schema():
@@ -63,7 +64,7 @@ def time_schema():
 
 
 def runtime_variants():
-    return [object_schema({'$sample': NAME, 'association': {'enum': ['POINTS', 'CELLS', 'ROWS']},
+    return [object_schema({'$sample': NODE_NAME, 'association': {'enum': ['POINTS', 'CELLS', 'ROWS']},
         'field': {'type': 'string', 'minLength': 1},
         'index': {'anyOf': [{'type': 'integer', 'minimum': 0}, {'$ref': '#/$defs/runtime'}]},
         'component': {'type': 'integer', 'minimum': 0},

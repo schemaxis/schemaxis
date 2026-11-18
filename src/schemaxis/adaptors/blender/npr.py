@@ -68,6 +68,7 @@ def schema_property(*, public=True):
         line_set = layer['lineSets']['items']['properties']
         line_set['edges']['items']['enum'] = list(PUBLIC_EDGES)
         line_set['edges']['maxItems'] = len(PUBLIC_EDGES)
+        line_set['edges']['uniqueItems'] = True
         line_set['edgeMatch']['enum'] = ['any']; line_set['invertEdges']['const'] = False
         line_set['scope']['anyOf'] = [variant for variant in line_set['scope']['anyOf']
             if variant['properties']['kind']['enum'][0] in ('objects', 'collection')]

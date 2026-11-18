@@ -11,6 +11,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import shutil
 import stat
 import time
@@ -513,6 +514,129 @@ def h5dump_version(paths, directory, deadline):
 
 
 # ------------------------------------------------------------------ capture
+def studio_peek(document, source):
+    """Provide bounded CSV header choices without running the native worker."""
+    import csv
+
+    if source.startswith("/"):
+        return {"readerChoices": {"scales": studio_dimension_scales(document, source)}}
+    inputs = document.get("inputs", [])
+    if (not isinstance(inputs, list) or len(inputs) > model.COMMON["inputs"]["maxItems"]
+            or any(not isinstance(item, dict) for item in inputs)):
+        fail("UNAVAILABLE_METADATA", "Choose a declared CSV input.")
+    matches = [item for item in inputs if item.get("id") == source]
+    if len(matches) != 1 or matches[0].get("format") != "csv":
+        fail("UNAVAILABLE_METADATA", "Choose a unique declared CSV input.")
+    item = matches[0]
+    path, delimiter, checksum = item.get("path"), item.get("delimiter", ","), item.get("sha256")
+    if (not isinstance(path, str) or delimiter not in (",", ";", "tab")
+            or ("sha256" in item and (not isinstance(checksum, str) or not model.HEX.fullmatch(checksum)))):
+        fail("UNAVAILABLE_METADATA", "Provide a valid absolute CSV path, delimiter and optional checksum.")
+    model.absolute_file(path, "$.inputs.path", "UNAVAILABLE_METADATA")
+    data = bounded(path, "RESOURCE_NOT_FOUND", 1024 * 1024)
+    if checksum and sha(data) != checksum:
+        fail("HDF5_INPUT_CHANGED", "The input bytes differ from the declared sha256.")
+    try:
+        names, _ = expect.parse_csv(data, delimiter, "$.inputs")
+    except csv.Error as error:
+        fail("UNAVAILABLE_METADATA", "The CSV cannot be parsed: " + str(error))
+    if len(names) > 256 or any(len(name) > 256 for name in names):
+        fail("UNAVAILABLE_METADATA", "The CSV header exceeds the Studio choice limit.")
+    return {"readerChoices": {"columns": names}}
+
+
+def studio_dimension_scales(document, pointer):
+    """Choose declared scales of the correct length for this dataset axis."""
+    match = re.fullmatch(r"/objects/([0-9]{1,6})/dimensions/([0-9]{1,2})/axis", pointer)
+    objects = document.get("objects", [])
+    if document.get("operation") != "createFile" or not match or not isinstance(objects, list):
+        fail("UNAVAILABLE_METADATA", "Choose an axis in a declared dataset.")
+    try:
+        owner = objects[int(match[1])]
+        axis = owner["dimensions"][int(match[2])]["axis"]
+        shape = owner["shape"]
+        if not isinstance(shape, list) or type(axis) is not int or not 0 <= axis < len(shape):
+            raise ValueError
+        size = shape[axis]
+        if type(size) is not int or size < 0:
+            raise ValueError
+    except (IndexError, KeyError, TypeError, ValueError):
+        fail("UNAVAILABLE_METADATA", "Choose an axis with a declared size.")
+    names = {item["path"] for item in objects if isinstance(item, dict)
+             and isinstance(item.get("path"), str) and item["path"] != owner.get("path")
+             and isinstance(item.get("scale"), str) and item.get("shape") == [size]}
+    if len(names) > 1024:
+        fail("UNAVAILABLE_METADATA", "The dimension scales exceed the Studio choice limit.")
+    return sorted(names)
+
+
+def studio_copy(document, directory, key, hash_key):
+    path, checksum = document.get(key), document.get(hash_key)
+    if (not isinstance(path, str)
+            or (hash_key in document and (not isinstance(checksum, str) or not model.HEX.fullmatch(checksum)))):
+        fail("INVALID_HDF5_SOURCE", "Choose a valid HDF5 source and optional checksum.", "$." + key)
+    model.absolute_file(path, "$." + key, "INVALID_HDF5_SOURCE")
+    data = bounded(path, "INVALID_HDF5_SOURCE", model.MAX_SOURCE_BYTES)
+    if checksum and sha(data) != checksum:
+        fail("HDF5_INPUT_CHANGED", "The source bytes differ from the declared sha256.", "$." + key)
+    (directory / (key + ".h5")).write_bytes(data)
+
+
+def studio_extract_target(document, pointer):
+    """Resolve the dataset and the ordered edit prefix visible at that field."""
+    match = re.fullmatch(r"/(edits|extracts)/([0-9]{1,6})/(path|dataset)", pointer)
+    if not match:
+        model.object_path(pointer, "$.dataset")
+        return pointer, []
+    collection, index, prop = match[1], int(match[2]), match[3]
+    rows = document.get(collection)
+    if not isinstance(rows, list) or index >= len(rows) or not isinstance(rows[index], dict):
+        fail("UNAVAILABLE_METADATA", "Choose an HDF5 dataset.")
+    target = rows[index]
+    if collection == "edits" and (prop != "path" or target.get("action") != "write"):
+        fail("UNSUPPORTED_INSPECTION", "Choose a compound dataset write.")
+    if collection == "extracts" and prop != "dataset":
+        fail("UNSUPPORTED_INSPECTION", "Choose a dataset extraction.")
+    dataset = model.object_path(target.get(prop), "$.dataset")
+    if document.get("operation") != "editFile":
+        return dataset, []
+    edits = document.get("edits")
+    if not isinstance(edits, list) or len(edits) > model.MAX_EDITS:
+        fail("UNAVAILABLE_METADATA", "Complete the ordered HDF5 edits first.")
+    return dataset, edits[:index] if collection == "edits" else edits
+
+
+def studio_inspect(document, source, executable, directory, *, port=0, prepare=False, geometry=False):
+    """Inspect metadata in scratch copies of the declared sources."""
+    operation = document.get("operation")
+    if (port or prepare or geometry or operation not in ("extractData", "compareFiles", "editFile")
+            or (operation == "compareFiles" and source != operation)
+            or (operation == "editFile" and not source.startswith(("/edits/", "/extracts/")))):
+        fail("UNSUPPORTED_INSPECTION", "Choose an HDF5 dataset or comparison.")
+    directory.mkdir()
+    if operation == "compareFiles":
+        studio_copy(document, directory, "source", "sha256")
+        studio_copy(document, directory, "reference", "referenceSha256")
+        stage, field, config = "studio-paths", "paths", {}
+    else:
+        dataset, before = studio_extract_target(document, source)
+        if before:
+            prefix = {key: document[key] for key in ("version", "operation", "source", "sha256", "inputs", "dependencies", "access")
+                      if key in document}
+            prefix.update(file={"name": "studio-preview.h5"}, edits=before)
+            replay = directory / "preceding-edits"
+            run(prefix, replay, executable=executable, timeout=30)
+            # The worker follows only hard links within this file and reads no values.
+            (replay / "studio-preview.h5").replace(directory / "source.h5")
+        else:
+            studio_copy(document, directory, "source", "sha256")
+        stage, field, config = "studio-compound", "fields", {"dataset": dataset}
+    (directory / "native-worker.py").write_text(worker_source())
+    atomic_json(directory / "native-config.json", config)
+    names = native({"python": executable}, directory, stage, time.monotonic() + 15)
+    return {"readerChoices": {field: names}}
+
+
 def capture(p, directory):
     captured, records = {}, []
     for item in p.get('inputs', []):

@@ -9,7 +9,7 @@ from schemaxis.artifacts import atomic_json, runtime_archive
 from schemaxis.core.faults import SchemaxisError
 from schemaxis.documents import resolve_document
 from schemaxis.core.declarations import validate_value
-from schemaxis.core.times import TIMES_ARGUMENT, resolve_times
+from schemaxis.core.times import resolve_times, validate_selection
 from schemaxis.adaptors.paraview.mvp.runners import require_paraview, PARAVIEW_OFFSCREEN
 from schemaxis.dispatch import SubprocessRunner
 from schemaxis.errors import fail, keys
@@ -120,7 +120,7 @@ def verify_receipt(directory, master, outputs):
             fail('VERIFICATION_FAILED', 'runtime sample evidence is missing', source)
         for key in order:
             node = master.nodes[key]
-            expected_options = evaluate(node['options'], visit['axes'], state['observations'], visit['time'], key, sampled_value)
+            expected_options = evaluate(node['options'], visit['sweeps'], state['observations'], visit['time'], key, sampled_value, master.scope, master.pointer(key))
             expected_options = validate_options(master.declarations[node['filter']], expected_options, key)
             if state['effective'][key] != expected_options:
                 fail('VERIFICATION_FAILED', 'effective options differ from authored values and observations', key)
@@ -152,6 +152,8 @@ def verify_receipt(directory, master, outputs):
     expected_events.extend({'event': 'delete', 'node': k} for k in reversed(master.order) if k in previous)
     if receipt.get('events') != expected_events:
         fail('VERIFICATION_FAILED', 'native lifecycle event sequence differs from plan', str(directory))
+    from schemaxis import spatial_results
+    spatial_results.verify(master, receipt, directory)
     by_state = {(s['id'], v['timeIndex'], tuple(sorted(v['indices'].items()))): (s, v, state)
                 for state, (s, v) in zip(states, planned_states)}
     seen = set()
@@ -165,7 +167,7 @@ def verify_receipt(directory, master, outputs):
                     if (item['node'], item['association'], item['field'], item['index'], item['component'], item['block']) == (source, association, field, index, component, block):
                         return item['value']
                 fail('VERIFICATION_FAILED', 'export sample evidence is absent', source)
-            values = evaluate(expected['options'], visit['axes'], state['observations'], visit['time'], expected['id'], export_sample)
+            values = evaluate(expected['options'], visit['sweeps'], state['observations'], visit['time'], expected['id'], export_sample, master.scope)
             effective = validate_options(master.declarations[expected['writer']], values, expected['id'])
             if artifact.get('effectiveOptions') != effective or any(artifact.get(k) != expected[k] for k in ('writer','comparison','tolerance','readback')) or artifact.get('acceptedLosses') != expected['acceptLosses']:
                 fail('VERIFICATION_FAILED', 'export settings differ from authored settings', str(directory))
@@ -194,7 +196,7 @@ def verify_receipt(directory, master, outputs):
                         return item['value']
                 fail('VERIFICATION_FAILED', 'presentation sample evidence is absent', source)
             def resolve(value):
-                return evaluate(value, visit['axes'], state['observations'], visit['time'], scene['id'], sample)
+                return evaluate(value, visit['sweeps'], state['observations'], visit['time'], scene['id'], sample, master.scope)
             text = scene.get('text', [])
             appearance = {k: style(resolve(v), scene['id'] + '.' + k, text=k in text)
                           for k, v in scene['appearances'][identity['appearance']].items()}
@@ -256,6 +258,26 @@ def verify_receipt(directory, master, outputs):
 
 
 
+def inspection_plan(document, *, draft=False):
+    """Check the whole pipeline before source-time inspection, without loading data."""
+    time_request = document['times']
+    keys(time_request, ('source', 'select'), '$.times')
+    validate_selection(time_request.get('select'), location='$.times.select')
+    provisional = {**document, 'times': [0.0]}
+    if draft and provisional.get('scenes') == []:
+        master = DefinitionGraph(provisional, catalogue())
+        outputs, resolved = [], {'status': 'draft', 'pipeline': master.to_dict()}
+    else:
+        master, outputs, resolved = plan(provisional)
+    source = time_request.get('source')
+    if (not isinstance(source, str) or source not in master.nodes
+            or master.nodes[source]['inputs']):
+        fail('INVALID_TIME_SOURCE', 'time selection requires a source without connected inputs', '$.times.source')
+    if list(markers(master.nodes[source]['options'])):
+        fail('INVALID_TIME_SOURCE', 'time-inspection source settings must be constant', source)
+    return master, outputs, resolved
+
+
 def run(document, directory, *, roots=None, timeout=300):
     authored = copy.deepcopy(document)
     document, resolution = resolve_document(copy.deepcopy(document))
@@ -263,16 +285,8 @@ def run(document, directory, *, roots=None, timeout=300):
         fail('INVALID_DOCUMENT', 'pipeline input must be an object')
     time_request = document.get('times') if isinstance(document.get('times'), dict) else None
     if time_request is not None:
-        keys(time_request, ('source', 'select'), '$.times')
-        validate_value(time_request.get('select'), TIMES_ARGUMENT, '$.times.select')
-        provisional = {**document, 'times': [0.0]}
-        master, outputs, resolved = plan(provisional)
+        master, outputs, resolved = inspection_plan(document)
         source = time_request.get('source')
-        if (not isinstance(source, str) or source not in master.nodes
-                or master.nodes[source]['inputs']):
-            fail('INVALID_TIME_SOURCE', 'time selection requires a source without connected inputs', '$.times.source')
-        if list(markers(master.nodes[source]['options'])):
-            fail('INVALID_TIME_SOURCE', 'time-inspection source settings must be constant', source)
     else:
         master, outputs, resolved = plan(document)
     directory = Path(directory).expanduser().absolute()
@@ -321,6 +335,8 @@ def run(document, directory, *, roots=None, timeout=300):
         result = {'status': 'succeeded', 'verified': True, 'directory': str(directory),
                   'artifacts': len(receipt['artifacts']), 'planDigest': master.to_dict()['digest'],
                   'runtimeSha256': hashlib.sha256(snapshot).hexdigest()}
+        if 'spatial' in receipt:
+            result['spatial'] = receipt['spatial']
         from .integration import compatibility
         result['compatibility'] = compatibility(directory, receipt)
         atomic_json(directory / 'result.json', result)

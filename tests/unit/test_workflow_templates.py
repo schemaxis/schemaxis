@@ -56,6 +56,46 @@ class WorkflowTemplateTests(unittest.TestCase):
         self.assertEqual(caught.exception.fault.code, code)
         self.assertTrue(caught.exception.fault.location)
 
+    def test_a_numeric_parameter_takes_an_expression_resolved_in_its_namespace(self):
+        self.body['dimensions'].update(base=4, box={'min': [0, 0, 0], 'max': [2, 4, 6]})
+        self.manifest['parameters'].update(
+            count=self.parameter('count', 'integer', constraints={'minimum': 1, 'maximum': 9}),
+            direction=self.parameter('direction', 'vector', constraints={'length': 3}))
+        bundle = self.capture()
+        marker = {'$expr': 'base * 2 + 1'}
+        result = bind_values(bundle, self.case(bundle, height=marker, count={'$expr': 'floor(base / 2)'},
+                                               direction={'$expr': 'box.size / 2'}))
+        self.assertEqual(result['values'], {'height': 9, 'count': 2, 'direction': [1, 2, 3]})
+        self.assertEqual(result['document']['dimensions']['height'], marker)
+        binding = next(item for item in result['bindings'] if item['parameter'] == 'height')
+        self.assertEqual((binding['value'], binding['resolved'], binding['previous']), (marker, 9, 5))
+        plan = workflow.inspect_plan(result['document'])
+        self.assertEqual(plan['operations'][0]['id'], 'design')
+
+    def test_an_expression_parameter_is_checked_for_type_limits_and_phase(self):
+        self.body['dimensions'].update(base=4)
+        self.body['sweeps'] = [{'name': 't', 'values': [1, 2]}]
+        self.manifest['parameters'].update(
+            count=self.parameter('count', 'integer', default=2),
+            label=self.parameter('label', 'string', default='body'))
+        bundle = self.capture()
+        for value, code in (({'$expr': 'base * 10'}, 'INVALID_PARAMETER'),
+                            ({'$expr': 'vector(base, 0, 0)'}, 'INVALID_PARAMETER'),
+                            ({'$expr': 'base +'}, 'EXPR_SYNTAX'),
+                            ({'$expr': 'missing + 1'}, 'EXPR_UNKNOWN_NAME'),
+                            ({'$expr': 'height + 1'}, 'EXPR_CYCLE'),
+                            ({'$expr': 't + 1'}, 'EXPR_PHASE'),
+                            ({'$expr': 'base', 'extra': 1}, 'INVALID_PARAMETER')):
+            with self.subTest(value=value), self.assertRaises(SchemaxisError) as caught:
+                bind_values(bundle, self.case(bundle, height=value))
+            self.assertEqual((caught.exception.fault.code, caught.exception.fault.location),
+                             (code, '$.case.values.height'))
+        with self.assertRaises(SchemaxisError) as caught:
+            bind_values(bundle, self.case(bundle, height={'$expr': 'base +'}))
+        self.assertEqual(caught.exception.fault.observed['position'], 6)
+        self.fault('INVALID_PARAMETER', lambda: bind_values(bundle, self.case(bundle, count={'$expr': 'base / 2'})))
+        self.fault('INVALID_PARAMETER', lambda: bind_values(bundle, self.case(bundle, label={'$expr': 'base'})))
+
     def test_supplied_value_defaults_and_source_map(self):
         bundle = self.capture()
         case = self.case(bundle, height=7)

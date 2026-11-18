@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Persistent Blender worker with bounded authored input and native geometry.
 
 LiveSession(executable, fresh_directory) supports request('apply', document=...),
@@ -11,8 +11,11 @@ Native scenes are process-local, with no reverse synchronisation of GUI edits.
 Images are fixed-camera 640x480 CPU previews, not authored batch publications.
 Only bounded geometry is transferred (100000 faces, 500000 face vertices,
 32 MiB JSON); limits do not bound the native application's transient memory.
-Timeout/exit closes the session. Native apply failures rebuild and compare the
-previous observations and tessellation, or report UNCERTAIN_STATE. Close the
+Timeout/exit closes the session. A resident apply changes only the affected
+native objects. A native failure is reversed by the opposite change and compared
+with the previous observations and tessellation; a failure inside native object
+construction, or an unverified reversal, reports UNCERTAIN_STATE, keeps the known
+objects and refuses further work until the session is closed. Close the
 session explicitly (or use a with block). Idle workers exit when the host dies.
 Save produces a .blend and .blend.receipt.json, embeds authored metadata, and
 checks the saved library's native object/material membership. The receipt states

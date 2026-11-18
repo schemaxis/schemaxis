@@ -15,8 +15,8 @@ test('automatic identities and primary inputs respect selection, kinds, collisio
   item.ports.base.multiple=true;
   assert.deepEqual(initialOperation(item,doc,null,kinds).inputs, {base:['cut2']});
   assert.equal(pipelineChoices(doc,'profile',kinds).length,1);
-  assert.deepEqual(initialOperation({id:'document:axes',at:'/axes/-',schema:{properties:{name:{type:'string'}}}},
-    {axes:[{name:'axis1'}]}),{name:'axis2'});
+  assert.deepEqual(initialOperation({id:'document:sweeps',at:'/sweeps/-',schema:{properties:{name:{type:'string'}}}},
+    {sweeps:[{name:'sweep1'}]}),{name:'sweep2'});
 });
 
 test('duplicate and dependent deletion preserve unrelated text and source document', () => {

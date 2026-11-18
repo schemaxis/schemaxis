@@ -32,7 +32,7 @@ for (const theme of ['light', 'dark']) {
       assert.deepEqual(await session.evaluate('JSON.parse(window.libraryDemo.editor.getValue())'),
         await session.evaluate('window.libraryDemo.initial'));
       assert.match(await session.evaluate('document.querySelector(".library-popover .library-summary").textContent'),
-        /\/axes\/.*\/scenes\/0\/visible/);
+        /\/sweeps\/.*\/scenes\/0\/visible/);
       const shots = process.env.STUDIO_SCREENSHOTS;
       if (shots) {
         await mkdir(shots, {recursive: true});
@@ -40,7 +40,7 @@ for (const theme of ['light', 'dark']) {
       }
       await session.key('Enter');
       await session.wait('JSON.parse(window.libraryDemo.editor.getValue()).nodes.length === 4', 'snippet inserted');
-      assert.equal(await session.evaluate('JSON.parse(window.libraryDemo.editor.getValue()).axes.length'), 1);
+      assert.equal(await session.evaluate('JSON.parse(window.libraryDemo.editor.getValue()).sweeps.length'), 1);
       assert.ok(await session.evaluate('window.libraryDemo.editor.getValue().includes("$fill")'));
       await session.key('Escape');
       await session.evaluate('window.libraryDemo.editor.focus()');

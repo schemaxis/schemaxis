@@ -34,12 +34,12 @@ source share that binding. Equal `sync` names coordinate equal-length sequences;
 independent groups form a Cartesian product, first encountered group fastest.
 Definition-site relative references retain the existing JSON-pointer semantics.
 
-Common studies also accept explicit `axes` with `values` or `series`, and `$axis`
-member references. Workflow axes and each operation's axes have separate name
-scopes, so the same axis name in two operations does not accidentally synchronize
+Common studies also accept explicit `sweeps` with `values` or `series`, and `$sweep`
+member references. Workflow sweeps and each operation's sweeps have separate name
+scopes, so the same sweep name in two operations does not accidentally synchronize
 them. Use a shared document reference or an explicit `sync` name to coordinate values. `maxStates` defaults to 10000 and cannot exceed 10000 in the
 common executor; expanded input is bounded to 64 MiB. Every statically known state
-is typed and validated before native execution. Dynamic axis membership/count is
+is typed and validated before native execution. Dynamic sweep membership/count is
 rejected. Native app limits still apply to each state. Orbit analytics produce
 camera lists. Existing graph camera/appearance sequences retain their separate
 publication loops. Constructor changes use isolated visits rather than assigning
@@ -51,6 +51,22 @@ visits, inputs, indices and native plans. `schema --expand` returns a
 workflow values. Workflow visits list `deferredReferences` explicitly; these inputs
 become literal only after producer verification. The report is an inspection
 result, not another authored application version.
+
+The study owns every step, including a sweep or analytic whose ends wait for time
+or for loaded data. A graph document that still evaluates something at its own
+visits keeps its named sections and is told where the study stands: the chosen
+value of each declared sweep under `sweeps`, its position on every other sweep
+under `%%studyPositions%%`, and the number of visits under `%%studyVisits%%`. The
+study writes these two fields, and a document that carries them is not planned
+again. Field names between double percent signs are reserved for such records;
+the command line and Studio's validation refuse an authored document that uses
+one (`RESERVED_KEY`). The graph then steps only its times, so everything
+that shares a `sync` name advances together, across the operations of a workflow
+as well. A workflow in which two operations use one `sync` name is planned as one
+study. An analytic whose ends are a verified result of an earlier operation is
+the exception: its own operation steps it once the producer has been verified,
+and a `sync` name it shares with anything outside its own waiting analytics is
+refused (`UNSCHEDULABLE_SYNC`).
 
 Execution retains the original `authored.json`, aggregate verification and numbered
 `state-00000` directories. Each state retains the native adaptor's original evidence

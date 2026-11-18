@@ -53,9 +53,11 @@ for (const theme of ['light', 'dark']) {
           || document.querySelector('.runner-fault')`, 'native case completed', 80000);
         assert.equal(await session.evaluate(`document.querySelector('.runner-fault')?.textContent || ''`), '');
         await session.wait(`document.querySelector('.runner-output-browser .results-frame')
-          ?.contentWindow?.artifactViewer?.items.some(item => item.kind === 'table')`, 'shared results viewer');
+          ?.contentWindow?.artifactExplorer?.collection?.items.some(item => item.kind === 'table')`, 'shared results viewer');
         assert.ok(await session.evaluate(`document.querySelector('.runner-output-browser .results-frame')
-          .contentDocument.querySelectorAll('.card').length >= 4`));
+          .contentWindow.artifactExplorer.collection.items.length >= 4`));
+        await session.wait(`document.querySelector('.runner-output-browser .results-frame')
+          .contentDocument.querySelector('#main .tile')`, 'results shown in the embedded viewer');
         if (shots) {
           await session.evaluate(`window.studio.store.set({panelOpen: false});
             document.querySelectorAll('.toast').forEach(element => element.remove());

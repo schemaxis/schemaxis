@@ -350,7 +350,7 @@ Revolves a [radius, height] profile a full turn about the local Z axis to create
 
 Common mistakes and assumptions:
 
-- Radii must be positive and heights must strictly increase; violations fail with INVALID_PROFILE at the profile's authored location during planning whenever the values are known host-side (literals, axes, times, expressions), and again when Blender builds the mesh; profiles that read native observations are checked only when Blender runs.
+- Radii must be positive and heights must strictly increase; violations fail with INVALID_PROFILE at the profile's authored location during planning whenever the values are known host-side (literals, sweeps, times, expressions), and again when Blender builds the mesh; profiles that read native observations are checked only when Blender runs.
 - The adaptor's recorded native qualification cases cover only a material on a cube; this operation relies on repository examples, not on a recorded qualification case.
 
 Native binding: `lathe`. Output kind: `["data"]`.
@@ -495,7 +495,7 @@ Imports one polygon mesh from a PLY file with Blender's PLY importer, multiplyin
 Common mistakes and assumptions:
 
 - A point cloud PLY fails with UNSUPPORTED_RESOURCE; mesh it elsewhere first.
-- scale is a constant set at creation; it cannot vary with an $axis.
+- scale is a constant set at creation; it cannot vary with an $sweep.
 - The adaptor's recorded native qualification cases cover only a material on a cube; this operation relies on repository examples, not on a recorded qualification case.
 
 Native binding: `readPLY`. Output kind: `["data"]`.
@@ -517,7 +517,7 @@ Imports one triangle mesh from an STL file with Blender's STL importer, multiply
 Common mistakes and assumptions:
 
 - The file must produce exactly one mesh object with faces; otherwise UNSUPPORTED_RESOURCE.
-- scale is a constant set at creation; it cannot vary with an $axis. Use transform for varying scale.
+- scale is a constant set at creation; it cannot vary with an $sweep. Use transform for varying scale.
 - The adaptor's recorded native qualification cases cover only a material on a cube; this operation relies on repository examples, not on a recorded qualification case.
 
 Native binding: `readSTL`. Output kind: `["data"]`.
@@ -706,7 +706,7 @@ Options: none.
 
 ## twist
 
-Twists a copy of the input mesh with Blender's Simple Deform modifier in Twist mode: cross-sections rotate about the selected local axis, accumulating the total angle (radians) over the mesh's extent along that axis, about the input object's local origin. Use it for twisted blades, helical shapes or parametric sweeps (the angle may be an $axis value). Subdivide the input along the axis first so the twist is resolved.
+Twists a copy of the input mesh with Blender's Simple Deform modifier in Twist mode: cross-sections rotate about the selected local axis, accumulating the total angle (radians) over the mesh's extent along that axis, about the input object's local origin. Use it for twisted blades, helical shapes or parametric sweeps (the angle may be an $sweep value). Subdivide the input along the axis first so the twist is resolved.
 
 Common mistakes and assumptions:
 
@@ -721,7 +721,7 @@ Native binding: `twist`. Output kind: `["data"]`.
 
 | Option | Meaning | Type / constraints | Default |
 | --- | --- | --- | --- |
-| `angle` | Total twist angle in radians accumulated along the mesh's extent on the twist axis: 6.2832 rotates one end a full turn relative to the other. Negative values twist the other way; the value may vary per state with $axis. | `{"type":"number","minimum":-6.283185307179586,"maximum":6.283185307179586}` | `0.7853981633974483` |
+| `angle` | Total twist angle in radians accumulated along the mesh's extent on the twist axis: 6.2832 rotates one end a full turn relative to the other. Negative values twist the other way; the value may vary per state with $sweep. | `{"type":"number","minimum":-6.283185307179586,"maximum":6.283185307179586}` | `0.7853981633974483` |
 | `axis` | Local axis the mesh is twisted around (Blender deform_axis), in the input object's own coordinates. Choose the axis along which the part is long, so cross-sections rotate along its length. | `{"type":"enum","values":["X","Y","Z"]}` | `"Z"` |
 
 

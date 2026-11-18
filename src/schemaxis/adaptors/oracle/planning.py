@@ -156,7 +156,7 @@ def condition_operands(conditions, name):
     return found
 
 
-def plan_report(report, at, tables):
+def report_outputs(report, at, tables):
     selects = [plan_select(s, f'{at}.selects[{i}]', tables) for i, s in enumerate(report['selects'])]
     first = selects[0]['columns']
     for i, other in enumerate(selects[1:], 1):
@@ -169,6 +169,25 @@ def plan_report(report, at, tables):
     outputs = [{'name': c['name'], 'kind': c['kind']} for c in first]
     if (combine in ('union', 'intersect', 'except') or report['distinct']) and any(c['kind'] in model.NO_EQUALITY_GROUPING for c in first):
         problem('INVALID_ORACLE_QUERY', 'distinct and set operations on time-zone timestamps leave the representative offset unspecified', at, 'convert the value to a date part, or use unionAll without distinct')
+    return selects, combine, outputs
+
+
+def studio_peek(document, source):
+    """Offer comparable projected columns without opening a database connection."""
+    if source != VERSION or document.get('operation') != 'report' or not isinstance(document.get('report'), dict):
+        problem('UNAVAILABLE_METADATA', 'Choose an Oracle report.', '$.report')
+    projection = {key: value for key, value in document['report'].items()
+                  if key in ('selects', 'combine', 'distinct')}
+    options = validate_arguments({'tables': OPTIONS['tables'], 'report': OPTIONS['report']},
+                                 {'tables': document.get('tables', []), 'report': projection})
+    tables, _ = plan_tables(options['tables'])
+    _, _, outputs = report_outputs(options['report'], '$.report', {table['name']: table for table in tables})
+    return {'readerChoices': {'partitionBy': [column['name'] for column in outputs
+                                               if column['kind'] not in model.NO_EQUALITY_GROUPING]}}
+
+
+def plan_report(report, at, tables):
+    selects, combine, outputs = report_outputs(report, at, tables)
     names = {o['name']: o['kind'] for o in outputs}
     columns = dict(names)
     windows = []

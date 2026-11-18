@@ -9,6 +9,7 @@ import {avatar, identity} from '../../shell/providers.mjs';
 import {uniqueId} from './geometry.mjs';
 import {expandFields, markers} from '../../editor/insert-fields.mjs';
 import {templateGallery} from '../template-gallery.mjs';
+import {suggestedName} from '../workbench/element-authoring.mjs';
 
 export const ID_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
 export const TEMPLATE_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]*$/;
@@ -48,7 +49,8 @@ export async function newOperationDialog(ctx, model, adaptorId, position) {
   }
   const info = identity(adaptorId);
   const existing = (model.store.get().projection?.nodes || []).map((node) => node.id);
-  const idInput = h('input', {class: 'input', name: 'id', value: uniqueId(adaptorId, existing),
+  const defaultName = uniqueId(adaptorId, existing);
+  const idInput = h('input', {class: 'input', name: 'id', value: defaultName,
     'aria-describedby': 'dz-new-id-hint', autocomplete: 'off', spellcheck: 'false'});
   const idError = h('div', {class: 'error-text', role: 'alert'});
   const start = h('select', {class: 'select', name: 'start'},
@@ -69,21 +71,40 @@ export async function newOperationDialog(ctx, model, adaptorId, position) {
   const sourceError = h('div', {class: 'error-text', role: 'alert'});
   const templateHint = h('div', {class: 'hint'}, 'The starting document of this operation. Edit it here, or later '
     + 'in the Adaptor Workbench. The design validates it immediately.');
-
+  const naming = {operation: adaptorId, authoring: {naming: {}, instanceFields: [
+    {path: '/operation'}, {path: '/output'}, {path: '/id'}, {path: '/outputs'},
+  ]}};
+  let overridden = false;
+  let templateRequest = 0;
+  const suggestID = () => {
+    if (overridden) return;
+    const ast = parse(source.value, syntax);
+    if (ast.diagnostics.length) return;
+    const document = documentValue(ast);
+    const outputs = document?.outputs;
+    idInput.value = suggestedName(naming, {...document,
+      outputs: Array.isArray(outputs) && outputs.every(value => typeof value === 'string') ? outputs : undefined},
+    new Set(existing)) || defaultName;
+  };
+  source.addEventListener('input', () => { templateRequest++; suggestID(); });
   start.addEventListener('change', async () => {
+    const request = ++templateRequest;
     sourceError.textContent = '';
     if (!start.value) {
       source.value = present(adaptor.emptyDocument || {version: adaptor.version});
+      suggestID();
       return;
     }
     const studio = await ctx.call(() => ctx.api.get('/api/studio/adaptor', {id: adaptorId}),
       {title: 'Starter templates unavailable'});
     const template = studio && studio.templates.find((item) => item.id === start.value);
-    if (template) {
+    if (template && request === templateRequest && source.isConnected) {
       source.value = present(expandFields(template.document, template.fields || {}));
+      suggestID();
     }
   });
   idInput.addEventListener('input', () => {
+    overridden = true;
     idError.textContent = operationIdError(idInput.value.trim(), existing);
     idInput.setAttribute('aria-invalid', String(Boolean(idError.textContent)));
   });

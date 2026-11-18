@@ -72,7 +72,7 @@ export function outline(documentValue) {
         label: caption(entry.id, `${group} ${index + 1}`), detail: caption(entry.filter, group), group}));
     }
   }
-  for (const key of ['axes', 'times', 'settings', 'dimensions', 'definitions', 'views', 'output', 'outputs', 'execution']) {
+  for (const key of ['sweeps', 'times', 'settings', 'dimensions', 'definitions', 'views', 'output', 'outputs', 'execution']) {
     if (Object.hasOwn(documentValue || {}, key)) items.push({pointer: '/' + key, label: key,
       detail: 'document setting', group: 'settings'});
   }

@@ -127,6 +127,7 @@
           "fileExtensions": []
         },
         "/properties/sources": {
+          "control": {"kind": "file-subset"},
           "status": "reference",
           "label": "Ordered compressed streams",
           "explanation": "List complete Zstandard streams in their intended decoded order. The join retains frame boundaries and skippable metadata; it does not unpack a filesystem archive.",
@@ -145,6 +146,7 @@
           ]
         },
         "/properties/samples": {
+          "control": {"kind": "file-subset"},
           "status": "reference",
           "label": "Representative training records",
           "explanation": "List related small files from the population you intend to compress. Keep different records for held-out evaluation; a dictionary trained on the test record gives misleading size gains.",
@@ -600,6 +602,24 @@
           ]
         },
         "/properties/profiles/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/format",
+                "label": "Format"
+              },
+              {
+                "path": "/level",
+                "label": "Level"
+              }
+            ],
+            "naming": {
+              "prefix": "profile"
+            },
+            "multiMode": {
+              "rationale": "Each profile independently evaluates the captured input with its own codec settings."
+            }
+          },
           "status": "reference",
           "label": "Candidates to compare",
           "explanation": "One captured member in this ordered list. One to four distinctly named format-and-level choices. Every candidate is actually compressed and restored. Sizes and content are verified; recorded producer wall time cannot be authenticated by later verification.",
@@ -782,6 +802,22 @@
           ]
         },
         "/properties/fileSet/properties/files/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/source",
+                "label": "Source",
+                "style": "lastSegment"
+              }
+            ],
+            "naming": {
+              "prefix": "file"
+            },
+            "identityStyle": "label",
+            "multiMode": {
+              "rationale": "Each selected archive path owns a separate captured file."
+            }
+          },
           "status": "reference",
           "label": "Explicit named inputs",
           "explanation": "One captured member in this ordered list. List absolute source paths and distinct relative names. These names determine the publication tree, so files from different directories can share a basename when their relative names differ. Directory filters cannot accompany this list.",
@@ -2421,6 +2457,7 @@
           ]
         },
         "/oneOf/3/properties/samples": {
+          "control": {"kind": "file-subset"},
           "status": "reference",
           "label": "Representative training records",
           "explanation": "List related small files from the population you intend to compress. Keep different records for held-out evaluation; a dictionary trained on the test record gives misleading size gains.",
@@ -3510,6 +3547,7 @@
           ]
         },
         "/oneOf/5/properties/sources": {
+          "control": {"kind": "file-subset"},
           "status": "reference",
           "label": "Ordered compressed streams",
           "explanation": "List complete Zstandard streams in their intended decoded order. The join retains frame boundaries and skippable metadata; it does not unpack a filesystem archive.",

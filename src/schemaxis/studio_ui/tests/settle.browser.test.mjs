@@ -55,7 +55,7 @@ for (const theme of ['light', 'dark']) {
       }
       await delay(1700);
       await assertQuiet(session);
-      assert.equal(await session.evaluate(`document.querySelector('.wb-diagnostic-state').textContent`), 'Editing…');
+      assert.equal(await session.evaluate(`document.querySelector('.wb-view-bar .wb-diagnostic-state')`), null);
       assert.equal(await session.evaluate('validationRequests.length'), 0);
       if (shots) {
         await mkdir(shots, {recursive: true});

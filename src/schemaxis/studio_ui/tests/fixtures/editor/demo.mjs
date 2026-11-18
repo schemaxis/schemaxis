@@ -20,7 +20,7 @@ const DOCUMENTS = {
     version: 'schemaxis/1',
     nodes: [
       {id: 'source', filter: 'wavelet'},
-      {id: 'cut', filter: 'slice', inputs: {input: 'source'}, options: {origin: {$axis: 'height'}, normal: [0, 0, 1]}},
+      {id: 'cut', filter: 'slice', inputs: {input: 'source'}, options: {origin: {$sweep: 'height'}, normal: [0, 0, 1]}},
       {id: 'iso', filter: 'contour', inputs: {input: 'source'}, options: {crinkle: 'yes'}},
     ],
     scenes: [],

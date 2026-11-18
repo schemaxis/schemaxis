@@ -315,8 +315,8 @@ def workflow_cases(root, executable, repository):
     third = workflow.execute(single, root / 'reuse', locations=locations, timeout=60, resume=True)
     assert not third['jobs'][0]['reused'] and workflow.verify(root / 'reuse')['verified']
     report['reuse'] = {'unchangedReused': True, 'changedSourceBytesReused': False}
-    study = {'version': a.VERSION, 'operation': 'conform', 'source': str(repository / FIXTURES / 'stereo48k.wav'), 'channelPolicy': {'$axis': 'policy'},
-             'axes': [{'name': 'policy', 'values': ['left', 'right']}]}
+    study = {'version': a.VERSION, 'operation': 'conform', 'source': str(repository / FIXTURES / 'stereo48k.wav'), 'channelPolicy': {'$sweep': 'policy'},
+             'sweeps': [{'name': 'policy', 'values': ['left', 'right']}]}
     result = a.run(study, root / 'study', executable=executable, timeout=60)
     assert a.verify(root / 'study')['verified'] and len(result['states']) == 2
     report['parameterStudy'] = {'states': 2, 'verified': True}

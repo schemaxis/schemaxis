@@ -99,6 +99,24 @@ class AuthoredSchemaTests(unittest.TestCase):
                 self.assertFalse(validator.is_valid(document))
                 self.assertIn('Factor', export_schema(operation='pvSchemaxisShrink')['properties'])
 
+    def test_a_whole_camera_may_be_a_late_value_and_the_foam_reader_skips_time_zero_unless_told(self):
+        from schemaxis.filters import catalogue
+        document = {'version': 'schemaxis/1', 'nodes': [{'id': 'ball', 'filter': 'sphere'}],
+                    'scenes': [{'id': 'view', 'visible': {'ball': {}}, 'images': [{'id': 'image', 'cameras': [
+                        {'$expr': "fitCamera(bounds = extents(ball).inflate(0.5), direction = 'x+')"}]}]}]}
+        for authored in (False, True):
+            validator = Validator(version_schema('schemaxis/1', authored=authored))
+            self.assertTrue(validator.is_valid(document))
+            for camera in ({'direction': 'x+'}, {'$observe': 'ball', 'path': ['bounds']}):
+                changed = copy.deepcopy(document)
+                changed['scenes'][0]['images'][0]['cameras'][0] = camera
+                self.assertTrue(validator.is_valid(changed))
+            for camera in ({'$nonsense': 1}, {'$expr': 'a', 'direction': 'x+'}, 'x+'):
+                changed = copy.deepcopy(document)
+                changed['scenes'][0]['images'][0]['cameras'][0] = camera
+                self.assertFalse(validator.is_valid(changed))
+        self.assertEqual(catalogue()['foam']['options']['skipZero']['value'], {'type': 'boolean', 'default': True})
+
     def test_expanded_recursive_corpus(self):
         from schemaxis.schema import expand_input
         validators = {v: Validator(version_schema(v)) for v in VERSIONS}

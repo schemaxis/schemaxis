@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L. F. Gaden.
 """Shared declarative service tool catalogue; no native application imports."""
 import copy
 import inspect
@@ -62,6 +63,7 @@ METHODS = {
     'capabilities.describe': 'Retrieve complete selected operation contract sections.',
     'capabilities.schema': 'Navigate exact document schema fragments.'}
 
+METHODS['spatial'] = 'Check an expression, or list, evaluate or load the named scalars, vectors and boxes of an authored input; action is spatial_check, spatial_list, spatial_eval, spatial_load or spatial_rename. Trusted local sessions also provide live_data_list, live_data_load (nodes), live_data_refresh (resolve values using resident sources only), live_data_status and live_data_unload; loaded native data stays resident until unload or service close.'
 METHODS['run_tool'] = 'Bind a local digest-pinned declared tool package into an ordinary task plan; optionally execute within the same authorisation and budgets.'
 
 PAGE = {'pointer': '', 'offset': 0, 'limit': 12, 'max_bytes': 8192, 'revision': None}
@@ -70,7 +72,7 @@ CONTROL = frozenset({'cancel', 'job', 'execute', 'create_task', 'plan', 'plan_dr
 READS = frozenset({'methods', 'job', 'task', 'observe', 'resource', 'inspect_resource',
     'inspect_resource_metadata', 'list_tasks', 'list_drafts', 'draft', 'locate_draft',
     'adaptor_context', 'inspection_resources', 'inspect_snapshot', 'inspect_selection',
-    'selections', 'workflow_graph', 'schedule_get', 'schedule_list', 'schedule_preview'})
+    'selections', 'workflow_graph', 'schedule_get', 'schedule_list', 'schedule_preview', 'spatial'})
 
 
 def target_for(service, method):
@@ -89,8 +91,8 @@ def _field(method, name, default=inspect.Parameter.empty):
     integers = {'offset', 'length', 'limit', 'max_bytes', 'count', 'artifact_index',
                 'draft_revision', 'expected_revision'}
     objects = {'document', 'budget', 'bindings', 'values', 'spec', 'changes',
-               'selection', 'connection', 'config'}
-    arrays = {'allowed_providers', 'sections', 'columns', 'edits'}
+               'selection', 'connection', 'config', 'input', 'state', 'observations', 'draft'}
+    arrays = {'allowed_providers', 'sections', 'columns', 'edits', 'entries'}
     kind = ('integer' if name in integers else 'object' if name in objects else
             'array' if name in arrays else 'boolean' if name in {'planning', 'execute'} else 'string')
     if method == 'capture_inspection' and name == 'expected_revision':

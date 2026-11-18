@@ -108,8 +108,8 @@ class CurvesAndMaterials(unittest.TestCase):
             fault=caught.exception.fault
             self.assertEqual(fault.code,'INVALID_PROFILE')
             self.assertEqual(fault.location,'$.nodes[%d].options.profile'%index)
-        doc=example('blender-lathe');doc['axes']=[{'name':'r','values':[1,-2]}]
-        doc['nodes'][index]['options']['profile']=[[{'$axis':'r'},0],[1,1]]
+        doc=example('blender-lathe');doc['sweeps']=[{'name':'r','values':[1,-2]}]
+        doc['nodes'][index]['options']['profile']=[[{'$sweep':'r'},0],[1,1]]
         with self.assertRaises(SchemaxisError) as caught:blender.plan(doc)
         self.assertEqual(caught.exception.fault.code,'INVALID_PROFILE')
 

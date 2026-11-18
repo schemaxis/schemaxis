@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden
 // Schemaxis Studio JSON editor: textarea + highlight overlay, schema completion,
 // hover documentation, diagnostics and ghost previews. See createJsonEditor().
 
@@ -21,6 +21,14 @@ import {duplicateKeyDiagnostics} from './settle.mjs';
 import {createFillMode} from './fill.mjs';
 
 const ANALYSIS_DELAY = 150;
+
+function deepFreeze(value) {
+  if (value && typeof value === 'object') {
+    Object.values(value).forEach(deepFreeze);
+    Object.freeze(value);
+  }
+  return value;
+}
 const LARGE_ANALYSIS_DELAY = 600;
 const LARGE_TEXT = 256 * 1024;
 
@@ -47,7 +55,9 @@ export function createJsonEditor(container, options = {}) {
   };
   const changeListeners = new Set();
   const diagnosticListeners = new Set();
+  const preparedEdits = new WeakSet();
   let unsubscribeRegistry = null;
+  let destroyed = false;
 
   const ensureAst = () => {
     const text = textarea.value;
@@ -391,8 +401,17 @@ export function createJsonEditor(container, options = {}) {
     replaceDocument(value) {
       if (state.readOnly) throw Error('This editor is read-only.');
       const ast = ensureAst();
-      replaceText(0, textarea.value.length, ast.format === 'yaml'
-        ? yamlRender(ast, value, state.options.indent) : JSON.stringify(value, null, state.options.indent));
+      const source = textarea.value;
+      const text = ast.format === 'yaml' ? yamlRender(ast, value, state.options.indent)
+        : source.slice(0, ast.root?.from ?? 0) + JSON.stringify(value, null, state.options.indent)
+          + source.slice(ast.root?.to ?? source.length);
+      // Keep unchanged document endings outside the native editing command.
+      // Selecting the terminal newline breaks Chromium's Redo range.
+      let to = source.length, end = text.length;
+      while (to > 0 && end > 0 && source[to - 1] === text[end - 1]) {
+        to--; end--;
+      }
+      replaceText(0, to, text.slice(0, end));
     },
     getSettledState: () => settling.snapshot(),
     onSettledState: (listener) => settling.subscribe(listener),
@@ -431,7 +450,53 @@ export function createJsonEditor(container, options = {}) {
 
     preview: (request) => preview.show(request),
     commitPreview: () => preview.commit(),
-    clearPreview: () => preview.clear(),
+    clearPreview: (options) => preview.clear(options),
+
+    /**
+     * Plan {inserts, fields} against the current text and caret, returning an immutable,
+     * single-use edit owned by this editor, or null when the request cannot be planned.
+     */
+    prepareInsert({inserts, fields = {}}) {
+      if (destroyed) return null;
+      let plan;
+      try {
+        plan = preview.plan({inserts});
+      } catch (error) {
+        console.warn('Preparation failed', error);
+        return null;
+      }
+      const token = deepFreeze({source: textarea.value, version: settling.version,
+        format: state.options.format || 'json', indent: state.options.indent,
+        caretSensitive: inserts.some((insert) => insert.at === '@cursor' || insert.at.endsWith('/-')),
+        selection: [textarea.selectionStart, textarea.selectionEnd],
+        from: plan.from, to: plan.to, text: plan.text, ghosts: structuredClone(plan.ghosts),
+        summaries: structuredClone(plan.summaries), conflicts: structuredClone(plan.conflicts),
+        pointers: structuredClone(plan.pointers), fields: structuredClone(fields)});
+      preparedEdits.add(token);
+      return token;
+    },
+
+    /**
+     * Apply a prepared edit as one undoable change if this editor, its text, text version,
+     * format, indentation, (when the plan used it) caret and the caller's `stillCurrent()`
+     * owner check all hold. Every attempt consumes the edit. Returns false without editing
+     * when it is stale, foreign or already used.
+     */
+    commitPrepared(token, stillCurrent = () => true) {
+      if (!preparedEdits.delete(token) || destroyed || state.readOnly || textarea.value !== token.source
+          || settling.version !== token.version || (state.options.format || 'json') !== token.format
+          || state.options.indent !== token.indent || (token.caretSensitive
+            && (textarea.selectionStart !== token.selection[0] || textarea.selectionEnd !== token.selection[1]))
+          || !stillCurrent()) {
+        return false;
+      }
+      preview.clear({restore: false});
+      replaceText(token.from, token.to, token.text);
+      const end = token.ghosts?.[0]?.from ?? token.from + token.text.length;
+      textarea.setSelectionRange(end, end);
+      afterProgrammaticSelection();
+      return true;
+    },
 
     /** Insert or set a JSON value at an RFC 6901 pointer ('/nodes/-' appends). {multiple: true} inserts a list. */
     insertAtPointer(pointer, jsonValue, {multiple = false, select = true} = {}) {
@@ -449,6 +514,7 @@ export function createJsonEditor(container, options = {}) {
     },
 
     destroy() {
+      destroyed = true;
       settling.destroy();
       analyseSoon.cancel();
       analyseLater.cancel();

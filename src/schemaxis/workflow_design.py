@@ -261,7 +261,7 @@ def _prepare(document, allowed, version):
     if document.get('version') != version:
         fail('UNSUPPORTED_VERSION', 'expected ' + version)
     body = document.get('workflow')
-    keys(body, ('version', 'operations', 'execution', 'dimensions', 'definitions', 'settings', 'axes', 'maxStates'), '$.workflow')
+    keys(body, ('version', 'operations', 'execution', 'dimensions', 'definitions', 'settings', 'sweeps', 'maxStates'), '$.workflow')
     if body.get('version') != EMPTY['version']:
         fail('UNSUPPORTED_VERSION', 'design.workflow must be schemaxis.workflow/1', '$.workflow.version')
     operations = body.get('operations')

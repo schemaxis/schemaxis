@@ -261,6 +261,10 @@ def compile_catalogue(snapshot):
                     else: spec['minLength'] = 1
             else:
                 gaps[name] = 'unsupported property class: ' + prop['class']; continue
+            # OpenFOAM lists its case when FileName is assigned. Select the
+            # layout at construction, before a decomposed-only case is opened.
+            if (identity, name) == ('sources/OpenFOAMReader', 'CaseType'):
+                binding['constructor'] = True
             binding['value'] = spec
             result[name] = binding
         return result, gaps

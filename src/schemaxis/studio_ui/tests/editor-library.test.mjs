@@ -15,11 +15,11 @@ test('multi-insert creates containers and preserves deep merge conflict details'
   const before = {nodes: [{id: 'source'}], scenes: [{visible: {source: {opacity: 1, colour: 'red'}}}]};
   const {value, edit} = insert(before, [
     {at: '/nodes/-', values: [{id: 'cut'}]},
-    {at: '/axes/-', values: [{name: 'height', values: [1, 2]}]},
+    {at: '/sweeps/-', values: [{name: 'height', values: [1, 2]}]},
     {at: '/scenes/0/visible', merge: {source: {opacity: 0.5}, cut: {}}},
   ]);
   assert.equal(value.nodes.length, 2);
-  assert.equal(value.axes.length, 1);
+  assert.equal(value.sweeps.length, 1);
   assert.deepEqual(value.scenes[0].visible.source, {opacity: 0.5, colour: 'red'});
   assert.deepEqual(edit.conflicts, [{pointer: '/scenes/0/visible/source/opacity', previous: 1, value: 0.5}]);
   assert.equal(edit.summaries.length, 3);
@@ -112,7 +112,7 @@ test('multi-insert rejects malformed JSON and merge over scalar without partial 
 test('multi-preview maps unchanged text between all inserts and commits one replacement', async () => {
   const {Preview} = await import('../editor/editor-preview.mjs');
   const {computeLineStarts, lineOfOffset} = await import('../editor/highlight.mjs');
-  const text = JSON.stringify({nodes: [], unchanged: 'middle', axes: []}, null, 2);
+  const text = JSON.stringify({nodes: [], unchanged: 'middle', sweeps: []}, null, 2);
   const calls = [];
   const core = {textarea: {value: text, selectionStart: 0, style: {}, setSelectionRange() {}},
     state: {options: {}, lineStarts: computeLineStarts(text)}, ensureAst: () => parse(text),
@@ -120,7 +120,7 @@ test('multi-preview maps unchanged text between all inserts and commits one repl
     requestRender() {}, afterProgrammaticSelection() {}, replaceText: (...args) => calls.push(args)};
   const preview = new Preview(core);
   preview.show({inserts: [{at: '/nodes/-', values: [{id: 'source'}]},
-    {at: '/axes/-', values: [{name: 'height', values: [1]}]}]});
+    {at: '/sweeps/-', values: [{name: 'height', values: [1]}]}]});
   const model = preview.model(text, core.state.lineStarts);
   const original = text.indexOf('middle');
   const mapped = model.map(original);
@@ -133,7 +133,7 @@ test('multi-preview maps unchanged text between all inserts and commits one repl
   assert.equal(preview.commit(), true);
   assert.equal(calls.length, 1);
   assert.deepEqual(JSON.parse(applyEdit(text, {from: calls[0][0], to: calls[0][1], text: calls[0][2]})),
-    {nodes: [{id: 'source'}], unchanged: 'middle', axes: [{name: 'height', values: [1]}]});
+    {nodes: [{id: 'source'}], unchanged: 'middle', sweeps: [{name: 'height', values: [1]}]});
 });
 
 test('ID rewrites stay within the correct nested document', () => {

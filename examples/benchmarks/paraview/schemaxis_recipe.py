@@ -20,13 +20,13 @@ def document(task,case):
         origin=[0,0,0]; origin[axis]=fraction*lengths[axis]; origins.append(origin)
     normal=[0,0,0]; normal[axis]=1
     return {'version':'schemaxis/1','times':case['times'],
-        'axes':[{'name':'cut','values':origins}],
+        'sweeps':[{'name':'cut','values':origins}],
         'nodes':[
             {'id':'source','filter':'pvPVDReader','options':{
                 'FileName':str(Path(task['inputs'])/case['id']/'series.pvd'),
                 'PointArrays':['T'],'CellArrays':['T']}},
             {'id':'slice','filter':'slice','inputs':{'input':'source'},
-             'options':{'origin':{'$axis':'cut'},'normal':normal}}],
+             'options':{'origin':{'$sweep':'cut'},'normal':normal}}],
         'scenes':[{'id':'slices','geometry':['slice'],
             'visible':{'slice':task['appearances'][0]},
             'appearances':[{'slice':a} for a in task['appearances']],

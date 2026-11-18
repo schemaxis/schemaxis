@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Shared revision transitions for JSON source, properties and console commands.
 
 Persistence and native ownership belong to the session. Each transition is one
@@ -14,7 +14,7 @@ from .core.faults import SchemaxisError
 from .observations import at_pointer
 
 LIMIT = 1024 * 1024
-FIELDS = ('document', 'name', 'file', 'selected', 'source', 'sourceFormat', 'diagnostics')
+FIELDS = ('document', 'name', 'file', 'selected', 'source', 'sourceFormat', 'diagnostics', 'identityTransition')
 
 
 def text(record):
@@ -56,6 +56,7 @@ def replace(state, identity, values):
     record = result['documents'][identity]
     record['undo'].append(snapshot(record))
     record['redo'] = []
+    record.pop('identityTransition', None)
     record.update(copy.deepcopy(values))
     result['nextRevision'] += 1
     record['revision'] = result['nextRevision']

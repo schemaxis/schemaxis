@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Discover installed adaptor manifests without importing application runtimes.
 
 Built-in adaptors are folders below ``schemaxis.adaptors``. External adaptor
@@ -42,7 +42,7 @@ GROUP = 'schemaxis.adaptors'
 BUILTIN = 'schemaxis.adaptors'
 _PACKAGE = re.compile(r'[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*')
 _COLOUR = re.compile(r'#[0-9a-fA-F]{6}')
-_BINDING_KEYS = ('registerFunctions', 'runtimeSchema', 'coverage', 'liveGraph', 'optionSchema',
+_BINDING_KEYS = ('registerFunctions', 'runtimeSchema', 'coverage', 'liveGraph', 'liveIdentityGeometry', 'optionSchema',
                  'capabilities', 'studioCatalogue', 'studioInspect', 'studioPeek', 'liveModule', 'documentValidation')
 _FLAG = re.compile(r'--[a-z0-9][a-z0-9-]*')
 RUNTIME_PLUGINS = 'runtime-plugins.json'
@@ -55,7 +55,7 @@ FRAMEWORK_SECTIONS = frozenset({'camera', 'series', 'workflow', 'execution', 'op
 FRAMEWORK_DOCUMENTS = frozenset('schemaxis.' + stem for stem in (
     'workflow', 'workflow-design', 'workflow-template', 'workflow-values', 'study', 'plan', 'reference',
     'resource', 'resource.adoption', 'views', 'agent', 'feedback', 'observation', 'output-naming', 'capabilities', 'readiness',
-    'artifact-metadata', 'adaptor-delivery', 'adaptor-execution', 'adaptor-qualification',
+    'artifact-metadata', 'artifact-name', 'adaptor-delivery', 'adaptor-execution', 'adaptor-qualification',
     'adaptor-assessment', 'adaptor-assessments', 'strength-rubric',
     'captured-content-policy', 'mcp-admission-coverage',
     'studio-adaptor', 'studio-guidance', 'studio-settings', 'schema-snapshot', 'schema-bundle',
@@ -63,6 +63,7 @@ FRAMEWORK_DOCUMENTS = frozenset('schemaxis.' + stem for stem in (
     'workflow.graph', 'workflow.plan', 'study.plan', 'feedback.report',
     'revision', 'revision.checkout', 'revision.plan', 'revision.result',
     'app-module', 'module-run', 'module-cleanup',
+    'authoring-references', 'identity-change', 'identity-transition',
     'timedtext', 'timedtext.reviewed', 'whispercpp.segments'))
 # Options that the run, inspect and console parsers define themselves.
 FRAMEWORK_FLAGS = frozenset({'-h', '--help', '--input-format', '--output-directory', '--executable',
@@ -194,6 +195,8 @@ def _admit(item, identity, prefix, claims, folders=None):
     for key in ('executables', 'keywords'):
         if not isinstance(item[key], list) or any(not isinstance(v, str) for v in item[key]):
             raise ValueError(key + ' must be an array of strings')
+    if 'studioInputOrder' in item and item['studioInputOrder'] != 'preceding':
+        raise ValueError('studioInputOrder must be preceding when specified')
     if 'display' in item:
         display = item['display']
         if (not isinstance(display, dict) or set(display) - {'name', 'mark', 'colour'}
@@ -207,6 +210,11 @@ def _admit(item, identity, prefix, claims, folders=None):
     for key in ('sections', 'consoleHooks', 'referenceSettings'):
         if not isinstance(item.get(key, {}), dict): raise ValueError(key + ' must be an object')
         bindings.extend(item.get(key, {}).values())
+    if 'extents' in item:
+        if (not isinstance(item['extents'], dict) or not {'setup', 'native'} <= set(item['extents'])
+                or not set(item['extents']) <= {'setup', 'native', 'inspect', 'relabel'}):
+            raise ValueError('extents must name the setup and native bindings of the extents provider')
+        bindings.extend(item['extents'].values())
     if not isinstance(item['routes'], dict) or item['version'] not in item['routes']:
         raise ValueError('primary version must have a route')
     claimed = set()
@@ -221,6 +229,8 @@ def _admit(item, identity, prefix, claims, folders=None):
         route.setdefault('workflow', True)
         route.setdefault('scheduled', True)
         bindings.extend([route['module'], route['schema'], *route.get('hooks', {}).values()])
+        if 'authoringReferences' in route:
+            bindings.append(route['authoringReferences'])
         for flag in ('workflow', 'scheduled', 'compose', 'graph', 'timeBatches', 'graphEditing'):
             if flag in route and type(route[flag]) is not bool: raise ValueError(flag + ' must be boolean')
         claimed.add(version)
@@ -328,6 +338,8 @@ def load_registry(root=None, *, plugins=None, strict=False, faults=None):
             _claim(claims, _admit(item, identity, BUILTIN + '.' + identity + '.', claims))
             item['package'], item['source'] = BUILTIN + '.' + identity, 'builtin'
             result[identity] = item
+        except RecursionError:
+            fail('INVALID_ADAPTOR', 'The adaptor manifest exceeds the nesting limit.', str(manifest))
         except (KeyError, TypeError, ValueError) as error:
             fail('INVALID_ADAPTOR', str(error), str(manifest))
     for flag in ('default', 'defaultConsole'):
@@ -471,13 +483,14 @@ def declarations(adaptor):
     item = metadata(adaptor)
     try:
         value = binding(item['declarations'])
-        value = value() if callable(value) else value
+        return copy.deepcopy(value() if callable(value) else value)
     except Exception as error:
         fault = exclude_plugin(adaptor, error)
-        if fault is None:
-            raise
-        raise SchemaxisError(fault) from error
-    return copy.deepcopy(value)
+        if fault is not None:
+            raise SchemaxisError(fault) from error
+        if isinstance(error, RecursionError):
+            fail('INVALID_ADAPTOR', 'The adaptor declarations exceed the nesting limit.', adaptor)
+        raise
 
 
 def plan(document, *, raw=False, legacy=False):
@@ -568,7 +581,7 @@ def discover():
             'routes': sorted(item['routes']), 'routeCount': len(item['routes']),
             'assessment': summary(strength),
             'authoring': {'documentReferences': True, 'valueFunctions': True, 'expressions': True,
-                          'analytics': True, 'operationValues': True},
+                          'analytics': True, 'operationValues': True, 'extents': 'extents' in item},
             'runtimeFamily': item['runtimeFamily'], 'scope': item['execution'],
             'operations': sorted(operations), 'keywords': item['keywords'],
             'executables': item['executables'], 'availability': 'not checked',

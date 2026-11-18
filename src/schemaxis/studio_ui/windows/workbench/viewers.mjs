@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 // Adaptor-declared viewers, local sample loading and reference chips.
 
 import {h, mount} from '../../lib/dom.mjs';
@@ -8,11 +8,12 @@ import {createTableViewer} from '../../viewers/table.mjs';
 import {createTextViewer} from '../../viewers/text.mjs';
 import {createChip, referenceLabel} from '../../viewers/chip.mjs';
 import {sha256, staleReason, verifiedArtifact} from './provenance.mjs';
+import {entryOverlays, spatialEntries, snapshotRows} from '../spatial/model.mjs';
 
 const FACTORIES = {'3d': createViewer3d, image: createImageViewer, table: createTableViewer, text: createTextViewer};
 export const VIEWER_LABELS = {'3d': '3D', image: 'Image', table: 'Table', text: 'Text'};
 
-export function createViewers({ctx, store, onTab, onObservation = () => {}}) {
+export function createViewers({ctx, store, onTab, onObservation = () => {}, spatialContext = () => ({root: store.get().value || {}, spatial: store.get().spatial})}) {
   const instances = new Map();
   const digests = new Map();
   const downloads = new Set();
@@ -54,6 +55,10 @@ export function createViewers({ctx, store, onTab, onObservation = () => {}}) {
     }));
   }
   const unsubscribe = store.subscribe((state, previous) => {
+    if (state.value !== previous.value || state.spatial !== previous.spatial) {
+      const three = instances.get('3d');
+      if (three) updateOverlays(three);
+    }
     if (state.dirty !== previous.dirty || state.record !== previous.record) {
       instances.forEach((item) => {
         if (item.provenance?.document) {
@@ -95,11 +100,29 @@ export function createViewers({ctx, store, onTab, onObservation = () => {}}) {
     return ++target.sequence;
   }
 
+  function updateOverlays(target, fit = false) {
+    if (!target.spatial) return;
+    try {
+      const {root, base = null, spatial} = spatialContext();
+      const rows = (snapshotRows(root, spatial) || spatialEntries(root)).filter(row => base === null || row.base === base);
+      const visible = target.spatial.checked ? entryOverlays(rows) : [];
+      target.viewer.setOverlays(visible, {fit});
+      target.spatial.title = 'Resolved boxes and vectors from the current input draft';
+      target.spatialLegend.textContent = rows.filter(row => visible.some(item => item.id === row.pointer))
+        .map(row => `${row.label} · ${row.group}.${row.name}${row.record ? ' · draft revision ' + (row.draft?.revision ?? 'unknown') : ' · literal'}`).join(' | ');
+    } catch (error) {
+      target.viewer.setOverlays([]);
+      target.spatialLegend.textContent = '';
+      target.spatial.title = error.message;
+    }
+  }
+
   async function finishLoad(target, token, data, provenance, label) {
     if (disposed || token !== target.sequence) return;
     const loaded = await target.viewer.load(data);
     if (!loaded || disposed || token !== target.sequence) return;
     target.provenance = provenance;
+    updateOverlays(target);
     target.loadedLabel = label;
     target.label.textContent = label;
     if (provenance.resource && provenance.digest) digests.set(provenance.resource, provenance.digest);
@@ -124,6 +147,13 @@ export function createViewers({ctx, store, onTab, onObservation = () => {}}) {
           onClick: () => input.click()}, 'Open sample file…'), nativeButton, label, input), body);
       const viewer = FACTORIES[kind](body);
       const target = {panel, viewer, label, nativeButton, sequence: 0, provenance: null, controller: null};
+      if (kind === '3d') {
+        target.spatial = h('input', {type: 'checkbox', 'aria-label': 'Spatial overlays',
+          onChange: () => updateOverlays(target, true)});
+        target.spatialLegend = h('div', {class: 'hint', 'aria-label': 'Visible spatial overlays'});
+        panel.querySelector('.wb-viewer-tools').append(h('label', {class: 'checkbox'}, target.spatial, 'Spatial overlays'));
+        panel.append(target.spatialLegend);
+      }
       viewer.on('pick', (reference) => addReference(reference, target.provenance));
       viewer.on('error', (error) => ctx.notify.error(error, {title: `${VIEWER_LABELS[kind]} viewer` }));
       viewer.on('extract', async (table) => {
@@ -249,7 +279,7 @@ export function createViewers({ctx, store, onTab, onObservation = () => {}}) {
     async showDraftGeometry(data, label) {
       const target = get('3d');
       await finishLoad(target, beginLoad(target), data, {origin: 'draft'}, label);
-      onObservation(data.observations || {}); onTab('3d');
+      onObservation(data.observations || {}); onTab('3d', {report: false});
     },
     async showArtifacts(items) {
       const record = store.get().record;

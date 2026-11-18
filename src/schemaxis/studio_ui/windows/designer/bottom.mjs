@@ -29,7 +29,7 @@ function sampleValues(projection, record) {
 
 function sampleAxes(record) {
   const axes = {};
-  const list = record && record.document && record.document.workflow ? record.document.workflow.axes : null;
+  const list = record && record.document && record.document.workflow ? record.document.workflow.sweeps : null;
   for (const axis of Array.isArray(list) ? list : []) {
     if (axis && axis.name && Array.isArray(axis.values) && axis.values.length) {
       axes[axis.name] = axis.values[0];

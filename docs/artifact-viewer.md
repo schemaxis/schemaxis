@@ -47,6 +47,49 @@ Standalone theme/sidebar preferences and recent folder references are saved unde
 references, not copies of media. Browser-picked files can be reopened from the
 recent list during the current page session.
 
+## Explorer interface
+
+The standalone viewer opens the Explorer interface (`src/schemaxis_viewer/explorer`).
+Studio's **Results** window embeds Explorer as well. `--classic` serves the
+previous interface from `src/schemaxis_viewer/web`.
+Explorer keeps every control in two fixed bars above the content, so the content
+uses the rest of the window and resizing thumbnails never moves the slider.
+
+- **Files** browses like a file manager: folders, breadcrumbs, icons or details,
+  **Include subfolders**, and **Stack sequences** to show each sequence as one stack.
+- **Groups** arranges files into sequences, or by chosen properties
+  (for example `var` then `axis`), each in its own order. Properties shared by
+  every group are listed once; captions show the order value and what else varies.
+- **Player** plays a sequence forward or backward (loop, bounce or stop). **Split
+  by** fills panes with the sequences that differ only in one property, such as
+  `axis` for X | Y | Z; panes are linked to one slider or stepped separately.
+- **3D** draws images with known companion corners in place, with STL/OBJ models.
+  Each sequence is a stack with its own slider; clicking a slice inspects it.
+
+Properties come from five sources, shown beside each value: file facts (type,
+folder), Schemaxis filenames, automatic sequences, filename patterns and companion
+metadata. Sidebar **Filters** combine values of one property with OR and
+different properties with AND.
+
+Automatic sequences need no configuration. Files in one folder that differ only
+in their digit runs form a numbered sequence in numeric order (`file1`, `file2`,
+`file10`); letters stay literal, so `file1outP.png` and `file2outU.png` are not
+one sequence. Three or more files differing in a short capital-letter run form a
+lettered sequence (`phase-A`, `phase-B`, `phase-Z`, `phase-AA`); digits that also
+vary must step evenly with the letters (`file-AAA-0`, `file-AAB-1`).
+
+**Filename patterns** (sidebar Filters, or the Open menu) are regular expressions.
+Each capture group becomes a property of type text, number or a list of tags;
+named groups `(?<axis>[XYZ])` name themselves. A pattern without captures
+gives matching files a property holding the matched text. The editor previews
+every file, highlighting matches and captured values. Patterns are stored in the
+browser and import/export as `artifact.filename-rules/1`.
+
+Opening a file fills the content area: images zoom and pan, keeping that zoom
+while stepping through the list; text supports find, regular expressions,
+matching lines only and a table of capture groups; CSV/TSV tables sort, filter
+and chart numeric columns; meshes rotate, pan and zoom.
+
 ## Studio results
 
 Studio's **Results** window embeds the same viewer assets and local media
@@ -66,9 +109,10 @@ needs matching, validated companion metadata for spatial placement.
 Studio supplies its theme to the embedded viewer; changing the viewer's theme
 also updates Studio's setting. Recent collection references are stored in
 `viewer-recent.json` within the Studio workspace. The left sidebar switches
-between **Collections**, **Files & folders**, **Recent runs** and **Recent
-collections**; the menu button collapses it. Recent-run restoration checks the
-retained publication digests before opening the collection again.
+between **Folders**, **Filters** and **Recent**; the menu button collapses it.
+Recent-run restoration checks the retained publication digests before opening
+the collection again. **Expand** fills the Studio window and **Close** closes the
+Results tab after confirmation.
 
 `--no-browser` prints the session URL without opening it; `--port PORT` chooses a
 port. The complete `schemaxis_viewer` source directory can also be copied and run

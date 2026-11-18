@@ -12,7 +12,7 @@ def parameter_spec(marker, pointer):
     field_type = marker.get('type', 'json')
     kinds = {'number': 'number', 'integer': 'integer', 'boolean': 'boolean', 'enum': 'enum',
              'string': 'string', 'path': 'string', 'field': 'string', 'nodeRef': 'string',
-             'axisRef': 'string', 'id': 'string', 'vector3': 'vector', 'colour': 'vector', 'bounds': 'vector'}
+             'sweepRef': 'string', 'id': 'string', 'vector3': 'vector', 'colour': 'vector', 'bounds': 'vector'}
     if field_type not in kinds or 'template' in marker:
         fail('UNSUPPORTED_PARAMETER_KIND', 'fill this value before exposing it; choose a scalar or numeric vector',
              pointer, type=field_type)

@@ -37,7 +37,17 @@ class StudioCatalogueTests(unittest.TestCase):
                 for group in ('templates', 'snippets'):
                     for item in library.get(group, []):
                         with self.subTest(provider=provider, kind=group, item=item['id']):
-                            plan_item(instantiate_item(library, item, provider=provider))
+                            document = instantiate_item(library, item, provider=provider)
+                            if provider == 'paraview' and item['id'] in {
+                                    'cfd-overview', 'pressure-coefficient-report', 'qcriterion-orbit',
+                                    'wake-streamlines', 'wall-yplus-report'}:
+                                from schemaxis.adaptors.paraview.console import validate
+                                with self.assertRaises(SchemaxisError) as caught:
+                                    plan_item(document)
+                                self.assertEqual(caught.exception.fault.code, 'TIME_INSPECTION_REQUIRED')
+                                self.assertTrue(validate(document)['deferred'])
+                            else:
+                                plan_item(document)
                             draft = instantiate_item(library, item, provider=provider, filled=False)
                             expected = find_unfilled(draft)
                             if not expected:

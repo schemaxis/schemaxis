@@ -212,7 +212,7 @@ class ParserSchemaParityTests(unittest.TestCase):
                     schema = export_schema(version=version, authored=authored)
                     branches = parser if isinstance(parser, tuple) else (parser,)
                     expected = set.union(*(key_contract(branch) for branch in branches))
-                    common = {'dimensions', 'definitions', 'settings', 'axes', 'maxStates'}
+                    common = {'dimensions', 'definitions', 'settings', 'sweeps', 'maxStates'}
                     if authored:
                         expected |= common
                     elif version == 'schemaxis.workflow/1':

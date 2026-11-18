@@ -79,19 +79,22 @@ export function yamlInsert(ast, pointer, values, options = {}) {
   const segments = pointer ? pointer.slice(1).split('/').map(s => s.replace(/~1/g, '/').replace(/~0/g, '~')) : [];
   const last = segments.pop();
   const parent = doc.getIn(segments, true);
+  let effect = 'insert';
   if (isSeq(parent)) {
     const at = last === '-' ? parent.items.length : Number(last);
     if (!Number.isInteger(at) || at < 0 || at > parent.items.length) throw Error('Invalid array index');
     parent.items.splice(at, 0, ...values.map(value => doc.createNode(value)));
-  } else if (last === undefined) doc.contents = doc.createNode(values[0]);
-  else {
+  } else if (last === undefined) {
+    doc.contents = doc.createNode(values[0]);
+    effect = 'replace';
+  } else {
     const old = doc.getIn([...segments, last], true);
     const replacement = doc.createNode(values[0]);
-    if (old) { replacement.comment = old.comment; replacement.commentBefore = old.commentBefore; }
+    if (old) { replacement.comment = old.comment; replacement.commentBefore = old.commentBefore; effect = 'replace'; }
     doc.setIn([...segments, last], replacement);
   }
   const text = yamlRender(ast, doc.toJS(), options.indent || '  ');
-  return {from: 0, to: ast.text.length, text, select: {from: 0, to: text.length}};
+  return {from: 0, to: ast.text.length, text, select: {from: 0, to: text.length}, effect};
 }
 
 export function dumpYaml(value) {

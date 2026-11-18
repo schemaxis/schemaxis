@@ -27,7 +27,8 @@ test('moving a value canonicalises its own relative references at the definition
   root.dimensions.twice.$expr.args[0]={$document:'/dimensions/size'};
   const old=entries(root).find(e=>e.name==='twice');
   const next=saveEntry(root,{base:'',name:'double',group:'settings',value:old.value},old);
-  assert.equal(preview(next,next.settings.used),6);
+  assert.deepEqual(next.settings.double, {$expr: {op: 'multiply', args: [{$document: '/dimensions/size'}, 2]}});
+  assert.throws(() => preview(next,next.settings.used), /host/);
   assert.equal(next.settings.used.$document,'/settings/double');
   assert.equal(next.dimensions.twice,undefined);
 });

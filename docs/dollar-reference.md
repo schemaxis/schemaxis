@@ -9,11 +9,11 @@ These are JSON value markers, not shell commands or general-purpose scripting. A
 | Marker | Purpose | Resolution context |
 | --- | --- | --- |
 | `$document` | Reuse JSON by pointer | Authored document / workflow scopes. |
-| `$expr` | Closed composition or arithmetic | Authored values; may defer while workflow inputs are pending. |
+| `$expr` | Closed composition or arithmetic; a string is an expression over scalars, vectors and boxes | Authored values; may defer while workflow inputs are pending. A string expression is evaluated when what it reads is known: before planning, at each visit, or after the nodes it reads have been updated. |
 | `$value` with `args` | Invoke registered pure typed function | Authored value resolution. |
 | `$value` with `path` | Read verified upstream operation result | Workflow execution, after producer verification. |
 | `$analytic` | Generate a value or camera sequence | Scheduled study/graph binding. |
-| `$axis` | Read selected sweep value | Current graph/workflow visit. |
+| `$sweep` | Read selected sweep value | Current graph/workflow visit. |
 | `$time` | Read simulation time | Graph native visit. |
 | `$observe` | Read updated upstream object metadata | Graph native visit. |
 | `$sample` | Read numeric field tuple/component | ParaView native visit. |
@@ -31,9 +31,9 @@ These are JSON value markers, not shell commands or general-purpose scripting. A
 flowchart TD
   A[Authored JSON] --> B[document / expr / value functions]
   B --> C[object / create graph compilation]
-  C --> D[analytic sequences and explicit axes]
+  C --> D[analytic sequences and explicit sweeps]
   D --> E[Selected visit]
-  E --> F[axis and time values]
+  E --> F[sweep and time values]
   F --> G[Update upstream objects]
   G --> H[observe / sample / calc / call]
   H --> I[Validate destination value and execute]
@@ -89,6 +89,96 @@ The wrapper contains only `$expr`. Its value contains `op`, `args` and optional 
 
 Named collections require nonempty unique string names. Authored arithmetic takes two finite scalar numbers, not booleans or vectors; runtime `$calc` has separate vector rules. Merge conflict `error` rejects unequal atomic values with a location. [Implementation](../src/schemaxis/core/composition.py).
 
+## `$expr`: string expressions
+
+A string value is an expression in the Schemaxis expression language:
+
+```json
+{"definitions": {"model": {"$expr": "union(body, wheels)"}},
+ "nodes": [{"id": "cut", "filter": "slice", "inputs": {"input": "data"},
+            "options": {"origin": {"$expr": "lerp(model.min, model.max, t)"}}}]}
+```
+
+- Names are direct keys of `dimensions`, `settings` and `definitions`, declared
+  sweeps, `time` and `pi`. A name found in more than one place is rejected;
+  qualify it, for example `settings.zoom` or `` settings.`wheel-left` ``.
+- Values are scalars, vectors, boxes, booleans and strings, with arithmetic,
+  comparisons, `&&`, `||`, `!` and `condition ? a : b`.
+- A box is `{"min": [x, y, z], "max": [x, y, z]}` or six numbers
+  `[xmin, xmax, ymin, ymax, zmin, zmax]`. Flat boxes are valid.
+- Registered functions are called with named arguments:
+  `fitCamera(bounds = model.inflate(0.52), direction = 'x+')`.
+- An entry written with any other marker can be read by name, and a string
+  expression can appear inside the arguments of `$call`, `$calc`, `$value` and
+  the object form of `$expr`.
+- Schemaxis decides when to evaluate from what the expression reads: before
+  planning for constants, at each visit for a sweep or `time`, and after the
+  nodes it reads have been updated for observed data. A value that is not
+  constant is rejected in a constructor option with `DYNAMIC_CONSTRUCTOR`.
+
+### Boxes from loaded data
+
+`extents(node)` is the bounding box of a pipeline node after it has been
+updated for the current visit, and `dataExtents` is the box around everything
+the document loads. An adaptor must offer the capability; ParaView and Blender
+do. In a document of an adaptor that does not, either is `EXTENTS_UNSUPPORTED`.
+
+```json
+{"definitions": {
+   "model": {"$expr": "union(extents(body), extents(wheels))"},
+   "wake":  {"$expr": "model.push('x+', 2.5).inflateY(1)"}},
+ "nodes": [{"id": "cut", "filter": "slice", "inputs": {"input": "fluid"},
+            "options": {"normal": "z+", "origin": {"$expr": "model.mid"}}}],
+ "scenes": [{"id": "view", "visible": {"cut": {}},
+             "images": [{"id": "top", "cameras": [
+               {"$expr": "fitCamera(bounds = wake, direction = 'z+', up = 'y+')"}]}]}]}
+```
+
+- A box has the properties `.min`, `.max`, `.mid`, `.size`, `.span`,
+  `.deltaX`, `.deltaY`, `.deltaZ` and `.valid`.
+- Boxes are combined and moved with `union`, `intersect`, `subtract`,
+  `translate`, `inflate`, `inflateAbs`, `push`, `pushAbs` and `setFace`. The
+  plain forms take a fraction of the box's size; the `Abs` forms take a
+  distance.
+- A value that reads `extents` is evaluated after the nodes it names have been
+  updated and before the node that uses it is configured. It is accepted in a
+  node option that is not a constructor option, in a scene camera and in a
+  scene appearance.
+
+### Sweeps written in an expression
+
+`sweep(a, b, count)` steps from `a` to `b` in `count` evenly spaced positions.
+The ends may be scalars or vectors, and may read loaded data:
+
+```json
+{"definitions": {"seedY": {"$expr": "sweep(model.min.y, model.max.y, 5)"}}}
+```
+
+A fourth argument is a `sync` name: sweeps and `$analytic` members with the
+same name share one sweep and advance together. Every reader of a named entry
+sees the same value at a visit, so name a sweep that two options must share.
+A `sweep` is not accepted in a scene camera or appearance (`SWEEP_PLACEMENT`).
+
+### Checking expressions without an application
+
+```bash
+PYTHONPATH=src python3 -m schemaxis spatial list INPUT
+PYTHONPATH=src python3 -m schemaxis spatial explain INPUT --entry definitions.wake
+PYTHONPATH=src python3 -m schemaxis spatial eval INPUT --expression "model.mid" --index SWEEP=2
+```
+
+`list` reports each named scalar, vector and box with its type, when it
+becomes known, what it depends on and its sweeps. `explain` gives the chain of
+entries that makes a value wait. `eval` gives values at one state; a value
+that reads loaded data is reported as `needs-data` unless `--observations`
+supplies extents saved from an earlier load. Agents have the same actions as
+`spatial_check`, `spatial_list`, `spatial_eval` and `spatial_load`; the last
+one starts the application to read extents.
+
+The [car example](../examples/paraview-car/README.md) uses all of this in one
+ParaView document. [The language specification](design/expression-language.md)
+lists every function and fault.
+
 ## `$value`: pure function form
 
 ```json
@@ -133,15 +223,15 @@ The wrapper contains only `$analytic`. Its value requires `type`:
 
 `count` is positive and within the state limit. `count:1` requires equal endpoints. Orbit elevation defaults to 0 and lies strictly between -90 and 90 degrees; orbit does not accept sync. Its output is a **camera sequence**, appropriate for an image writer's whole `cameras` value, not a scalar angle or XYZ vector option.
 
-Member analytics create scheduled axes. A shared nonempty `sync` string zips equal-length sequences; unequal lengths fail. Unsynchronized members expand independently. Camera-list analytics become explicit camera lists in graph compilation rather than unrelated geometry axes. The common runtime also schedules non-graph adaptor/workflow studies, with route-specific placement restrictions. Do not put executable analytics into metadata containers and assume they will be evaluated. [Implementation](../src/schemaxis/analytics.py).
+Member analytics create scheduled sweeps. A shared nonempty `sync` string zips equal-length sequences; unequal lengths fail. Unsynchronized members expand independently. Camera-list analytics become explicit camera lists in graph compilation rather than unrelated geometry sweeps. The common runtime also schedules non-graph adaptor/workflow studies, with route-specific placement restrictions. Do not put executable analytics into metadata containers and assume they will be evaluated. [Implementation](../src/schemaxis/analytics.py).
 
-## `$axis` and `$time`
+## `$sweep` and `$time`
 
 ```json
-{"$axis":"offset","path":["position",2]}
+{"$sweep":"offset","path":["position",2]}
 ```
 
-`$axis` names a declared active axis. Optional `path` is an array of object keys/list indices (default `[]`) into the selected value. An axis declaration has `name` and either nonempty `values` or a `series` specification. In ordinary graph use the marker belongs in varying non-constructor node options. Common workflow studies also support declared study axes with their own placement rules.
+`$sweep` names a declared active sweep. Optional `path` is an array of object keys/list indices (default `[]`) into the selected value. A sweep declaration has `name` and either nonempty `values` or a `series` specification. In ordinary graph use the marker belongs in varying non-constructor node options. Common workflow studies also support declared study sweeps with their own placement rules.
 
 ```json
 {"$time":true}
@@ -183,7 +273,7 @@ Missing fields, incompatible associations, out-of-range tuples/components and no
 ## `$calc`: every runtime operation
 
 ```json
-{"$calc":"multiply","args":[{"$axis":"offset"},2]}
+{"$calc":"multiply","args":[{"$sweep":"offset"},2]}
 ```
 
 Exactly `$calc` and `args` are valid. Arguments recursively resolve graph runtime values.
@@ -206,10 +296,10 @@ Arithmetic combines matching arrays recursively or broadcasts a scalar across an
 ## `$call`: registered runtime functions
 
 ```json
-{"$call":"vectorLength","args":{"vector":{"$axis":"position"}}}
+{"$call":"vectorLength","args":{"vector":{"$sweep":"position"}}}
 ```
 
-`$call` names a registered function; `args` maps its declared parameters to literal/runtime values (defaults apply when arguments are optional). It uses the same typed registry as `$value` with args. In graph execution use it for `$axis`, `$time`, `$observe`, `$sample` or `$calc` arguments. Dependencies are inherited from arguments. It does not grant arbitrary Python execution or native reflection. Functions explicitly declared to use graph objects require an object registry/context; none should be inferred from a name.
+`$call` names a registered function; `args` maps its declared parameters to literal/runtime values (defaults apply when arguments are optional). It uses the same typed registry as `$value` with args. In graph execution use it for `$sweep`, `$time`, `$observe`, `$sample` or `$calc` arguments. Dependencies are inherited from arguments. It does not grant arbitrary Python execution or native reflection. Functions explicitly declared to use graph objects require an object registry/context; none should be inferred from a name.
 
 ## `$object` and `$create`: graph input convenience
 
@@ -241,4 +331,12 @@ Exactly `$artifact` (earlier workflow operation ID) and `index` (required nonneg
 
 ## Choosing the appropriate form
 
-Use `$document` for authored JSON reuse; `$value` with args for pure authoring calculations; `$analytic`/`$axis` for scheduled variation; `$call`/`$calc` with `$observe`/`$sample` for updated graph data; and `$artifact`/`$value` with path for verified workflow outputs. Destination constraints still apply after every resolution. Constructor settings cannot become runtime-variable simply by wrapping them in a marker.
+Use `$document` for authored JSON reuse; a string `$expr` for arithmetic, boxes, positions and cameras, including ones that read loaded data with `extents`; `$value` with args for pure authoring calculations; `$analytic`/`$sweep` for scheduled variation; `$call`/`$calc` with `$observe`/`$sample` for updated graph data that an expression does not reach, such as field samples; and `$artifact`/`$value` with path for verified workflow outputs. Destination constraints still apply after every resolution. Constructor settings cannot become runtime-variable simply by wrapping them in a marker.
+
+## Identity changes
+
+The [checked identity rename preview](identity-authoring.md) uses these reference
+semantics to update declared node consumers and checked `extents` bindings. It
+preserves `$document` definition-site scope and pointer relationships when a
+reference-map key moves. Runtime result/artifact consumers require a producer
+identity contract; a preview refuses them where preservation is not established.

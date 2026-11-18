@@ -10,7 +10,6 @@ import {identity} from '../shell/providers.mjs';
 import {downloadText, chooseTextFile, confirmDiscard} from './source-files.mjs';
 import {createLibrary} from './workbench/library.mjs';
 import {commonProperties, nodeKinds} from './workbench/guidance.mjs';
-import {namespaceRequest} from '../editor/insert-fields.mjs';
 
 export const schemaEditorWindow = {
   type: 'schema-editor',
@@ -55,15 +54,11 @@ export const schemaEditorWindow = {
       return {...resolveSchemaContext(registry, value, editor.getCursor().pointer, null), root: value};
     }
     editor.setOption('commonProperties', (pointer, value) => commonProperties(libraryMetadata, value, pointer));
-    const library = createLibrary({ctx, editor: {...editor, preview: (request) => {
-      const {base, root} = libraryScope();
-      const scoped = namespaceRequest(request, root);
-      // The library starts fill mode with this request's field definitions after committing.
-      request.fields = scoped.fields;
-      const inserts = scoped.inserts?.map((insert) => ({...insert,
-        at: insert.at === '@cursor' ? insert.at : base + insert.at}));
-      return editor.preview({...scoped, inserts});
-    }}, getDocument: () => libraryScope().value,
+    const library = createLibrary({ctx, editor, getDocument: () => libraryScope().value,
+    scope: () => {
+      const {base, value, root, schema} = libraryScope();
+      return {base, value, root, label: base ? 'operation input' : 'input', context: [base, schema, value?.version]};
+    },
     getSelectedNode: () => {
       const {value, base} = libraryScope();
       const index = editor.getCursor().pointer.slice(base.length).match(/^\/nodes\/(\d+)/)?.[1];
@@ -365,6 +360,7 @@ export const schemaEditorWindow = {
       },
       onHide: () => {
         libraryActive = false;
+        library.cancelReview();
         library.registerCommands(null);
         reportDiagnostics(ctx, editor, {document: params.document});
       },

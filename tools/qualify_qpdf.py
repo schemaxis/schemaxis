@@ -494,8 +494,8 @@ class Qualification:
         # Finite composition: an axis and a definition resolve before planning; two states, each verified.
         study = copy.deepcopy(document)
         study['definitions'] = {'quarter': 90}
-        study['axes'] = [{'name': 'turn', 'values': [0, 180]}]
-        study['pages'][0]['rotate'] = {'$axis': 'turn'}
+        study['sweeps'] = [{'name': 'turn', 'values': [0, 180]}]
+        study['pages'][0]['rotate'] = {'$sweep': 'turn'}
         study['pages'][1]['rotate'] = {'$document': '/definitions/quarter'}
         result = self.run(study, 'bd-study')
         assert len(result['states']) == 2, result

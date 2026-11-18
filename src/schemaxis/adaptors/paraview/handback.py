@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L. F. Gaden
 """Host-side policy and verification for editable ParaView state bundles.
 
 A scene may request ``"stateBundle": true``. Before any publication consumes the
@@ -71,7 +72,7 @@ GUI_STEPS = ['Copy or move the whole bundle directory; keep state.pvsm, bundle.j
              'Verification loads the bundle with the same LoadStateOptions settings through pvbatch '
              '(paraview.simple.LoadState); the GUI dialog itself is not exercised.']
 _HEX = re.compile('[0-9a-f]{64}')
-_NODE = re.compile('[A-Za-z][A-Za-z0-9_-]{0,127}')
+_NODE = re.compile('[A-Za-z0-9][A-Za-z0-9_-]{0,127}')
 _PROPERTY = re.compile('[A-Za-z][A-Za-z0-9_]{0,127}')
 
 

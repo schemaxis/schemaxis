@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden
 """JSON Schema export from Schemaxis's existing typed declarations.
 
 This module projects expanded input and literal declarations; schema_authoring
@@ -11,6 +11,7 @@ from .errors import fail
 
 DRAFT = 'https://json-schema.org/draft/2020-12/schema'
 NAME = {'type': 'string', 'pattern': '^[A-Za-z][A-Za-z0-9_-]*$'}
+NODE_NAME = {'type': 'string', 'pattern': '^[A-Za-z0-9][A-Za-z0-9_-]*$'}
 
 
 def object_schema(properties, required=()):
@@ -77,11 +78,15 @@ def option_schema(declaration, *, dynamic=False):
     return result
 
 
-def runtime_schema(provider):
+EXPRESSION_TEXT = {'type': 'string', 'minLength': 1, 'maxLength': 4096,
+                   'description': 'An expression in the Schemaxis expression language, for example model.inflate(0.52).'}
+
+
+def runtime_schema(provider, *, node_name=NAME):
     from .functions import FUNCTIONS
     path = {'type': 'array', 'items': {'anyOf': [{'type': 'string'}, {'type': 'integer'}]}}
-    variants = [object_schema({'$axis': {'type': 'string'}, 'path': path}, ['$axis']),
-                object_schema({'$observe': NAME, 'path': path}, ['$observe']),
+    variants = [object_schema({'$sweep': {'type': 'string'}, 'path': path}, ['$sweep']),
+                object_schema({'$observe': node_name, 'path': path}, ['$observe']),
                 object_schema({'$time': {'const': True}}, ['$time'])]
     counts = {'vector': 3, 'midpoint': 1, 'boundsMin': 1, 'boundsMax': 1,
               'add': 2, 'subtract': 2, 'multiply': 2, 'divide': 2, 'min': 2, 'max': 2}
@@ -95,30 +100,31 @@ def runtime_schema(provider):
     from .adaptors.registry import metadata, binding
     hook = metadata(provider).get('runtimeSchema')
     if hook: variants.extend(binding(hook)())
+    variants.append(object_schema({'$expr': EXPRESSION_TEXT}, ['$expr']))
     return {'anyOf': variants}
 
 
-def graph_document_schema(provider, scene_builder, *, reference=NAME, source_times=False, max_scenes=None):
+def graph_document_schema(provider, scene_builder, *, reference=NAME, node_name=NAME, source_times=False, max_scenes=None):
     from schemaxis.core.series import SERIES_ARGUMENT
     from schemaxis.core.times import TIMES_ARGUMENT
     from .adaptors.registry import metadata
     catalogue = declarations(provider)
-    definitions = {'runtime': runtime_schema(provider)}
+    definitions = {'runtime': runtime_schema(provider, node_name=node_name)}
     nodes = []
     for name, declaration in sorted(catalogue.items()):
         key = 'options-' + name
         definitions[key] = option_schema(declaration, dynamic=True)
         if declaration.get('role') == 'writer':
             continue
-        ports = {p: ({'type': 'array', 'items': reference if s.get('kind','data')=='data' else NAME, 'minItems': 1}
-                     if s.get('multiple') else reference if s.get('kind','data')=='data' else NAME)
+        ports = {p: ({'type': 'array', 'items': reference if s.get('kind','data')=='data' else node_name, 'minItems': 1}
+                     if s.get('multiple') else reference if s.get('kind','data')=='data' else node_name)
                  for p, s in declaration['inputs'].items()}
         ports = copy.deepcopy(ports)
         for port, spec in declaration['inputs'].items():
             if spec.get('contract'):
                 ports[port]['x-schemaxis-contract'] = copy.deepcopy(spec['contract'])
         required_ports = [p for p, s in declaration['inputs'].items() if s.get('required')]
-        props = {'id': NAME, 'filter': {'const': name},
+        props = {'id': node_name, 'filter': {'const': name},
                  'inputs': object_schema(ports, required_ports), 'options': {'$ref': '#/$defs/' + key}}
         props['onVisit'] = {'type':'array', 'items':({'enum':sorted(declaration['commands'])} if declaration.get('commands') else False),
                                 'description':'Invoke in order before updating this node on every selected visit.'}
@@ -135,13 +141,13 @@ def graph_document_schema(provider, scene_builder, *, reference=NAME, source_tim
                      {'required': ['series'], 'not': {'required': ['values']}}]
     times = {'type': 'array', 'items': {'type': 'number'}, 'minItems': 1, 'default': [0.0]}
     if source_times:
-        times = {'anyOf': [times, object_schema({'source': NAME, 'select': argument_schema(TIMES_ARGUMENT)}, ['source', 'select'])]}
+        times = {'anyOf': [times, object_schema({'source': node_name, 'select': argument_schema(TIMES_ARGUMENT)}, ['source', 'select'])]}
     scenes = {'type': 'array', 'items': scene, 'minItems': 1}
     if max_scenes is not None:
         scenes['maxItems'] = max_scenes
     result = object_schema({'version': {'const': metadata(provider)['version']},
         'nodes': {'type': 'array', 'items': {'oneOf': nodes}, 'minItems': 1}, 'scenes': scenes,
-        'axes': {'type': 'array', 'items': axis}, 'times': times,
+        'sweeps': {'type': 'array', 'items': axis}, 'times': times,
         **{key: {'$ref': '#/$defs/json'} for key in ('definitions', 'dimensions', 'views', 'settings')},
         'maxStates': {'type': 'integer', 'minimum': 1, 'default': 10000},
         'maxPublications': {'type': 'integer', 'minimum': 1, 'default': 10000}}, ['version', 'nodes', 'scenes'])
@@ -210,7 +216,7 @@ def expand_input(document):
                                for visit in program.visits()]}
         document = workflow_inputs(document)
         operations = validate(document)
-        return {**{k: copy.deepcopy(v) for k, v in document.items() if k not in (*META, 'axes', 'maxStates')},
+        return {**{k: copy.deepcopy(v) for k, v in document.items() if k not in (*META, 'sweeps', 'maxStates')},
                 'operations': [{**operation, 'document': expand_input(operation['document'])} for operation in operations]}
     _, route = resolve(document)
     from .adaptor_runtime import InputProgram, requires_common

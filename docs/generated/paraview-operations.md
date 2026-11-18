@@ -538,7 +538,7 @@ Inputs: none.
 | `caseType` | Choose Decomposed Case when the results remain in processor0, processor1 and other processor folders. Choose Reconstructed Case for a serial case or results reconstructed into the main case folder. Match the layout of the data you want to read. | `{"type":"enum","values":["Decomposed Case","Reconstructed Case"]}` | `"Decomposed Case"` |
 | `regions` | Mesh regions to load. internalMesh is the volume mesh; add boundary patches with the reader's prefixed names, e.g. "patch/inlet" or "patch/walls", when you also want those surfaces. Names must match regions available in your case. Omitting this setting loads internalMesh. Use {"select":"all"} for all names advertised by the reader, or a list of entries. Each entry is an exact name or {"pattern":"..."}, a regular expression matched when the case is loaded; an expression that matches nothing is an error. Load names reads case headers; Ask the application asks ParaView for its advertised names without updating mesh data. | `{"type":"union","options":[{"type":"array","items":{"type":"union","options":[{"type":"string","minLength":1},{"type":"object","properties":{"pattern":{"type":"string","minLength":1,"maxLength":256,"required":true}}}]},"minItems":1},{"type":"object","properties":{"select":{"type":"enum","values":["all"],"required":true}}},{"type":"object","properties":{"pattern":{"type":"string","minLength":1,"maxLength":256,"required":true}}}]}` | `["internalMesh"]` |
 | `cellArrays` | Names of cell fields to read, for example U for velocity, p for pressure, or nut for turbulent viscosity. Names depend on your case. This selects existing fields; it does not calculate new ones. If omitted, Schemaxis leaves the reader’s field selection at its native default. Use {"select":"all"} for all names advertised by the reader, or a list of entries. Each entry is an exact name or {"pattern":"..."}, a regular expression matched when the case is loaded; an expression that matches nothing is an error. Load names reads case headers; Ask the application asks ParaView for its advertised names without updating mesh data. | `{"type":"union","options":[{"type":"array","items":{"type":"union","options":[{"type":"string","minLength":1},{"type":"object","properties":{"pattern":{"type":"string","minLength":1,"maxLength":256,"required":true}}}]},"minItems":1},{"type":"object","properties":{"select":{"type":"enum","values":["all"],"required":true}}},{"type":"object","properties":{"pattern":{"type":"string","minLength":1,"maxLength":256,"required":true}}}]}` | omitted |
-| `skipZero` | Enable this to skip the initial time directory 0 when reading available times. Leave it disabled when you want to inspect the initial conditions as well as later results. | `{"type":"boolean"}` | `false` |
+| `skipZero` | Enable this to skip the initial time directory 0 when reading available times. Leave it disabled when you want to inspect the initial conditions as well as later results. | `{"type":"boolean"}` | `true` |
 
 - `file` is a constructor option.
 - `caseType` is a constructor option.
@@ -7998,7 +7998,7 @@ Input `Input` contract: `{"compatibility":"native-domain-checked","composite":nu
 
 ## pvOpenFOAMReader
 
-Full native OpenFOAM reader: opens a case through its .foam marker and outputs a multiblock dataset with the selected mesh regions (internalMesh, patches, patch groups, Lagrangian clouds and optionally zones) carrying cell, point and Lagrangian fields for each stored time. Omitted settings keep ParaView's own defaults: Reconstructed Case, the 0 directory skipped, point data interpolated from cell fields, 32-bit labels and 64-bit scalars. Use the curated foam operation for the common case (decomposed case, internalMesh only, 0 kept); use this one for point or Lagrangian fields, zones, binary label/scalar sizes and the other native options.
+Full native OpenFOAM reader: opens a case through its .foam marker and outputs a multiblock dataset with the selected mesh regions (internalMesh, patches, patch groups, Lagrangian clouds and optionally zones) carrying cell, point and Lagrangian fields for each stored time. Omitted settings keep ParaView's own defaults: Reconstructed Case, the 0 directory skipped, point data interpolated from cell fields, 32-bit labels and 64-bit scalars. Use the curated foam operation for the common case (decomposed case, internalMesh only, 0 skipped by default); use this one for point or Lagrangian fields, zones, binary label/scalar sizes and the other native options.
 
 Common mistakes and assumptions:
 
@@ -8016,7 +8016,7 @@ Inputs: none.
 | --- | --- | --- | --- |
 | `Adddimensionalunitstoarraynames` | Read dimensional units from field data and add them to array names as human-readable string. | `{"type":"boolean"}` | omitted |
 | `Cachemesh` | Cache the OpenFOAM mesh between GUI selection changes. | `{"type":"boolean"}` | omitted |
-| `CaseType` | The property indicates whether decomposed mesh or reconstructed mesh should be read | `{"type":"enum","values":["Decomposed Case","Reconstructed Case"]}` | omitted |
+| `CaseType` | The property indicates whether decomposed mesh or reconstructed mesh should be read. Schemaxis sets this constant option when it creates the reader, before opening FileName, so Decomposed Case can read processor folders without a reconstructed mesh. | `{"type":"enum","values":["Decomposed Case","Reconstructed Case"]}` | omitted |
 | `CellArrays` | Cell-centred fields to read from the time directories (OpenFOAM volume fields such as p, U, T, k or nut). Fields not listed are not loaded; an empty list loads the mesh without cell fields. With Createcelltopointfiltereddata on (ParaView default) each selected field is also interpolated to points. | `{"items":{"type":"string"},"type":"array"}` | omitted |
 | `Copydatatocellzones` | Copy data of internal mesh to the cell zones | `{"type":"boolean"}` | omitted |
 | `Createcelltopointfiltereddata` | Create point data from cell data. Beware: the filter does not do inverse distance weighting. | `{"type":"boolean"}` | omitted |
@@ -8034,6 +8034,7 @@ Inputs: none.
 
 `onVisit` commands: `{"Refresh":{"command":"SetRefresh","native":"Refresh"}}`. Invoked in authored order on every selected visit, before updating this node; downstream results are invalidated.
 
+- `CaseType` is a constructor option.
 - `FileName` is a constructor option.
 
 ## pvOpenVDBReader

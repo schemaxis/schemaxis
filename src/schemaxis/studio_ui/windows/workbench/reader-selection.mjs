@@ -5,6 +5,13 @@
 // are resolved against the names in the case when it is loaded.
 import {h, mount} from '../../lib/dom.mjs';
 
+const nameOrder = new Intl.Collator('en', {numeric: true, sensitivity: 'base'});
+
+/** Natural, case-insensitive offered-name order, with a stable exact-name tie break. */
+export function sortedNames(names) {
+  return [...names].sort((a, b) => nameOrder.compare(a, b) || (a < b ? -1 : a > b ? 1 : 0));
+}
+
 export function parseNames(text) {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -41,11 +48,85 @@ export function matchesOf(entry, available, blocks = false) {
 
 /** The names a whole entry list selects, in the order the application resolves them. */
 export function selectedNames(entries, available, blocks = false) {
-  let result = entries.some((entry) => !entry.exclude) ? [] : [...available];
+  const result = new Set(entries.length && !entries.some((entry) => !entry.exclude) ? available : []);
+  const offered = new Set(available);
   for (const entry of entries) {
-    const matches = matchesOf(entry, available, blocks) || [];
-    if (entry.exclude) result = result.filter((name) => !matches.includes(name));
-    else result.push(...matches.filter((name) => !result.includes(name)));
+    const exact = blocks ? blockName(entry.text) : entry.text;
+    const matches = entry.regex ? matchesOf(entry, available, blocks) || [] : offered.has(exact) ? [exact] : [];
+    for (const name of matches) {
+      if (entry.exclude) result.delete(name);
+      else result.add(name);
+    }
+  }
+  return [...result];
+}
+
+/** Toggle one offered name without removing other names selected by a pattern. */
+export function toggledName(entries, name, available, {blocks = false, all = false} = {}) {
+  const exact = value => ({text: blocks ? '//' + value : value, regex: false});
+  if (all) return {all: false, materialized: true, entries: available.filter(value => value !== name).map(exact)};
+  const selected = selectedNames(entries, available, blocks).includes(name);
+  const implicitAll = entries.length > 0 && entries.every(entry => entry.exclude);
+  const exclusion = '^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$';
+  let next;
+  if (selected) {
+    next = entries.filter(entry => entry.regex || !matchesOf(entry, [name], blocks).length);
+    // Removing the final positive selector must not turn leftover exclusions
+    // into a new implicit selection of every other block.
+    if (!implicitAll && !next.some(entry => !entry.exclude)) next = [];
+    if (selectedNames(next, available, blocks).includes(name)) {
+      if (blocks) next = [...next, {text: exclusion, regex: true, exclude: true}];
+      else {
+        next = next.flatMap(entry => entry.regex && matchesOf(entry, [name])?.length
+          ? matchesOf(entry, available).filter(value => value !== name).map(exact) : [entry]);
+        return {all: false, entries: next, materialized: true};
+      }
+    }
+  } else {
+    next = entries.filter(entry => !(entry.exclude && entry.text === exclusion));
+    if (implicitAll && !next.length) next = [{text: '.*', regex: true}];
+    if (!selectedNames(next, available, blocks).includes(name)) {
+      if (implicitAll && next.every(entry => entry.exclude)) next = [{text: '.*', regex: true}, ...next];
+      next = [...next, exact(name)];
+    }
+  }
+  return {all: false, entries: next, materialized: false};
+}
+
+/** Set a subset without replacing patterns or selections outside that subset. */
+export function setNamesSelected(entries, names, available, selected, options = {}) {
+  if (options.blocks && !options.all) {
+    const offered = new Set(available);
+    const chosen = new Set(selectedNames(entries, available, true));
+    const targets = [...new Set(names)].filter(name => offered.has(name) && chosen.has(name) !== selected);
+    if (!targets.length) return {entries, all: false, materialized: false};
+    const implicitAll = entries.length > 0 && entries.every(entry => entry.exclude);
+    const exclusion = name => '^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$';
+    let next;
+    if (selected) {
+      const exclusions = new Set(targets.map(exclusion));
+      next = entries.filter(entry => !(entry.exclude && exclusions.has(entry.text)));
+      if (implicitAll && !next.length) next = [{text: '.*', regex: true}];
+      const retained = new Set(selectedNames(next, available, true));
+      const missing = targets.filter(name => !retained.has(name));
+      if (implicitAll && missing.length && next.every(entry => entry.exclude)) next = [{text: '.*', regex: true}, ...next];
+      next = [...next, ...missing.map(name => ({text: '//' + name, regex: false}))];
+    } else {
+      const removed = new Set(targets);
+      next = entries.filter(entry => entry.regex || !removed.has(blockName(entry.text)));
+      if (!implicitAll && !next.some(entry => !entry.exclude)) next = [];
+      const retained = new Set(selectedNames(next, available, true));
+      next = [...next, ...targets.filter(name => retained.has(name)).map(name => ({text: exclusion(name), regex: true, exclude: true}))];
+    }
+    return {entries: next, all: false, materialized: false};
+  }
+  let result = {entries, all: Boolean(options.all), materialized: false};
+  for (const name of new Set(names)) {
+    if (!available.includes(name)) continue;
+    const chosen = result.all || selectedNames(result.entries, available, options.blocks).includes(name);
+    if (chosen === selected) continue;
+    const next = toggledName(result.entries, name, available, {...options, all: result.all});
+    result = {...next, materialized: result.materialized || next.materialized};
   }
   return result;
 }
@@ -58,13 +139,18 @@ const KINDS = [['exact', 'Exact name'], ['regex', 'Regular expression'], ['exclu
  * `blocks` selects blocks of a pipeline input: no All mode, exclusions allowed, names shown without
  * their region prefix. read() returns undefined when nothing is chosen (the reader's default,
  * `fallback`, stays in force), or `required()` when the setting cannot be left out.
+ * `compact` puts offered names first and folds the exact/pattern entry editor.
  */
-export function readerSelection({initial, label, field, inspect, names, fallback, blocks = false, required = null}) {
+export function readerSelection({initial, label, field, inspect, names, fallback, blocks = false, required = null, compact = false}) {
   let entries = entriesOf(initial);
   let all = !blocks && initial?.select === 'all';
   let editing = -1;
   let available = [];
   let loaded = false;
+  let nativeBlocks = false;
+  let inspectionVersion = 0;
+  let anchor = null;
+  let anchorSelected = true;
   const short = blocks ? 'blocks' : label.split(/[./]/).at(-1);
   const modes = h('div', {class: 'wb-segmented', role: 'radiogroup', 'aria-label': `${label} selection mode`, hidden: blocks},
     [[true, 'All', 'Everything the reader offers, resolved when the case is loaded'],
@@ -91,9 +177,22 @@ export function readerSelection({initial, label, field, inspect, names, fallback
   const hint = h('p', {class: 'wb-help', role: 'status'});
   const state = h('p', {class: 'wb-help', role: 'status'});
   const summary = h('p', {class: 'reader-summary', role: 'status', hidden: true});
+  const selectionNote = h('p', {class: 'wb-help reader-selection-note', role: 'status', hidden: true});
   const choices = h('div', {class: 'reader-choices'});
   const filter = h('input', {class: 'input', type: 'search', placeholder: 'Filter the names…', hidden: true,
-    'aria-label': `Filter available ${short}`, onInput: renderChoices});
+    'aria-label': `Filter available ${short}`, onInput: () => { anchor = null; renderChoices(); }});
+  const shownNames = () => available.filter(name => name.toLowerCase().includes(filter.value.trim().toLowerCase()));
+  const bulk = h('div', {class: 'operation-file-tools reader-bulk', hidden: true},
+    h('button', {class: 'button small', type: 'button', dataset: {action: 'select-all'},
+      title: 'Add every loaded block, including names hidden by the filter', onClick: () => chooseMany(available, true)}, 'Select All'),
+    h('button', {class: 'button small', type: 'button', dataset: {action: 'deselect-all'},
+      title: 'Clear all selectors, patterns, exclusions and pending entries', onClick: () => {
+        entries = []; all = false; anchor = null; selectionNote.hidden = true; stopEditing();
+      }}, 'Deselect All'),
+    h('button', {class: 'button small', type: 'button', dataset: {action: 'select-shown'},
+      onClick: () => chooseMany(shownNames(), true)}, 'Select shown'),
+    h('button', {class: 'button small', type: 'button', dataset: {action: 'deselect-shown'},
+      onClick: () => chooseMany(shownNames(), false)}, 'Deselect shown'));
   const heading = h('strong', {class: 'reader-available-title'}, 'Names in the case');
   const loadButtons = h('div', {class: 'reader-load'},
     h('button', {class: 'button small', type: 'button', dataset: {action: 'load-names'}, onClick: () => load(false),
@@ -101,30 +200,41 @@ export function readerSelection({initial, label, field, inspect, names, fallback
     h('button', {class: 'button small ghost', type: 'button', onClick: () => load(true),
       title: 'Ask the application for the names it reports. Slower, and complete.'}, 'Ask the application'));
   const named = h('div', {class: 'reader-named'}, list,
-    h('div', {class: 'reader-add'}, kind, text, options, add, cancel), hint, summary);
-  const element = h('div', {class: 'reader-selection'}, h('div', {class: 'reader-head'}, modes, loadButtons), named,
-    h('div', {class: 'reader-available'}, h('div', {class: 'reader-available-head'}, heading, filter), state, choices));
+    h('div', {class: 'reader-add'}, kind, text, options, add, cancel), hint, summary, selectionNote);
+  const availablePanel = h('div', {class: 'reader-available'}, h('div', {class: 'reader-available-head'}, heading, filter), state, bulk,
+    blocks ? h('p', {class: 'wb-help'}, 'Click to toggle; Shift-click a range. Filter to select a group. Drag a box to add names; Ctrl/Cmd-drag toggles them.') : null, choices);
+  const element = h('div', {class: ['reader-selection', compact && 'reader-selection-compact']},
+    h('div', {class: 'reader-head'}, modes, loadButtons),
+    ...(compact ? [availablePanel, h('details', {class: 'reader-selectors', open: entries.some(entry => entry.regex)},
+      h('summary', {}, 'Selectors and patterns'), named)] : [named, availablePanel]));
 
   function setAvailable(inspection) {
     loaded = Boolean(inspection?.available !== false && inspection);
     const values = (inspection?.[field] || []).map(String);
-    available = blocks ? [...new Set(values.map(blockName))] : values;
+    available = sortedNames(blocks ? [...new Set(values.map(blockName))] : values);
+    anchor = null;
     heading.textContent = loaded ? `Names in the case (${available.length})` : 'Names in the case';
     state.textContent = !inspection ? 'Not loaded yet. Press Load names to list them here; entries work without them.'
       : inspection.available === false ? inspection.reason || inspection.message || 'No names could be read from this case.'
         : inspection.scope || 'Names reported by the application.';
     mount(options, available.map((name) => h('option', {value: name})));
-    filter.hidden = available.length < 12;
+    filter.hidden = blocks ? !loaded : available.length < 12;
     render();
   }
 
   async function load(live) {
+    const version = ++inspectionVersion;
     state.textContent = live ? 'Asking the application…' : 'Reading case headers…';
     try {
-      const inspection = names ? await names.load(live) : await inspect(live);
-      if (!names && element.isConnected) setAvailable(inspection);
+      // Native block choices belong to this input, even when reader header
+      // hints are shared with the rest of the workbench.
+      const direct = !names || (blocks && live);
+      const inspection = direct ? await inspect(live) : await names.load(live);
+      if (version !== inspectionVersion || !element.isConnected) return;
+      nativeBlocks = blocks && live;
+      setAvailable(inspection);
     } catch (error) {
-      state.textContent = error.message;
+      if (version === inspectionVersion) state.textContent = error.message;
     }
   }
 
@@ -191,17 +301,115 @@ export function readerSelection({initial, label, field, inspect, names, fallback
     text.focus();
   }
 
+  function capturePending() {
+    const pending = typed();
+    if (typeof pending === 'string') { hint.textContent = pending; return false; }
+    if (pending.length) {
+      if (editing >= 0) entries.splice(editing, 1, ...pending);
+      else entries.push(...pending.filter(entry => !entries.some(item => item.text === entry.text
+        && item.regex === entry.regex && Boolean(item.exclude) === Boolean(entry.exclude))));
+    }
+    editing = -1; text.value = ''; add.textContent = 'Add entry'; cancel.hidden = true;
+    return true;
+  }
+
+  function chooseMany(namesToSet, select) {
+    if (!capturePending()) return;
+    const next = setNamesSelected(entries, namesToSet, available, select, {blocks, all});
+    entries = next.entries; all = next.all;
+    selectionNote.hidden = false;
+    selectionNote.textContent = select
+      ? 'Added exact choices from the loaded names. Existing patterns and other selections are kept.'
+      : 'Deselected these loaded names. Other selections and dynamic patterns are kept.';
+    render();
+  }
+
   function renderChoices() {
-    const query = filter.value.trim().toLowerCase();
+    const shown = shownNames();
+    bulk.hidden = !blocks;
+    bulk.querySelector('[data-action=select-all]').disabled = !available.length;
+    for (const action of ['select-shown', 'deselect-shown']) {
+      const button = bulk.querySelector(`[data-action=${action}]`);
+      button.hidden = !filter.value.trim(); button.disabled = !shown.length;
+    }
     const chosen = new Set(all ? available : selectedNames(entries, available, blocks));
-    mount(choices, available.filter((name) => name.toLowerCase().includes(query)).map((name) => h('button', {
-      class: ['wb-case-name', 'mono'], type: 'button', 'aria-pressed': String(chosen.has(name)), disabled: all,
-      title: all ? 'Selected by All' : chosen.has(name) ? 'Selected by the entries' : 'Add as an exact name',
-      onClick: () => {
-        const value = blocks ? '//' + name : name;
-        if (!entries.some((entry) => !entry.regex && entry.text === value)) entries.push({text: value, regex: false});
+    mount(choices, shown.map((name) => h('button', {
+      class: ['wb-case-name', 'mono'], type: 'button', 'aria-pressed': String(chosen.has(name)),
+      dataset: {name},
+      title: chosen.has(name) ? 'Remove from selection' : 'Add to selection',
+      onClick: event => {
+        const restoreFocus = document.activeElement === event.currentTarget;
+        if (blocks && event.shiftKey && shown.includes(anchor)) {
+          const from = shown.indexOf(anchor), to = shown.indexOf(name);
+          chooseMany(shown.slice(Math.min(from, to), Math.max(from, to) + 1), anchorSelected);
+          if (restoreFocus) [...choices.querySelectorAll('button')].find(button => button.dataset.name === name)?.focus({preventScroll: true});
+          return;
+        }
+        if (blocks && !capturePending()) return;
+        const next = toggledName(entries, name, available, {blocks, all});
+        entries = next.entries; all = next.all;
+        anchor = name; anchorSelected = selectedNames(entries, available, blocks).includes(name);
+        if (editing >= 0) stopEditing();
+        selectionNote.hidden = !next.materialized;
+        selectionNote.textContent = next.materialized ? 'This change uses exact names from the loaded list. Choose All or add a pattern for future matches.' : '';
         render();
-      }}, name)));
+        if (restoreFocus) [...choices.querySelectorAll('button')].find(button => button.textContent === name)?.focus({preventScroll: true});
+      }}, name)), !shown.length && loaded ? h('p', {class: 'wb-help'}, 'No names match this filter.') : null);
+  }
+
+  // Box selection is confined to the offered chips. Pointer capture keeps a
+  // drag alive outside the list; touch scrolling continues to work normally.
+  if (blocks) {
+    let drag = null;
+    let suppressClick = false;
+    const finish = (apply = false) => {
+      if (!drag) return;
+      const current = drag; drag = null;
+      current.box?.remove();
+      choices.querySelectorAll('.reader-box-hit').forEach(button => button.classList.remove('reader-box-hit'));
+      if (choices.hasPointerCapture(current.id)) choices.releasePointerCapture(current.id);
+      if (!current.box) return;
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      if (!apply || !current.names.length || !capturePending()) return;
+      if (current.toggle) {
+        for (const name of current.names) entries = toggledName(entries, name, available, {blocks: true}).entries;
+        render();
+      } else chooseMany(current.names, true);
+      anchor = null;
+      element.dispatchEvent(new Event('change', {bubbles: true}));
+    };
+    choices.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || event.pointerType !== 'mouse') return;
+      drag = {id: event.pointerId, x: event.clientX, y: event.clientY, toggle: event.ctrlKey || event.metaKey, names: []};
+    });
+    choices.addEventListener('pointermove', event => {
+      if (!drag || drag.id !== event.pointerId) return;
+      if (!drag.box && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 5) return;
+      if (!drag.box) {
+        drag.box = h('div', {class: 'reader-selection-box', 'aria-hidden': 'true'});
+        choices.append(drag.box); choices.setPointerCapture(drag.id);
+      }
+      event.preventDefault();
+      const bounds = choices.getBoundingClientRect();
+      const left = Math.max(bounds.left, Math.min(drag.x, event.clientX));
+      const right = Math.min(bounds.right, Math.max(drag.x, event.clientX));
+      const top = Math.max(bounds.top, Math.min(drag.y, event.clientY));
+      const bottom = Math.min(bounds.bottom, Math.max(drag.y, event.clientY));
+      Object.assign(drag.box.style, {left: `${left - bounds.left + choices.scrollLeft}px`, top: `${top - bounds.top + choices.scrollTop}px`,
+        width: `${Math.max(0, right - left)}px`, height: `${Math.max(0, bottom - top)}px`});
+      drag.names = [...choices.querySelectorAll('button')].filter(button => {
+        const rect = button.getBoundingClientRect();
+        const hit = right > left && bottom > top && rect.right > left && rect.left < right && rect.bottom > top && rect.top < bottom;
+        button.classList.toggle('reader-box-hit', hit); return hit;
+      }).map(button => button.dataset.name);
+    });
+    choices.addEventListener('pointerup', () => finish(true));
+    choices.addEventListener('pointercancel', () => finish());
+    choices.addEventListener('lostpointercapture', () => finish());
+    choices.addEventListener('keydown', event => { if (event.key === 'Escape' && drag?.box) { event.stopPropagation(); finish(); } });
+    choices.addEventListener('click', event => { if (suppressClick) { event.preventDefault(); event.stopPropagation(); } }, true);
+    choices.addEventListener('dragstart', event => event.preventDefault());
   }
 
   function render() {
@@ -239,10 +447,14 @@ export function readerSelection({initial, label, field, inspect, names, fallback
   }
 
   setAvailable(names?.get() || null);
-  const unsubscribe = names?.subscribe((inspection) => { if (element.isConnected) setAvailable(inspection); else unsubscribe?.(); });
-  return {element, read() {
+  const unsubscribe = names?.subscribe((inspection) => {
+    if (!element.isConnected) unsubscribe?.();
+    else if (!nativeBlocks) setAvailable(inspection);
+  });
+  return {element, invalidate(inspection = null) { inspectionVersion++; nativeBlocks = false; setAvailable(inspection); }, read() {
     if (all) return {select: 'all'};
     const pending = editing < 0 ? typed() : [];
+    if (typeof pending === 'string') throw Error(pending);
     const chosen = [...entries, ...(Array.isArray(pending) ? pending : [])];
     if (!chosen.length) return required ? required() : undefined;
     return chosen.map((entry) => entry.exclude ? {exclude: entry.text} : entry.regex ? {pattern: entry.text} : entry.text);

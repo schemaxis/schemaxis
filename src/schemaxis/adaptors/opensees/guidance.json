@@ -34,7 +34,7 @@
         "": {
           "status": "reviewed",
           "explanation": "Describe one complete pin-jointed structural network, its physical stiffness, nodal loads and measured limits. The result is a linear elastic axial assessment; it does not certify stability or safety.",
-          "units": "SI m, N, Pa and m\u00b2",
+          "units": "SI m, N, Pa and m²",
           "sources": [
             "docs/opensees.md"
           ]
@@ -64,6 +64,15 @@
           ]
         },
         "/properties/nodes/items": {
+          "authoring": {
+            "instanceFields": [
+              {"path": "/x_m", "label": "X position"},
+              {"path": "/y_m", "label": "Y position"},
+              {"path": "/fixed", "label": "Restraints"}
+            ],
+            "naming": {"prefix": "node"},
+            "multiMode": {"rationale": "Each node declares its own position and restraints for later member connections."}
+          },
           "status": "reviewed",
           "explanation": "One pin joint carries its x/y position and optional zero-translation restraints. Every joint must belong to at least one member; brace each component sufficiently to prevent free mechanisms.",
           "units": "m",
@@ -120,6 +129,32 @@
           ]
         },
         "/properties/members/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/a",
+                "label": "A"
+              },
+              {
+                "path": "/b",
+                "label": "B"
+              },
+              {
+                "path": "/youngsModulus_Pa",
+                "label": "Youngs modulus_ pa"
+              },
+              {
+                "path": "/area_m2",
+                "label": "Area_m2"
+              }
+            ],
+            "naming": {
+              "prefix": "member"
+            },
+            "multiMode": {
+              "rationale": "Each named member connects its own two declared nodes."
+            }
+          },
           "status": "reviewed",
           "explanation": "One two-node straight elastic axial bar. Positive force is tension and negative force is compression. Compressive stiffness remains elastic; no buckling, slackening, yielding or bending check is implied.",
           "units": "SI",
@@ -162,7 +197,7 @@
         "/properties/members/items/properties/area_m2": {
           "status": "reviewed",
           "explanation": "Uniform member cross-sectional area in square metres, such as 0.001. Axial stiffness is E times area divided by length. Increasing area lowers elastic strain/stress in determinate bars but can redistribute force in redundant networks.",
-          "units": "m\u00b2",
+          "units": "m²",
           "sources": [
             "docs/opensees.md"
           ]
@@ -216,6 +251,29 @@
           ]
         },
         "/properties/requirements/items": {
+          "authoring": {
+            "instanceFields": [
+              {
+                "path": "/quantity",
+                "label": "Quantity"
+              },
+              {
+                "path": "/target",
+                "label": "Target"
+              },
+              {
+                "path": "/maximum",
+                "label": "Maximum"
+              }
+            ],
+            "naming": {
+              "prefix": "limit"
+            },
+            "multiMode": {
+              "rationale": "Each requirement evaluates its own structural result threshold."
+            },
+            "identityStyle": "label"
+          },
           "status": "reviewed",
           "explanation": "One accountable maximum measurement at a named node or member. The measured magnitude must not exceed maximum. These are serviceability/elastic measurements, not code-compliance, yield or buckling certification.",
           "units": "selected quantity SI unit",

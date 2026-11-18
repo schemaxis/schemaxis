@@ -1,3 +1,4 @@
+import {stubSpatialHost} from './fixtures/spatial-host-browser.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {launch} from './harness.mjs';
@@ -19,6 +20,7 @@ test('create a shared Case Runner parameter before operations, then undo its sav
   const session = await launch();
   try {
     await session.wait('window.studio?.store.get().server', 'Studio');
+    await stubSpatialHost(session, {expressions: {'distance * 2': {type: 'scalar', value: 10}, [JSON.stringify({$sweep:'heights'})]: {type:'scalar',phase:'visit',value:1}}});
     await session.evaluate(`(async()=>{const record=await studio.api.post('/api/documents',{action:'new',provider:'workflow-design',name:'Dimensions first'});
       window.variableDoc=record.id;await studio.refresh();studio.openDocument(record.id);})()`);
     await session.wait('studio.designers.get(window.variableDoc)?.model.store.get().projection', 'empty design');
@@ -51,6 +53,7 @@ test('creating and binding a value is cancellable, schema checked, and one local
   const session = await launch();
   try {
     await session.wait('window.studio?.store.get().server', 'Studio');
+    await stubSpatialHost(session, {expressions: {'distance * 2': {type: 'scalar', value: 10}, [JSON.stringify({$sweep:'heights'})]: {type:'scalar',phase:'visit',value:1}}});
     await session.evaluate(`(async()=>{const record=await studio.api.post('/api/documents',{action:'new',provider:'freecad',name:'Variables',document:{
       version:'schemaxis.freecad/1',nodes:[{id:'body',filter:'box',options:{length:10,width:2,height:3}}],output:'body'}});
       await studio.refresh();studio.openDocument(record.id);})()`);
@@ -84,6 +87,7 @@ test('Blender Add forms stage variables with the operation, and embedded Help om
   const session = await launch({provider: 'blender'});
   try {
     await session.wait('window.studio?.store.get().server', 'Studio');
+    await stubSpatialHost(session, {expressions: {'distance * 2': {type: 'scalar', value: 10}, [JSON.stringify({$sweep:'heights'})]: {type:'scalar',phase:'visit',value:1}}});
     await session.evaluate(`(async()=>{const record=await studio.api.post('/api/documents',{action:'new',provider:'blender',name:'Ring',source:JSON.stringify({
       version:'schemaxis.blender/1',nodes:[{id:'blue',filter:'material'}],scenes:[]})});
       await studio.refresh();studio.openDocument(record.id);})()`);
@@ -131,6 +135,7 @@ test('an operation Workbench creates and binds a shared parameter without losing
   const session = await launch();
   try {
     await session.wait('window.studio?.store.get().server', 'Studio');
+    await stubSpatialHost(session, {expressions: {'distance * 2': {type: 'scalar', value: 10}, [JSON.stringify({$sweep:'heights'})]: {type:'scalar',phase:'visit',value:1}}});
     await session.evaluate(`(async()=>{const record=await studio.api.post('/api/documents',{action:'new',provider:'workflow-design',name:'Shared',document:{
       version:'schemaxis.workflow-design/2',workflow:{version:'schemaxis.workflow/1',operations:[{id:'part',document:{
       version:'schemaxis.freecad/1',nodes:[{id:'body',filter:'box',options:{length:10,width:2,height:3}}],output:'body'}}]},
@@ -171,6 +176,7 @@ test('Add forms inside workflows stage shared variables and the new node in one 
   const session = await launch();
   try {
     await session.wait('window.studio?.store.get().server', 'Studio');
+    await stubSpatialHost(session, {expressions: {'distance * 2': {type: 'scalar', value: 10}, [JSON.stringify({$sweep:'heights'})]: {type:'scalar',phase:'visit',value:1}}});
     await session.evaluate(`(async()=>{const record=await studio.api.post('/api/documents',{action:'new',provider:'workflow-design',name:'Shared Add',document:{
       version:'schemaxis.workflow-design/2',workflow:{version:'schemaxis.workflow/1',operations:[{id:'part',document:{
       version:'schemaxis.freecad/1',nodes:[{id:'body',filter:'box',options:{length:10,width:2,height:3}}],output:'body'}}]},
@@ -223,6 +229,7 @@ test('the common picker rejects incompatible named values and authors calculatio
   const session = await launch();
   try {
     await session.wait('window.studio?.store.get().server', 'Studio');
+    await stubSpatialHost(session, {expressions: {'distance * 2': {type: 'scalar', value: 10}, [JSON.stringify({$sweep:'heights'})]: {type:'scalar',phase:'visit',value:1}}});
     await session.evaluate(`(async()=>{const r=await studio.api.post('/api/documents',{action:'new',provider:'freecad',name:'Computed dimensions',document:{
       version:'schemaxis.freecad/1',dimensions:{distance:5,material:'steel'},nodes:[{id:'body',filter:'box',options:{length:10,width:2,height:3}}],output:'body'}});
       await studio.refresh();studio.openDocument(r.id);})()`);
@@ -232,34 +239,32 @@ test('the common picker rejects incompatible named values and authors calculatio
     assert.equal(await session.evaluate(`document.querySelector('.variables-list [data-pointer="/dimensions/material"]').disabled`), true);
     await session.evaluate(`document.querySelector('[aria-label="Choose a value or expression"] details').open=true`);
     await field(session, 'Value source', '$expr');
-    await field(session, 'Calculation', 'multiply');
-    await field(session, 'Left argument source', '0');
-    await field(session, 'Right argument', '2');
+    await field(session, 'Expression', 'distance * 2');
     await button(session, 'Use value');
     await session.wait('!document.querySelector(".dialog")', 'calculation applied');
     assert.deepEqual(await session.evaluate(`${active}.editor.getDocument().nodes[0].options.length`),
-      {$expr:{op:'multiply',args:[{$document:'/dimensions/distance'},2]}});
+      {$expr:'distance * 2'});
     await session.evaluate(`void ${active}.editor.getOption('chooseValue')({pointer:'/nodes/0/options/height'})`);
     await session.wait(`document.querySelector('[aria-label="Choose a value or expression"]')`, 'height picker');
     await button(session, 'Create new value…');
     await session.wait(`document.querySelector('[aria-label="Variable name"]')`, 'sweep creator');
-    await field(session, 'Variable name', 'heights'); await field(session, 'Value group', 'axes');
+    await field(session, 'Variable name', 'heights'); await field(session, 'Value group', 'sweeps');
     await field(session, 'Sweep values (JSON)', '[1,2,3]');
     await button(session, 'Create value');
     await session.wait(`!document.querySelector('[aria-label="Variable name"]')`, 'sweep created');
     await button(session, 'Use value');
     await session.wait('!document.querySelector(".dialog")', 'sweep bound');
     const document = await session.evaluate(`${active}.editor.getDocument()`);
-    assert.deepEqual(document.axes, [{name:'heights',values:[1,2,3]}]);
-    assert.deepEqual(document.nodes[0].options.height, {$axis:'heights'});
+    assert.deepEqual(document.sweeps, [{name:'heights',values:[1,2,3]}]);
+    assert.deepEqual(document.nodes[0].options.height, {$sweep:'heights'});
     await session.evaluate(`void ${active}.editor.getOption('chooseValue')({pointer:'/nodes/0/options/width'})`);
     await session.wait(`document.querySelector('[aria-label="Choose a value or expression"]')`, 'width picker');
     await session.evaluate(`document.querySelector('[aria-label="Choose a value or expression"] details').open=true`);
-    await field(session, 'Value source', '$axis');
+    await field(session, 'Value source', '$sweep');
     await field(session, 'Named sweep', 'heights');
     await button(session, 'Use value');
     await session.wait('!document.querySelector(".dialog")', 'existing sweep applied');
-    assert.deepEqual(await session.evaluate(`${active}.editor.getDocument().nodes[0].options.width`), {$axis:'heights'});
+    assert.deepEqual(await session.evaluate(`${active}.editor.getDocument().nodes[0].options.width`), {$sweep:'heights'});
     assert.deepEqual(session.exceptions, []); assert.deepEqual(session.consoleErrors, []);
   } finally {await session.close();}
 });
@@ -268,6 +273,7 @@ test('binding repeated fields across operation scopes keeps the selected variabl
   const session = await launch();
   try {
     await session.wait('window.studio?.store.get().server', 'Studio');
+    await stubSpatialHost(session, {expressions: {'distance * 2': {type: 'scalar', value: 10}, [JSON.stringify({$sweep:'heights'})]: {type:'scalar',phase:'visit',value:1}}});
     await session.evaluate(`void (async()=>{const {chooseValue}=await import('/windows/variables/panel.mjs');
       const root={version:'schemaxis.workflow/1',operations:['a','b'].map((id,i)=>({id,document:{
         version:'schemaxis.freecad/1',dimensions:{length:i?99:12},nodes:[{id:'body',filter:'box',options:{length:{$fill:'length'},width:2,height:3}}],output:'body'}}))};

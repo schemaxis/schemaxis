@@ -1,6 +1,6 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 // Readable, navigable reference to the current draft, shared by both editors.
-import {h, mount} from '../../lib/dom.mjs';
+import {h} from '../../lib/dom.mjs';
 import {escapePointer} from './model.mjs';
 import {openDialog} from '../../shell/dialog.mjs';
 import {duplicateNode, removeNode} from './pipeline-edit.mjs';
@@ -35,12 +35,16 @@ export function comprehensionEntries(documentValue) {
 
 export function createComprehension(editor, onReveal = (pointer) => editor.revealPointer(pointer), onEditForm = null) {
   let selected = '';
+  let busy = false;
+  let canEdit = true;
+  const rows = new Map();
   const list = h('div', {class: 'wb-comprehension-list'});
   const state = h('p', {class: 'wb-help', role: 'status'});
+  const settings = h('button', {class: 'button small primary', type: 'button', hidden: !onEditForm,
+    dataset: {action: 'edit-settings'}, onClick: () => onEditForm?.(selected)}, 'Edit');
   const duplicate = h('button', {class: 'button small', type: 'button', disabled: true, onClick: () => edit(false)}, 'Duplicate');
   const remove = h('button', {class: 'button small', type: 'button', disabled: true, onClick: () => edit(true)}, 'Delete');
-  const form = onEditForm ? h('button', {class: 'button small', type: 'button', disabled: true, dataset: {action: 'edit-form'},
-    title: 'Reopen the settings window for the selected node', onClick: () => onEditForm(selected)}, 'Edit…') : null;
+  const actions = h('div', {class: 'operation-file-tools wb-node-actions', hidden: true}, settings, duplicate, remove);
   async function edit(deleting) {
     const before = editor.getValue();
     let result;
@@ -60,23 +64,58 @@ export function createComprehension(editor, onReveal = (pointer) => editor.revea
   }
   const element = h('details', {class: 'wb-comprehension', open: true},
     h('summary', {}, 'Pipeline'),
-    h('p', {class: 'wb-help'}, 'Follows your cursor. Click a node for its source and Properties; double-click to edit it in its settings window.'),
+    h('p', {class: 'wb-help'}, 'Follows your cursor. Click a node to highlight its source and expand its overview; click again to deselect.'
+      + (onEditForm ? ' Use Edit to open its settings.' : '')),
     h('details', {}, h('summary', {}, 'How to read the pipeline'),
-    h('p', {class: 'wb-help'}, 'Operations and their data connections. Each node creates a named result. Click a node to select its Properties and reveal its source. Numbers are array indices, starting at 0.'),
+    h('p', {class: 'wb-help'}, 'Operations and their data connections. Each node creates a named result. Click a node to highlight its whole source and read its guide. Numbers are array indices, starting at 0.'),
     h('p', {class: 'wb-help'}, '$observe reads a result measurement; path selects its nested value. $document reads a value from this document. $value evaluates a declared function with args.')), state,
-    h('div', {class: 'operation-file-tools'}, form, duplicate, remove), list);
+    list);
+  function paintSelection() {
+    const current = rows.get(selected);
+    for (const [pointer, row] of rows) {
+      const active = pointer === selected;
+      row.card.classList.toggle('selected', active);
+      row.button.setAttribute('aria-current', String(active));
+      row.button.setAttribute('aria-expanded', String(active));
+    }
+    actions.hidden = !current;
+    if (current && actions.parentElement !== current.header) current.header.append(actions);
+    settings.disabled = busy || !canEdit || !current;
+    duplicate.disabled = remove.disabled = busy || !current;
+  }
   function update() {
     let value;
     try { value = editor.getDocument(); }
     catch { state.textContent = 'Incomplete source — showing the last readable reference.'; return; }
     const entries = comprehensionEntries(value);
-    duplicate.disabled = remove.disabled = !entries.some(item => item.pointer === selected);
-    if (form) form.disabled = duplicate.disabled;
     state.textContent = entries.length ? `${entries.length} nodes · current draft` : 'No nodes in this document yet.';
-    mount(list, entries.map((item) => h('button', {class: 'wb-outline-item', dataset: {pointer: item.pointer},
-      'aria-current': String(item.pointer === selected), onClick: () => { selected = item.pointer; update(); onReveal(item.pointer); },
-      onDblclick: () => onEditForm?.(item.pointer)},
-      h('span', {}, h('strong', {}, item.label), h('small', {}, item.detail || 'No inputs or scalar options declared.')))));
+    const pointers = new Set(entries.map(item => item.pointer));
+    for (const [pointer, row] of rows) if (!pointers.has(pointer)) { row.card.remove(); rows.delete(pointer); }
+    // Keep title buttons alive across selection changes to retain focus and scroll position.
+    entries.forEach((item, index) => {
+      let row = rows.get(item.pointer);
+      if (!row) {
+        const title = h('strong');
+        const detail = h('small');
+        const button = h('button', {class: 'wb-outline-item', type: 'button', dataset: {pointer: item.pointer},
+          onClick: () => {
+            const scroller = button.closest('.wb-sidebar-content') || list;
+            const top = button.getBoundingClientRect().top;
+            selected = selected === item.pointer ? '' : item.pointer;
+            paintSelection(); onReveal(selected);
+            // Collapsing a sticky card must leave its title under the pointer.
+            scroller.scrollTop += button.getBoundingClientRect().top - top;
+            button.focus({preventScroll: true});
+          }}, h('span', {}, title, detail));
+        const header = h('div', {class: 'wb-node-head'}, button);
+        const card = h('section', {class: 'wb-overview-node'}, header);
+        row = {card, header, button, title, detail}; rows.set(item.pointer, row);
+      }
+      row.title.textContent = item.label;
+      row.detail.textContent = item.detail || 'No inputs or scalar options declared.';
+      if (list.children[index] !== row.card) list.insertBefore(row.card, list.children[index] || null);
+    });
+    paintSelection();
   }
   const track = () => { if (document.activeElement === editor.textarea) api.select(editor.getCursor().pointer); };
   document.addEventListener('selectionchange', track);
@@ -85,12 +124,11 @@ export function createComprehension(editor, onReveal = (pointer) => editor.revea
   const unsubscribe = editor.onChange(update);
   update();
   const api = {element, dispose() { unsubscribe(); document.removeEventListener('selectionchange', track);
-    editor.textarea.removeEventListener('keyup', track); editor.textarea.removeEventListener('click', track); }, refresh: update, select(pointer) {
+    editor.textarea.removeEventListener('keyup', track); editor.textarea.removeEventListener('click', track); }, refresh: update,
+    setAvailability(options) { busy = Boolean(options.busy); canEdit = options.canEdit; paintSelection(); },
+    select(pointer) {
     selected = pointer.match(/^(.*\/nodes\/\d+)(?:\/|$)/)?.[1] || pointer;
-    pointer = selected;
-    duplicate.disabled = remove.disabled = !list.querySelector(`[data-pointer="${CSS.escape(pointer)}"]`);
-    if (form) form.disabled = duplicate.disabled;
-    list.querySelectorAll('button').forEach(button => button.setAttribute('aria-current', String(button.dataset.pointer === pointer)));
+    paintSelection();
   }};
   return api;
 }

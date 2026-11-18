@@ -16,6 +16,31 @@ _PARAVIEW_SUBPATHS = (
     "build/install/bin/pvbatch",
 )
 
+
+def executable_candidates(location, names):
+    """Accept an installation/build root, bin directory or ParaView executable."""
+    base = Path(location).expanduser()
+    if base.name in ('paraview', 'pvpython', 'pvbatch') and not base.is_dir():
+        if base.name in names:
+            yield base
+        base = base.parent
+    for name in names:
+        yield base / name
+        for subpath in _PARAVIEW_SUBPATHS:
+            yield base / Path(subpath).parent / name
+        if base.is_dir():
+            yield from sorted(base.glob('build*/install/bin/' + name))
+
+
+def live_executable(location):
+    """Resolve only the chosen installation, without launching or probing it."""
+    for candidate in executable_candidates(location, ('pvpython', 'pvbatch')):
+        if candidate.is_absolute() and candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate.resolve())
+    raise _fault(INTERPRETER_NOT_FOUND, 'No pvpython or pvbatch executable was found in the selected ParaView installation',
+                 '$.interpreter', observed={'location': str(location)},
+                 recovery='Choose a ParaView installation root, its bin directory, or pvpython/pvbatch.')
+
 #: pvbatch renders to an offscreen buffer only when told to.
 PARAVIEW_OFFSCREEN: tuple[str, ...] = ("--force-offscreen-rendering",)
 
@@ -34,15 +59,7 @@ def find_paraview(
         item for item in os.environ.get(ROOTS_VARIABLE, "").split(os.pathsep) if item
     ]
     for root in supplied:
-        base = Path(root).expanduser()
-        for subpath in _PARAVIEW_SUBPATHS:
-            candidates.append(str(base / subpath))
-        # A superbuild keeps its installation under a versioned build directory.
-        if base.is_dir():
-            for build in sorted(base.glob("build*/install/bin/pvbatch")):
-                candidates.append(str(build))
-        if base.name == "pvbatch":
-            candidates.append(str(base))
+        candidates.extend(str(path) for path in executable_candidates(root, ('pvbatch',)))
     if search_path:
         located = shutil.which("pvbatch")
         if located:

@@ -31,9 +31,11 @@ bounds and defaults that validation actually enforces.
   applies; ParaView can derive some of these from the input data, so set values
   explicitly when the result depends on them.
 
-Many fields offer a choice between a literal value and a **Runtime value**
-(`$axis`, `$time`, `$observe`, `$calc`, …) that is computed on each selected visit;
-see the [$ reference](dollar-reference.md). If an explanation is wrong or unclear,
+Numeric fields accept a number, a named value or an expression, such as
+`model.mid` or `0.002 * model.deltaX`. Studio keeps expressions as `$expr`
+markers; it asks the host to check their meaning and destination. Other
+**Runtime value** forms (`$sweep`, `$time`, `$observe`, `$calc`, …) remain
+available; see the [$ reference](dollar-reference.md). If an explanation is wrong or unclear,
 open **Suggest a correction → Copy help request** and send the copied record
 with your correction; it identifies the adaptor, route and schema address.
 
@@ -44,6 +46,44 @@ with your correction; it identifies the adaptor, route and schema address.
 - [Workflow authoring](workflow-authoring.md) and [Workflow design](workflow-design.md): connect application stages and expose parameters.
 - [Typed inspection](typed-inspection.md): inspect data before selecting fields or consuming artifacts.
 - [Installation](installation.md) and [Updates](updates.md): application configuration and compatibility.
+
+## Workbench sidebars and element settings
+
+The left sidebar offers **Overview** and **Templates**. Its mode buttons stay
+visible while the content scrolls. Overview follows the selected element, lists
+pipeline connections and provides read-only explanations from its declared schema.
+Click a pipeline element to highlight its entire source and expand its details;
+click its title again to deselect and collapse it. Text-editor cursor selection
+continues to update Overview. Templates keeps document sections, templates and
+snippets available in the same sidebar.
+
+Each expanded element encloses its title and properties in one outlined box.
+**Edit**, **Duplicate** and **Delete** sit just below its title. The title and actions
+stick to the top while its properties scroll, then leave with the end of that
+element. Each title click immediately toggles selection; rapid clicks do not open
+settings. **Edit** and **Edit settings…** above the input reopen the full
+configuration window (including a remembered multi-mode batch).
+Edit is enabled when the selection has a settings form. Duplicate and Delete use
+the existing reference-aware draft edits; Undo restores them. Removing dependent
+nodes or publication references asks for confirmation.
+
+The right sidebar holds **Case data**: regions, arrays, times and available
+observations. Its heading, refresh action and search field stay fixed while the
+names scroll. Region and array names use natural alphabetical order (for example,
+`wall2` before `wall10`); time values retain their supplied order. Click a name to insert it at a compatible cursor position or copy
+it. Each section has **Copy** and **Export CSV**. Copy appends all values to the
+list at the cursor, skipping existing values, in one undoable edit; at other
+cursor positions it copies a JSON list (also valid YAML). **Copy all** copies a
+JSON object with the named sections. CSV exports use Section and Value columns.
+Copy/export always include the entire section or all sections, even when the
+search hides some names. Clipboard failures are reported in the panel.
+Saved inspection references remain available below the case information.
+
+Matching sidebar icons flank the view row: the left icon toggles the left sidebar;
+the right icon toggles Case data, beside **Controls**. Both panel choices are
+remembered independently. The row contains Input, Schema, 3D, Image, Table and Text
+views without file or diagnostic summaries. The central **Schema** tab retains
+the selected schema browser; **Text** displays relevant text artifacts.
 
 ## Start, open and recent work
 
@@ -77,7 +117,7 @@ your task; otherwise add a reader or generated source, then filters and outputs.
    compatible object when none is selected. Use the dropdown or **Browse pipeline…**
    to choose another input. Additional ports remain explicit; multiple-input ports
    support multiple selections. ParaView references can select an output port under
-   **Advanced**. These controls also appear in the selected object's Properties.
+   **Advanced**. Reopen **Edit settings…** to change these inputs later.
 7. Add a **Scene** using **Presentation & controls**. Its name is automatic; select
    geometry or visible nodes. Use **Appearance** for colours, fields, representation,
    opacity, lighting, textures and scalar bars.
@@ -92,6 +132,57 @@ your task; otherwise add a reader or generated source, then filters and outputs.
 [ParaView guide](paraview-guide.md), [complete operation reference](paraview-operation-reference.md)
 and [settings reference](paraview-settings-reference.md) describe the contract in detail.
 
+For **Extract Block**, choose **Switch to multi-mode** in the Add/Edit window.
+The title changes from **Single instance** to **Multi-mode**, replacing the normal
+form with the instance list. The compact toolbar and Apply/Cancel footer stay
+visible while the instances scroll.
+
+Each instance header shows its Name and selected blocks. Click it to open or close
+quick settings; the open header is highlighted. Name and selection edits update
+the summary immediately. Available-name chips appear below Name; click a chip
+again to deselect it. Expand **Selectors and patterns** for exact-entry and pattern
+editing. Starting with no blocks selected opens an editable empty instance.
+Available names sort naturally. Adding another instance folds the open editors
+and moves focus to the new one. The preceding instance stays visible as a collapsed
+row above the new editor, making the addition clear; older instances remain above
+it in the scrollable list.
+
+**Add instance** opens an empty selection with the settings and input captured
+when multi-mode began. **Properties…** changes only that instance, then returns to
+multi-mode; Cancel leaves it unchanged. Editing one instance never changes the
+defaults of later additions. **Delete** asks for confirmation.
+
+**Batch actions** has a separate selection editor. Choose blocks there and use
+**One instance per selected item**: four exact selections create four extracts
+from a fresh starter. Existing instances and edited groups are kept; matching
+instances are skipped. Patterns and exclusions remain explicit groups.
+Opening Batch actions reveals instance-selection checkboxes. Use **Split selected
+rows**, **Group selected rows**, or **Use starting settings for selected instances**
+for those checked instances. Resetting settings preserves each Name and selection.
+Apply creates ordinary elements together, with one Undo/Redo step; Cancel leaves
+the input unchanged.
+
+Studio remembers batches created here in this browser. Select any known member
+in Overview and use **Edit** to reopen its multi-mode window. Saved members
+keep their Names and references. Only surviving members of that original batch
+appear; deleted instances stay out of the table, and unrelated extracts are not
+added. Undoing a deletion restores the member to the remembered batch. The available
+block names have their own scrolling area, separate from the headings and selection
+controls. Batch membership stays outside exported input files; older or imported
+untracked nodes open their individual settings window.
+
+Saved instance Names are currently fixed in multi-mode, including its Properties
+windows. This protects existing identities; it does not mean Studio found a
+reference to every such Name. Ordinary single-instance settings allow a rename,
+but do not rewrite references for you. The text editor also permits ID changes;
+update any references when making one.
+
+New extracts suggest names such as `extractBlock_internalMesh`. OpenFOAM readers
+suggest the parent folder plus file stem: `004_031_9d/case.foam` becomes
+`004_031_9d_case`, while `004_031_9d/004_031_9d.foam` becomes `004_031_9d`.
+Typing your own Name preserves it as other settings change. Existing elements
+keep their names when reopened.
+
 ## Browse without knowing an operation name
 
 **Add anything…** searches the whole catalogue. The groups separate file inputs,
@@ -100,7 +191,7 @@ results load in bounded pages; use Show more to continue. Curated recipe buttons
 remain available for multi-operation tasks such as slice sweeps.
 
 The four pipeline groups do not cover the whole document: scenes, cameras,
-appearance, axes, time selection, definitions, dimensions, views, settings and
+appearance, sweeps, time selection, definitions, dimensions, views, settings and
 publication limits belong to **Presentation & controls**. Scene/image selectors
 choose an existing target. Add that target first. Adding a value at an occupied
 setting uses the editor's replacement preview and undo transaction.
@@ -110,8 +201,10 @@ setting uses the editor's replacement preview and undo transaction.
 Configuration forms follow the schema recursively. Select an alternative for a
 union, add/remove array items, and expand optional nested properties. A proxy
 choice such as a clipping plane or box has its own nested options. Free-form
-objects are editable as JSON; their help shows the available schema. Expressions
-and analytic syntax can be entered in the JSON editor after insertion.
+objects are editable as JSON; their help shows the available schema. Scalar,
+vector and box controls accept expressions directly. The JSON editor also
+accepts expression and analytic markers, including a camera written as one
+`{"$expr":"fitCamera(bounds = model, direction = 'z+', up = 'y+')"}` value.
 
 A displayed default is an annotation; an unchecked optional field is omitted.
 An empty enabled field becomes a placeholder, including an optional field you
@@ -184,7 +277,7 @@ in place so it can be corrected.
 **Pipeline** opens by default at the top of the sidebar. It lists nodes, named
 results, incoming connections and compact options, including XYZ vectors. Its
 numbers are zero-based JSON indices: node 0 is the first node. Click a row to
-select its Properties and reveal its source. It follows the current draft,
+highlight its entire source object and read its field explanations directly below the selected row. It follows the current draft,
 includes nested workflow documents and retains its last readable list during
 incomplete JSON edits. **How to read the pipeline** explains references and
 expression syntax.
@@ -199,9 +292,9 @@ their containing document. These controls are shared by Workbench and Schema Edi
 **Document sections** replaces the old Outline. It navigates scenes, settings,
 definitions, workflow components and other document-level structures. Nodes
 appear only in Pipeline, so the two lists serve different purposes. **Help** is
-the general operation reference; **Properties** edits the selected instance.
+the general operation reference; **Edit settings…** opens the selected instance configuration.
 
-Configuration and property Help show the native operation/property beside the
+Configuration and Overview help show the native operation/property beside the
 Schemaxis JSON key where a declared binding exists. For example Calculator's
 **Function (equation)** maps to `Calculator.Function` and the JSON key
 `expression`; **Result array name** maps to `ResultArrayName` and `result`.
@@ -235,7 +328,7 @@ in dataset coordinates, not a count of line samples.
 1. Load and preview the flow source first. For OpenFOAM cell velocity, add
    `cellToPoint` before tracing and select the resulting POINTS vector array.
 2. Add a `line`, or select the line node in **Pipeline**. Choose **Place line
-   endpoints…** in its configuration form or Properties.
+   endpoints…** in its configuration form, opened through **Edit settings…**.
 3. Choose **Load preview bounds**, then select the flow dataset in **Bounds
    source**. **All displayed geometry** uses the visible preview extents, which
    can differ from the full flow dataset. Without a preview, expand **Dataset
@@ -268,13 +361,12 @@ In **Add Input → foam**, Studio supplies a name such as `foam1`.
 Its `file` is the `.foam` marker in the case folder, rather than the mesh data
 itself. **Browse…** opens the desktop's ordinary existing-file dialog on Linux
 when Zenity and a desktop display are available. Select the marker and choose
-**Add operation**. Studio detects processor folders versus serial/reconstructed
-layout, reads available mesh regions and fields, and records explicit reader
-settings. Unless overridden, it loads all available regions and fields. For a
-document without `times`, it records the first available reader time. An explicit
-case type, region/array selection or document time is preserved. A notification
-reports the detected layout and time; these remain editable in Properties and
-Document sections. This setup needs the configured ParaView executable.
+**Add operation**. Studio reads bounded case headers to detect processor folders
+versus serial/reconstructed layout and list regions, fields and times. It records
+the detected case type and, for a document without `times`, the first available
+time. Explicit reader choices and document times are preserved. This header
+inspection does not start ParaView; **Ask the application** and live previews
+need the configured executable.
 
 The chooser inserts an absolute path and does not
 upload, copy or create case files. You can also type the path directly. Relative
@@ -294,8 +386,11 @@ reader. Very large folders require a more specific path (2,000-entry limit).
 The form shows practical descriptions next to the fields. For `caseType`, choose
 the layout containing your results: processor folders for Decomposed Case, or
 the main case folder for serial/reconstructed data. `regions` selects volume
-and boundary mesh parts; `cellArrays` selects existing cell fields; `skipZero`
-omits the initial time. The question-mark buttons retain technical constraints
+and boundary mesh parts; `cellArrays` selects existing cell fields. `skipZero`
+defaults to **true**, so an omitted setting skips time zero in both the header
+list and the native reader. Include the setting and choose **false** to offer
+time zero as well. If you already authored `times`, change it explicitly to
+select the newly available time. The question-mark buttons retain technical constraints
 under **Schema details**.
 
 ### Extracting blocks by name
@@ -314,11 +409,23 @@ leaves the model:
 ```
 
 The names in the case are listed under the entries, without their `patch/`
-prefix; click one to add it. The line above them reports what the whole list
+prefix; click one to toggle it. **Select All** adds all loaded names, including
+names hidden by the filter. **Deselect All** clears the complete selection,
+including patterns, exclusions and pending entries. Filter the names and use
+**Select shown** or **Deselect shown** to work on a group while retaining other
+selections. Shift-click selects or deselects the visible range from the last
+clicked name; Ctrl/Cmd-click also toggles individual names. Drag a box over names
+to add them, or Ctrl/Cmd-drag to toggle them. Keyboard Enter/Space toggles a
+focused name. These controls also appear in multi-mode quick settings and Batch
+actions. Bulk additions use the loaded names, keeping existing dynamic patterns;
+filtered removals add exclusions when a pattern selects the removed blocks.
+They do not silently expand a pattern into separate nodes.
+
+The line above the names reports what the whole list
 selects in this case. Expressions are resolved when the input is loaded, so one
 authored list serves cases whose names vary. An expression that matches nothing
 is an error. A full selector path such as `/Root/boundary/walls` can also be
-typed as an exact entry. Existing filters show the same list in Properties.
+typed as an exact entry. Existing filters show the same list when reopened with **Edit settings…**.
 
 **Load names** reads the case headers of the reader in this pipeline.
 **Ask the application** loads the chosen input and its upstream dependencies in
@@ -336,8 +443,7 @@ node is named after the marker file (`coupe_AMI.foam` gives `coupe_AMI`; a
 generic `case.foam` takes its folder's name) until you type a name yourself.
 Relative dataset paths are resolved from Studio's launch directory.
 
-**Save** writes the input to its file, asking where the first time. The file
-name is shown beside the revision. The arrow beside **Save** offers
+**Save** writes the input to its file, asking where the first time. The arrow beside **Save** offers
 **Save as…**, which writes a new file and makes it the one later saves go to,
 and **Open…**. Saving over an existing file asks first.
 
@@ -347,8 +453,8 @@ open; anything left empty stays a placeholder that the editor offers to fill
 after the operation is added. Enter never closes the window. Drag any window by
 its title bar, and the fill window by its heading, to see the text behind it.
 To reopen the window for a node that already exists, put the cursor in it and
-press **Edit settings…** above the input or in Properties, or double-click it in
-the pipeline guide; **Apply changes** replaces the node as one undoable edit.
+press **Edit settings…** above the input or **Edit** below its Overview title;
+**Apply changes** replaces the node as one undoable edit.
 **Load names** sits beside the screen names, with **Live data preview** for a
 reader, and each list of names has its own.
 
@@ -372,16 +478,21 @@ loads them automatically. Once loaded, each entry shows what it matches, and
 the names can be clicked to add them. **Ask the application** asks ParaView for
 advertised region/array names without updating mesh data.
 
-The same names stay available while editing. **Case data**, beside
-**Properties** in the right panel, lists the regions, cell arrays and times of
+The same names stay available while editing. **Case data** in the right panel lists the regions, cell arrays and times of
 the open case: click a name to add it to the list under the cursor, or to copy
 it when the cursor is elsewhere. The editor's suggestions offer them wherever
-text is accepted. **Live data**, beside **Run**, loads the selected node and its
+text is accepted. **Live Data…**, beside **Run**, opens the source checklist, including when there
+is only one input. **Inspect selected node** loads or reuses that node and its
 upstream dependencies and displays a bounded 3D snapshot when supported. Neither
 inspection action runs downstream publications or requires unfinished downstream
 nodes to validate. Live inspection still needs usable upstream inputs and one
 selected state; workflow-produced files must exist before they can be inspected.
-Use **Refresh live data** after changing the draft. Inspection preserves the
+If the loaded mesh exceeds the browser display limit, inspection still supplies
+bounds, counts and available names in **Case data**; Studio explains why the 3D
+snapshot was omitted. Spatial **Refresh from Live Data** calculates extents from resident sources
+without transferring the mesh to the browser. Both retain the native data until **Disable all Live Data**
+or session exit.
+Use **Inspect selected node** again to update its mesh preview after changing the draft. Inspection preserves the
 input, including unfilled fields. Adding a reader uses header metadata, when
 available, to record its layout and first stored time without launching ParaView.
 
@@ -392,18 +503,31 @@ executes and verifies the complete input in the configured application.
 **Adaptor help** opens the selected adaptor/operation reference; the title-bar
 **Help** opens the general Studio guide. The native status explains whether an
 executable is available and how to open Application Setup in Admin mode.
+For ParaView, the configured location can be the installation root, its `bin`
+directory, or the `paraview`, `pvpython` or `pvbatch` executable. Studio finds
+the scripting executable in that installation for live inspection; selecting
+`paraview` does not launch the desktop application as a worker.
 
-The sidebar's header chooses **Guide** (the pipeline), **Library** (document
-sections, templates and snippets) or **Both**; its close button, and the
-sidebar button left of the view tabs, hide and restore it. The guide follows
-the editor cursor and selects the containing node, including when the cursor is
-deep inside its options. **Edit…**, **Duplicate** and **Delete** operate on
-that node. **Controls**, right of the view tabs, hides the Add and editing rows
+The sidebar's header chooses **Overview** (the pipeline) or **Templates** (document
+sections, templates and snippets); its close button and the sidebar button left
+of the view tabs hide and restore it. Overview follows the editor cursor, including
+when it is deep inside a node's options. **Edit**, **Duplicate** and **Delete**
+operate on that node and scroll with its sticky title within its properties box.
+**Controls**, right of the view tabs, hides the Add and editing rows
 so the input takes the full height. **Snippets & templates** opens the snippet
 categories. These layout choices are remembered.
 
 Section recipe buttons insert on click. Hover/focus shows a temporary preview;
-the click commits one draft edit. Three centre slices create one plane for each
+the click commits one draft edit. A template or snippet whose planned edit
+replaces the whole input (or, in Schema Editor, the whole operation input under
+the cursor) first opens **Replace input?** or **Replace operation input?**. It
+names the item, the scope and any document-version change, lists the planned
+changes in order and shows the changed text. Cancel, the close button, Escape
+and a click outside leave the input, selection and Undo history unchanged.
+**Replace input** commits that reviewed edit as one draft change; Undo restores
+the previous input. If the input, its format, the cursor scope or the window
+changes while the review is open, nothing is replaced and the item must be chosen
+again. Merges and additions insert without this review. Three centre slices create one plane for each
 axis; slice sweeps create arrays of planes across the data volume. **Undo** and
 **Redo** use draft history (Ctrl+Z / Ctrl+Shift+Z). **Undo saved edit** and
 **Redo saved edit** travel through saved workspace revisions.
@@ -417,6 +541,14 @@ dismisses the popup; Problems and Log remain available. Settings can suppress
 popups while retaining that history.
 
 ## Vectors and volumes in Variables & expressions
+
+Use **Variables & expressions** for reusable named values in `dimensions`,
+`definitions` and `settings`, and for declared `sweeps`. A numeric input accepts
+`2`, `gap / 2` or `model.mid` as appropriate to its destination. Expressions
+remain authored text inside a `$expr` marker; a computed preview never replaces
+the expression with its current number. **Check expression** asks the host for
+the result type and evaluation phase without launching an application. A syntax
+error selects the offending text where the host supplies a location.
 
 New variable names start empty. Editing a value allows name, group and scope
 changes; explicit references and parameter targets follow the change. Moving a
@@ -445,8 +577,223 @@ Model extents, data extents and manually authored areas of interest can all feed
 these helpers. Runtime measurements remain pending until data is available;
 a static preview never invents a runtime bound.
 
+### Inspect spatial expressions
+
+Open **Spatial** in the title bar, or **Spatial…** in Variables & expressions.
+Choose the document or workflow operation in **Spatial scope**. The list shows
+named scalars, vectors and boxes with their authored values and evaluation state.
+Select a row to edit a literal or choose **Edit expression** to preserve a
+dependency. **Apply changes** applies the staged edits together; Cancel leaves
+the draft alone.
+
+The **Data extents** card is always visible, even before you add a literal.
+**Load data extents** asks the configured application for reader bounds directly;
+you do not need to save an expression or click Apply in ParaView. It shows
+`dataExtents = (xmin, ymin, zmin), (xmax, ymax, zmax)`, or explains why bounds
+are unavailable. Hover over the result for full precision. For generated
+geometry or a filtered region, use a node’s extents instead.
+
+**Add literal / volume…** opens a guided volume builder. Start from coordinates
+(corners or centre and size), **Data extents**, **A node’s extents**, or **A saved
+value**. Choose **Inflate %**, **Inflate by distance**, **Resize**, **Translate**,
+**Push face**, **Set face**, **Union**, or **Intersect** to add ordered adjustments.
+Each control explains its units and meaning. For example, 10% inflation adds 5%
+at each end; a distance of 0.2 adds 0.1 at each end. Union encloses both boxes;
+it does not combine their geometry. A disjoint intersection cannot be added.
+Flat boxes are valid.
+
+The preview uses the host evaluator and automatically resolves values from available
+Live Data. **Select Live Data…** opens the source checklist. **Refresh from Live Data**
+recalculates from resident sources without rereading input files, with cancellation available. **Keep linked to sources**
+saves a normal expression; **Fixed numbers** saves the full-precision result
+and is available only for a valid, current preview. Coordinate-only volumes
+save as literals. **Show expression** exposes the generated expression without
+requiring you to write it. **Add volume** or **Update volume** stages the result;
+**Apply changes** commits the whole Spatial edit. Closing either window without
+applying its changes discards that window’s edits. **Quick literal** remains
+available for direct scalar, vector and coordinate entry.
+
+Boxes use dataset coordinates: either six limits in
+`[xmin,xmax,ymin,ymax,zmin,zmax]` order or `{"min":[x,y,z],"max":[x,y,z]}`.
+Studio preserves either representation. Vectors can be shown as points or as
+lines from the origin. The visibility checkboxes control overlays only.
+Unresolved entries, faults and boxes with inverted limits are not drawn.
+
+`extents(body)` needs the named node's loaded output. `dataExtents` needs the
+data-loading nodes of the selected document. Until those observations exist,
+the list says **needs-data**; this is not an instruction to type guessed
+coordinates. **Live data** explicitly starts the configured application to load
+spatial dependencies. It can inspect a draft with unfinished downstream fields;
+the dependencies themselves must be usable. **Cancel live data** cancels that
+job. Adaptors without extent support do not offer this action.
+
+Resolved live values and available records from a verified run carry their
+source and captured draft revision. Upstream recipe or visit changes invalidate
+measurements; editing names or downstream expressions reuses compatible upstream
+observations and evaluates the new expression.
+Spatial currently shows the first visit (time index zero and sweep indices
+zero); it has no visit selector. It does not display every position of a sweep
+at once. ParaView Workbench Live data inspection shares the resident data service
+and makes its measured extents available to Spatial.
+
+### Work through the car example and templates
+
+The [car example](../examples/paraview-car/README.md) derives its model from the
+union of body and wheel extents. Its wake, seed line and cameras read that model
+by name. Open its `input.json`, set `settings.case` and the body/wheel patch
+names for your case, then use Spatial to inspect `model`, `wake`, `seedX` and
+`seedY`. Checking the document without loaded data leaves these entries
+unresolved. Its latest-time selection also requires reader inspection before
+a plan can enumerate times.
+
+Studio checks the pipeline and expressions before Run, then defers source-time
+inspection to the configured application. A latest-time selection can therefore
+run as authored; structural and expression errors still block Run. Spatial
+expression checks remain usable while the time selection is pending.
+
+The seed expression `sweep(model.min.y, model.max.y, seedPositions)` moves both
+ends of one line together because both refer to the same named `seedY` entry.
+Its count is constant; its endpoints become available after the model loads.
+The complete example produces twelve files at its default five positions.
+The README records a bounded native run and explains the case-specific patch
+names and display range; Studio inspection alone does not reproduce that run.
+
+Three supplied ParaView templates also use these expressions:
+
+| Template | Fill in | Position expression |
+| --- | --- | --- |
+| Slice sweep | Slice positions | A fraction of `data.deltaX`, where `data = extents(source)`. |
+| CFD orthogonal-slice overview | OpenFOAM case file and slices per axis | Three coordinated fractions of `domain`, where `domain = extents(speed)`. |
+| Synchronised geometry study | Design samples, initial radius and final radius | `extents(sphere).mid` follows the changing sphere. |
+
+Template insertion replaces the current draft as one undoable edit. Fill the
+highlighted fields, then Validate. The CFD template expects a reconstructed
+case with `U` and `p`; its field range remains a choice for the author. These
+templates retain the expressions after filling, so a changed dataset or sphere
+can supply new extents at execution.
+
+The five OpenFOAM templates (CFD overview, pressure-coefficient report,
+Q-criterion orbit, wake streamlines and wall-yplus report) explicitly select the
+latest stored case time with `{"source":"case","select":{"latest":1}}`.
+The reader still skips time zero by default. To use another stored time, edit
+`times`; to include zero, also set `skipZero` to false.
+
 Output settings explain filename tokens and provide presets. Parameter tokens
-include a key and value, while axis tokens provide a sweep value. Explicit output
+include a key and value, while sweep tokens provide a sweep value. Explicit output
 filenames take precedence. **Default parallel workers** controls independent Case
 Runner workflow operations, rather than native threads or MPI ranks. Developers
 can edit it; explicit template/workflow worker settings take precedence.
+
+### Live Data and linked spatial volumes
+
+**New volume** suggests a Name from its source and adjustments. The suggestion
+stops changing after the first manual Name edit. Existing spatial Names are
+editable. Renaming updates bound expression and `$document` consumers in the
+same staged document; Cancel discards the edit and Apply remains one undo step.
+A collision or an expression whose references cannot be identified is reported
+without changing the document.
+
+A linked volume is a recipe: `inflate(extents(`tires`), 0.1)` can be saved
+before any input data is available. Schemaxis checks the type and dependency
+graph, including cycles, in the shared core. Coordinates are needed for a
+preview or a fixed snapshot, not for saving the recipe. The disabled Add/Update
+button explains its current reason in its tooltip.
+
+The top bar's **Live Data** indicator and the workbench's **Live Data…** button
+open **Live Data selection**. Choose
+source nodes or derived nodes, then **Enable selected Live Data**. Upstream
+requirements load automatically, and compatible native objects stay in memory
+across windows. Additional selections retain previously loaded compatible nodes.
+**Disable all Live Data** releases native processes; closing a dialog does not.
+The indicator shows total resident native-process memory (including application
+overhead, not just mesh bytes). Native loading can be cancelled through the
+selection dialog or Jobs.
+
+Spatial and New volume resolve missing values automatically when their source
+nodes are already loaded, including building required derived nodes. They never
+silently enable another input. Under Settings → Live Data, turn off
+**Automatically resolve spatial values from loaded Live Data** to calculate on
+request instead. Cached values still appear immediately.
+
+**Refresh from Live Data** recalculates values and updates changed derived nodes
+using resident sources. **Refresh extents** does the same for `dataExtents`.
+These controls remain available while Live Data is enabled and are disabled
+when it is off; their tooltips explain this. Refresh does not reread files from
+disk. The selection dialog disables **Enable selected Live Data** when all
+selected nodes are already loaded and offers **Refresh from Live Data** separately.
+
+Measured bounds remain session knowledge even after unloading native memory.
+Adding or renaming a value does not invalidate its upstream measurements. Changing
+the upstream recipe or visit makes old measurements inapplicable; enabling that
+changed input supplies new ones. `dataExtents` needs bounds for all readers in the
+selected document; use a node's extents when loading only a subset. Input files
+changed externally require disabling and re-enabling Live Data to reread them.
+Resident data and cached measurements are not restored after exit/reboot. Save
+preserves the recipe, not a hidden mesh or cache.
+
+The persistent console exposes the same service:
+
+```text
+data list
+data load reader selectedRegion
+data status
+data refresh
+data refresh selectedRegion
+data eval "inflate(extents(selectedRegion), 0.1)"
+data unload
+```
+
+Use `--operation ID` with list/load/refresh/eval inside a workflow. `data refresh`
+resolves named values; supplying nodes limits it to those nodes. `data eval`
+automatically resolves missing bounds from resident sources; add `--cached`
+to use existing measurements only. Neither command enables unloaded inputs. The console prompt
+shows Live Data state and resident memory. CLI clients can issue these through
+`schemaxis console --command ...` within one process; use the interactive console
+or a long-running agent service to retain memory between requests. Process exit
+releases native memory. `schemaxis spatial rename input.json --name old
+--new-name new` prints a renamed input without overwriting the original file.
+
+Python clients use `schemaxis.live_data.LiveDataSession.refresh(request)` to
+resolve from resident sources, or `evaluate(request)` for cached evaluation. Trusted-local agent/MCP
+clients use the `spatial` method with `live_data_list`, `live_data_load` (`nodes`),
+`live_data_refresh`, `live_data_status` and `live_data_unload`. `spatial_eval` reuses the service's
+observations; `spatial_rename` accepts `section`, `name` and `newName`. These are
+session resources shared across requests. Strict MCP retains its planned-task
+execution boundary and does not admit native Live Data actions.
+
+### Creating ParaView scenes with controls
+
+Use **Add → Scene**, or edit a scene already in the input. **Visible objects**
+shows the pipeline as selectable chips. Filter by name or operation, use
+**Select shown** to add a group, and open **Appearance…** beside an object.
+Selections outside the filter keep their settings. Missing objects remain marked
+**unavailable** until you explicitly remove them.
+
+In Appearance, **Colour by** selects **Solid colour** or **Data field**. The colour
+browser includes the bundled Matplotlib names, including `tab:` and `xkcd:`;
+RGB/RGBA can be entered in 0–1 or 0–255 units. A data field has a separate
+**Cell data / Point data** association and array name. **Ask the application**
+inspects this object and its upstream data; it is never triggered just by opening
+the form. **Use inspected range** copies the inspected range into a fixed override.
+Leave Range out for automatic rescaling at each visit. Representation, opacity,
+components, presets and legend controls are available alongside colouring.
+
+Under **Images & cameras**, add an image and one or more cameras. Size presets
+and background controls fill the existing image settings. Direction buttons set
+the view and a compatible up direction. Leave camera Bounds out to frame all
+visible geometry, choose a pipeline object's bounds, or use **Choose Spatial box
+or expression…** to link an existing area of interest. **New volume…** opens the
+Spatial volume builder directly. Its definition and the scene are staged together:
+Apply accepts both in one editor transaction, and Cancel discards both. Changing
+a linked box later changes the next run's camera without editing the scene.
+
+**Appearance variants** contain per-object overrides for successive colour
+states. An empty entry renders the base appearance; every entry repeats images
+and glTF outputs. A variant cannot remove a field inherited from the base, so
+use a separate scene for that field-to-solid change. **Data outputs** supplies
+pipeline choices for geometry and measurements and keeps the existing export
+forms. **Bundles** explains the supported editable ParaView state-bundle scope
+before execution. The guided controls preserve the existing input format.
+
+For the full coverage audit and deferred interface refinements, see
+[Guided ParaView scene authoring](design/paraview-scene-authoring.md).

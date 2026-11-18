@@ -94,7 +94,7 @@ class ArtifactNamesTests(unittest.TestCase):
         def closure(*args):
             active = MagicMock(closed=False, events=[])
             active.handles = {'s': MagicMock()}
-            active.apply.side_effect = lambda visit: {'observations': {}, 'samples': []}
+            active.apply.side_effect = lambda visit: {'visit': visit, 'observations': {}, 'samples': []}
             active.close.side_effect = lambda: setattr(active, 'closed', True)
             return active
         def artifact(path, extension=''):

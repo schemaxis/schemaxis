@@ -109,7 +109,7 @@ Rules:
 - `layout` is presentation only. It is excluded from loop identity and from the
   template digest, so moving a box never invalidates saved feedback settings.
 - Multiplicity: "Duplicate instance" copies an operation with a new ID. Sweeping
-  N instances over a parameter uses the existing axes/analytics, not N boxes.
+  N instances over a parameter uses the existing sweeps/analytics, not N boxes.
 
 ### 4.2 Parameters and named outputs live in the design
 
@@ -137,7 +137,7 @@ Naming is a **post-verification view**: after a run verifies, the runner creates
 `named/naming.json` mapping each name to its verified artifact and sha256.
 
 Pattern tokens: `{index}` (zero-padded to the admin/dev width, default 6),
-`{operation}`, `{output}` (named output alias), `{param:ID}`, `{axis:NAME}`,
+`{operation}`, `{output}` (named output alias), `{param:ID}`, `{sweep:NAME}`,
 `{artifact}` (native index), `{ext}`. Values are sanitised: `.` → `p`, `-` → `m`,
 spaces/other → `_`. Default pattern: `{index}-{operation}-{output}{ext}`. A dev
 may choose e.g. `{index}-inlet_{param:inlet}-spoiler_{param:spoiler}{ext}`.

@@ -7,15 +7,33 @@ import {completionsAt} from '../editor/schema-complete.mjs';
 import {entryName} from '../windows/workbench/authoring-defaults.mjs';
 import {caseNames} from '../windows/workbench/case-data.mjs';
 import {entriesOf, matchesOf} from '../windows/workbench/reader-selection.mjs';
+import {checkField} from '../editor/fill-data.mjs';
 
-test('a reader is named after its marker file, or its folder for a generic case marker', () => {
-  const used = new Set(['foam1', 'coupe_AMI']);
-  assert.equal(entryName('/data/run/42_b/coupe.foam', used), 'coupe');
-  assert.equal(entryName('/data/run/42_b/case.foam', used), 'case_42_b');
-  assert.equal(entryName('/data/run/wing/Case.foam', used), 'wing');
-  assert.equal(entryName('/data/run/coupe_AMI.foam', used), 'coupe_AMI_2');
-  assert.equal(entryName('/data/my case/a b.c.foam', used), 'a_b_c');
+test('reader names combine parent and file stem, collapse duplicates and keep valid unique identities', () => {
+  const used = new Set(['foam1', 'run_coupe_AMI', 'run_coupe_AMI_2']);
+  assert.equal(entryName('/data/run/42_b/coupe.foam', used), '42_b_coupe');
+  assert.equal(entryName('/data/run/42_b/case.foam', used), '42_b_case');
+  assert.equal(entryName('/data/run/wing/Case.foam', used), 'wing_Case');
+  assert.equal(entryName('/data/run/coupe_AMI.foam', used), 'run_coupe_AMI_3');
+  assert.equal(entryName('/data/my case/a b.c.foam', used), 'my_case_a_b_c');
+  assert.equal(entryName('004_031_9d/case.foam', used), '004_031_9d_case');
+  assert.equal(entryName('004_031_9d/004_031_9d.foam', used), '004_031_9d');
+  assert.equal(entryName('/data/wing/wing.foam', used), 'wing');
+  assert.equal(entryName('C:\\cases\\wing\\wing.foam', used), 'wing');
+  assert.equal(entryName('wing.foam', used), 'wing');
+  assert.equal(entryName('./wing.foam', used), 'wing');
+  assert.equal(entryName('../wing.foam', used), 'wing');
+  assert.equal(entryName('/data/wing/.foam', used), null);
+  assert.equal(entryName({$value: 'path'}, used), null);
   assert.equal(entryName('', used), null);
+  assert.deepEqual([...used], ['foam1', 'run_coupe_AMI', 'run_coupe_AMI_2']);
+});
+
+test('Name placeholders honour the instance schema without changing other identifier rules', () => {
+  const instance = {type: 'id', pattern: '^[A-Za-z0-9][A-Za-z0-9_-]*$'};
+  assert.equal(checkField('004_031_9d_case', instance), '');
+  assert.ok(checkField('../case', instance));
+  assert.ok(checkField('004_031_9d_case', {type: 'id'}));
 });
 
 test('selection entries round-trip exact names and patterns and report what they match', () => {

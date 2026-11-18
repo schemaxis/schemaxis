@@ -8,7 +8,7 @@
         {
           "type": "object",
           "properties": {
-            "$axis": {
+            "$sweep": {
               "type": "string"
             },
             "path": {
@@ -27,7 +27,7 @@
           },
           "additionalProperties": false,
           "required": [
-            "$axis"
+            "$sweep"
           ]
         },
         {
@@ -290,24 +290,100 @@
                 "bounds": {
                   "anyOf": [
                     {
-                      "type": "array",
-                      "items": {
-                        "anyOf": [
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "$ref": "#/$defs/runtime"
-                          }
-                        ]
-                      },
-                      "minItems": 6,
-                      "maxItems": 6
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ],
+                          "title": "min and max corners"
+                        },
+                        {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              },
+                              "minItems": 6,
+                              "maxItems": 6
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
+                        }
+                      ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 }
               },
               "additionalProperties": false,
@@ -334,31 +410,70 @@
                 "bounds": {
                   "anyOf": [
                     {
-                      "type": "object",
-                      "properties": {
-                        "min": {
+                      "anyOf": [
+                        {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "$ref": "#/$defs/runtime"
-                                  }
-                                ]
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "min and max corners"
                         },
-                        "max": {
+                        {
                           "anyOf": [
                             {
                               "type": "array",
@@ -372,25 +487,23 @@
                                   }
                                 ]
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "minItems": 6,
+                              "maxItems": 6
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                         }
-                      },
-                      "additionalProperties": false,
-                      "required": [
-                        "min",
-                        "max"
                       ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 }
               },
               "additionalProperties": false,
@@ -417,31 +530,70 @@
                 "bounds": {
                   "anyOf": [
                     {
-                      "type": "object",
-                      "properties": {
-                        "min": {
+                      "anyOf": [
+                        {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "$ref": "#/$defs/runtime"
-                                  }
-                                ]
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "min and max corners"
                         },
-                        "max": {
+                        {
                           "anyOf": [
                             {
                               "type": "array",
@@ -455,25 +607,23 @@
                                   }
                                 ]
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "minItems": 6,
+                              "maxItems": 6
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                         }
-                      },
-                      "additionalProperties": false,
-                      "required": [
-                        "min",
-                        "max"
                       ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 },
                 "before": {
                   "anyOf": [
@@ -554,31 +704,70 @@
                 "bounds": {
                   "anyOf": [
                     {
-                      "type": "object",
-                      "properties": {
-                        "min": {
+                      "anyOf": [
+                        {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "$ref": "#/$defs/runtime"
-                                  }
-                                ]
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "min and max corners"
                         },
-                        "max": {
+                        {
                           "anyOf": [
                             {
                               "type": "array",
@@ -592,25 +781,23 @@
                                   }
                                 ]
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "minItems": 6,
+                              "maxItems": 6
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                         }
-                      },
-                      "additionalProperties": false,
-                      "required": [
-                        "min",
-                        "max"
                       ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 },
                 "before": {
                   "anyOf": [
@@ -729,24 +916,100 @@
                 "extents": {
                   "anyOf": [
                     {
-                      "type": "array",
-                      "items": {
-                        "anyOf": [
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "$ref": "#/$defs/runtime"
-                          }
-                        ]
-                      },
-                      "minItems": 6,
-                      "maxItems": 6
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ],
+                          "title": "min and max corners"
+                        },
+                        {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "$ref": "#/$defs/runtime"
+                                  }
+                                ]
+                              },
+                              "minItems": 6,
+                              "maxItems": 6
+                            },
+                            {
+                              "$ref": "#/$defs/runtime"
+                            }
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
+                        }
+                      ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 }
               },
               "additionalProperties": false,
@@ -773,31 +1036,70 @@
                 "bounds": {
                   "anyOf": [
                     {
-                      "type": "object",
-                      "properties": {
-                        "min": {
+                      "anyOf": [
+                        {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "$ref": "#/$defs/runtime"
-                                  }
-                                ]
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "min and max corners"
                         },
-                        "max": {
+                        {
                           "anyOf": [
                             {
                               "type": "array",
@@ -811,25 +1113,23 @@
                                   }
                                 ]
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "minItems": 6,
+                              "maxItems": 6
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                         }
-                      },
-                      "additionalProperties": false,
-                      "required": [
-                        "min",
-                        "max"
                       ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 },
                 "x": {
                   "anyOf": [
@@ -901,31 +1201,70 @@
                 "bounds": {
                   "anyOf": [
                     {
-                      "type": "object",
-                      "properties": {
-                        "min": {
+                      "anyOf": [
+                        {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "$ref": "#/$defs/runtime"
-                                  }
-                                ]
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "min and max corners"
                         },
-                        "max": {
+                        {
                           "anyOf": [
                             {
                               "type": "array",
@@ -939,25 +1278,23 @@
                                   }
                                 ]
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "minItems": 6,
+                              "maxItems": 6
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                         }
-                      },
-                      "additionalProperties": false,
-                      "required": [
-                        "min",
-                        "max"
                       ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 }
               },
               "additionalProperties": false,
@@ -988,31 +1325,70 @@
                       "items": {
                         "anyOf": [
                           {
-                            "type": "object",
-                            "properties": {
-                              "min": {
+                            "anyOf": [
+                              {
                                 "anyOf": [
                                   {
-                                    "type": "array",
-                                    "items": {
-                                      "anyOf": [
-                                        {
-                                          "type": "number"
-                                        },
-                                        {
-                                          "$ref": "#/$defs/runtime"
-                                        }
-                                      ]
+                                    "type": "object",
+                                    "properties": {
+                                      "min": {
+                                        "anyOf": [
+                                          {
+                                            "type": "array",
+                                            "items": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number"
+                                                },
+                                                {
+                                                  "$ref": "#/$defs/runtime"
+                                                }
+                                              ]
+                                            },
+                                            "minItems": 3,
+                                            "maxItems": 3
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "max": {
+                                        "anyOf": [
+                                          {
+                                            "type": "array",
+                                            "items": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number"
+                                                },
+                                                {
+                                                  "$ref": "#/$defs/runtime"
+                                                }
+                                              ]
+                                            },
+                                            "minItems": 3,
+                                            "maxItems": 3
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      }
                                     },
-                                    "minItems": 3,
-                                    "maxItems": 3
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "min",
+                                      "max"
+                                    ]
                                   },
                                   {
                                     "$ref": "#/$defs/runtime"
                                   }
-                                ]
+                                ],
+                                "title": "min and max corners"
                               },
-                              "max": {
+                              {
                                 "anyOf": [
                                   {
                                     "type": "array",
@@ -1026,25 +1402,23 @@
                                         }
                                       ]
                                     },
-                                    "minItems": 3,
-                                    "maxItems": 3
+                                    "minItems": 6,
+                                    "maxItems": 6
                                   },
                                   {
                                     "$ref": "#/$defs/runtime"
                                   }
-                                ]
+                                ],
+                                "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                               }
-                            },
-                            "additionalProperties": false,
-                            "required": [
-                              "min",
-                              "max"
                             ]
                           },
                           {
                             "$ref": "#/$defs/runtime"
                           }
-                        ]
+                        ],
+                        "title": "box",
+                        "description": "A box as min and max corners, or as six extents"
                       },
                       "minItems": 1
                     },
@@ -1279,31 +1653,70 @@
                 "bounds": {
                   "anyOf": [
                     {
-                      "type": "object",
-                      "properties": {
-                        "min": {
+                      "anyOf": [
+                        {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "$ref": "#/$defs/runtime"
-                                  }
-                                ]
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "min and max corners"
                         },
-                        "max": {
+                        {
                           "anyOf": [
                             {
                               "type": "array",
@@ -1317,25 +1730,23 @@
                                   }
                                 ]
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "minItems": 6,
+                              "maxItems": 6
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                         }
-                      },
-                      "additionalProperties": false,
-                      "required": [
-                        "min",
-                        "max"
                       ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 },
                 "aspect": {
                   "anyOf": [
@@ -1843,31 +2254,70 @@
                 "bounds": {
                   "anyOf": [
                     {
-                      "type": "object",
-                      "properties": {
-                        "min": {
+                      "anyOf": [
+                        {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "$ref": "#/$defs/runtime"
-                                  }
-                                ]
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "min and max corners"
                         },
-                        "max": {
+                        {
                           "anyOf": [
                             {
                               "type": "array",
@@ -1881,25 +2331,23 @@
                                   }
                                 ]
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "minItems": 6,
+                              "maxItems": 6
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                         }
-                      },
-                      "additionalProperties": false,
-                      "required": [
-                        "min",
-                        "max"
                       ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 },
                 "aspect": {
                   "anyOf": [
@@ -2090,31 +2538,70 @@
                 "bounds": {
                   "anyOf": [
                     {
-                      "type": "object",
-                      "properties": {
-                        "min": {
+                      "anyOf": [
+                        {
                           "anyOf": [
                             {
-                              "type": "array",
-                              "items": {
-                                "anyOf": [
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "$ref": "#/$defs/runtime"
-                                  }
-                                ]
+                              "type": "object",
+                              "properties": {
+                                "min": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                },
+                                "max": {
+                                  "anyOf": [
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/$defs/runtime"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 3,
+                                      "maxItems": 3
+                                    },
+                                    {
+                                      "$ref": "#/$defs/runtime"
+                                    }
+                                  ]
+                                }
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "additionalProperties": false,
+                              "required": [
+                                "min",
+                                "max"
+                              ]
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "min and max corners"
                         },
-                        "max": {
+                        {
                           "anyOf": [
                             {
                               "type": "array",
@@ -2128,25 +2615,23 @@
                                   }
                                 ]
                               },
-                              "minItems": 3,
-                              "maxItems": 3
+                              "minItems": 6,
+                              "maxItems": 6
                             },
                             {
                               "$ref": "#/$defs/runtime"
                             }
-                          ]
+                          ],
+                          "title": "xmin, xmax, ymin, ymax, zmin, zmax"
                         }
-                      },
-                      "additionalProperties": false,
-                      "required": [
-                        "min",
-                        "max"
                       ]
                     },
                     {
                       "$ref": "#/$defs/runtime"
                     }
-                  ]
+                  ],
+                  "title": "box",
+                  "description": "A box as min and max corners, or as six extents"
                 },
                 "axis": {
                   "anyOf": [
@@ -2231,6 +2716,21 @@
           "required": [
             "$call",
             "args"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$expr": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "An expression in the Schemaxis expression language, for example model.inflate(0.52)."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "$expr"
           ]
         }
       ]
@@ -25776,7 +26276,8 @@
                       "maxItems": 32,
                       "default": [
                         "combined"
-                      ]
+                      ],
+                      "uniqueItems": true
                     },
                     "aovs": {
                       "type": "array",
@@ -27117,7 +27618,8 @@
                                   ]
                                 },
                                 "minItems": 1,
-                                "maxItems": 3
+                                "maxItems": 3,
+                                "uniqueItems": true
                               },
                               "edgeMatch": {
                                 "enum": [
@@ -29019,7 +29521,7 @@
       "minItems": 1,
       "maxItems": 1
     },
-    "axes": {
+    "sweeps": {
       "type": "array",
       "items": {
         "type": "object",

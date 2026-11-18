@@ -563,7 +563,7 @@ def main():
         report['workflow']={'baseline':first['status'],'unchangedReused':True,'changedImageReused':False}
         # Shared authored bindings and a finite study exercise effective schema execution.
         study=copy.deepcopy(document);study['definitions']={'title':'Bound calibration report'};study['title']={'$document':'/definitions/title'}
-        study['axes']=[{'name':'width','values':[40,70]}];study['sections'][1]['content'][1]['widthMm']={'$axis':'width'}
+        study['sweeps']=[{'name':'width','values':[40,70]}];study['sections'][1]['content'][1]['widthMm']={'$sweep':'width'}
         result=adaptor.run(study,directory/'study',executable=locations['pandoc'],timeout=60);assert adaptor.verify(directory/'study')['verified'];assert len(result['states'])==2
         report['composition']={'states':2,'verified':True}
         # Pandoc stores byte-identical images once: two pictures after a text paragraph (BodyText style) share one media part.

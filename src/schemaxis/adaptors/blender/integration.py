@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Blender policies exposed through the shared adaptor contract."""
 import copy
 import os
@@ -61,13 +61,13 @@ def provisionalResources(document, spec, identity):
     if not isinstance(raw, dict):
         return render_settings(raw)  # Preserve the settings validator's fault.
     unknown = {key for key, value in raw.items() if any(dependencies(value))}
-    axes = document.get('axes', [])
+    axes = document.get('sweeps', [])
     if any(dependencies(axes)):
         unknown.update(key for key, value in raw.items()
-                       if any('$axis' in marker for _, marker in walk(value)))
+                       if any('$sweep' in marker for _, marker in walk(value)))
         axes = []
     projection = {'render': {key: value for key, value in raw.items() if key not in unknown},
-                  'axes': axes, 'maxStates': document.get('maxStates', 10000)}
+                  'sweeps': axes, 'maxStates': document.get('maxStates', 10000)}
     result = {}
     for visit in InputProgram(projection).visits():
         known = visit['document']['render']
@@ -170,6 +170,23 @@ def nativeInspection(document):
     from .native import Backend
     bpy.ops.wm.read_factory_settings(use_empty=True)
     return plan(document)[0], Backend()
+
+
+def extentsSetup(document, locations):
+    """Plan the node graph alone, and find the application that loads its extents."""
+    from .adaptor import graph_master, require_runtime
+    executable = locations.get('blender') or os.environ.get('SCHEMAXIS_BLENDER')
+    if not executable: fail('INTERPRETER_NOT_FOUND', 'set SCHEMAXIS_BLENDER or pass --blender')
+    return graph_master(document), require_runtime(executable), ('--background', '--factory-startup', '--python-exit-code', '1', '--python')
+
+
+def nativeExtents(document, initialise=True):
+    import bpy
+    from .adaptor import graph_master
+    from .native import Backend
+    if initialise:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+    return graph_master(document), Backend()
 
 
 def liveGraph(document):

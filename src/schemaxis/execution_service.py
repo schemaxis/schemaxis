@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Durable agent lifecycle over existing registry/workflow execution and receipts.
 
 Captured requests use the existing authored JSON model. This is a service/job
@@ -55,6 +55,8 @@ class ExecutionService:
         self._catalogue = None
         self._authoring = None
         self._inspection = None
+        from .live_data import LiveDataSession
+        self.live_data = LiveDataSession(self.workspace / 'live-data')
         try:
             try:
                 fcntl.flock(self._owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -162,6 +164,24 @@ class ExecutionService:
     def adaptor_context(self, version, **page):
         from .adaptor_delivery import context
         return context(version, **page)
+
+    def spatial(self, action, input, operation=None, expression=None, destination=None, entries=None,
+                state=None, observations=None, draft=None, nodes=None, section=None, name=None, newName=None):
+        """The host actions of the expression language over one authored input."""
+        from .spatial_actions import run
+        given = {'operation': operation, 'expression': expression, 'destination': destination,
+                 'entries': entries, 'state': state, 'observations': observations, 'draft': draft,
+                 'nodes': nodes, 'section': section, 'name': name, 'newName': newName}
+        request = {'input': input, **{key: value for key, value in given.items() if value is not None}}
+        if self.closed: fail('SESSION_CLOSED', 'Open a new service owner')
+        if action == 'live_data_status': return self.live_data.status()
+        if action == 'live_data_list': return self.live_data.selection(request)
+        if action == 'live_data_unload': return self.live_data.unload()
+        if action in ('spatial_load', 'live_data_load'):
+            return self.live_data.load(request, locations=self.locations)
+        if action == 'live_data_refresh': return self.live_data.refresh(request, locations=self.locations)
+        if action == 'spatial_eval': return self.live_data.evaluate(request)
+        return run(action, request)
 
     @property
     def schedules(self):
@@ -1252,6 +1272,7 @@ class ExecutionService:
     def close(self):
         if not self._owner.closed:
             self.runner.close()
+            self.live_data.close()
             if self._authoring is not None:
                 self._authoring.close()
             with self.lock:

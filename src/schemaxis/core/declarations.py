@@ -30,6 +30,7 @@ UNKNOWN_ARGUMENT = "UNKNOWN_ARGUMENT"
 MISSING_ARGUMENT = "MISSING_ARGUMENT"
 INVALID_ARGUMENT = "INVALID_ARGUMENT"
 
+MAX_DECLARATION_DEPTH = 128
 DECLARATION_PHASE = "declaration"
 VALIDATION_PHASE = "validation"
 
@@ -91,10 +92,13 @@ def _kind_name(value: Any) -> str:
 # ---------------------------------------------------------------------------
 
 def validate_specification(
-    specification: Any, location: str, *, phase: str = DECLARATION_PHASE
+    specification: Any, location: str, *, phase: str = DECLARATION_PHASE, _depth: int = 0
 ) -> Mapping[str, Any]:
     """Check one argument declaration and return it unchanged."""
 
+    if _depth > MAX_DECLARATION_DEPTH:
+        raise _fault(INVALID_DECLARATION, "argument declaration exceeds the nesting limit", location, phase,
+                     recovery="reduce nesting in the argument declaration")
     if not isinstance(specification, Mapping):
         raise _fault(
             INVALID_DECLARATION, "an argument declaration must be an object",
@@ -102,12 +106,15 @@ def validate_specification(
             recovery='declare the argument as {"type": "..."}',
         )
     kind = specification.get("type")
-    if kind not in KINDS:
+    if not isinstance(kind, str) or kind not in KINDS:
         raise _fault(
-            INVALID_DECLARATION, f"unsupported argument type {kind!r}", location, phase,
+            INVALID_DECLARATION, f"unsupported argument type {kind!r}" if isinstance(kind, str)
+            else "unsupported argument type", location, phase,
             observed={"type": kind if isinstance(kind, str) or kind is None else _kind_name(kind)},
             recovery=f"use one of: {', '.join(sorted(KINDS))}",
         )
+    if any(not isinstance(key, str) for key in specification):
+        raise _fault(INVALID_DECLARATION, "argument declaration keys must be strings", location, phase)
     unknown = sorted(set(specification) - _COMMON_KEYS - _KEYS_BY_KIND[kind])
     if unknown:
         raise _fault(
@@ -127,7 +134,7 @@ def validate_specification(
         raise _fault(
             INVALID_DECLARATION,
             "a required argument cannot also declare a default",
-            location, phase, observed={"default": json_value(specification["default"])},
+            location, phase, observed={"default": _observable(specification["default"])},
             recovery="drop 'required' if the default is the intended value, or drop the default",
         )
     for key in ("title", "summary"):
@@ -137,7 +144,7 @@ def validate_specification(
                 observed={"type": _kind_name(specification[key])},
             )
 
-    _validate_kind_keys(kind, specification, location, phase)
+    _validate_kind_keys(kind, specification, location, phase, _depth)
 
     if "default" in specification:
         # A default that its own declaration would reject is the worst kind of
@@ -147,7 +154,7 @@ def validate_specification(
 
 
 def _validate_kind_keys(
-    kind: str, specification: Mapping[str, Any], location: str, phase: str
+    kind: str, specification: Mapping[str, Any], location: str, phase: str, depth: int
 ) -> None:
     if kind == "enum":
         values = specification.get("values")
@@ -175,7 +182,7 @@ def _validate_kind_keys(
                 f"{location}.items", phase,
                 recovery='declare the element type, e.g. "items": {"type": "string"}',
             )
-        validate_specification(specification["items"], f"{location}.items", phase=phase)
+        validate_specification(specification["items"], f"{location}.items", phase=phase, _depth=depth + 1)
         _bound_pair(specification, "minItems", "maxItems", location, phase)
         if "uniqueItems" in specification and not isinstance(specification["uniqueItems"], bool):
             raise _fault(
@@ -196,12 +203,12 @@ def _validate_kind_keys(
                 INVALID_DECLARATION,
                 "'additionalProperties' must be false; object arguments are closed",
                 f"{location}.additionalProperties", phase,
-                observed={"additionalProperties": json_value(specification["additionalProperties"])},
+                observed={"additionalProperties": _observable(specification["additionalProperties"])},
                 recovery="declare every accepted property explicitly",
             )
         for name, member in properties.items():
             _valid_name(name, f"{location}.properties", phase)
-            validate_specification(member, f"{location}.properties.{name}", phase=phase)
+            validate_specification(member, f"{location}.properties.{name}", phase=phase, _depth=depth + 1)
     elif kind == "union":
         options = specification.get("options")
         if not isinstance(options, (list, tuple)) or len(options) < 2:
@@ -211,7 +218,7 @@ def _validate_kind_keys(
                 recovery="declare each accepted spelling as its own option",
             )
         for index, option in enumerate(options):
-            validate_specification(option, f"{location}.options[{index}]", phase=phase)
+            validate_specification(option, f"{location}.options[{index}]", phase=phase, _depth=depth + 1)
             if "default" in option or option.get("required", False):
                 raise _fault(
                     INVALID_DECLARATION,
@@ -487,7 +494,7 @@ def _observable(value: Any) -> JsonValue:
 
     try:
         return json_value(value)
-    except TypeError:
+    except (TypeError, RecursionError):
         return f"<{type(value).__name__}>"
 
 

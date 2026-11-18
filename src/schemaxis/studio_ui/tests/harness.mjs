@@ -3,10 +3,12 @@
 // workspace, launches headless Chromium and drives it over the DevTools protocol.
 
 import {spawn} from 'node:child_process';
-import {mkdtemp, rm, writeFile} from 'node:fs/promises';
-import {homedir, tmpdir} from 'node:os';
+import {mkdtemp, writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+
+import {createBrowserProfile, cleanupLaunch} from './browser-profile.mjs';
 
 const REPOSITORY = fileURLToPath(new URL('../../../..', import.meta.url));
 export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -37,9 +39,19 @@ function waitForLine(stream, pattern, timeout = 30000 * SCALE) {
 }
 
 /** Start server + browser. Returns a session with evaluate/wait/click/screenshot/close. */
-export async function launch({provider = 'freecad', width = 1440, height = 960, theme} = {}) {
-  const workspace = await mkdtemp(join(tmpdir(), 'studio-test-'));
-  const server = spawn(process.env.STUDIO_PYTHON || 'python3', ['-B', '-m', 'schemaxis', 'console', '--provider', provider,
+export async function launch(options = {}) {
+  const handles = {};
+  try {
+    return await launchSession(options, handles);
+  } catch (error) {
+    await cleanupLaunch(handles);
+    throw error;
+  }
+}
+
+async function launchSession({provider = 'freecad', width = 1440, height = 960, theme}, handles) {
+  const workspace = handles.workspace = await mkdtemp(join(tmpdir(), 'studio-test-'));
+  const server = handles.server = spawn(process.env.STUDIO_PYTHON || 'python3', ['-B', '-m', 'schemaxis', 'console', '--provider', provider,
     '--workspace', workspace, '--web'], {
     cwd: REPOSITORY,
     // Automated runs must never open a file window on the developer's desktop.
@@ -49,15 +61,15 @@ export async function launch({provider = 'freecad', width = 1440, height = 960, 
   const serverErrors = [];
   server.stderr.on('data', (data) => serverErrors.push(String(data)));
   const url = await waitForLine(server.stdout, /Schemaxis Studio: (http:\/\/127\.0\.0\.1:\d+\/\?token=\S+)/);
-  const profile = await mkdtemp(join(homedir(), 'schemaxis-studio-test-'));
-  const browser = spawn(process.env.CHROMIUM || 'chromium', ['--headless', '--no-sandbox', '--disable-dev-shm-usage',
+  const profile = handles.profile = await createBrowserProfile('schemaxis-studio-test-');
+  const browser = handles.browser = spawn(process.env.CHROMIUM || 'chromium', ['--headless', '--no-sandbox', '--disable-dev-shm-usage',
     '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--remote-debugging-port=0', '--remote-allow-origins=*',
     `--user-data-dir=${profile}`, `--window-size=${width},${height}`, '--no-first-run', '--no-default-browser-check',
     ...(theme === 'dark' ? ['--force-dark-mode'] : []), 'about:blank'], {stdio: ['ignore', 'ignore', 'pipe']});
   const endpoint = await waitForLine(browser.stderr, /DevTools listening on (ws:\/\/\S+)/);
   const origin = endpoint.replace(/^ws:/, 'http:').split('/devtools/')[0];
   const target = await (await fetch(`${origin}/json/new?${encodeURIComponent(url)}`, {method: 'PUT'})).json();
-  const socket = new WebSocket(target.webSocketDebuggerUrl);
+  const socket = handles.socket = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => {
     socket.onopen = resolve;
     socket.onerror = reject;
@@ -181,19 +193,7 @@ export async function launch({provider = 'freecad', width = 1440, height = 960, 
         task.reject(new Error('Browser session closed'));
       }
       pending.clear();
-      try {
-        browser.kill('SIGTERM');
-      } catch {
-        // Snap wrappers can forbid signals; Browser.close above owns cleanup.
-      }
-      try {
-        server.kill('SIGTERM');
-      } catch {
-        // The server may have already exited after a failed test.
-      }
-      await delay(300);
-      await rm(profile, {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
-      await rm(workspace, {recursive: true, force: true, maxRetries: 10, retryDelay: 100});
+      await cleanupLaunch(handles);
       return serverErrors.join('');
     },
   };

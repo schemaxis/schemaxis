@@ -156,6 +156,16 @@ class DeclarationValidationTests(unittest.TestCase):
         self.assertEqual(fault.code, "INVALID_DECLARATION")
         self.assertIn("enum", fault.recovery)
 
+    def test_rejects_malformed_or_unbounded_declaration_shapes(self) -> None:
+        self.assertEqual(self.check({"type": []}).code, "INVALID_DECLARATION")
+        self.assertEqual(self.check({"type": "string", 5: True}).code, "INVALID_DECLARATION")
+        deep = {"type": "integer"}
+        for _ in range(500):
+            deep = {"type": "array", "items": deep}
+        fault = self.check(deep)
+        self.assertEqual(fault.code, "INVALID_DECLARATION")
+        self.assertIn("nesting limit", fault.message)
+
     def test_rejects_a_misspelled_declaration_key(self) -> None:
         fault = self.check({"type": "number", "minimun": 0})
         self.assertEqual(fault.observed["unsupported"], ["minimun"])

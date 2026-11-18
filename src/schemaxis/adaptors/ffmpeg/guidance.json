@@ -2,6 +2,19 @@
   "version": "schemaxis.studio-guidance/1",
   "operations": {
     "encodeFrames": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/codec",
+            "label": "Codec"
+          },
+          {
+            "path": "/options/fps",
+            "label": "Frame rate"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Encodes an explicit list of PNG images into one silent, constant-frame-rate video (video.mp4 for H.264 or video.mkv for FFV1); each list entry becomes exactly one frame lasting 1/fps seconds. A fresh FFmpeg decode is compared pixel-by-pixel with the source images. Choose it for rendered image sequences (for example ParaView, Blender or Inkscape frames); use encodeSheet for an Aseprite sprite sheet with per-frame durations.",
       "sources": [
@@ -19,6 +32,20 @@
       ]
     },
     "encodeSheet": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "Source file",
+            "style": "lastSegment"
+          },
+          {
+            "path": "/options/fps",
+            "label": "Frame rate"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Cuts frame rectangles out of one sprite-sheet PNG, using a schemaxis.aseprite.sheet/1 JSON file for their positions and millisecond durations, and encodes them in metadata order into one silent constant-frame-rate video. Each rectangle is repeated for durationMS x fps / 1000 video frames. Choose it for Aseprite animation output; use encodeFrames for separate image files.",
       "sources": [
@@ -35,6 +62,24 @@
       ]
     },
     "encodeVideo": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "Source file",
+            "style": "lastSegment"
+          },
+          {
+            "path": "/options/startFrame",
+            "label": "Start frame"
+          },
+          {
+            "path": "/options/endFrame",
+            "label": "End frame"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Capture a silent existing video, select a zero-based presentation-frame range (inclusive start, exclusive end), and publish it at the chosen constant output fps. Choose this for clip preparation and retiming; use Shotcut for multi-clip editing. Every source frame is probed/decoded before selection and every output RGB channel is checked. MP4 edit lists use FFmpeg default presentation semantics.",
       "sources": [
@@ -51,6 +96,16 @@
       ]
     },
     "muxReview": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/video",
+            "label": "Video",
+            "style": "lastSegment"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Combines one captured silent FFV1 Matroska video, one canonical PCM16 WAV and one strict UTF-8 SubRip (SRT) file into a single review movie, review.mkv, with exactly three streams: FFV1 video, PCM16 audio and a selectable SubRip caption track. Video and audio are stream-copied, so nothing is re-encoded, trimmed, padded or resampled; captions are soft, never burned in. Choose it to hand a reviewer or a publishing step one reusable file from an encodeVideo/encodeFrames result, a SoX speech WAV and whisper.cpp captions (the encodeVideo handoff is run natively, and one four-job SoX and whisper.cpp chain was run once natively on a single clip; that is one limited proof, not a corpus). The captions are a machine draft unless you declare otherwise: neither recognition accuracy nor human review is ever certified.",
       "sources": [
@@ -72,6 +127,20 @@
       ]
     },
     "extractAudio": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "Source file",
+            "style": "lastSegment"
+          },
+          {
+            "path": "/options/streamIndex",
+            "label": "Audio stream"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Turns the speech or soundtrack of one phone or camera recording (an MP4 or M4A file with AAC audio, optionally with one H.264 video track) into a canonical PCM16 WAV that SoX, FLAC and whisper.cpp accept. You name the file and the zero-based global stream index of its audio track; nothing is chosen for you. The WAV keeps the recording's own sample rate and channel count (no resampling or mixing), the frame count is counted from the decoded audio frames rather than assumed from the container, and an audio-summary.json records the codec, stream index, decoded geometry and duration. AAC is lossy: the WAV is what FFmpeg's decoder produces, not the uncompressed recording that was encoded, and the result is a machine draft whose recognition accuracy and human review are never certified. Verification decodes the captured compressed bytes again with a trusted FFmpeg and compares every PCM byte with the published WAV. Limits: one AAC-LC stream, mono or stereo, 8-96 kHz, at most 600 seconds, 64 MiB of compressed input and a 32 MiB WAV; extra audio, subtitle, data or cover-art streams, chapters, fragmented or externally referenced MP4 and other codecs are refused.",
       "sources": [
@@ -91,6 +160,20 @@
       ]
     },
     "encodeAudio": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "Source file",
+            "style": "lastSegment"
+          },
+          {
+            "path": "/options/bitrateKbps",
+            "label": "Bitrate"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Publishes one prepared PCM16 WAV (for example SoX or eSpeak NG output) as a shareable AAC-LC .m4a, and refuses to publish unless the result meets two budgets you declare: a maximum file size and a maximum mean absolute waveform error. The file is encoded with FFmpeg's native AAC-LC encoder at the bitrate you choose, then decoded again by a separate native pass at the source rate and channel count; the decoded frame count must equal the source exactly on a timeline that starts at zero under the MP4 edit list, and every interleaved sample is compared with your WAV. The error figure is the integer sum of absolute sample differences divided by the sample count, compared exactly (as a rational number) with your budget, endpoints accepted. It is a waveform number in signed 16-bit sample units: it does not measure or certify listening quality, audibility, speech recognition accuracy or who is speaking. AAC is lossy, so the result is never lossless or high quality, the decoded waveform can clip at full scale, and the budget bounds only the average error (the largest single-sample error is reported). Nothing is resampled, mixed, normalised, trimmed or padded. Publishes audio.m4a and audio-publish-summary.json; the decoded WAV is retained only as internal evidence.",
       "sources": [
@@ -212,6 +295,7 @@
           ]
         },
         "/properties/nodes/items/oneOf/0/properties/options/properties/files": {
+          "control": {"kind": "file-subset"},
           "status": "reviewed",
           "explanation": "Absolute paths of 1 to 600 PNG images in playback order, or workflow references to image artifacts. Repeating a path repeats that frame; no filename sorting or wildcard expansion is done.",
           "sources": [
@@ -230,6 +314,7 @@
           ]
         },
         "/properties/nodes/items/oneOf/0/properties/options/properties/files/items": {
+          "fileExtensions": [".png"],
           "status": "reference",
           "explanation": "An absolute PNG path in playback order. The captured copy of the file is retained and is the trust anchor, so verification does not read the original path again; verification does decode the published video again with a trusted FFmpeg.",
           "sources": [

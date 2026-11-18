@@ -218,6 +218,12 @@ and native lifecycle methods. `liveArguments`, `liveExecutable`, `liveModule`,
 `liveSaveName` and `nativeExtension` keep startup and save policy in the adaptor.
 An adaptor may instead supply its own `LiveSession` transport.
 
+Checked graph identity migration additionally requires `extents.relabel` and a
+host-safe `liveIdentityGeometry(objects, steps)` binding. The latter projects only
+adaptor-owned geometry identity fields; the worker compares the complete actual
+geometry against that projection before claiming success. Missing capabilities
+refuse migration rather than rebuilding. See the [identity contract](identity-authoring.md#live-geometry-identity-contract).
+
 ## Verification
 
 ```bash
@@ -262,3 +268,15 @@ GUI delivery also requires adaptor-owned conceptual text preserved in
 `guidance.json`. The [Studio contract](studio-adaptor-contract.md) defines complete
 operation/field coverage, human contribution, schema annotations and admission
 checks; native property bindings alone are insufficient user guidance.
+
+### Declaring authored identity references
+
+An exact route may provide a package-local `authoringReferences` binding returning
+the closed [identity/reference policy](identity-authoring.md#adaptor-policy-contract).
+The host validates policy data against the literal schema and projects declared
+ports, including generated operations. Policies define semantic reference paths;
+the host never infers identity from arbitrary strings or imports a native runtime.
+Non-graph routes whose nodes are closed zero-input sources use the explicit
+no-container spelling; Calc is the first such route.
+The initial consumer is a pure rename preview, with durable integration separately
+gated on resident-state and history support. Unpolicied routes remain unsupported.

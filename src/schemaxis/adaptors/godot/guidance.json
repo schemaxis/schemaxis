@@ -2,6 +2,26 @@
   "version": "schemaxis.studio-guidance/1",
   "operations": {
     "material": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/colour",
+            "label": "Colour"
+          },
+          {
+            "path": "/options/roughness",
+            "label": "Roughness"
+          },
+          {
+            "path": "/options/metallic",
+            "label": "Metallic"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance has its own settings and result without changing the captured inputs."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates a Godot StandardMaterial3D resource with an opaque base colour, roughness and metallic value; it is not a scene node by itself. Choose it once per distinct surface look and connect it to the material input of box, sphere, cylinder, plane, capsule, torus or readGLTF nodes; several meshes may share one material. The resource is saved inside scene.tscn as each mesh's material override, and the reopened values are compared with the authored ones.",
       "sources": [
@@ -20,6 +40,22 @@
       ]
     },
     "box": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/size",
+            "label": "Size"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance produces its own result with these settings and can be used independently."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates a MeshInstance3D holding a native BoxMesh centred on position, with edge lengths size in metres and the connected material. Choose it for blocks, walls, platforms or bounding volumes; it is the simplest primitive and the box readback (12 triangles, exact bounds) is the easiest to check. The mesh stays an editable BoxMesh in Godot. Use plane for a zero-thickness floor and readGLTF for shapes that are not primitives.",
       "sources": [
@@ -37,6 +73,22 @@
       ]
     },
     "sphere": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/radius",
+            "label": "Radius"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance produces its own result with these settings and can be used independently."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates a MeshInstance3D holding a full native SphereMesh of the given radius, centred on position. Schemaxis fixes the height at twice the radius and the tessellation at 32 radial segments and 15 rings (1024 triangles), so a sphere always reopens with exactly those native parameters. Choose it for balls, markers and material comparisons; for an ellipsoid, apply a non-uniform scale.",
       "sources": [
@@ -56,6 +108,26 @@
       ]
     },
     "cylinder": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/radius",
+            "label": "Radius"
+          },
+          {
+            "path": "/options/height",
+            "label": "Height"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance produces its own result with these settings and can be used independently."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates a MeshInstance3D holding a native CylinderMesh with equal top and bottom radius, standing along its local Y axis and centred on position (it extends height/2 above and below). Tessellation is fixed at 32 radial segments and one ring (192 triangles). Choose it for posts, pipes and columns; rotate it to lie along another axis. Cones are not available because only one radius is accepted.",
       "sources": [
@@ -74,6 +146,22 @@
       ]
     },
     "plane": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/size",
+            "label": "Size"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance produces its own result with these settings and can be used independently."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates a MeshInstance3D holding a native PlaneMesh: a flat, zero-thickness rectangle (2 triangles) in its local XZ plane, facing +Y and centred on position. Choose it for floors, ground or backdrop panels; size gives its X and Z extents. Rotate it to make a wall. The default 10 x 10 m plane suits a ground under the default camera.",
       "sources": [
@@ -93,6 +181,23 @@
       ]
     },
     "readGLTF": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "File",
+            "style": "lastSegment"
+          },
+          {
+            "path": "/options/position",
+            "label": "Position"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each row has its own source result. Other settings come from the starting instance."
+        }
+      },
       "status": "reviewed",
       "explanation": "Imports one static triangle mesh from a self-contained .gltf 2.0 file with Godot's GLTFDocument and places it as an editable ArrayMesh in a MeshInstance3D, using the connected material and the authored position, rotation and scale. Choose it to bring CAD or modelling output into a scene when no primitive fits. Schemaxis accepts only a narrow subset (one scene, one untransformed node, one mesh with one TRIANGLES primitive, embedded base64 buffers, POSITION and optional NORMAL, at most 8 MiB) and rejects anything else instead of discarding it. The file bytes are captured and hashed before import, and the native bounds and triangle count are checked against values measured from those bytes.",
       "sources": [
@@ -119,6 +224,27 @@
       ]
     },
     "sprite3D": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "File",
+            "style": "lastSegment"
+          },
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/pixelSize",
+            "label": "Pixel size"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each row has its own source result. Other settings come from the starting instance."
+        }
+      },
       "status": "reviewed",
       "explanation": "Embeds a PNG image as an editable Sprite3D with an ImageTexture: a flat, double-sided picture centred on position, facing +Z, whose world size is the image size in pixels multiplied by pixelSize. Choose it to show pixel art, a sprite sheet from an Aseprite operation or any other PNG inside a 3D scene; it needs no material and counts as the visible geometry a scene requires. Schemaxis uses nearest-neighbour filtering so pixels stay crisp, and checks the reopened texture's dimensions and RGBA pixel digest.",
       "sources": [
@@ -144,6 +270,19 @@
       ]
     },
     "camera": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/fov",
+            "label": "Field of view"
+          },
+          {
+            "path": "/options/position",
+            "label": "Position"
+          }
+        ],
+        "naming": {}
+      },
       "status": "reviewed",
       "explanation": "Creates the scene's single perspective Camera3D at position, turned with look_at so that it looks at target with +Y up, and makes it the current camera. Every Godot document needs exactly one camera node; it frames the optional preview image and the view when the saved project is run. With orbit enabled, a fixed trusted script lets a user orbit, zoom and reset the view interactively in Godot.",
       "sources": [
@@ -165,6 +304,22 @@
       ]
     },
     "directionalLight": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/rotation",
+            "label": "Rotation"
+          },
+          {
+            "path": "/options/energy",
+            "label": "Energy"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance has its own settings and result without changing the captured inputs."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates a DirectionalLight3D: parallel light from a distant source such as the sun, whose direction comes only from rotation (light travels along the node's rotated -Z axis); it has no position and lights the whole scene equally. Choose it as the main key or sun light; add omniLight or spotLight for local light. Shadows are not offered for this operation. Schemaxis does not require any light node; add one when the preview or running project should show directional shading.",
       "sources": [
@@ -179,6 +334,26 @@
       ]
     },
     "capsule": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/radius",
+            "label": "Radius"
+          },
+          {
+            "path": "/options/height",
+            "label": "Height"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance produces its own result with these settings and can be used independently."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates a MeshInstance3D holding a native CapsuleMesh: a cylinder with hemispherical ends standing along its local Y axis, centred on position. height is the total height including both caps, so it must be at least twice the radius; tessellation is fixed at 32 radial segments and 8 rings. Choose it for character or obstacle placeholders and rounded rods.",
       "sources": [
@@ -198,6 +373,26 @@
       ]
     },
     "torus": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/innerRadius",
+            "label": "Inner radius"
+          },
+          {
+            "path": "/options/outerRadius",
+            "label": "Outer radius"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance produces its own result with these settings and can be used independently."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates a MeshInstance3D holding a native TorusMesh: a ring lying in its local XZ plane around the local Y axis, centred on position. innerRadius is the radius of the hole and outerRadius the overall radius, so the tube is outerRadius - innerRadius thick. Tessellation is fixed at 32 rings and 16 ring segments. Choose it for rings, wheels and seals.",
       "sources": [
@@ -218,6 +413,26 @@
       ]
     },
     "omniLight": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/energy",
+            "label": "Energy"
+          },
+          {
+            "path": "/options/range",
+            "label": "Range"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance has its own settings and result without changing the captured inputs."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates an OmniLight3D: a point light at position that shines in all directions and lights nothing beyond range metres. attenuation shapes how brightness falls with distance inside that radius, and shadows can be enabled. Choose it for lamps, fill and rim lights; use spotLight for a directed cone and directionalLight for sunlight.",
       "sources": [
@@ -232,6 +447,26 @@
       ]
     },
     "spotLight": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/rotation",
+            "label": "Rotation"
+          },
+          {
+            "path": "/options/angle",
+            "label": "Angle"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance has its own settings and result without changing the captured inputs."
+        }
+      },
       "status": "reviewed",
       "explanation": "Creates a SpotLight3D: a cone of light from position along the node's rotated -Z axis, with angle as the cone's half-angle and range as its reach in metres. attenuation and angleAttenuation shape the fall-off with distance and towards the cone edge; shadows can be enabled. Choose it for key lights, stage lights or torches; use omniLight for light in all directions.",
       "sources": [
@@ -247,6 +482,26 @@
       ]
     },
     "transformGroup": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/position",
+            "label": "Position"
+          },
+          {
+            "path": "/options/rotation",
+            "label": "Rotation"
+          },
+          {
+            "path": "/options/scale",
+            "label": "Scale"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each instance has its own settings and result without changing the captured inputs."
+        }
+      },
       "status": "reviewed",
       "explanation": "Create a named, non-renderable Node3D transform group to move, rotate and scale a static assembly together. Connect child geometry or other groups through inputs.parent. Transform options are local to the parent; leaving parent out attaches to the scene root. Group world bounds enclose descendant geometry; empty groups have no bounds. Cameras, lights and sprites stay at the root.",
       "sources": [
@@ -277,6 +532,32 @@
       ]
     },
     "animatedSprite3D": {
+      "authoring": {
+        "instanceFields": [
+          {
+            "path": "/options/file",
+            "label": "File",
+            "style": "lastSegment"
+          },
+          {
+            "path": "/options/metadata",
+            "label": "Animation metadata",
+            "style": "omit"
+          },
+          {
+            "path": "/options/animation",
+            "label": "Animation"
+          },
+          {
+            "path": "/options/position",
+            "label": "Position"
+          }
+        ],
+        "naming": {},
+        "multiMode": {
+          "rationale": "Each row has its own source result. Other settings come from the starting instance."
+        }
+      },
       "status": "reviewed",
       "question": "When would you choose this operation, what does it produce, and what assumptions matter?",
       "explanation": "Turns one named, forward-running Aseprite tag into a native editable AnimatedSprite3D with its own SpriteFrames, so a technical artist's authored per-frame timing survives into the Godot scene. Choose it when a sprite should play inside the 3D scene; choose sprite3D for a still picture. It reads the exported sheet PNG and its schemaxis.aseprite.sheet/1 metadata together, keeps every frame's rectangle and its duration in milliseconds, and plays the slice at an animation speed of 1 frame per second with each frame's duration written in seconds, so a 250 ms frame stays 250 ms. The scene plays the animation when it runs. Reverse and ping-pong tags, other tags in the sheet, trimmed frames and per-frame offsets are not imported; they are refused or ignored by design, never reinterpreted.",

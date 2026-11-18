@@ -48,6 +48,9 @@ def equivalent(actual, expected):
     return actual == expected
 
 
+RELISTS_TIMES = ('SkipZeroTime', 'ListtimestepsaccordingtocontrolDict', 'CaseType')
+
+
 def configure_binding(proxy, binding, value, location):
     """Assign captured bindings, checking nested identity, domains and readback."""
     from schemaxis.core.declarations import validate_value
@@ -125,6 +128,34 @@ def raw_elements(proxy, path):
     return [prop.GetElement(i) for i in range(prop.GetNumberOfElements())]
 
 
+class ErrorWatch:
+    """Notes whether the application reported an error while the block ran."""
+
+    def __init__(self):
+        self.seen = False
+
+    def note(self, *arguments):
+        self.seen = True
+
+    def __enter__(self):
+        from vtkmodules.vtkCommonCore import vtkOutputWindow
+        self.window = vtkOutputWindow.GetInstance()
+        self.observer = self.window.AddObserver('ErrorEvent', self.note)
+        return self
+
+    def __exit__(self, *exception):
+        self.window.RemoveObserver(self.observer)
+        return False
+
+
+def same_proxy(registered, proxy):
+    """Whether a registered proxy is this resident proxy."""
+    left, right = getattr(registered, 'SMProxy', registered), proxy.SMProxy
+    if hasattr(left, 'GetGlobalIDAsString') and hasattr(right, 'GetGlobalIDAsString'):
+        return left.GetGlobalIDAsString() == right.GetGlobalIDAsString()
+    return left is right
+
+
 class ParaViewBackend:
     def __init__(self):
         from paraview import simple, servermanager
@@ -158,9 +189,17 @@ class ParaViewBackend:
 
     def create(self, node, declaration, inputs, constructor):
         self.load_dependencies(node, declaration)
+        with ErrorWatch() as watch:
+            proxy = self.construct(node, declaration, inputs, constructor)
+        if watch.seen:
+            self.delete(proxy)
+            fail('NATIVE_PIPELINE_ERROR', 'native object reported an error when it was created; inspect retained stderr', node)
+        return proxy
+
+    def construct(self, node, declaration, inputs, constructor):
         kwargs = {declaration['inputs'][p]['native']: value for p, value in inputs.items()}
         kwargs.update({declaration['options'][k]['path'][0]: v for k, v in constructor.items()})
-        if declaration['id'] == 'foam':
+        if declaration.get('native') == 'OpenFOAMReader' and 'CaseType' in kwargs:
             kwargs = {'CaseType': kwargs['CaseType'], **{k: v for k, v in kwargs.items() if k != 'CaseType'}}
         if declaration.get('role') == 'resource':
             factory = declaration['factory']
@@ -231,6 +270,10 @@ class ParaViewBackend:
                 fail('NATIVE_VALUE_MISMATCH', 'native property did not retain the effective requested value',
                      record['node'] + '.' + key, requested=expected, actual=str(actual))
             record['options'][key] = value
+        if declaration.get('native') == 'OpenFOAMReader' and any(
+                declaration['options'][key].get('path', [None])[0] in RELISTS_TIMES for key in changes):
+            # The reader lists its times when it is created, with its own defaults; it lists them again only on request.
+            proxy.Refresh()
 
     def command(self, proxy, name):
         record = self.records[id(proxy)]
@@ -368,6 +411,79 @@ class ParaViewBackend:
                 if field['range'] is not None and not all(math.isfinite(v) for v in field['range']):
                     field['range'] = None
         return result
+
+    def extents(self, proxy):
+        """Bounds of every output port: six numbers, empty, or not spatial for a table."""
+        if self.records[id(proxy)]['declaration'].get('role') == 'resource':
+            return [{'status': 'notSpatial'}]
+        results = []
+        for port in range(proxy.GetNumberOfOutputPorts()):
+            info = proxy.GetDataInformation(port)
+            bounds = list(info.GetBounds())
+            if info.GetDataClassName() == 'vtkTable':
+                results.append({'status': 'notSpatial'})
+            elif any(lower > upper for lower, upper in zip(bounds[0::2], bounds[1::2])):
+                results.append({'status': 'empty'})
+            else:
+                results.append({'status': 'ok', 'bounds': bounds})
+        return results
+
+    def relabel(self, proxy, old, new):
+        """Rename one resident source registration in place; the proxy and its data are kept.
+
+        Refusals before RenameSource change nothing. After it, the registrations are
+        read back; any exception or mismatch is reconciled by restoring and verifying
+        the old label, or reported as uncertain when that cannot be proved.
+        """
+        record = self.records.get(id(proxy))
+        if record is None or record['node'] != old:
+            fail('IDENTITY_TRANSITION_MISMATCH', 'resident proxy does not carry the expected identity', old)
+        if record['declaration'].get('role') == 'resource':
+            fail('UNSUPPORTED_NATIVE_RELABEL', 'resource registrations are not relabelled in place', old)
+        try:
+            manager = self.sm.ProxyManager()
+            current, occupied = manager.GetProxyName('sources', proxy.SMProxy), manager.GetProxy('sources', new)
+        except Exception as error:
+            fail('NATIVE_RELABEL_FAILED', 'native registrations could not be read before relabelling', old, cause=str(error))
+        if current != old:
+            fail('IDENTITY_TRANSITION_MISMATCH', 'native source registration differs from the resident identity', old)
+        if occupied is not None:
+            fail('NATIVE_IDENTITY_COLLISION', 'another native source is registered with the new identity', new)
+        cause = 'native source registration did not change exactly'
+        try:
+            self.pv.RenameSource(new, proxy)
+            changed = self.registered(manager, proxy, new, old)
+        except Exception as error:
+            changed, cause = False, str(error)
+        if changed:
+            record['node'] = new
+            return
+        restored = self.restore(manager, proxy, old, new)
+        fail('NATIVE_RELABEL_FAILED', 'native source relabel failed', old, cause=cause, restored=restored,
+             **({} if restored else {'uncertain': True}))
+
+    @staticmethod
+    def registered(manager, proxy, name, other):
+        """Whether ``name``, and not ``other``, is this proxy's source registration."""
+        return manager.GetProxyName('sources', proxy.SMProxy) == name and manager.GetProxy('sources', other) is None
+
+    def restore(self, manager, proxy, old, new):
+        """Return the registration to ``old`` only and verify it; False when unproved."""
+        try:
+            if self.registered(manager, proxy, old, new):
+                return True
+            holder = manager.GetProxy('sources', new)
+            if holder is not None and same_proxy(holder, proxy):
+                if manager.GetProxy('sources', old) is None:
+                    self.pv.RenameSource(old, proxy)
+                else:
+                    manager.UnRegisterProxy('sources', new, proxy)
+        except Exception:
+            pass  # The readback below decides.
+        try:
+            return self.registered(manager, proxy, old, new)
+        except Exception:
+            return False
 
     def delete(self, proxy):
         record = self.records.get(id(proxy), {})

@@ -37,7 +37,7 @@ class ExpansionTests(unittest.TestCase):
         for operation, options in [('uvSphere',{'segments':10000}),
                                    ('subdivision',{'levels':5}), ('array',{'count':0}),
                                    ('transform',{'scale':[1,0,1]}),
-                                   ('mirror',{'axes':[1,0,0]}),
+                                   ('mirror',{'sweeps':[1,0,0]}),
                                    ('material',{'metallic':2}), ('wireframe',{'thickness':0}),
                                    ('wireframe',{'offset':2}), ('wireframe',{'replace':1})]:
             with self.subTest(operation=operation), self.assertRaises(SchemaxisError):

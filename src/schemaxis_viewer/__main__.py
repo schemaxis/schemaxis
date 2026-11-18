@@ -9,10 +9,10 @@ import webbrowser
 from .library import inventory, LocalLibrary, browse, history_file
 from .transport import ViewerTransport
 
-from . import WEB_ROOT as WEB
+from . import WEB_ROOT, CLASSIC_ROOT
 
 
-def make_server(inputs=(), port=0, *, history=None):
+def make_server(inputs=(), port=0, *, history=None, web_root=WEB_ROOT):
     library = LocalLibrary(history)
     initial = library.register(inputs) if inputs else None
     records = library.collections[initial]['records'] if initial else []
@@ -74,8 +74,8 @@ def make_server(inputs=(), port=0, *, history=None):
                     return
                 self.serve_file(path, head, artifact=True)
                 return
-            path = WEB / (route or 'index.html')
-            if path.parent != WEB or not path.is_file():
+            path = web_root / (route or 'index.html')
+            if path.parent != web_root or not path.is_file():
                 self.send_error(404)
                 return
             self.serve_file(path, head)
@@ -123,11 +123,12 @@ def main(argv=None):
     parser.add_argument('paths', nargs='*', help='Files and/or folders; folders are scanned recursively')
     parser.add_argument('--port', type=int, default=0, help='Local port (default: choose an available port)')
     parser.add_argument('--no-browser', action='store_true')
+    parser.add_argument('--classic', action='store_true', help='Use the previous viewer interface')
     args = parser.parse_args(argv)
     if not 0 <= args.port <= 65535:
         parser.error('--port must be between 0 and 65535')
     try:
-        server = make_server(args.paths, args.port, history=history_file())
+        server = make_server(args.paths, args.port, history=history_file(), web_root=CLASSIC_ROOT if args.classic else WEB_ROOT)
     except (OSError, ValueError) as error:
         parser.error(str(error))
     print(f'Artifact viewer: {server.viewer_url}', flush=True)

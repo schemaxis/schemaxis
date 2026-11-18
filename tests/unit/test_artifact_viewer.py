@@ -7,6 +7,7 @@ import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from schemaxis_viewer import CLASSIC_ROOT
 from schemaxis_viewer.__main__ import inventory, make_server
 
 
@@ -67,13 +68,25 @@ class ArtifactViewerTest(unittest.TestCase):
             urlopen(self.url+'file/0')
         self.assertEqual(caught.exception.code, 409)
 
-    def test_assets_and_csp(self):
-        for name in ('', 'app.mjs', 'scene.mjs', 'style.css'):
-            with urlopen(self.url+name) as response:
+    def check_assets(self, url, names):
+        for name in names:
+            with urlopen(url+name) as response:
                 self.assertEqual(response.status, 200)
                 self.assertIn("object-src 'none'", response.headers['Content-Security-Policy'])
                 self.assertEqual(response.headers['X-Content-Type-Options'], 'nosniff')
                 self.assertGreater(len(response.read()), 0)
+
+    def test_assets_and_csp(self):
+        self.check_assets(self.url, ('', 'app.mjs', 'gl.mjs', 'sequences.mjs', 'style.css'))
+        classic = make_server([self.data], web_root=CLASSIC_ROOT)
+        thread = threading.Thread(target=classic.serve_forever, daemon=True)
+        thread.start()
+        try:
+            self.check_assets(classic.viewer_url, ('', 'app.mjs', 'scene.mjs', 'style.css'))
+        finally:
+            classic.shutdown()
+            classic.server_close()
+            thread.join(2)
 
     def test_local_folder_library_paths_ranges_history_and_origin(self):
         body = json.dumps({'paths': [str(self.data)]}).encode()

@@ -3,7 +3,7 @@
 // flattening, conditional evaluation against instance data and descent along
 // JSON pointers. Everything expensive is memoised per schema object.
 //
-// Schemaxis composition markers ($document, $expr, $value, $axis, $analytic,
+// Schemaxis composition markers ($document, $expr, $value, $sweep, $analytic,
 // $artifact, ...) are objects with a '$'-prefixed key. Schema branches that
 // only describe such markers are "marker branches": they are skipped for
 // completion unless asked for, and marker instances are never validated here.

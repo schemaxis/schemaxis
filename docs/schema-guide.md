@@ -204,8 +204,8 @@ are outside these commands.
 
 | Required literal version | Contents | Authoring conveniences |
 | --- | --- | --- |
-| `schemaxis/1` | ParaView nodes, axes, times, scenes, images, appearances, measurements, exports | Composition, inline inputs, scoped analytics, runtime expressions |
-| `schemaxis.blender/1` | Blender nodes, axes, scenes, rendering, images, mesh publications | Composition, inline inputs, scoped analytics, runtime expressions |
+| `schemaxis/1` | ParaView nodes, sweeps, times, scenes, images, appearances, measurements, exports | Composition, inline inputs, scoped analytics, runtime expressions |
+| `schemaxis.blender/1` | Blender nodes, sweeps, scenes, rendering, images, mesh publications | Composition, inline inputs, scoped analytics, runtime expressions |
 | `schemaxis.freecad/1` | Features, output and CAD settings | Composition; literal resolved features |
 | `schemaxis.freecad.assembly/1` | Parts, components, grounding and joints | Composition; literal resolved assembly values |
 | `schemaxis.blender.render/1` | Saved scene, cameras, render settings | Literal only outside workflow artifact handoffs |
@@ -253,7 +253,7 @@ image-camera or ParaView appearance sequence may be analytic; arbitrary nested
 presentation members do not gain analytics. Separate option-runtime and
 presentation-runtime definitions preserve this boundary.
 
-Expanded documents retain `$axis`, `$observe`, `$time`, `$calc`, `$call`, and ParaView
+Expanded documents retain `$sweep`, `$observe`, `$time`, `$calc`, `$call`, and ParaView
 `$sample`. Calculation arguments use a recursive data/runtime grammar. Malformed
 nested markers are rejected; runtime result types and observed values remain deferred.
 
@@ -299,7 +299,7 @@ separate from authoring-document structure.
 Schemas check unknown structural keys, declaration types/enums/bounds, required
 properties, marker shapes and versions. A valid reference can still resolve to an
 invalid value. Use `schemaxis plan` for reference existence/cycles, unique IDs, graph
-dependencies, compatible kinds, computed types, matching analytic shapes, axes,
+dependencies, compatible kinds, computed types, matching analytic shapes, sweeps,
 source times, cross-option comparisons, publication limits and resource availability.
 A schema pass is neither native execution nor independent reopen verification.
 

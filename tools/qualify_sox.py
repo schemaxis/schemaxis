@@ -260,7 +260,7 @@ def main():
         for job in passed['jobs']: assert a.verify(Path(job['directory']))['verified']
         report['handoff']['standaloneCapturesReopenAfterOriginalRemoved']=True
         report['handoff']['workflowRequiresCurrentOriginalSource']=refused(lambda:workflow.verify(directory/'handoff'),'INVALID_AUDIO_SOURCE')['code']
-        study=case_document(entry,entry['development']['cases'][0],ROOT);study['definitions']={'level':.25};study['clips'][0]['gain']={'$document':'/definitions/level'};study['axes']=[{'name':'level','values':[.25,.5]}];study['clips'][1]['gain']={'$axis':'level'}
+        study=case_document(entry,entry['development']['cases'][0],ROOT);study['definitions']={'level':.25};study['clips'][0]['gain']={'$document':'/definitions/level'};study['sweeps']=[{'name':'level','values':[.25,.5]}];study['clips'][1]['gain']={'$sweep':'level'}
         result=a.run(study,directory/'study',executable=locations['sox'],timeout=30);assert a.verify(directory/'study')['verified'];assert len(result['states'])==2;report['composition']={'states':2,'verified':True}
         report['ancillaryChunkSources']=ancillary_sources(directory,locations['sox'])
         report['sampleRateBoundaries']=rate_boundaries(directory,locations['sox'])

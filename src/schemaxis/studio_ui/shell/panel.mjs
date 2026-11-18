@@ -92,6 +92,7 @@ export function createPanel(ctx) {
   const body = h('div', {class: 'panel-body'});
   const consoleView = createConsole(ctx);
   const element = h('section', {class: 'panel', hidden: true, 'aria-label': 'Bottom panel'}, tabs, body);
+  let renderedTab, renderedItems, renderedTabs;
 
   const render = () => {
     const state = ctx.store.get();
@@ -100,15 +101,28 @@ export function createPanel(ctx) {
       return;
     }
     const problems = ctx.notify.store.get().problems;
-    mount(tabs, TABS.map((tab) => h('button', {
-      class: 'panel-tab', role: 'tab', 'aria-selected': String(state.panelTab === tab.id),
-      onClick: () => ctx.store.set({panelTab: tab.id}),
-    }, tab.label, tab.id === 'problems' && problems.length ? h('span', {class: 'count'}, problems.length) : null)),
-    h('span', {style: {flex: 1}}),
-    state.panelTab === 'problems' && problems.length
-      ? h('button', {class: 'button ghost small', onClick: () => ctx.notify.clearProblems()}, 'Clear all') : null,
-    h('button', {class: 'button ghost small icon-only', 'aria-label': 'Close panel',
-      onClick: () => ctx.store.set({panelOpen: false})}, icon('close')));
+    const tabKey = JSON.stringify([state.panelTab, problems.length]);
+    if (renderedTabs !== tabKey) {
+      renderedTabs = tabKey;
+      mount(tabs, TABS.map((tab) => h('button', {
+        class: 'panel-tab', role: 'tab', 'aria-selected': String(state.panelTab === tab.id),
+        onClick: () => ctx.store.set({panelTab: tab.id}),
+      }, tab.label, tab.id === 'problems' && problems.length ? h('span', {class: 'count'}, problems.length) : null)),
+      h('span', {style: {flex: 1}}),
+      state.panelTab === 'problems' && problems.length
+        ? h('button', {class: 'button ghost small', onClick: () => ctx.notify.clearProblems()}, 'Clear all') : null,
+      h('button', {class: 'button ghost small icon-only', 'aria-label': 'Close panel',
+        onClick: () => ctx.store.set({panelOpen: false})}, icon('close')));
+    }
+    const items = state.panelTab === 'problems' ? problems
+      : state.panelTab === 'log' ? ctx.notify.store.get().log
+      : state.panelTab === 'jobs' ? JSON.stringify((state.server?.jobs || []).map(({id, label, status}) => [id, label, status]))
+      : consoleView;
+    // Polling changes server state without changing these rows. Keep their DOM
+    // nodes so native browser text selection and copying survive the refresh.
+    if (renderedTab === state.panelTab && renderedItems === items) return;
+    renderedTab = state.panelTab;
+    renderedItems = items;
     if (state.panelTab === 'console') {
       if (body.firstChild !== consoleView) {
         mount(body, consoleView);

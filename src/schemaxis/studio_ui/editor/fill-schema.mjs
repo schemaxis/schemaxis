@@ -1,4 +1,5 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
+import {spatialFieldType} from './spatial-input.mjs';
 // Schema-directed field creation and expression admission. No invented adaptor grammar.
 import {contextFor, expand, schemasAt, childSchemas, matches} from './schema-core.mjs';
 import {escapeSegment, parsePointer, formatPointer} from './json-pointer.mjs';
@@ -6,7 +7,7 @@ import {validate} from './schema-validate.mjs';
 import {atPointer, replacing, isFill} from './fill-data.mjs';
 
 export const EXPRESSION_KEYS = [
-  '$document', '$value', '$axis', '$analytic', '$expr', '$observe', '$sample', '$calc', '$call',
+  '$document', '$value', '$sweep', '$analytic', '$expr', '$observe', '$sample', '$calc', '$call',
 ];
 
 export function expressionNodes(schema, value, pointer) {
@@ -23,7 +24,8 @@ export function fieldFromSchemas(name, nodes, required = true, includeValues = f
   const literal = nodes.filter((node) => !Object.keys(node.properties || {}).some((key) => key.startsWith('$')));
   const types = literal.flatMap((node) => [].concat(node.type || []));
   const values = literal.flatMap((node) => node.enum || (Object.hasOwn(node, 'const') ? [node.const] : []));
-  const type = values.length ? 'enum' : ['string', 'integer', 'number', 'boolean'].find((type) => types.includes(type));
+  const type = values.length ? 'enum' : ['string', 'integer', 'number', 'boolean'].find((type) => types.includes(type))
+    || literal.map(spatialFieldType).find(Boolean);
   const field = {$fill: name, label: name, type: type || 'json', required};
   if (values.length && includeValues) field.values = [...new Set(values)];
   for (const key of ['minimum', 'maximum', 'minLength', 'maxLength', 'pattern']) {
@@ -110,7 +112,7 @@ export function expressionExample(key) {
   return {
     $document: {$document: field('pointer', 'string')},
     $value: {$value: field('function', 'string'), args: {}},
-    $axis: {$axis: field('axis', 'axisRef')},
+    $sweep: {$sweep: field('sweep', 'sweepRef')},
     $analytic: {$analytic: {type: 'linear', start: field('start', 'number'), end: field('end', 'number'), count: 5}},
     $expr: {$expr: {op: 'add', args: [field('left', 'number'), field('right', 'number')]}},
     $observe: {$observe: field('source', 'nodeRef'), path: ['bounds']},

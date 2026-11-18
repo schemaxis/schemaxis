@@ -23,7 +23,7 @@ and supersedes `studio.json` version 1.
    - Values still to fill are clearly highlighted, and the cursor visits each
      required value in turn.
    - For each value the user can type it, choose an expression (`$value`,
-     `$document`, `$analytic`, `$axis`, `$expr`, and so on), or leave it for later.
+     `$document`, `$analytic`, `$sweep`, `$expr`, and so on), or leave it for later.
    - A value left for later stays visibly marked as an unset variable.
 5. **Templates** that create ready-made files with values still missing.
    Templates or snippets should be offered at every step: document, section and
@@ -120,7 +120,7 @@ loader.
         "prefix": {"label": "ID prefix", "type": "id", "default": "slice"}
       },
       "inserts": [
-        {"at": "/axes/-", "values": ["…"]},
+        {"at": "/sweeps/-", "values": ["…"]},
         {"at": "/nodes/-", "values": ["…"]},
         {"at": "/scenes/0/visible", "merge": {"…": {}}}
       ]
@@ -145,7 +145,7 @@ is what "left for later" means.
 `number`, `integer`, `boolean`, `string`, `enum` (with `values`), `vector3`,
 `bounds`, `colour`, `path` (file, with `extensions`), `id` (auto-uniquified against
 existing IDs in its collection), `nodeRef` (choose an existing node ID; filter by
-`acceptsKinds` where the adaptor declares port kinds), `axisRef`, `field` (a data
+`acceptsKinds` where the adaptor declares port kinds), `sweepRef`, `field` (a data
 array name; offer names from the last native observation when one exists), `json`.
 
 ### 3.3 Placement
@@ -156,10 +156,10 @@ array name; offer names from the last native observation when one exists), `json
 - `merge` deep-merges an object, with conflicts shown in the preview.
 - `"at": "@cursor"` inserts a value at the caret's value position. This is used by
   value-level snippets.
-- A missing intermediate container (for example no `axes` yet) is created.
+- A missing intermediate container (for example no `sweeps` yet) is created.
 - All inserts of one snippet are **one undo group**.
 - The ghost preview (existing `editor-preview.mjs`) shows every insert before
-  commit. Off-screen inserts are listed in the popover ("also adds 1 axis, 3 scene
+  commit. Off-screen inserts are listed in the popover ("also adds 1 sweep, 3 scene
   entries").
 
 ### 3.4 Backend contract for unfilled values
@@ -229,10 +229,10 @@ After a snippet or template is inserted, the editor enters **fill mode**.
 - **The fill popover** is anchored at the marker. It offers:
   - **Type a value**, validated live against the field type and the schema at that
     pointer.
-  - **Choose** from enum values, existing node or axis IDs, or recent values.
+  - **Choose** from enum values, existing node IDs or sweep names, or recent values.
   - **An expression:** `$document` (pointer picker over the current document),
-    `$value` (function picker with typed arguments), `$axis` (pick or create an
-    axis), `$analytic` (linear, values or orbit form), `$expr`, and `$observe`,
+    `$value` (function picker with typed arguments), `$sweep` (pick or create a
+    sweep), `$analytic` (linear, values or orbit form), `$expr`, and `$observe`,
     `$sample`, `$calc` and `$call` where that adaptor's schema allows them.
     - Only offer what the schema at that pointer accepts. The authored schemas
       reference `#/$defs/composition` and `#/$defs/analytic`.
@@ -262,7 +262,7 @@ After a snippet or template is inserted, the editor enters **fill mode**.
 | Step | Offer |
 | --- | --- |
 | New document | Template gallery in the New Instance dialog and an empty Workbench: cards with title, description and the fields they will ask for |
-| Empty or new section | A "Start this section" strip: the most relevant snippets for the collection the caret is in (`nodes`, `scenes`, `axes`) |
+| Empty or new section | A "Start this section" strip: the most relevant snippets for the collection the caret is in (`nodes`, `scenes`, `sweeps`) |
 | Anywhere | The category button rows above the editor, in the Workbench Input tab and the Schema Editor |
 | A value | Fill popover expressions and value snippets |
 | Workflow Designer | An operation-level template picker when adding a node, plus snippets for ports, handoffs and parameters |

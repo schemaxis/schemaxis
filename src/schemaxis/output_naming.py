@@ -26,7 +26,7 @@ DEFAULT_WIDTH = 6
 _TOKEN = re.compile(r'\{([^{}]*)\}')
 _SIMPLE = ('index', 'operation', 'output', 'artifact', 'ext')
 _PARAMETER = r'param:[A-Za-z][A-Za-z0-9_.-]*'
-_AXIS = r'axis:[A-Za-z0-9_.-]+'
+_AXIS = r'sweep:[A-Za-z0-9_.-]+'
 _LITERAL = r'[A-Za-z0-9_.+=,@-]*'
 _MAX_PATTERN = 256
 _MAX_NAME = 255
@@ -51,7 +51,7 @@ def validate_pattern(pattern, location='$.pattern'):
                  literal=literal)
         token = match.group(1)
         if token not in _SIMPLE and not re.fullmatch(_PARAMETER, token) and not re.fullmatch(_AXIS, token):
-            fail('INVALID_NAMING', 'unknown token; use {index}, {operation}, {output}, {param:ID}, {axis:NAME}, '
+            fail('INVALID_NAMING', 'unknown token; use {index}, {operation}, {output}, {param:ID}, {sweep:NAME}, '
                  '{artifact} or {ext}', location, token=token)
         tokens.append(token)
         position = match.end()
@@ -110,9 +110,9 @@ def _render(pattern, entry, index, width):
         if key in ('operation', 'output'):
             return sanitise(entry.get(key) or entry.get('stem') or 'output')
         group, _, identity = key.partition(':')
-        values = entry.get('parameters' if group == 'param' else 'axes', {})
+        values = entry.get('parameters' if group == 'param' else 'sweeps', {})
         if identity not in values:
-            fail('INVALID_NAMING', ('parameter ' if group == 'param' else 'axis ') + identity
+            fail('INVALID_NAMING', ('parameter ' if group == 'param' else 'sweep ') + identity
                  + ' has no value for this output', '$.pattern', token=key, operation=entry.get('operation'))
         return sanitise(values[identity])
     name = _TOKEN.sub(token, pattern)
@@ -125,7 +125,7 @@ def preview(pattern, entries, index_width=DEFAULT_WIDTH):
     """Names for a UI preview; entries carry operation, output, artifact, ext and values.
 
     Each entry may contain ``operation``, ``output``, ``artifact`` (default 0),
-    ``ext`` (with its dot), ``parameters`` and ``axes``. The index is the 1-based
+    ``ext`` (with its dot), ``parameters`` and ``sweeps``. The index is the 1-based
     position in ``entries``. Collisions are reported, not raised.
     """
     validate_pattern(pattern)
@@ -157,9 +157,9 @@ def _axis_values(directory, indices):
     program = InputProgram(_load(directory / 'authored.json'), workflow=True)
     result = {}
     for group, position in indices.items():
-        if '/axis:' not in group:
+        if '/declared:' not in group:
             continue
-        axis = group.rsplit('/axis:', 1)[1]
+        axis = group.rsplit('/declared:', 1)[1]
         items = program.explicit.get(group, ([],))[0]
         value = items[position] if 0 <= position < len(items) else position
         scalar = type(value) in (bool, int, float, str) or (
@@ -186,7 +186,7 @@ def _collect(directory, axes):
         for artifact in _load(target / 'verification.json')['artifacts']:
             index = counters.get(operation, 0)
             counters[operation] = index + 1
-            yield {'operation': operation, 'artifact': index, 'record': artifact, 'axes': dict(axes)}
+            yield {'operation': operation, 'artifact': index, 'record': artifact, 'sweeps': dict(axes)}
 
 
 def _sha256(path):
@@ -252,7 +252,7 @@ def apply(run_directory, pattern, *, index_width=DEFAULT_WIDTH, parameters=None,
         entry = {'operation': item['operation'], 'artifact': item['artifact'], 'ext': suffix,
                  'output': aliases.get((item['operation'], item['artifact'])),
                  'stem': source.name[:-len(suffix)] if suffix else source.name,
-                 'parameters': parameters, 'axes': item['axes']}
+                 'parameters': parameters, 'sweeps': item['sweeps']}
         entries.append((_render(pattern, entry, ordinal, index_width), relative, sha256, entry, item))
     counts = Counter(entry[0] for entry in entries)
     duplicates = sorted(value for value, count in counts.items() if count > 1)
@@ -271,7 +271,7 @@ def apply(run_directory, pattern, *, index_width=DEFAULT_WIDTH, parameters=None,
         mapping[value] = {'source': relative.as_posix(), 'sha256': sha256, 'operation': entry['operation'],
                           'artifact': entry['artifact'], 'output': entry['output'],
                           'kind': item['record'].get('kind', item['record'].get('identity', {}).get('kind')),
-                          'axes': entry['axes'], 'method': method}
+                          'sweeps': entry['sweeps'], 'method': method}
     manifest = {'version': VERSION, 'pattern': pattern, 'indexWidth': index_width,
                 'verification': verification, 'names': mapping}
     storage.atomic(named / _MANIFEST, (json.dumps(manifest, indent=2) + '\n').encode('utf-8'), exclusive=True)

@@ -164,7 +164,7 @@ def main():
         source.write_bytes(source.read_bytes()+b'\n')
         third=workflow.execute(graph,directory/'workflow',locations=locations,timeout=30,resume=True);assert not any(j['reused'] for j in third['jobs']);assert workflow.verify(directory/'workflow')['verified']
         report['workflow']={'status':first['status'],'verifiedValueHandoff':True,'unchangedReused':True,'samePathByteEditReused':False}
-        study=copy.deepcopy(document);study['axes']=[{'name':'minimum','values':[1,3]}];study['where']['minimum']={'$axis':'minimum'}
+        study=copy.deepcopy(document);study['sweeps']=[{'name':'minimum','values':[1,3]}];study['where']['minimum']={'$sweep':'minimum'}
         result=a.run(study,directory/'study',executable=locations['sqlite'],timeout=30);assert a.verify(directory/'study')['verified'];assert len(result['states'])==2;report['composition']={'states':2,'verified':True}
         report['inflightLifecycle']=lifecycle(directory,document)
         if args.register:register(directory/'kit/qualification.json')

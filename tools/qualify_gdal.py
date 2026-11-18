@@ -199,7 +199,7 @@ def main():
         source.write_bytes(source.read_bytes()+b'\0')
         changed=workflow.execute(graph,directory/'workflow',locations=locations,timeout=30,resume=True);assert not changed['jobs'][0]['reused'];assert workflow.verify(directory/'workflow')['verified']
         report['workflow']={'status':first['status'],'unchangedReused':True,'samePathChangedBytesReused':False,'handoff':'Verified GeoTIFF crop consumed by a second nearest window.'}
-        study=copy.deepcopy(document);study['axes']=[{'name':'columns','values':[3,4]}];study['outputWidth']={'$axis':'columns'};study['definitions']={'method':'nearest'};study['resampling']={'$document':'/definitions/method'}
+        study=copy.deepcopy(document);study['sweeps']=[{'name':'columns','values':[3,4]}];study['outputWidth']={'$sweep':'columns'};study['definitions']={'method':'nearest'};study['resampling']={'$document':'/definitions/method'}
         result=adaptor.run(study,directory/'study',executable=executable,timeout=30);assert len(result['states'])==2 and adaptor.verify(directory/'study')['verified'];report['composition']={'states':2,'verified':True}
         if args.register:register(directory/'kit/qualification.json')
         report['verified']=True

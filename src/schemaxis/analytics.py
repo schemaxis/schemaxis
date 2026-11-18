@@ -117,7 +117,7 @@ class AnalyticBindings:
         member = 'member' + str(len(self.bindings))
         for row, value in zip(axis['values'], data):
             row[member] = value
-        marker = {'$axis': axis['name'], 'path': [member]}
+        marker = {'$sweep': axis['name'], 'path': [member]}
         self.entries[identity] = (copy.deepcopy(spec), marker, axis, member)
         self.bindings.append({'owner': owner, 'memberPath': list(path), 'axis': axis['name'], 'member': member, 'sync': sync})
         return copy.deepcopy(marker)
@@ -136,13 +136,17 @@ def compile_analytics(document):
     limit = document.get('maxStates', 10000)
     if type(limit) is not int or limit < 1:
         fail('INVALID_LIMIT', 'maxStates must be a positive integer')
-    axes = document.setdefault('axes', [])
+    axes = document.setdefault('sweeps', [])
     if not isinstance(axes, list):
-        fail('INVALID_AXIS', 'axes must be an array')
+        fail('INVALID_SWEEP', 'sweeps must be an array')
     registry = AnalyticBindings(axes=axes, limit=limit)
+    from .expressions import late_analytic, late_syncs, sweep_syncs
+    syncs = sweep_syncs(document) | late_syncs(document)
     def bind(value, owner, path):
         if isinstance(value, dict) and '$analytic' in value:
             keys(value, ('$analytic',), owner + '/' + '/'.join(str(x) for x in path))
+            if late_analytic(value['$analytic'], syncs):
+                return value
             return registry.bind(owner, path, value['$analytic'])
         if isinstance(value, dict):
             return {k: bind(v, owner, [*path, k]) for k, v in value.items()}

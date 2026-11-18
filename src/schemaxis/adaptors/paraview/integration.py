@@ -1,4 +1,4 @@
-# Copyright (C) 2026 David L F Gaden
+# Copyright (C) 2026 David L. F. Gaden.
 """Framework hooks for ParaView execution, evidence and native inspection."""
 import copy
 import json
@@ -189,6 +189,27 @@ def nativeInspection(document):
     return plan(document)[0], ParaViewBackend()
 
 
+def extentsSetup(document, locations):
+    """Plan a document that may publish nothing, and find the application that loads its extents."""
+    from schemaxis.pipeline import DefinitionGraph
+    from schemaxis.adaptors.paraview.filters import catalogue
+    from schemaxis.adaptors.paraview.mvp.runners import require_paraview, PARAVIEW_OFFSCREEN
+    master = DefinitionGraph(document, catalogue())
+    return master, require_paraview(locations.get('paraview', locations.get('roots'))), PARAVIEW_OFFSCREEN
+
+
+def nativeExtents(document, initialise=True):
+    from schemaxis.pipeline import DefinitionGraph
+    from schemaxis.adaptors.paraview.filters import catalogue
+    from .native import ParaViewBackend
+    return DefinitionGraph(document, catalogue()), ParaViewBackend()
+
+
+def nativeRelabel(backend, handle, old, new):
+    """Declared safe resident relabel: ParaView renames the source registration in place."""
+    return backend.relabel(handle, old, new)
+
+
 def verifyLegacy(target, effective, outcome, identity):
     from schemaxis.pipeline import DefinitionGraph
     from .job import verify_receipt
@@ -227,3 +248,34 @@ def liveGraph(document):
     selection = master.select(scene['selection']['roots'])
     visible = list(dict.fromkeys([*scene['visible'], *scene['geometry']]))
     return master, selection, scene, visible
+
+
+def identityGeometry(objects, steps, budget=None):
+    """Project ParaView's logical and composite-leaf IDs, preserving all mesh data."""
+    import copy
+    from schemaxis.errors import fail
+    result = []
+    if not isinstance(objects, list):
+        fail('INVALID_GEOMETRY', 'ParaView identity projection needs an object array')
+    for original in objects:
+        item = original
+        node = item.get('node')
+        if not isinstance(node, str) or item.get('label') != node:
+            fail('NATIVE_DIVERGENCE', 'Geometry labels do not match the declared node identity')
+        identity = item.get('id')
+        suffix = '' if identity == node else '/block/' + str(item.get('block'))
+        if identity != node + suffix:
+            fail('INVALID_GEOMETRY', 'Geometry identity is not its node or declared composite block')
+        for old, new in steps:
+            if node == old:
+                node = new
+        identity = node + suffix
+        if budget is not None:
+            # Reserve repeated escaped identities before allocating the collection.
+            for value in (identity, node, node): budget.add(value)
+        item = copy.deepcopy(original)
+        item.update(node=node, label=node, id=identity)
+        result.append(item)
+    if len({item['id'] for item in result}) != len(result):
+        fail('IDENTITY_COLLISION', 'Projected geometry identities collide')
+    return result

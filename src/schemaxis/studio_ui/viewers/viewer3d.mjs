@@ -19,6 +19,7 @@ import {
 import {createRenderer} from './viewer3d-gl.mjs';
 import {buildToolbar, createGizmo} from './viewer3d-controls.mjs';
 import {attachNavigation} from './viewer3d-input.mjs';
+import {overlayBounds, prepareOverlays} from './spatial-overlay.mjs';
 
 export function createViewer3d(container, options = {}) {
   const events = createEmitter();
@@ -36,6 +37,12 @@ export function createViewer3d(container, options = {}) {
 
   let renderer = null;
   let mesh = null;
+  let overlayItems = [];
+  let overlays = prepareOverlays([]);
+  let overlaySelected = -1;
+  const coordinateFrame = () => mesh?.elements.length ? mesh : overlays.frame;
+  const fitBounds = () => overlayBounds(mesh?.elements.length ? mesh : null, overlays);
+  const hasContent = () => Boolean(mesh?.elements.length || overlays.lines.length || overlays.dots.length);
   let camera = createCamera();
   let section = {axis: -1, cut: 0, side: 1};
   let wireframe = false;
@@ -112,14 +119,16 @@ export function createViewer3d(container, options = {}) {
       hovered,
       wireframe,
       colours,
+      overlaySelected,
     }, dpr);
   }
 
   function updateToolbar() {
-    toolbar.update(toolbarState(camera, section, mesh, wireframe, Boolean(renderer?.derivatives)));
+    toolbar.update(toolbarState(camera, section, hasContent() ? {...coordinateFrame(), bounds: fitBounds()} : null, wireframe, Boolean(renderer?.derivatives)));
     hint.textContent = camera.navigation === 'walk'
-      ? 'WASD move · Q/E down/up · Drag look · Shift-drag pan · Click reference'
-      : 'Drag rotate · Shift/right-drag pan · Wheel zoom · F fit · Click reference';
+      ? 'WASD move · Q/E down/up · Drag look · Shift-drag pan'
+      : 'Drag rotate · Shift/right-drag pan · Wheel zoom · F fit';
+    if (mesh?.elements.length) hint.textContent += ' · Click reference';
   }
 
   function animateTo(next) {
@@ -246,7 +255,7 @@ export function createViewer3d(container, options = {}) {
   });
   canvas.addEventListener('webglcontextrestored', () => {
     renderer?.contextRestored();
-    frame.setState(mesh ? 'ready' : 'empty');
+    frame.setState(hasContent() ? 'ready' : 'empty');
     invalidate();
   });
 
@@ -257,19 +266,21 @@ export function createViewer3d(container, options = {}) {
   // ---- public API ------------------------------------------------------
 
   function resize() {
-    if (needsFit && mesh && canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+    // A viewer may be assembled in a detached dialog before its theme is inherited.
+    if (frame.root.isConnected) readColours();
+    if (needsFit && hasContent() && canvas.clientWidth > 0 && canvas.clientHeight > 0) {
       needsFit = false;
-      camera = fitCamera(camera, aspect(), mesh?.bounds);
+      camera = fitCamera(camera, aspect(), fitBounds());
     }
     invalidate();
   }
 
   function fit() {
-    animateTo(fitCamera(camera, aspect(), mesh?.bounds));
+    animateTo(fitCamera(camera, aspect(), fitBounds()));
   }
 
   function setView(name) {
-    animateTo(fitCamera(viewCamera(camera, name), aspect(), mesh?.bounds));
+    animateTo(fitCamera(viewCamera(camera, name), aspect(), fitBounds()));
     canvas.focus({preventScroll: true});
   }
 
@@ -295,7 +306,7 @@ export function createViewer3d(container, options = {}) {
 
   /** See nextSection() in viewer3d-scene.mjs for the accepted change fields. */
   function setSection(change) {
-    section = nextSection(section, change, mesh);
+    section = nextSection(section, change, hasContent() ? {...coordinateFrame(), bounds: fitBounds()} : null);
     updateToolbar();
     invalidate();
   }
@@ -316,7 +327,7 @@ export function createViewer3d(container, options = {}) {
   async function load(input) {
     const token = ++loadToken;
     frame.setState('loading', 'Preparing geometry…');
-    let prepared;
+    let prepared, preparedOverlays;
     try {
       const data = await input;
       // Let the loading state paint before a potentially long synchronous preparation.
@@ -325,6 +336,7 @@ export function createViewer3d(container, options = {}) {
         return null;
       }
       prepared = prepareGeometry(data);
+      preparedOverlays = prepareOverlays(overlayItems, prepared.elements.length ? prepared : null);
     } catch (error) {
       if (token === loadToken) {
         showError(error?.message || String(error));
@@ -339,13 +351,15 @@ export function createViewer3d(container, options = {}) {
     selected = -1;
     hovered = -1;
     renderer?.upload(mesh);
+    overlays = preparedOverlays;
+    renderer?.uploadOverlays(overlays);
     if (!sameDocument) {
       needsFit = true;
       camera = {...camera, yaw: createCamera().yaw, pitch: createCamera().pitch};
       section = {...section, axis: -1};
     }
     if (renderer) {
-      frame.setState(mesh.elements.length ? 'ready' : 'empty', mesh.elements.length ? '' : 'Geometry has no elements');
+      frame.setState(hasContent() ? 'ready' : 'empty', hasContent() ? '' : 'Geometry has no elements');
     }
     statusLeft.textContent = 'No element selected';
     statusRight.textContent = `${mesh.triangleCount.toLocaleString('en-CA')} triangles · `
@@ -367,10 +381,34 @@ export function createViewer3d(container, options = {}) {
     selected = -1;
     hovered = -1;
     renderer?.upload(null);
+    overlayItems = [];
+    overlays = prepareOverlays([]);
+    overlaySelected = -1;
+    renderer?.uploadOverlays(null);
     statusLeft.textContent = 'No element selected';
     statusRight.textContent = '';
     frame.setState(renderer ? 'empty' : 'error', renderer ? '' : 'WebGL is unavailable in this browser.');
     invalidate();
+  }
+
+  /** Replace display-only primitives in model coordinates, without native references. */
+  function setOverlays(items, {selected: identity = null, fit: refit = false} = {}) {
+    const hadContent = hasContent();
+    const prepared = prepareOverlays(items, mesh?.elements.length ? mesh : null);
+    const changedFrame = prepared.frame.radius !== overlays.frame.radius
+      || prepared.frame.centre.some((n, i) => n !== overlays.frame.centre[i]);
+    overlayItems = structuredClone(items);
+    overlays = prepared;
+    overlaySelected = overlays.ids.indexOf(identity);
+    renderer?.uploadOverlays(overlays);
+    if (!mesh?.elements.length) {
+      if (changedFrame || !hadContent) { section = {...section, axis: -1}; needsFit = true; animation = null; }
+      statusLeft.textContent = identity ? `Spatial selection: ${identity}` : 'Select a spatial entry in the list';
+      statusRight.textContent = `${overlays.ids.length} overlays`;
+    }
+    if (refit) needsFit = true;
+    if (renderer && !renderer.lost) frame.setState(hasContent() ? 'ready' : 'empty');
+    resize(); updateToolbar(); invalidate();
   }
 
   function showError(message) {
@@ -381,6 +419,7 @@ export function createViewer3d(container, options = {}) {
   function destroy() {
     loadToken++;
     cancelAnimationFrame(frameRequest);
+    cancelAnimationFrame(hoverRequest);
     navigation.detach();
     resizeObserver.disconnect();
     stopTheme();
@@ -392,7 +431,7 @@ export function createViewer3d(container, options = {}) {
   /** Client (CSS pixel) position of a world point, or null when off-view. */
   function projectToClient(worldPoint) {
     const rect = canvas.getBoundingClientRect();
-    const projected = mesh && projectWorld(mesh, camera, worldPoint, rect.width / rect.height);
+    const projected = hasContent() && projectWorld(coordinateFrame(), camera, worldPoint, rect.width / rect.height);
     if (!projected) {
       return null;
     }
@@ -422,7 +461,8 @@ export function createViewer3d(container, options = {}) {
     setNavigation: setNavigationMode,
     setWireframe,
     setSection,
-    getSection: () => ({...section, position: sectionPosition(mesh, section)}),
+    setOverlays,
+    getSection: () => ({...section, position: sectionPosition(hasContent() ? {...coordinateFrame(), bounds: fitBounds()} : null, section)}),
     select,
     getSelection: () => (mesh?.elements[selected] ? reference(mesh.elements[selected], null, 'selection') : null),
     setTheme,

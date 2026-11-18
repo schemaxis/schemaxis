@@ -61,3 +61,56 @@ def validate_selection(value, location):
 
 from schemaxis.bindings import register_compiler
 register_compiler('paraview-reader-selection', validate_selection)
+
+
+def selection_fields(declaration):
+    if declaration.get('inputs') or not declaration.get('nativeIdentity', '').startswith('sources/'):
+        return ()
+    return tuple(key for key, binding in declaration['options'].items()
+                 if binding.get('path') == [key]
+                 and 'vtkSMArraySelectionDomain' in binding.get('nativeDomains', ())
+                 and binding['value'].get('type') == 'array'
+                 and binding['value'].get('items', {}).get('type') == 'string')
+
+
+def single_file_source(declaration):
+    """Return the sole file constructor of an independent generated data source."""
+    if (declaration.get('inputs') or not declaration.get('loadsData')
+            or not declaration.get('nativeIdentity', '').startswith('sources/')):
+        return None
+    constructors = [(key, binding) for key, binding in declaration['options'].items()
+                    if binding.get('constructor')]
+    if len(constructors) != 1:
+        return None
+    key, binding = constructors[0]
+    value = binding['value']
+    if ('vtkSMFileListDomain' in binding.get('nativeDomains', ()) and
+            (value.get('type') == 'string' or value.get('type') == 'array'
+             and value.get('items', {}).get('type') == 'string')):
+        return key
+    return None
+
+
+def available_choices(declaration, source, properties):
+    """Keep optional names bounded independently of the inspection reply."""
+    result, remaining = {}, 65536
+    for field in selection_fields(declaration):
+        if field not in properties:
+            continue
+        try:
+            available = getattr(source.GetProperty(field), 'Available', None)
+        except (AttributeError, RuntimeError, TypeError):
+            continue
+        if available is None or len(available) > 5000:
+            continue
+        names = []
+        for value in available:
+            if not isinstance(value, str) or len(value) > remaining:
+                break
+            remaining -= len(value.encode('utf-8')) + 4
+            if remaining < 0:
+                break
+            names.append(value)
+        else:
+            result[field] = list(dict.fromkeys(names))
+    return result

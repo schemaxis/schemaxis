@@ -9,7 +9,7 @@ advantage of the ordinary-template control. Geometry and field checks use analyt
 expectations rather than either procedure's receipts.
 
 The Schemaxis procedure uses one declarative pipeline per case. Its time list,
-slice axis, appearances and camera list expand inside one native process. Artifact
+slice sweep, appearances and camera list expand inside one native process. Artifact
 identities drive publication collection; internal attempt filenames are not guessed.
 The native procedure implements the same loops, view state and publications directly.
 Both supplied procedures regenerate all outputs; agents may add validated reuse.
@@ -21,7 +21,7 @@ analytic test fixtures, not solved CFD or colleague/customer data.
 
 The initial batch has two cases, two times and two slice positions. Each slice
 produces geometry plus two appearances at two camera angles: 40 publications.
-The revision changes a slice axis, positions, times and a fixed colour range and
+The revision changes a slice sweep, positions, times and a fixed colour range and
 adds a third case: 70 publications. Time zero is included. Image size is 192×160;
 one camera faces the slice and the other is oblique. All task parameters are explicit.
 

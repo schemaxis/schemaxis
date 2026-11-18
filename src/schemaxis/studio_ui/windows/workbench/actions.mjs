@@ -1,5 +1,6 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 // Revision-checked authoring, file saving and native jobs.
+import {liveDataChanged} from '../spatial/live-data.mjs';
 import {inspectionInput} from '../variables/model.mjs';
 import {h} from '../../lib/dom.mjs';
 import {inputBrowser} from './input-browser.mjs';
@@ -40,7 +41,7 @@ export function createActions({ctx, store, editor, params, load, viewers, showTa
     editor.setDiagnostics(diagnostics);
     const problems = reportDiagnostics(ctx, editor, {document: params.document, show: () => showTab('input')});
     if (success && result.valid && !problems.length) {
-      ctx.notify.ok(result.validation?.deferred ? 'Workflow references checked' : 'Input validated', {
+      ctx.notify.ok(result.validation?.deferred ? 'Input checked; inspection deferred' : 'Input validated', {
         body: result.validation?.deferred ? result.validation.message : 'The host planner accepted this input.'});
     }
 
@@ -132,6 +133,8 @@ export function createActions({ctx, store, editor, params, load, viewers, showTa
         body: 'Preview can still produce a host planning checkpoint.'});
       return;
     }
+    const spatialDraft = {identity: record.id, revision: editor.getTextVersion()};
+    const spatialInput = structuredClone(editor.getDocument());
     const job = await ctx.api.post(run ? '/api/command' : '/api/preview',
       {...(run ? {line: 'preview'} : {}), document: record.id, revision: record.revision});
     ctx.store.set({panelOpen: true, panelTab: 'jobs'});
@@ -140,6 +143,10 @@ export function createActions({ctx, store, editor, params, load, viewers, showTa
     await ctx.refresh();
     if (store.get().disposed) {
       return;
+    }
+    const spatial = result.result?.spatial;
+    if (spatial?.inputDigest && Array.isArray(spatial.records)) {
+      store.set({spatial: {root: spatialInput, draft: spatialDraft, response: spatial}});
     }
     const native = result.result?.native;
     store.set({native: result.result?.live ? 'live' : null});
@@ -170,11 +177,15 @@ export function createActions({ctx, store, editor, params, load, viewers, showTa
       const request = await ctx.api.post('/api/inspect-input', {provider: state.provider, input: document, node: node.id,
         geometry: Boolean(state.metadata.inspection?.geometry)});
       result = (await ctx.api.waitForJob(request.job)).result;
+      liveDataChanged();
+      await ctx.refresh();
     } else result = await ctx.api.post('/api/peek-input', {provider: state.provider, input: document, node: node.id});
     if (store.get().disposed) return;
     if (editor.getTextVersion() !== version) throw Error('The draft changed during inspection. Refresh the preview.');
     store.set({inspection: result, dataMode: live ? 'live' : 'metadata'});
     if (result.geometry) await viewers.showDraftGeometry(result.geometry, `Live data · ${node.id} · current draft · refresh after editing`);
+    else if (result.geometryUnavailable) ctx.notify.info('Live data inspected; mesh display unavailable', {
+      body: `${result.geometryUnavailable.message}. Bounds, counts and block names are available in Case data.`});
     else if (result.available === false) ctx.notify.info('No names could be read', {body: result.reason || result.message || result.scope});
     else if (live) ctx.notify.info('Live data inspected', {body: result.scope});
     return result;
@@ -193,7 +204,7 @@ export function createActions({ctx, store, editor, params, load, viewers, showTa
       const pointer = diagnosticPointer(fault.location, store.get().value);
       editor.setDiagnostics([{...fault, message: fault.message, pointer, source: 'server'}]);
       reportDiagnostics(ctx, editor, {title: 'Workbench action failed', document: params.document,
-        show: () => showTab('input')});
+        show: () => showTab('input'), filter: diagnostic => diagnostic.source === 'server'});
     } finally {
       store.set({busy: false});
     }

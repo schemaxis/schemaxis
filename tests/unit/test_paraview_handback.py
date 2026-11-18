@@ -74,8 +74,8 @@ class Planning(unittest.TestCase):
         two['scenes'].append({'id': 'other', 'visible': {'ball': {}}, 'images': [image]})
         cases['scenes'] = two
         axis = document()
-        axis['axes'] = [{'name': 'r', 'values': [0.5, 1]}]
-        axis['nodes'][0]['options']['radius'] = {'$axis': 'r'}
+        axis['sweeps'] = [{'name': 'r', 'values': [0.5, 1]}]
+        axis['nodes'][0]['options']['radius'] = {'$sweep': 'r'}
         cases['axis'] = axis
         for label, value in cases.items():
             with self.subTest(label):

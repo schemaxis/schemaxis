@@ -171,15 +171,18 @@ def scenes(master):
                 fail('TYPE_MISMATCH', 'publication requires data; a native resource is not a dataset', location, node=node)
         roots.extend(node for item in exports for node in item.get('resources',{}).values())
         roots=list(dict.fromkeys(roots))
-        late = list(markers({k: raw[k] for k in ('visible', 'appearances', 'images', 'exports') if k in raw}))
+        presentation = {k: raw[k] for k in ('visible', 'appearances', 'images', 'exports') if k in raw}
+        late = list(markers(presentation))
         master._check_markers(late, location + '.presentation')
+        profile = master.presentation(presentation, f'/scenes/{scene_index}', location + '.presentation')
         roots.extend(m.get('$observe', m.get('$sample')) for m in late if '$observe' in m or '$sample' in m)
+        roots.extend(sorted(profile.nodes))
         roots = list(dict.fromkeys(roots))
         selection = master.select(roots)
-        for marker in late:
-            if '$axis' in marker and marker['$axis'] not in selection.axes:
-                fail('PRESENTATION_AXIS_UNAVAILABLE', 'presentation may reference only an active geometry axis; use camera samples for camera-only variation',
-                     location, axis=marker['$axis'])
+        for axis in [m['$sweep'] for m in late if '$sweep' in m] + sorted(profile.axes):
+            if axis not in selection.axes:
+                fail('PRESENTATION_SWEEP_UNAVAILABLE', 'presentation may reference only an active geometry sweep; use camera samples for camera-only variation',
+                     location, axis=axis)
         appearances = raw.get('appearances', [{}])
         if not isinstance(appearances, list) or not appearances:
             fail('EMPTY_APPEARANCES', 'appearances must be a nonempty list', location + '.appearances')

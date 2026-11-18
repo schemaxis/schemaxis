@@ -147,7 +147,7 @@ These three concepts must have different UI labels and records:
 | Mode | What drives the next state | Existing foundation |
 | --- | --- | --- |
 | Once | One supplied case | Workflow executor |
-| Sweep | A finite authored sequence or Cartesian/synchronised axes | `InputProgram`, analytics, workflow study |
+| Sweep | A finite authored sequence or Cartesian/synchronised sweeps | `InputProgram`, analytics, workflow study |
 | Feedback | Verified results from the previous complete candidate | Shared feedback controller; new workflow policy adapter needed |
 | Native physical time | A solver's time evolution or a dataset's stored times | Individual adaptor contracts |
 
@@ -157,8 +157,8 @@ time-varying physical model needs explicit solver support beyond this design.
 
 A proposed template `study` selects `once`, `sweep` or `feedback`. A sweep compiles
 through the existing finite study mechanism; do not create another independent
-axis loop. The first release rejects simultaneous case-level sweeps and already
-embedded workflow axes unless their synchronisation has been explicitly specified.
+sweep loop. The first release rejects simultaneous case-level sweeps and already
+embedded workflow sweeps unless their synchronisation has been explicitly specified.
 Later nesting must retain a calculable total state/resource bound.
 
 Feedback wraps the whole workflow as one candidate. Reuse `feedback.run` and its

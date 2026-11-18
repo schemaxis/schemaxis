@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
@@ -19,9 +19,11 @@ test('native names, nonduplicated navigation and line placement edit one undoabl
     await session.wait('window.studio.windows.active().window.store?.get().schema', 'schema');
     assert.equal(await session.evaluate(`document.querySelectorAll('.wb-outline [data-pointer^="/nodes/"]').length`), 0);
     await session.clickSelector('.wb-comprehension [data-pointer="/nodes/2"]');
-    assert.match(await session.evaluate(`document.querySelector('.wb-properties').textContent`), /Function \(equation\).*Calculator.Function/s);
+    assert.match(await session.evaluate(`document.querySelector('.wb-selection-guide').textContent`), /Function \(equation\).*Calculator.Function/s);
     await session.clickSelector('.wb-comprehension [data-pointer="/nodes/1"]');
-    await session.evaluate(`[...document.querySelectorAll('.wb-properties button')].find(b=>b.textContent==='Place line endpoints…').click()`);
+    await session.clickSelector('.wb-overview-node.selected [data-action=edit-settings]');
+    await session.wait(`document.querySelector('.operation-dialog')`, 'line settings');
+    await session.evaluate(`[...document.querySelectorAll('.operation-form button')].find(b=>b.textContent==='Place line endpoints…').click()`);
     await session.wait(`document.querySelector('.line-selector')`, 'selector');
     await session.evaluate(`(() => {
       for(const [label,value] of Object.entries({'X min':10,'X max':30,'Y min':-8,'Y max':4,'Z min':100,'Z max':140})) {
@@ -38,6 +40,7 @@ test('native names, nonduplicated navigation and line placement edit one undoabl
     })()`);
     await session.screenshot('/tmp/schemaxis-line-selector.png');
     await session.evaluate(`[...document.querySelectorAll('.dialog-footer button')].find(b=>b.textContent==='Use endpoints').click()`);
+    await session.evaluate(`[...document.querySelectorAll('.operation-dialog > .dialog-footer button')].find(b=>b.textContent==='Apply changes').click()`);
     await session.wait(`JSON.parse(window.studio.windows.active().window.editor.getValue()).nodes[1].options?.start?.[0]===15`, 'applied endpoints');
     const options = await session.evaluate(`JSON.parse(window.studio.windows.active().window.editor.getValue()).nodes[1].options`);
     assert.deepEqual(options, {start:[15,-2,110],end:[25,-2,130]});

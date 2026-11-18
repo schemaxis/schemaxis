@@ -1,10 +1,11 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
+import {readSpatialInput, spatialField} from './spatial-input.mjs';
 // Library bodies are data. Expand fields to persistent markers and keep identity
 // rewrites scoped to declarations and reference positions, never arbitrary text.
 
 const interpolation = /\$\{([^}:]+)\}/g;
 const clone = (value) => structuredClone(value);
-const collections = new Set(['nodes', 'operations', 'scenes', 'axes', 'components']);
+const collections = new Set(['nodes', 'operations', 'scenes', 'sweeps', 'components']);
 const escape = (value) => String(value).replaceAll('~', '~0').replaceAll('/', '~1');
 
 export function markers(value, pointer = '') {
@@ -57,8 +58,8 @@ function at(value, path) {
 /** Rewrite declared IDs and only positions that the document treats as references. */
 function references(value, changes, key = '', parent = '') {
   if (typeof value === 'string') {
-    const group = key === '$axis' ? 'axes' : key === '$artifact' || key === 'operation' ? 'operations' : 'nodes';
-    const isReference = parent === 'inputs' || ['output', 'geometry', 'visible', '$axis', '$artifact', 'operation']
+    const group = key === '$sweep' ? 'sweeps' : key === '$artifact' || key === 'operation' ? 'operations' : 'nodes';
+    const isReference = parent === 'inputs' || ['output', 'geometry', 'visible', '$sweep', '$artifact', 'operation']
       .includes(key) || ['$observe', '$sample'].includes(key);
     return isReference ? changes[group]?.get(value) || value : value;
   }
@@ -90,7 +91,7 @@ export function uniquifyInserts(documentValue, inserts) {
       continue;
     }
     const [, path, group] = match;
-    const identity = group === 'axes' ? 'name' : 'id';
+    const identity = group === 'sweeps' ? 'name' : 'id';
     if (!used.has(path)) {
       used.set(path, new Set((at(documentValue, path) || []).map((item) => item?.[identity])));
     }
@@ -158,6 +159,8 @@ export function namespaceRequest(request, documentValue) {
 /** Build a Preview request without mutating a library item or the document. */
 export function libraryRequest(item, documentValue, replacements = {}) {
   const fields = item.fields || {};
+  replacements = Object.fromEntries(Object.entries(replacements).map(([key, value]) =>
+    [key, spatialField(fields[key]) && typeof value === 'string' ? readSpatialInput(value) : value]));
   // Identity fields are bookkeeping, not questions the user must answer.
   replacements = {...Object.fromEntries(Object.entries(fields).filter(([, field]) => field.type === 'id')
     .map(([key, field]) => [key, field.default || (key === 'id' ? (item.id || 'item').replace(/[^A-Za-z0-9_-]/g, '') + '1' : key + '1')])), ...replacements};
@@ -166,4 +169,21 @@ export function libraryRequest(item, documentValue, replacements = {}) {
     : item.inserts || (item.insert ? [item.insert] : []);
   return {inserts: uniquifyInserts(documentValue, expandFields(inserts, fields, replacements, names)),
     fields: Object.fromEntries(Object.entries(fields).map(([key, spec]) => [names[key], clone(spec)]))};
+}
+
+/**
+ * Fix a library request to one editor scope: fields are namespaced against the
+ * whole `root` when given, and literal targets are rebased below `base`.
+ */
+export function scopeRequest(request, {base = '', root} = {}) {
+  const scoped = root === undefined ? {...request, inserts: clone(request.inserts), fields: clone(request.fields || {})}
+    : namespaceRequest(request, root);
+  return {...scoped, inserts: scoped.inserts.map((insert) => ({...insert,
+    at: insert.at === '@cursor' ? insert.at : base + insert.at}))};
+}
+
+/** Indices of planned actions that replace the scope root at `base`, or a value containing it. */
+export function scopeReplacements(summaries, base = '') {
+  return summaries.flatMap((entry, index) => entry.effect === 'replace'
+    && (entry.pointer === base || base.startsWith(entry.pointer + '/')) ? [index] : []);
 }

@@ -1,3 +1,4 @@
+# Copyright (C) 2026 David L. F. Gaden.
 """Dependency-free MCP stdio dispatcher over the shared declared service tools.
 
 Supports modern 2026-07-28 and legacy 2025-11-25 stdio profiles. Application
@@ -27,7 +28,7 @@ MAX_REQUEST = 1024 * 1024
 MAX_RESPONSE = 256 * 1024
 STRICT_METHODS = frozenset({'methods', 'create_task', 'list_tasks', 'task', 'plan',
     'execute', 'job', 'observe', 'cancel', 'verify', 'resource', 'inspect_resource',
-    'inspect_resource_metadata', 'run_tool', 'adaptor_context',
+    'inspect_resource_metadata', 'run_tool', 'adaptor_context', 'spatial',
     'capabilities.browse', 'capabilities.search', 'capabilities.describe', 'capabilities.schema'})
 
 
@@ -177,6 +178,11 @@ class McpDispatcher:
                     self.admission.check(document, context=inputs, bound=True)
                 if plan.get('resources') or plan.get('bindings') or inputs is not None and self.input_store is None:
                     fail('MCP_POLICY_DENIED', 'strict file-free admission has no external input bindings')
+        elif method == 'spatial':
+            if arguments.get('action') == 'spatial_load' or str(arguments.get('action', '')).startswith('live_data_'):
+                fail('MCP_POLICY_DENIED', 'loading extents starts an application; strict MCP runs applications '
+                     'only through a planned task')
+            self.admission.check(arguments.get('input'))
         elif method == 'run_tool':
             if arguments.get('execute') and not getattr(self.service.executor, 'isolated', False):
                 fail('ISOLATION_UNAVAILABLE', 'strict MCP package execution requires qualified worker images')

@@ -134,6 +134,56 @@ def narrow_media(media, authored, op=None):
     return planned
 
 
+def studio_peek(document, source):
+    """Offer the same independent keyword base assessed by edit planning."""
+    if document.get('operation') != 'editMetadata':
+        fail('UNSUPPORTED_INSPECTION', 'Choose a metadata edit.')
+    media = validate_arguments({'media': options.WRITE_OPTIONS['editMetadata']['media']},
+                               {'media': document.get('media')})['media']
+    planned = narrow_media(media, media, 'editMetadata')
+    entries = planned['items'] if planned['kind'] == 'items' else [
+        {**item['entry'], 'path': item['entry']['abs'], 'id': item['id'], 'sidecar': item['sidecar']}
+        for item in mediaset.expand(planned)[1]]
+    if source == VERSION:
+        overrides = document.get('itemEdits', [])
+        if not isinstance(overrides, list) or any(not isinstance(row, dict) or
+                not isinstance(row.get('item'), str) or not isinstance(row.get('edits'), dict) for row in overrides):
+            fail('UNAVAILABLE_METADATA', 'Complete the item overrides first.')
+        replaced = {row['item'] for row in overrides if 'keywords' in row['edits']}
+        entries = [entry for entry in entries if entry['id'] not in replaced]
+    else:
+        entries = [entry for entry in entries if entry['id'] == source]
+    if not entries or len(entries) > 32:
+        fail('UNAVAILABLE_METADATA', 'Choose an individual media item or a batch of up to 32 items.')
+    budget = 32 * 1024 * 1024
+    common = None
+    destinations = writes.fields()['keywords']['destinations']
+    for entry in entries:
+        path = entry['path']
+        if entry.get('sidecar') or budget <= 0:
+            fail('UNAVAILABLE_METADATA', 'Choose media without sidecars within the preview byte budget.')
+        data = mediaset.read_file(path, entry.get('identity'), min(budget, mediaset.item_limit(path)), '$.media')
+        budget -= len(data)
+        if entry.get('sha256') and legacy.sha(data) != entry['sha256']:
+            fail('UNAVAILABLE_METADATA', 'Media bytes differ from the declared checksum.')
+        try:
+            if Path(path).suffix.lower() in ('.jpg', '.jpeg'):
+                jpegwrite.walk(data)
+                located = containers.locate(data)
+            else:
+                located = e5edit.admit(data, path)
+            payloads = records.Payloads(located)
+            reads = {d['family']: edits.read_destination(payloads, d)
+                     for d in destinations if d['family'] in ('xmp', 'iptc')}
+            names = edits.base_list('keywords', reads)
+        except (edits.Refusal, jpegwrite.Refused, containers.Refused) as error:
+            fail('UNAVAILABLE_METADATA', error.message)
+        common = names if common is None else [name for name in common if name in names]
+    if len(common) > 256 or any(len(name) > 256 for name in common):
+        fail('UNAVAILABLE_METADATA', 'The keywords exceed the Studio choice limit.')
+    return {'readerChoices': {'keywords': common}}
+
+
 def plan_hash(p): return legacy.plan_hash(p)
 
 

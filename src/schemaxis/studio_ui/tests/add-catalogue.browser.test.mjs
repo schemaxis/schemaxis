@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {launch} from './harness.mjs';
@@ -73,7 +73,7 @@ test('complete Add form configures optional fields, placeholders, targets, cance
     await session.clickSelector('[data-library="scene:camera"]');
     await session.wait('document.querySelector(".operation-form")', 'camera form');
     await button(session, '.dialog-footer', 'Add operation');
-    assert.match(await session.evaluate('document.querySelector(".operation-error").textContent'), /target scene, image or node/);
+    assert.match(await session.evaluate('document.querySelector(".operation-wizard > .operation-error").textContent'), /target scene, image or node/);
     await button(session, '.dialog-footer', 'Cancel');
     assert.equal(JSON.parse(await source()).scenes[0].images, undefined);
     await session.clickSelector('[data-add="all"]');

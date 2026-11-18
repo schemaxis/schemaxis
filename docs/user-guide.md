@@ -167,8 +167,8 @@ option. A JSON boolean is not a number.
 
 | Document version | Purpose | Main structure |
 | --- | --- | --- |
-| `schemaxis/1` | ParaView scientific data pipelines | `nodes`, `scenes`; optional axes and times |
-| `schemaxis.blender/1` | Meshes, materials, modifiers and rendering | `nodes`, one scene; optional axes and explicit visit times |
+| `schemaxis/1` | ParaView scientific data pipelines | `nodes`, `scenes`; optional sweeps and times |
+| `schemaxis.blender/1` | Meshes, materials, modifiers and rendering | `nodes`, one scene; optional sweeps and explicit visit times |
 | `schemaxis.blender.render/1` | Render a prepared Schemaxis Blender scene | `sceneFile`, `cameras`, optional `render` and `size` |
 | `schemaxis.freecad/1` | CAD feature graphs | `nodes`, solid `output`, millimetre units |
 | `schemaxis.freecad.assembly/1` | Native fixed-joint assemblies | `parts`, `components`, `grounded`, `joints` |
@@ -179,7 +179,7 @@ option. A JSON boolean is not a number.
 | `schemaxis.workflow/1` | Dependencies between application jobs | `operations`, optional execution budgets |
 
 Do not copy one family's root keys into another. Assemblies have no modelling
-node graph; Godot and Aseprite do not use ParaView's scenes/axes contract.
+node graph; Godot and Aseprite do not use ParaView's scenes/sweeps contract.
 ParaView/Blender graphs can resolve forward references and prune unused nodes.
 FreeCAD inputs must refer to earlier nodes; Godot materials precede their
 consumers; Aseprite mutations form one linear chain. Use each family's planner.
@@ -240,7 +240,7 @@ its own declared defaults. JSON Schema considers `3.0` an integer value, whereas
 Schemaxis integer options require an integer token such as `3`.
 
 Reference existence, cycles, resolved expression values, cross-option relations,
-active axes, time availability, publication budgets and native capabilities need
+active sweeps, time availability, publication budgets and native capabilities need
 the planner or runner. `x-schemaxis-checks` and related metadata are not additional
 standard JSON Schema keywords that an external validator automatically enforces.
 See the [schema guide](schema-guide.md) for exact exports and native guards.
@@ -517,8 +517,8 @@ arbitrary Python. List the declared functions with `python3 -m schemaxis functio
 Inline `$create` / `$object` construction and `$analytic` sequences are separate
 authoring tools, not interchangeable with native reference chips in the console.
 
-ParaView and Blender axes describe parameter visits. Values sharing an axis
-advance together; independent active axes form a Cartesian product. Unused axes
+ParaView and Blender sweeps describe parameter visits. Values sharing a sweep
+advance together; independent active sweeps form a Cartesian product. Unused sweeps
 do not justify executing unused branches. Increasing two independent counts can
 multiply the work: check the plan's visits and publication budget first.
 
@@ -683,12 +683,12 @@ python3 -m schemaxis verify evidence/handoff-001-edit-001
 select a direct `{"$artifact": ..., "index": ...}` reference at a reader field
 whose adaptor declares a captured-input policy. The parent must be a verified,
 successful workflow without studies and without workflow-level `settings`,
-`definitions`, `dimensions`, `axes` or `execution`, or operation-level
+`definitions`, `dimensions`, `sweeps` or `execution`, or operation-level
 `execution`. It may be a serial
 result or a simple scheduled one: adaptors such as FreeCAD and Gmsh are always
 run by the scheduler, so a two-operation FreeCAD to Gmsh workflow qualifies even
 though you never wrote any `execution`. Every operation must then be one
-batch with one native visit, so an operation that carries its own `axes` study of
+batch with one native visit, so an operation that carries its own `sweeps` study of
 several states is refused wherever it sits (a study of a single state
 qualifies). The consumer's recorded handoff must show it received the selected
 artifact at the selected field. The producer

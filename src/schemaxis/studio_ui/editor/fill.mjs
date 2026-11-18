@@ -1,7 +1,8 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
+import {spatialInput, spatialField, expressionValue, reportSpatialFault} from './spatial-input.mjs';
 import {yamlRender} from './yaml-parse.mjs';
 // Fill mode is a small editor controller. Markers stay ordinary, durable JSON.
-import {h} from '../lib/dom.mjs';
+import {h, mount} from '../lib/dom.mjs';
 import {dragSurface} from '../lib/drag.mjs';
 import {documentValue} from './json-parse.mjs';
 import {rangeOfPointer, pointerAt} from './json-pointer.mjs';
@@ -30,6 +31,7 @@ export function createFillMode(core, options = {}) {
   let message = null;
   let acceptButton = null;
   let dirty = false;
+  let checking = false;
   let applying = false;
   let disposed = false;
   let followups = [];
@@ -126,7 +128,7 @@ export function createFillMode(core, options = {}) {
       const problem = checkSchemaValue(scope.schema, scope.value, scope.pointer, replacement);
       if (problem) throw new Error(problem);
     }
-    if (!expression && ['nodeRef', 'axisRef'].includes(marker.field.type)) {
+    if (!expression && ['nodeRef', 'sweepRef'].includes(marker.field.type)) {
       const choices = fieldChoices(marker.field, context.value, choiceOptions());
       if (!choices.includes(result.value)) throw new Error('Choose an existing, compatible reference.');
     }
@@ -164,10 +166,10 @@ export function createFillMode(core, options = {}) {
       marker.field = {...fieldFromSchemas(marker.field.$fill, schemas, marker.field.required, true), ...marker.field};
     }
     const kinds = expressionKinds(context.schema, context.value, context.pointer);
-    input = h('input', {type: 'text', class: 'sx-fill-value', 'aria-label': 'Value',
+    input = spatialField(marker.field) ? spatialInput({label: 'Value', value: marker.field.default, class: 'sx-fill-value', onChange: changed}).element : h('input', {type: 'text', class: 'sx-fill-value', 'aria-label': 'Value',
       value: marker.field.default === undefined ? '' : (typeof marker.field.default === 'string'
         && marker.field.type !== 'enum' ? marker.field.default : JSON.stringify(marker.field.default)),
-      placeholder: ['string', 'id', 'path', 'nodeRef', 'axisRef', 'field'].includes(marker.field.type)
+      placeholder: ['string', 'id', 'path', 'nodeRef', 'sweepRef', 'field'].includes(marker.field.type)
         ? 'Type a value' : 'Type a JSON value', onInput: changed});
     mode = h('select', {'aria-label': 'Value or expression'},
       h('option', {value: 'literal'}, 'Type a value'),
@@ -216,7 +218,7 @@ export function createFillMode(core, options = {}) {
       onStart: () => { grabbed = {x: popover.offsetLeft, y: popover.offsetTop}; },
       onMove: (dx, dy) => { pinned = {x: grabbed.x + dx, y: grabbed.y + dy}; reposition(); },
     });
-    popover.replaceChildren(heading,
+    mount(popover, heading,
       h('div', {class: 'sx-fill-pointer'}, pointer || '/'),
       guide?.binding ? h('p', {class: 'sx-fill-help'}, `${guide.binding.operation}.${guide.binding.property}`) : null,
       description ? h('p', {class: 'sx-fill-help'}, description) : null,
@@ -225,6 +227,8 @@ export function createFillMode(core, options = {}) {
           entry.field.$fill === marker.field.$fill && active.has(entry.pointer)).map(entry => entry.pointer)})},
       'Variables & expressions…') : null, mode, modeHelp, body, message,
       h('div', {class: 'sx-fill-actions'}, acceptButton,
+        core.state.options.checkSpatialValue ? h('button', {type: 'button', class: 'button small',
+          onClick: () => checkValue()}, 'Check expression') : null,
         h('button', {type: 'button', class: 'button small', onClick: () => move(1)}, 'Leave for later'),
         h('button', {type: 'button', class: 'button small',
           onClick: () => { close(); core.textarea.focus(); }}, 'Done')),
@@ -246,11 +250,49 @@ export function createFillMode(core, options = {}) {
     show(candidates[(index + direction + candidates.length) % candidates.length].pointer);
   }
 
-  function accept(direction) {
+  const containsExpression = value => value && typeof value === 'object'
+    && (typeof value.$expr === 'string' || Object.values(value).some(containsExpression));
+  async function checkValue(direction) {
+    if (checking) return;
+    const checker = core.state.options.checkSpatialValue;
+    if (!checker || !validate()) return;
+    const marker = item(), candidate = read(), source = core.textarea.value;
+    const controls = [...popover.querySelectorAll('input, textarea, select')];
+    const values = controls.map(input => input.value);
+    const stillCurrent = () => !disposed && current === marker.pointer && core.textarea.value === source
+      && controls.every((input, index) => input.isConnected && input.value === values[index]);
+    checking = true;
+    try {
+      const pointers = markers.filter(entry => entry.field.$fill === marker.field.$fill
+        && active.has(entry.pointer)).map(entry => entry.pointer);
+      const response = await checker({...candidate, pointers});
+      if (!stillCurrent()) return;
+      if (!response.ok) {
+        message.textContent = response.fault?.message || 'Expression refused';
+        message.classList.add('sx-fill-error');
+        reportSpatialFault(popover, response.fault);
+        return;
+      }
+      message.textContent = 'Expression checked';
+      message.classList.remove('sx-fill-error');
+      if (direction !== undefined) accept(direction, true);
+    } catch (error) {
+      if (stillCurrent()) {
+        message.textContent = error.message;
+        message.classList.add('sx-fill-error');
+        reportSpatialFault(popover, error.fault);
+      }
+    } finally { checking = false; }
+  }
+
+  function accept(direction, checked = false) {
     if (core.state.readOnly) return false;
     if (!validate()) return false;
     const marker = item();
     const {value, axis} = read();
+    if (!checked && core.state.options.checkSpatialValue && containsExpression(value)) {
+      void checkValue(direction); return false;
+    }
     const before = list();
     const index = before.findIndex((entry) => entry.pointer === current);
     const group = markers.filter((entry) => entry.field.$fill === marker.field.$fill
@@ -264,7 +306,7 @@ export function createFillMode(core, options = {}) {
     }
     if (axis) {
       const context = resolved(marker.pointer);
-      const target = `${context.base}/axes`;
+      const target = `${context.base}/sweeps`;
       document = replacing(document, target, [...(atPointer(document, target) || []), axis]);
     }
     applying = true;

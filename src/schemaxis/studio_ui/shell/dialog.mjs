@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 // Modal dialogs and context menus.
 
 import {h, icon} from '../lib/dom.mjs';
@@ -8,7 +8,8 @@ import {clampOffset, dragSurface} from '../lib/drag.mjs';
  * Open a modal dialog. `content` is an element or a function(close) returning one.
  * `actions` are {label, primary, danger, run(close) → value|false}. Returning false
  * keeps the dialog open (for validation). Resolves with the chosen value or null.
- * Every dialog moves by its title bar. `enterSubmits: false` stops Enter in a
+ * An optional action hint appears beneath its button. Every dialog moves by its
+ * title bar. `enterSubmits: false` stops Enter in a
  * field from pressing the primary action, for forms where Enter adds a row.
  * `className` adds layout classes to the dialog.
  */
@@ -29,17 +30,20 @@ export function openDialog({title, content, actions = [], wide = false, initialF
       resolve(value);
     };
     const body = typeof content === 'function' ? content(close) : content;
-    const buttons = actions.map((action) => h('button', {
-      class: ['button', action.primary && 'primary', action.danger && 'danger'],
-      type: action.primary && enterSubmits ? 'submit' : 'button',
-      onClick: async (event) => {
-        event.preventDefault();
-        const value = action.run ? await action.run(close) : action.value;
-        if (value !== false) {
-          close(value === undefined ? true : value);
-        }
-      },
-    }, action.label));
+    const buttons = actions.map((action) => {
+      const button = h('button', {
+        class: ['button', action.primary && 'primary', action.danger && 'danger'],
+        type: action.primary && enterSubmits ? 'submit' : 'button',
+        onClick: async (event) => {
+          event.preventDefault();
+          const value = action.run ? await action.run(close) : action.value;
+          if (value !== false) {
+            close(value === undefined ? true : value);
+          }
+        },
+      }, action.label);
+      return action.hint ? h('div', {class: 'dialog-action'}, button, h('small', {}, action.hint)) : button;
+    });
     const header = h('div', {class: 'dialog-header', title: 'Drag to move'},
       h('h3', {}, title),
       h('button', {type: 'button', class: 'button ghost icon-only', 'aria-label': 'Close',

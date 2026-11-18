@@ -106,7 +106,9 @@ OPTIONS = {'viewLayers': array(LAYER, 16), 'renderAovs': array(AOV, 32),
 
 
 def schema_properties():
-    return arguments_schema(OPTIONS)['properties']
+    properties = arguments_schema(OPTIONS)['properties']
+    properties['viewLayers']['items']['properties']['passes']['uniqueItems'] = True
+    return properties
 
 
 def _distinct(records, location):

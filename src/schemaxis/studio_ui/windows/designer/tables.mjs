@@ -3,6 +3,7 @@
 
 import {h, icon, mount} from '../../lib/dom.mjs';
 import {TEMPLATE_ID_PATTERN} from './dialogs.mjs';
+import {suggestedName} from '../workbench/element-authoring.mjs';
 
 const OUTPUT_KINDS = ['table', 'image', 'video', 'geometry', 'text', 'audio', 'archive', 'value'];
 
@@ -152,6 +153,14 @@ export function createOutputsTab(ctx, model) {
   let draft = null;
   let baseline = null;
   const error = h('span', {class: 'error-text'});
+  const naming = {operation: 'output', authoring: {naming: {}, instanceFields: [
+    {path: '/operation'}, {path: '/kind'}, {path: '/artifact'},
+  ]}};
+  const automatic = new WeakSet();
+  const suggestAlias = row => {
+    const used = new Set(draft.filter(other => other !== row).map(other => other.alias));
+    row.alias = suggestedName(naming, row, used);
+  };
 
   const render = () => {
     const projection = model.store.get().projection;
@@ -168,6 +177,7 @@ export function createOutputsTab(ctx, model) {
     const operations = projection.nodes.map((node) => node.id);
     const rows = draft.map((row, index) => {
       const field = (key, input, parse = (value) => value) => {
+        if (key === 'alias') input.addEventListener('input', () => automatic.delete(row));
         input.addEventListener('change', () => {
           const value = parse(input.value);
           if (value === undefined || value === '') {
@@ -175,6 +185,8 @@ export function createOutputsTab(ctx, model) {
           } else {
             row[key] = value;
           }
+          if (key === 'alias') automatic.delete(row);
+          else if (automatic.has(row)) suggestAlias(row);
           render();
         });
         return input;
@@ -201,12 +213,10 @@ export function createOutputsTab(ctx, model) {
           }}, icon('close'))));
     });
     const add = h('button', {class: 'button small', disabled: !operations.length, onClick: () => {
-      const taken = new Set(draft.map((row) => row.alias));
-      let number = draft.length + 1;
-      while (taken.has(`output${number}`)) {
-        number += 1;
-      }
-      draft.push({alias: `output${number}`, operation: operations[0], artifact: 0, kind: 'table'});
+      const row = {operation: operations[0], artifact: 0, kind: 'table'};
+      suggestAlias(row);
+      automatic.add(row);
+      draft.push(row);
       render();
     }}, icon('plus'), 'Add output');
     mount(element,
@@ -225,7 +235,7 @@ export function createOutputsTab(ctx, model) {
         }
         const outputs = {};
         for (const row of draft) {
-          if (!TEMPLATE_ID_PATTERN.test(row.alias || '') || outputs[row.alias]) {
+          if (!TEMPLATE_ID_PATTERN.test(row.alias || '') || Object.hasOwn(outputs, row.alias)) {
             error.textContent = `Alias “${row.alias}” must be unique and start with a letter.`;
             return;
           }

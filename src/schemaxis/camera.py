@@ -38,6 +38,11 @@ def staged_values(specifications, value, location):
 
 
 def camera_values(value, location, deferred=False):
+    if deferred and isinstance(value, dict) and any(key.startswith('$') for key in value):
+        return copy.deepcopy(value)
+    if isinstance(value, dict) and 'bounds' in value:
+        from .expressions import fit_box
+        value = {**value, 'bounds': fit_box(value['bounds'], CAMERA['bounds'])}
     result = staged_values(CAMERA, value, location) if deferred else validate_arguments(CAMERA, value, location=location)
     if list(_markers(result)):
         return result

@@ -60,7 +60,7 @@ Explicit captured items and inline intent retain all declared metadata
 operation families. ParaView source generators and qualified exports are
 available without input files; PNG readers and textures use explicit capture
 slots. Unresolved external reader families and OBJ's auxiliary `TextureFileName`
-reference remain refused. ParaView axes, definitions, dimensions, views and
+reference remain refused. ParaView sweeps, definitions, dimensions, views and
 settings metadata sections are excluded from this literal graph profile. These limits are visible in coverage, rather than
 being inferred as supported from native catalogue discovery.
 

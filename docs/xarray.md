@@ -42,7 +42,7 @@ depth,temperature,validCount,missingCount
 | `retain` | The one declared dimension kept as the profile axis (2 to 2048 selected points). |
 | `missing` | `value` (finite sentinel, equal to the file `_FillValue`), `policy` (`skip`, `propagate`, `refuse`) and, for `skip` only, `minimumValid` (default 1). |
 
-The document key is `coordinates` because `dimensions` and `axes` are reserved by the shared
+The document key is `coordinates` because `dimensions` and `sweeps` are reserved by the shared
 document framework. Declared order is asserted against the variable's storage order. A permuted
 order is refused with `XR_DIMENSION_ORDER`. This is a deliberate layout assertion that catches an upstream
 change in how the file is stored; it is not needed for correctness, because named dimensions keep their

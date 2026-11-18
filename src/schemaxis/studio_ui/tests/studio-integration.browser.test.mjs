@@ -1,4 +1,4 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
 // Shipped starter through Designer → nested Workbench → export → Case Runner.
 // STUDIO_RUN_NATIVE=1 additionally executes the resulting case in configured GNU Octave.
 import assert from 'node:assert/strict';
@@ -92,7 +92,9 @@ test('Studio starter connects Designer, Workbench, template export and Case Runn
         'nested Workbench');
       assert.equal(await session.evaluate(`${active}.store.get().provider`), 'octave');
       await session.clickSelector('.wb-outline-item[data-pointer="/nodes/0"]');
-      await field(session, '.wb-property [aria-label="/nodes/0/options/start"]', '1');
+      await session.clickSelector('.wb-overview-node.selected [data-action="edit-settings"]');
+      await field(session, '.operation-dialog [aria-label="sequence.options.start"]', '1');
+      await button(session, '.operation-dialog > .dialog-footer', 'Apply changes');
       await session.wait(`JSON.parse(${active}.editor.getValue()).nodes[0].options.start === 1`, 'nested input edited');
       await button(session, '.wb-workbench .actions', 'Save');
       await session.wait(`!${active}.store.get().busy && !${active}.isDirty()

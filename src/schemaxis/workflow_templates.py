@@ -10,6 +10,7 @@ import math
 from pathlib import Path, PurePosixPath
 import re
 
+from schemaxis.core.faults import SchemaxisError
 from . import storage, workflow
 from .adaptors import registry
 from .errors import fail, keys
@@ -141,13 +142,55 @@ def _value(value, spec, location):
              'enum': lambda: any(_equal(value, choice) for choice in constraints['enum']),
              'vector': lambda: isinstance(value, list) and len(value) == constraints['length'] and all(_numeric(v) for v in value)}[kind]()
     if not valid:
-        fail('INVALID_PARAMETER', 'supply a ' + kind + ' value in the declared units; expressions and quantity objects are unsupported', location)
+        fail('INVALID_PARAMETER', 'supply a ' + kind + ' value in the declared units; quantity objects are unsupported', location)
     if kind in ('number', 'integer', 'vector'):
         for component in value if kind == 'vector' else [value]:
             if ('minimum' in constraints and component < constraints['minimum']) or ('maximum' in constraints and component > constraints['maximum']):
                 fail('INVALID_PARAMETER', 'value is outside the declared inclusive limits', location)
     if kind == 'string' and not constraints.get('minLength', 0) <= len(value) <= constraints.get('maxLength', float('inf')):
         fail('INVALID_PARAMETER', 'string length is outside the declared limits', location)
+
+
+def _takes_expression(spec):
+    """Numeric parameters accept an expression in place of a number."""
+    if spec['kind'] == 'enum':
+        return all(_numeric(choice) for choice in spec['constraints']['enum'])
+    return spec['kind'] in ('number', 'integer', 'vector')
+
+
+def _expression_value(document, spec, value, parts, location):
+    """Resolve an expression parameter in the namespace of its target and check what it gives.
+
+    A case value is fixed when the case is bound, so the expression must be
+    constant there. Its names are those of the document that holds the target.
+    """
+    from . import expressions
+    from .spatial_actions import Draft, Expression, Visit
+    request, destination = {'input': document}, parts
+    if len(parts) > 3 and parts[0] == 'operations' and parts[2] == 'document' and parts[1].isdigit():
+        request['operation'] = document['operations'][int(parts[1])]['id']
+        destination = parts[3:]
+    path = ''
+    for part in destination:
+        path = expressions.pointer(path, part)
+    draft = Draft(request)
+    checked = Expression(draft.selected, value['$expr'], path)
+    if checked.fault is None:
+        try:
+            expressions.misuse(draft.selected.scope, checked.marker, path, expressions.STATIC, location,
+                               'a case value, which is fixed when the case is bound')
+        except SchemaxisError as error:
+            checked.fault = error.fault.to_dict()
+    record = checked.record(Visit(draft, True))
+    if record['state'] != 'resolved':
+        fault = record.get('fault') or {'code': 'INVALID_PARAMETER', 'message':
+                                        'this expression has no value when the case is bound', 'observed': {}}
+        fail(fault['code'], fault['message'], location, **fault.get('observed', {}))
+    resolved = record['value']
+    if spec['kind'] == 'vector' and expressions.is_box_object(resolved):
+        resolved = expressions.fit_box(resolved, expressions.SIX)
+    _value(resolved, spec, location)
+    return resolved
 
 
 def _validate(manifest, body, *, allow_unfilled=False, allow_empty_design=False):
@@ -328,13 +371,16 @@ def bind_values(bundle, values):
         fail('STALE_TEMPLATE', 'case identity, revision and digest must match the captured template; migrate explicitly', '$.case.template')
     supplied = values.get('values')
     keys(supplied, manifest['parameters'], '$.case.values')
-    document, resolved, bindings = copy.deepcopy(body), {}, []
+    from .expressions import is_expression
+    document, resolved, bindings, computed = copy.deepcopy(body), {}, [], []
     for parameter, spec in manifest['parameters'].items():
         location = '$.case.values.' + parameter
         if parameter not in supplied and 'default' not in spec:
             fail('MISSING_PARAMETER', 'supply this required parameter', location)
         value = supplied[parameter] if parameter in supplied else spec['default']
-        _value(value, spec, location)
+        written = is_expression(value) and set(value) == {'$expr'} and _takes_expression(spec)
+        if not written:
+            _value(value, spec, location)
         parts = _pointer(spec['target']['pointer'], location, binding=True)
         parent, key = _target(document, parts, location)
         bindings.append({'parameter': parameter, 'target': copy.deepcopy(spec['target']),
@@ -342,6 +388,11 @@ def bind_values(bundle, values):
                          'previous': copy.deepcopy(parent[key]), 'value': copy.deepcopy(value)})
         resolved[parameter] = copy.deepcopy(value)
         parent[key] = copy.deepcopy(value)
+        if written:
+            computed.append((parameter, spec, value, parts, location, bindings[-1]))
+    for parameter, spec, value, parts, location, binding in computed:
+        resolved[parameter] = _expression_value(document, spec, value, parts, location)
+        binding['resolved'] = copy.deepcopy(resolved[parameter])
     from .unfilled import reject_unfilled
     reject_unfilled(document)
     workflow.inspect_plan(document)

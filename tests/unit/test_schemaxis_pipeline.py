@@ -42,11 +42,11 @@ def document():
     return {'version': 'schemaxis/1', 'nodes': [
         {'id': 'source', 'filter': 'wavelet'},
         {'id': 'slice', 'filter': 'slice', 'inputs': {'input': 'source'},
-         'options': {'origin': {'$axis': 'position'}}},
+         'options': {'origin': {'$sweep': 'position'}}},
         {'id': 'contour', 'filter': 'contour', 'inputs': {'input': 'slice'},
-         'options': {'field': ['POINTS', 'RTData'], 'values': {'$axis': 'level'}}},
+         'options': {'field': ['POINTS', 'RTData'], 'values': {'$sweep': 'level'}}},
         {'id': 'unused', 'filter': 'sphere'},
-    ], 'axes': [{'name': 'position', 'values': [[0, 0, 0], [1, 0, 0]]},
+    ], 'sweeps': [{'name': 'position', 'values': [[0, 0, 0], [1, 0, 0]]},
                 {'name': 'level', 'values': [[100], [150], [200]]}]}
 
 
@@ -167,7 +167,7 @@ class PipelineTests(unittest.TestCase):
 
     def test_every_axis_sample_is_validated(self):
         value = document()
-        value['axes'][0]['values'][1] = [1, 2]
+        value['sweeps'][0]['values'][1] = [1, 2]
         self.assertFault('INVALID_ARGUMENT', lambda: self.make(value))
 
     def test_expansion_limit_and_invalid_versions(self):
@@ -190,9 +190,9 @@ class PipelineTests(unittest.TestCase):
 
     def test_synchronised_properties_share_one_axis(self):
         value = {'version': 'schemaxis/1', 'nodes': [{'id': 'line', 'filter': 'line', 'options': {
-            'start': {'$axis': 'seed', 'path': ['a']},
-            'end': {'$axis': 'seed', 'path': ['b']}}}],
-            'axes': [{'name': 'seed', 'values': [
+            'start': {'$sweep': 'seed', 'path': ['a']},
+            'end': {'$sweep': 'seed', 'path': ['b']}}}],
+            'sweeps': [{'name': 'seed', 'values': [
                 {'a': [0, 0, 0], 'b': [0, 1, 0]}, {'a': [1, 0, 0], 'b': [1, 1, 0]}]}]}
         active = RuntimeClosure(self.make(value), Backend())
         selected = active.activate(['line'])
@@ -211,7 +211,7 @@ class PipelineTests(unittest.TestCase):
 
     def test_constructor_changes_cannot_be_swept(self):
         value = document()
-        value['nodes'].append({'id': 'case', 'filter': 'foam', 'options': {'file': {'$axis': 'level'}}})
+        value['nodes'].append({'id': 'case', 'filter': 'foam', 'options': {'file': {'$sweep': 'level'}}})
         self.assertFault('DYNAMIC_CONSTRUCTOR', lambda: self.make(value))
 
     def test_time_change_invalidates_and_duplicate_time_does_not(self):
@@ -242,8 +242,8 @@ class PipelineTests(unittest.TestCase):
 
     def test_axis_series_and_direction_conversion(self):
         value = document()
-        value['axes'][1] = {'name': 'level', 'series': {'start': 100, 'end': 200, 'count': 3}}
-        value['nodes'][2]['options']['values'] = [{'$axis': 'level'}]
+        value['sweeps'][1] = {'name': 'level', 'series': {'start': 100, 'end': 200, 'count': 3}}
+        value['nodes'][2]['options']['values'] = [{'$sweep': 'level'}]
         value['nodes'][1]['options']['normal'] = 'y+'
         active = RuntimeClosure(self.make(value), Backend())
         active.apply(next(active.activate(['contour']).visits()))

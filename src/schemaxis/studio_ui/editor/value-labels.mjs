@@ -4,7 +4,7 @@ export const VALUE_LABELS = {
   $expr: ['Calculate a value', 'Combine authored values with arithmetic or structured composition.'],
   $value: ['Use a function', 'Call a registered function with named arguments.'],
   $result: ['Use an operation’s result', 'Read JSON from an earlier, verified workflow operation.'],
-  $axis: ['Use a sweep value', 'Use the current sample of a named sweep; this need not be a spatial axis.'],
+  $sweep: ['Use a sweep value', 'Use the current sample of a named sweep; this need not be a spatial axis.'],
   $analytic: ['Create a sequence', 'Generate a finite list of values or camera positions.'],
   $observe: ['Use object metadata', 'Read updated upstream metadata, such as geometry bounds.'],
   $sample: ['Sample field data', 'Read a numeric tuple or component from upstream data.'],

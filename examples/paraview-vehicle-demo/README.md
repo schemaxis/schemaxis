@@ -85,7 +85,7 @@ Choose an output directory that does not exist. The native time inspection is
 needed to resolve `latest`; plain `schemaxis plan` cannot resolve it by itself.
 
 Schemaxis already writes a `verification.json` index with artifact paths, scene,
-time/axis identity, appearance, camera, and hashes, plus the effective input and
+time/sweep identity, appearance, camera, and hashes, plus the effective input and
 time-selection records. Appearance indices 0, 1, 2 mean p, |U|, nut respectively.
 There is no need to add per-image sidecars for this demonstration.
 

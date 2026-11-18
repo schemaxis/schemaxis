@@ -69,13 +69,52 @@ class StudioServerTests(unittest.TestCase):
             self.app.job_owner.futures[started['job']].result(timeout=5)
             outcome = self.app.jobs[started['job']]
             self.assertEqual(outcome['status'], 'succeeded', outcome)
-            self.assertEqual(inspect.call_args.kwargs, {'port': 1, 'prepare': False})
+            self.assertEqual(inspect.call_args.kwargs, {'port': 1, 'prepare': False, 'live_data': self.session.live_data})
             self.assertIn('inputDigest', outcome['result'])
             self.assertEqual(json.dumps(self.session.document, sort_keys=True), before)
             self.assertFalse(self.app.busy)
             status, _, _ = self.call('/api/inspect-input', request, token=False)
             self.assertEqual(status, 403)
             self.assertEqual(inspect.call_count, 1)
+
+    def test_spatial_actions_answer_directly_and_loading_extents_is_a_job(self):
+        document = {'version': 'schemaxis/1', 'nodes': [{'id': 'source', 'filter': 'sphere'}],
+                    'definitions': {'seen': {'$expr': 'extents(source)'}, 'size': {'$expr': '2 * 3'}}}
+        status, listed, _ = self.call('/api/spatial', {'action': 'spatial_list', 'input': document,
+                                                      'draft': {'identity': 'draft', 'revision': 3}})
+        self.assertEqual((status, listed['draft'], listed['capabilities']),
+                         (200, {'identity': 'draft', 'revision': 3}, {'extents': True}))
+        self.assertEqual([(record['entry']['key'], record['state']) for record in listed['entries']],
+                         [('seen', 'unresolved'), ('size', 'resolved')])
+        status, checked, _ = self.call('/api/spatial', {'action': 'spatial_check', 'input': document,
+                                                       'expression': 'seen.span +'})
+        self.assertEqual((status, checked['ok'], checked['fault']['code']), (200, False, 'EXPR_SYNTAX'))
+        extents = [{'node': 'source', 'port': 0, 'status': 'ok', 'bounds': [0, 1, 0, 2, 0, 3]}]
+        before = json.dumps(self.session.document, sort_keys=True)
+        with patch.object(self.app.setup, 'location', return_value='/configured/pvpython'), \
+             patch.object(self.app.setup, 'available', return_value=True), \
+             patch.object(self.session.live_data, 'load', side_effect=lambda request, **kwargs: __import__('schemaxis.spatial_load', fromlist=['spatial_load']).spatial_load(request, load=lambda *args: extents)) as native:
+            status, started, _ = self.call('/api/spatial', {'action': 'spatial_load', 'input': document})
+            self.assertEqual((status, started['status']), (200, 'running'))
+            self.app.job_owner.futures[started['job']].result(timeout=5)
+            outcome = self.app.jobs[started['job']]
+            self.assertEqual(outcome['status'], 'succeeded', outcome)
+            self.assertEqual(native.call_args.args[0]['input'], document)
+            self.assertEqual(native.call_args.kwargs, {'locations': {'paraview': ['/configured/pvpython']}})
+            result = outcome['result']
+            self.assertEqual(result['observations']['extents'], extents)
+            self.assertEqual(result['records'][0]['value'], {'min': [0, 0, 0], 'max': [1, 2, 3]})
+            self.assertEqual(json.dumps(self.session.document, sort_keys=True), before)
+            self.assertFalse(self.app.busy)
+            status, evaluated, _ = self.call('/api/spatial', {'action': 'spatial_eval', 'input': document,
+                                                         'observations': result['observations']})
+            self.assertEqual((status, evaluated['records']), (200, result['records']))
+            self.assertEqual(self.call('/api/spatial', {'action': 'spatial_load', 'input': document},
+                                       token=False)[0], 403)
+            status, refused, _ = self.call('/api/spatial', {'action': 'spatial_load', 'input': {
+                'version': 'schemaxis.gmsh/1', 'definitions': {'size': 1}}})
+            self.assertEqual((status, refused['fault']['code']), (400, 'EXTENTS_UNSUPPORTED'))
+            self.assertEqual(native.call_count, 1)
 
     def test_input_dialog_requires_authentication_and_validated_request_fields(self):
         with patch('schemaxis.studio_server.choose_input_file', return_value={'status': 'cancelled'}) as choose:
@@ -117,7 +156,7 @@ class StudioServerTests(unittest.TestCase):
     def test_shared_results_viewer_is_embeddable_and_local_files_are_authenticated(self):
         status, body, headers = self.call('/artifact-viewer/index.html', raw=True)
         self.assertEqual(status, 200)
-        self.assertIn(b'ARTIFACT', body)
+        self.assertIn(b'Artifact Explorer', body)
         self.assertIn("frame-ancestors 'self'", headers['Content-Security-Policy'])
         self.assertEqual(self.call('/artifact-viewer/api/library', token=False)[0], 403)
         directory = self.session.workspace/'run-output'

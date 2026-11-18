@@ -271,3 +271,24 @@ native cell of the result. It
 qualifies these fixtures, not all native workbooks. See LibreOffice's [Calc guide](https://help.libreoffice.org/latest/en-US/text/scalc/main0000.html)
 and [formula entry guide](https://help.libreoffice.org/latest/en-US/text/scalc/guide/formulas.html)
 for the native application; the bounded grammar above is the Schemaxis contract.
+
+## Renaming the table node
+
+The workbook's single table node is a zero-input source. The checked
+[identity preview](identity-authoring.md) can change its `id` for all four sources:
+`fromRows`, `readCSV`, `fromTypedRows` and `readTypedCSV`. A new name follows the
+node's own rule: an ASCII letter, then letters, digits or underscores, at most 64
+characters, with nothing after them, not even a line break. The preview never adds an `inputs` container. It refuses a draft node
+that carries one, or any other property the source schema does not declare.
+
+Column labels, CSV paths, cells, requirement names and the fixed `Data` and `Summary`
+sheet names are workbook data. They stay unchanged even when they spell the old name.
+Expressions keep binding to settings, and `$document` pointers keep their addresses;
+a cell that reads the node's own `id` through `$document` therefore shows the new
+name. The preview refuses, without changing anything, when another workflow operation
+consumes this workbook's output, when another operation borrows the node's identity,
+or when a `$observe`, `$sample` or `$object` marker could name the node.
+
+Console `rename` uses the same checked operation. Studio Name editing, browser
+history, renaming typed columns or requirements, and native qualification of renamed
+workbooks remain separate work.

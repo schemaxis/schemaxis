@@ -217,6 +217,8 @@ class StudioCases:
             except Exception as error:
                 result['namingFault'] = fault(error)
             result['outputs'] = self._outputs(directory, result['naming'])
+            from .spatial_results import job_records
+            result['spatial'] = job_records(prepared['document'], directory)
             snapshot = {'status': 'succeeded', 'label': label, 'result': result, 'verified': True,
                         'directory': str(directory), 'operations': [dict(op, status='succeeded')
                                                                   for op in prepared['operations']]}

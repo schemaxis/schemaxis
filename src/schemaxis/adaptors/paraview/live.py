@@ -20,3 +20,7 @@ from schemaxis.live_transport import ProcessSession
 
 class LiveSession(ProcessSession):
     provider = 'paraview'
+
+    def __init__(self, executable, directory, **options):
+        from .mvp.runners import live_executable
+        super().__init__(live_executable(executable), directory, **options)

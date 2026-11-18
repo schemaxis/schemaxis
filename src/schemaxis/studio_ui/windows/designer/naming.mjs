@@ -4,12 +4,12 @@
 
 export const DEFAULT_PATTERN = '{index}-{operation}-{output}{ext}';
 export const DEFAULT_WIDTH = 6;
-export const TOKENS = ['{index}', '{operation}', '{output}', '{param:ID}', '{axis:NAME}', '{artifact}', '{ext}'];
+export const TOKENS = ['{index}', '{operation}', '{output}', '{param:ID}', '{sweep:NAME}', '{artifact}', '{ext}'];
 
 const TOKEN = /\{([^{}]*)\}/g;
 const SIMPLE = ['index', 'operation', 'output', 'artifact', 'ext'];
 const PARAMETER = /^param:[A-Za-z][A-Za-z0-9_.-]*$/;
-const AXIS = /^axis:[A-Za-z0-9_.-]+$/;
+const AXIS = /^sweep:[A-Za-z0-9_.-]+$/;
 const LITERAL = /^[A-Za-z0-9_.+=,@-]*$/;
 const MAX_PATTERN = 256;
 const MAX_NAME = 255;
@@ -39,7 +39,7 @@ export function validatePattern(pattern) {
     const token = match[1];
     if (!SIMPLE.includes(token) && !PARAMETER.test(token) && !AXIS.test(token)) {
       throw new NamingError(`unknown token {${token}}; use {index}, {operation}, {output}, {param:ID}, `
-        + '{axis:NAME}, {artifact} or {ext}');
+        + '{sweep:NAME}, {artifact} or {ext}');
     }
     tokens.push(token);
     position = match.index + match[0].length;
@@ -114,7 +114,7 @@ function byteLength(text) {
   return new TextEncoder().encode(text).length;
 }
 
-/** One name for an entry {operation, output, artifact, ext, stem, parameters, axes}. */
+/** One name for an entry {operation, output, artifact, ext, stem, parameters, sweeps}. */
 export function render(pattern, entry, index, width) {
   const name = pattern.replace(TOKEN, (_, key) => {
     if (key === 'index') {
@@ -132,9 +132,9 @@ export function render(pattern, entry, index, width) {
     const separator = key.indexOf(':');
     const group = key.slice(0, separator);
     const identity = key.slice(separator + 1);
-    const values = (group === 'param' ? entry.parameters : entry.axes) || {};
+    const values = (group === 'param' ? entry.parameters : entry.sweeps) || {};
     if (!Object.hasOwn(values, identity)) {
-      throw new NamingError(`${group === 'param' ? 'parameter' : 'axis'} ${identity} has no value for this output`);
+      throw new NamingError(`${group === 'param' ? 'parameter' : 'sweep'} ${identity} has no value for this output`);
     }
     return sanitise(values[identity]);
   });
@@ -182,7 +182,7 @@ export function extensionFor(kind) {
 
 /**
  * Sample entries from a design: named outputs first, otherwise every declared output port.
- * parameterValues maps parameter IDs to sample values; axes maps axis names to a sample value.
+ * parameterValues maps parameter IDs to sample values; axes maps sweep names to a sample value.
  */
 export function sampleEntries(projection, parameterValues = {}, axes = {}) {
   const entries = [];
@@ -190,14 +190,14 @@ export function sampleEntries(projection, parameterValues = {}, axes = {}) {
   if (aliases.length) {
     for (const [alias, output] of aliases) {
       entries.push({operation: output.operation, output: alias, artifact: output.artifact,
-        ext: extensionFor(output.kind), parameters: parameterValues, axes});
+        ext: extensionFor(output.kind), parameters: parameterValues, sweeps: axes});
     }
     return entries;
   }
   for (const node of projection.nodes || []) {
     for (const port of (node.ports && node.ports.outputs) || []) {
       entries.push({operation: node.id, output: port.name, artifact: port.artifact,
-        ext: extensionFor(port.data && port.data.kind), parameters: parameterValues, axes});
+        ext: extensionFor(port.data && port.data.kind), parameters: parameterValues, sweeps: axes});
     }
   }
   return entries;

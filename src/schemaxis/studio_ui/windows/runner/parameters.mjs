@@ -1,4 +1,5 @@
-// Copyright (C) 2026 David L F Gaden
+// Copyright (C) 2026 David L. F. Gaden.
+import {readSpatialInput, spatialInput, expressionValue, numericChoices} from '../../editor/spatial-input.mjs';
 // Parameter values preserve JSON types; constraints remain authoritative on the server.
 import {h} from '../../lib/dom.mjs';
 import {ApiError} from '../../lib/api.mjs';
@@ -13,6 +14,11 @@ export function parseParameter(spec, raw) {
     }
     return raw === 'true';
   }
+  if (spec.kind === 'enum' && numericChoices(spec)) {
+    const value = readSpatialInput(raw);
+    if (expressionValue(value) || spec.constraints.enum.includes(value)) return value;
+    throw Error('Choose a listed value or enter a name or expression.');
+  }
   if (spec.kind === 'enum') {
     const index = Number(raw);
     if (!Number.isInteger(index) || index < 0 || index >= spec.constraints.enum.length) {
@@ -20,9 +26,13 @@ export function parseParameter(spec, raw) {
     }
     return spec.constraints.enum[index];
   }
+  if (['number', 'integer', 'vector', 'box'].includes(spec.kind)) {
+    const value = readSpatialInput(raw);
+    if (expressionValue(value) || spec.kind === 'box') return value;
+  }
   if (spec.kind === 'number' || spec.kind === 'integer') {
-    const number = Number(raw);
-    if (!Number.isFinite(number) || (spec.kind === 'integer' && !Number.isInteger(number))) {
+    const number = readSpatialInput(raw);
+    if (typeof number !== 'number' || !Number.isFinite(number) || (spec.kind === 'integer' && !Number.isInteger(number))) {
       throw Error(spec.kind === 'integer' ? 'Enter a whole number.' : 'Enter a finite number.');
     }
     return number;
@@ -63,21 +73,17 @@ export function parameterField(id, spec, value) {
   const props = {class: 'input', name: id, id: `case-param-${id}`, 'data-parameter': id,
     'aria-describedby': `case-help-${id}`};
   let input;
-  if (spec.kind === 'boolean' || spec.kind === 'enum') {
+  if (spec.kind === 'boolean' || spec.kind === 'enum' && !numericChoices(spec)) {
     const choices = spec.kind === 'boolean' ? [true, false] : constraints.enum;
     input = h('select', {...props, class: 'select'},
       h('option', {value: '', selected: value === undefined}, 'Choose a value…'),
       choices.map((item, index) => h('option', {
         value: spec.kind === 'boolean' ? String(item) : String(index), selected: item === value,
       }, typeof item === 'boolean' ? (item ? 'Yes' : 'No') : String(item))));
-  } else if (spec.kind === 'vector') {
-    input = h('input', {...props, type: 'text', placeholder: `[${Array(constraints.length).fill(0).join(', ')}]`,
-      value: value === undefined ? '' : JSON.stringify(value)});
+  } else if ((['number', 'integer', 'vector', 'box'].includes(spec.kind) || numericChoices(spec))) {
+    input = spatialInput({label: spec.label, value, ...props}).element;
   } else {
-    const numeric = ['number', 'integer'].includes(spec.kind);
-    input = h('input', {...props, type: numeric ? 'number' : 'text',
-      min: numeric ? constraints.minimum : undefined, max: numeric ? constraints.maximum : undefined,
-      step: numeric ? (spec.kind === 'integer' ? '1' : 'any') : undefined,
+    input = h('input', {...props, type: 'text',
       value: value === undefined ? '' : String(value)});
   }
   const required = spec.default === undefined;
